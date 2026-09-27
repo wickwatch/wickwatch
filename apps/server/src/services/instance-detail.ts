@@ -22,7 +22,8 @@ export async function loadInstanceDetail(
   log: FastifyBaseLogger,
   now = new Date(),
 ): Promise<InstanceDetail> {
-  const instance = (await adapters.runtime.list()).find((i) => i.ref === ref);
+  const allInstances = await adapters.runtime.list();
+  const instance = allInstances.find((i) => i.ref === ref);
   if (!instance) throw new AdapterError("not_found", `Unknown instance ${ref}`);
 
   const from = new Date(now.getTime() - days * DAY_MS);
@@ -38,6 +39,7 @@ export async function loadInstanceDetail(
     from,
     labelPrefix,
     instance,
+    allInstances,
     ...(lastLog ? { lastLog } : {}),
     ...(account ? { account } : {}),
   });

@@ -39,19 +39,26 @@ describe("dealStats", () => {
   });
 });
 
+const alpha = {
+  ref: "ww-alpha",
+  labels: buildLabels("ww", { instance: "alpha", account: "111", symbol: "GER40" }),
+  status: "running" as const,
+  restartCount: 0,
+  image: "bot:1",
+};
+
 describe("buildInstanceDetail", () => {
   it("keeps only this instance's positions, orders and deals, oldest first", () => {
     const detail = buildInstanceDetail({
       time: new Date("2026-09-25T12:00:00.000Z"),
       from: new Date("2026-08-26T12:00:00.000Z"),
       labelPrefix: "ww",
-      instance: {
-        ref: "ww-alpha",
-        labels: buildLabels("ww", { instance: "alpha", account: "111", symbol: "GER40" }),
-        status: "running",
-        restartCount: 0,
-        image: "bot:1",
-      },
+      instance: alpha,
+      // A second bot on the same account and symbol: attribution falls back to the labels.
+      allInstances: [
+        alpha,
+        { ...alpha, ref: "ww-beta", labels: buildLabels("ww", { instance: "beta", account: "111", symbol: "GER40" }) },
+      ],
       account: {
         number: "111",
         displayName: "Main",

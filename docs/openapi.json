@@ -1634,6 +1634,18 @@
                                 "enum": [
                                   "challenge_passed"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "attribution_ambiguous"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "attribution_invalid"
+                                ]
                               }
                             ]
                           },

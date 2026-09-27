@@ -1,4 +1,5 @@
 import type { AdapterErrorCode } from "./errors";
+import { createAttributor, type Attributor } from "./attribution";
 import { readLabels } from "./labels";
 import type {
   AccountStats,
@@ -43,11 +44,14 @@ export function summarizeInstance(
   labelPrefix: string,
   broker: { positions: Position[]; dealsToday: Deal[] } | undefined,
   lastLog: LogLine | undefined,
+  attributor: Attributor,
 ): InstanceSummary {
   const labels = readLabels(labelPrefix, instance.labels);
   const name = labels.instance ?? instance.ref;
-  const positions = broker?.positions.filter((p) => p.label === name) ?? [];
-  const deals = broker?.dealsToday.filter((d) => d.label === name) ?? [];
+  const owns = (item: { label?: string | undefined; symbol: string }) =>
+    labels.account !== undefined && attributor.owner(labels.account, item) === name;
+  const positions = broker?.positions.filter(owns) ?? [];
+  const deals = broker?.dealsToday.filter(owns) ?? [];
   return {
     ref: instance.ref,
     name,
@@ -67,10 +71,11 @@ export function summarizeInstance(
 export function buildOverview(input: OverviewInput): Overview {
   const byNumber = new Map(input.accounts.map((a) => [a.number, a]));
 
+  const attributor = createAttributor(input.instances, input.labelPrefix);
   const instances = input.instances.map((instance) => {
     const account = readLabels(input.labelPrefix, instance.labels).account;
     const data = account ? byNumber.get(account)?.data : undefined;
-    return summarizeInstance(instance, input.labelPrefix, data, input.lastLogs.get(instance.ref));
+    return summarizeInstance(instance, input.labelPrefix, data, input.lastLogs.get(instance.ref), attributor);
   });
 
   const accounts = input.accounts.map((account): AccountSummary => {
@@ -98,7 +103,7 @@ export function buildOverview(input: OverviewInput): Overview {
     };
   });
 
-  return { time: toIsoTime(input.time), accounts, instances, alerts: alerts(instances, input.accounts) };
+  return { time: toIsoTime(input.time), accounts, instances, alerts: alerts(instances, input.accounts, attributor) };
 }
 
 function accountState(account: AccountSnapshot, total: number, running: number): AccountSummary["state"] {
@@ -108,8 +113,13 @@ function accountState(account: AccountSnapshot, total: number, running: number):
   return running === 0 ? "stopped" : "attention";
 }
 
-function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[]): Alert[] {
+function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[], attributor: Attributor): Alert[] {
   const result: Alert[] = [];
+  for (const problem of attributor.problems) {
+    const params = { instances: problem.instances.join(", "), ...(problem.symbol ? { symbol: problem.symbol } : {}) };
+    const code = problem.kind === "ambiguous" ? "attribution_ambiguous" : "attribution_invalid";
+    result.push({ level: "warning", code, subject: problem.account, params });
+  }
   for (const account of accounts) {
     if (account.error) {
       result.push({

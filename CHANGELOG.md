@@ -15,4 +15,5 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Docker runtime adapter: finds labelled containers, start/stop/restart, logs (also followed), host status.
 - Accounts page: add accounts from the broker's list, rename, switch login, remove; broker logins with password change (encrypted, never shown again).
 - Challenge profiles per account (from a template or entered manually): profit target, daily loss with reset time and time zone, static or trailing max drawdown, minimum trading days, duration; traffic light on the account card and alerts near limits. A background poller records balance and equity per trading day.
+- Trade attribution per instance (`auto`, `label`, `label-pattern`, `account-symbol`), so third-party bots with their own labels work too.
 - Instance detail page: key figures and realised P&L curve for 7/30/90 days, open positions (close with confirmation), pending orders, trade history, live log via SSE with filters.

@@ -10,6 +10,7 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 | `adapters.ts` | `RuntimeAdapter`, `BrokerAdapter`, `ConfigAdapter`, `Credentials`, `LogOptions` |
 | `errors.ts` | `AdapterError` with a translatable `code` |
 | `labels.ts` | Label keys and helpers for the configurable prefix |
+| `attribution.ts` | `createAttributor()`: which instance a position, order or deal belongs to (modes `auto`, `label`, `label-pattern`, `account-symbol`, see [BOT-CONTRACT.md](BOT-CONTRACT.md)) |
 | `parameters.ts` | `validateParameters()`, format-independent, reusable by every config adapter |
 | `setup-log.ts` | `parseSetupLine()` for `WW-SETUP` lines (see [BOT-CONTRACT.md](BOT-CONTRACT.md)) |
 | `overview.ts` | `buildOverview()`: combines runtime and broker data into accounts, instances and alerts (pure, no I/O) |

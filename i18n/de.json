@@ -248,7 +248,9 @@
     "account_error": "Konto {subject} nicht erreichbar: {reason}",
     "challenge_breached": "Konto {subject}: Challenge-Regel verletzt – {rule}",
     "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",
-    "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht"
+    "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht",
+    "attribution_ambiguous": "Konto {subject}: Trades auf {symbol} nicht zuordenbar – {instances} teilen sich das Symbol, eine nutzt account-symbol",
+    "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}"
   },
   "emergencyStop": {
     "title": "Notstopp",

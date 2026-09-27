@@ -3,7 +3,18 @@ import type { Labels } from "./schemas";
 /** Default prefix for runtime discovery labels, e.g. `wickwatch.instance`. */
 export const DEFAULT_LABEL_PREFIX = "wickwatch";
 
-export const LABEL_KEYS = ["instance", "account", "prop", "symbol", "period", "set", "algo-version"] as const;
+export const LABEL_KEYS = [
+  "instance",
+  "account",
+  "prop",
+  "symbol",
+  "period",
+  "set",
+  "algo-version",
+  // How trades are attributed to the instance, see attribution.ts.
+  "attribution",
+  "order-label",
+] as const;
 export type LabelKey = (typeof LABEL_KEYS)[number];
 export type LabelValues = Partial<Record<LabelKey, string>>;
 

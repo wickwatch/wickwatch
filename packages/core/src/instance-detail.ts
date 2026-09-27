@@ -1,4 +1,6 @@
 import type { AdapterErrorCode } from "./errors";
+import { createAttributor } from "./attribution";
+import { readLabels } from "./labels";
 import { summarizeInstance } from "./overview";
 import type { Deal, InstanceDetail, LogLine, PendingOrder, Position, RuntimeInstance } from "./schemas";
 import { toIsoTime } from "./schemas";
@@ -11,12 +13,14 @@ export interface InstanceDetailInput {
   from: Date;
   labelPrefix: string;
   instance: RuntimeInstance;
+  /** All instances, so trades can be attributed (e.g. "only instance on this account and symbol"). */
+  allInstances?: RuntimeInstance[];
   lastLog?: LogLine;
   account?: {
     number: string;
     displayName: string;
     currency?: string;
-    /** Broker data of the whole account; filtered here by the instance's order label. */
+    /** Broker data of the whole account; attributed to the instance here (see attribution.ts). */
     data?: { positions: Position[]; pendingOrders: PendingOrder[]; deals: Deal[] };
     error?: AdapterErrorCode;
   };
@@ -28,6 +32,7 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
   const dayStart = Math.floor(time.getTime() / DAY_MS) * DAY_MS;
   const data = account?.data;
 
+  const attributor = createAttributor(input.allInstances ?? [instance], input.labelPrefix);
   const summary = summarizeInstance(
     instance,
     input.labelPrefix,
@@ -35,9 +40,11 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
       ? { positions: data.positions, dealsToday: data.deals.filter((d) => Date.parse(d.time) >= dayStart) }
       : undefined,
     input.lastLog,
+    attributor,
   );
-  const mine = <T extends { label?: string }>(items: T[] | undefined) =>
-    items?.filter((i) => i.label === summary.name) ?? [];
+  const accountNumber = readLabels(input.labelPrefix, instance.labels).account;
+  const mine = <T extends { label?: string | undefined; symbol: string }>(items: T[] | undefined) =>
+    items?.filter((i) => accountNumber !== undefined && attributor.owner(accountNumber, i) === summary.name) ?? [];
   const deals = mine(data?.deals).sort((a, b) => a.time.localeCompare(b.time));
 
   return {

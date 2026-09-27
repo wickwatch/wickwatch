@@ -248,7 +248,9 @@
     "account_error": "Account {subject} not reachable: {reason}",
     "challenge_breached": "Account {subject}: challenge rule breached – {rule}",
     "challenge_limit": "Account {subject}: {used} % of the {rule} limit used",
-    "challenge_passed": "Account {subject}: challenge goals reached"
+    "challenge_passed": "Account {subject}: challenge goals reached",
+    "attribution_ambiguous": "Account {subject}: trades on {symbol} cannot be attributed – {instances} share the symbol and one uses account-symbol",
+    "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}"
   },
   "emergencyStop": {
     "title": "Emergency stop",
