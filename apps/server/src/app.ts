@@ -18,9 +18,11 @@ import { authRoutes } from "./routes/auth";
 import { credentialRoutes } from "./routes/credentials";
 import { healthRoutes } from "./routes/health";
 import { instanceRoutes } from "./routes/instances";
+import { managedInstanceRoutes } from "./routes/managed-instances";
 import { overviewRoutes } from "./routes/overview";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
+import { createSymbolCache } from "./services/symbols";
 
 export interface AppDeps {
   config: Config;
@@ -51,6 +53,7 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   const { basePath, labelPrefix } = config;
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
+  const symbols = createSymbolCache(adapters.broker);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -67,10 +70,11 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
-  await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, prefix: api });
+  await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, { db, templates, prefix: api });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
+  await app.register(managedInstanceRoutes, { adapters, accounts, db, symbols, labelPrefix, prefix: api });
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {

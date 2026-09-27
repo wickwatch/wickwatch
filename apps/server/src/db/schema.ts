@@ -108,6 +108,32 @@ export interface AlgosTable {
   uploaded_at: string;
 }
 
+export interface InstancesTable {
+  id: Generated<number>;
+  name: string;
+  account_id: number;
+  created_by: number | null;
+  created_at: string;
+}
+
+export interface InstanceConfigsTable {
+  id: Generated<number>;
+  instance_id: number;
+  version: number;
+  algo_id: number | null;
+  algo_name: string;
+  algo_version: string;
+  symbol: string;
+  period: string;
+  /** ParameterValues as JSON. */
+  parameters: string;
+  attribution: string;
+  order_label: string | null;
+  comment: string | null;
+  created_by: number | null;
+  created_at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -118,4 +144,6 @@ export interface Database {
   daily_stats: DailyStatsTable;
   attribution_overrides: AttributionOverridesTable;
   algos: AlgosTable;
+  instances: InstancesTable;
+  instance_configs: InstanceConfigsTable;
 }

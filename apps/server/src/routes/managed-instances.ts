@@ -1,0 +1,394 @@
+import {
+  AdapterError,
+  AlgoMetadata,
+  ATTRIBUTION_MODES,
+  ParameterIssue,
+  ParameterValues,
+  readLabels,
+  type AttributionMode,
+} from "@wickwatch/core";
+import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
+import Type from "typebox";
+import Value from "typebox/value";
+import type { AccountDirectory, AccountEntry } from "../accounts";
+import type { Adapters } from "../adapters";
+import type { Db } from "../db";
+import type { InstanceConfigsTable } from "../db/schema";
+import { requireAdmin } from "../plugins/auth";
+import { ErrorBody } from "../plugins/errors";
+import { audit } from "../services/audit";
+import type { SymbolCache } from "../services/symbols";
+
+/** Lower case, digits and dashes: usable as a container name and host name. */
+const NAME = "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$";
+
+const Attribution = Type.Object({
+  mode: Type.Enum(ATTRIBUTION_MODES),
+  /** Expected order label (`label`, default: the instance name) or regular expression (`label-pattern`). */
+  orderLabel: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })),
+});
+
+const ConfigInput = Type.Object({
+  algoId: Type.Integer(),
+  symbol: Type.String({ minLength: 1, maxLength: 100 }),
+  period: Type.String({ minLength: 1, maxLength: 50 }),
+  /** All values; parameters left out run with the algo's default. */
+  parameters: ParameterValues,
+  attribution: Attribution,
+  comment: Type.Optional(Type.String({ maxLength: 500 })),
+});
+type ConfigInput = Type.Static<typeof ConfigInput>;
+
+const InstanceConfig = Type.Object({
+  version: Type.Integer(),
+  /** `id` is null when this algo version was deleted since. */
+  algo: Type.Object({ id: Type.Union([Type.Integer(), Type.Null()]), name: Type.String(), version: Type.String() }),
+  symbol: Type.String(),
+  period: Type.String(),
+  parameters: ParameterValues,
+  attribution: Attribution,
+  comment: Type.Optional(Type.String()),
+  createdAt: Type.String(),
+  createdBy: Type.Optional(Type.String()),
+});
+type InstanceConfig = Type.Static<typeof InstanceConfig>;
+
+const ManagedInstance = Type.Object({
+  id: Type.Integer(),
+  name: Type.String(),
+  account: Type.Object({ id: Type.Integer(), number: Type.String(), displayName: Type.String() }),
+  createdAt: Type.String(),
+  config: InstanceConfig,
+});
+type ManagedInstance = Type.Static<typeof ManagedInstance>;
+
+const ManagedInstanceDetail = Type.Intersect([
+  ManagedInstance,
+  Type.Object({ history: Type.Array(InstanceConfig, { description: "All versions, newest first" }) }),
+]);
+
+/** A rejected configuration; `issues` and `unknown` are set for `invalid_parameters`. */
+const ConfigErrorBody = Type.Object({
+  error: Type.String(),
+  message: Type.Optional(Type.String()),
+  issues: Type.Optional(Type.Array(ParameterIssue)),
+  unknown: Type.Optional(Type.Array(Type.String())),
+});
+type ConfigErrorBody = Type.Static<typeof ConfigErrorBody>;
+
+const NameParams = Type.Object({ name: Type.String({ pattern: NAME }) });
+
+type ConfigRow = Omit<InstanceConfigsTable, "id" | "instance_id"> & { created_by_name?: string | null };
+
+function toConfig(row: ConfigRow): InstanceConfig {
+  const parameters: unknown = JSON.parse(row.parameters);
+  return {
+    version: row.version,
+    algo: { id: row.algo_id, name: row.algo_name, version: row.algo_version },
+    symbol: row.symbol,
+    period: row.period,
+    parameters: Value.Check(ParameterValues, parameters) ? parameters : {},
+    attribution: {
+      mode: row.attribution as AttributionMode,
+      ...(row.order_label ? { orderLabel: row.order_label } : {}),
+    },
+    ...(row.comment ? { comment: row.comment } : {}),
+    createdAt: row.created_at,
+    ...(row.created_by_name ? { createdBy: row.created_by_name } : {}),
+  };
+}
+
+/** JSON with sorted keys, so equal parameter sets compare equal. */
+const canonical = (values: ParameterValues) =>
+  JSON.stringify(Object.fromEntries(Object.entries(values).sort(([a], [b]) => a.localeCompare(b))));
+
+type Checked =
+  | { ok: true; row: Omit<ConfigRow, "version" | "created_by" | "created_at"> }
+  | { ok: false; status: 400 | 404; body: ConfigErrorBody };
+
+export interface ManagedInstanceRouteOptions {
+  adapters: Adapters;
+  accounts: AccountDirectory;
+  db: Db;
+  symbols: SymbolCache;
+  labelPrefix: string;
+}
+
+export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRouteOptions> = async (
+  app,
+  { adapters, accounts, db, symbols, labelPrefix },
+) => {
+  const configs = () =>
+    db
+      .selectFrom("instance_configs")
+      .leftJoin("users", "users.id", "instance_configs.created_by")
+      .select([
+        "instance_configs.instance_id",
+        "instance_configs.version",
+        "instance_configs.algo_id",
+        "instance_configs.algo_name",
+        "instance_configs.algo_version",
+        "instance_configs.symbol",
+        "instance_configs.period",
+        "instance_configs.parameters",
+        "instance_configs.attribution",
+        "instance_configs.order_label",
+        "instance_configs.comment",
+        "instance_configs.created_by",
+        "instance_configs.created_at",
+        "users.username as created_by_name",
+      ]);
+
+  /** Managed instances of the active broker adapter with their current configuration. */
+  async function load(name?: string): Promise<ManagedInstance[]> {
+    const entries = new Map((await accounts.list()).map((a) => [a.id, a]));
+    let query = db.selectFrom("instances").selectAll().orderBy("name");
+    if (name !== undefined) query = query.where("name", "=", name);
+    const rows = (await query.execute()).filter((r) => entries.has(r.account_id));
+    if (!rows.length) return [];
+    const latest = await configs()
+      .where(
+        "instance_configs.id",
+        "in",
+        db
+          .selectFrom("instance_configs")
+          .select((eb) => eb.fn.max("id").as("id"))
+          .groupBy("instance_id"),
+      )
+      .execute();
+    const byInstance = new Map(latest.map((c) => [c.instance_id, c]));
+    return rows.flatMap((row) => {
+      const entry = entries.get(row.account_id);
+      const config = byInstance.get(row.id);
+      if (!entry || !config) return [];
+      return [
+        {
+          id: row.id,
+          name: row.name,
+          account: { id: entry.id, number: entry.number, displayName: entry.displayName },
+          createdAt: row.created_at,
+          config: toConfig(config),
+        },
+      ];
+    });
+  }
+
+  async function check(input: ConfigInput, entry: AccountEntry): Promise<Checked> {
+    const algo = await db.selectFrom("algos").selectAll().where("id", "=", input.algoId).executeTakeFirst();
+    if (!algo) return { ok: false, status: 404, body: { error: "algo_not_found" } };
+    const metadata: unknown = JSON.parse(algo.metadata);
+    const schema = Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
+
+    const periods = adapters.broker.periods?.();
+    const period = periods
+      ? periods.find((p) => p.toLowerCase() === input.period.toLowerCase())
+      : input.period.trim() || undefined;
+    if (!period) return { ok: false, status: 400, body: { error: "invalid_period" } };
+
+    const offered = await symbols.get(entry);
+    const symbol =
+      offered.find((s) => s === input.symbol) ?? offered.find((s) => s.toLowerCase() === input.symbol.toLowerCase());
+    if (!symbol) return { ok: false, status: 400, body: { error: "invalid_symbol" } };
+
+    const result = adapters.config.validate(input.parameters, schema);
+    if (result.errors.length || result.unknown.length) {
+      return {
+        ok: false,
+        status: 400,
+        body: { error: "invalid_parameters", issues: result.errors, unknown: result.unknown },
+      };
+    }
+
+    const { mode, orderLabel } = input.attribution;
+    if (mode === "label-pattern") {
+      try {
+        new RegExp(orderLabel ?? "");
+      } catch {
+        return { ok: false, status: 400, body: { error: "invalid_order_label" } };
+      }
+      if (!orderLabel) return { ok: false, status: 400, body: { error: "invalid_order_label" } };
+    }
+    return {
+      ok: true,
+      row: {
+        algo_id: algo.id,
+        algo_name: algo.name,
+        algo_version: algo.version,
+        symbol,
+        period,
+        parameters: canonical(input.parameters),
+        attribution: mode,
+        // Only the label modes use it.
+        order_label: mode === "label" || mode === "label-pattern" ? (orderLabel ?? null) : null,
+        comment: input.comment?.trim() || null,
+      },
+    };
+  }
+
+  app.get(
+    "/managed-instances",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "Instances set up in Wickwatch, with their current configuration",
+        response: { 200: Type.Array(ManagedInstance) },
+      },
+    },
+    () => load(),
+  );
+
+  app.get(
+    "/managed-instances/:name",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "One managed instance with all configuration versions",
+        params: NameParams,
+        response: { 200: ManagedInstanceDetail, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const [instance] = await load(request.params.name);
+      if (!instance) return reply.code(404).send({ error: "not_found" });
+      const history = await configs()
+        .where("instance_configs.instance_id", "=", instance.id)
+        .orderBy("instance_configs.version", "desc")
+        .execute();
+      return { ...instance, history: history.map(toConfig) };
+    },
+  );
+
+  app.post(
+    "/managed-instances",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Set up an instance (saved only; nothing is started)",
+        body: Type.Object({
+          name: Type.String({ pattern: NAME }),
+          accountId: Type.Integer(),
+          config: ConfigInput,
+        }),
+        response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { name, accountId, config } = request.body;
+      const entry = (await accounts.list()).find((a) => a.id === accountId);
+      if (!entry) return reply.code(404).send({ error: "not_found" });
+      const taken =
+        (await db.selectFrom("instances").select("id").where("name", "=", name).executeTakeFirst()) ??
+        (await adapters.runtime.list()).find(
+          (i) => i.ref === name || readLabels(labelPrefix, i.labels).instance === name,
+        );
+      if (taken) return reply.code(409).send({ error: "instance_exists" });
+      const checked = await check(config, entry);
+      if (!checked.ok) return reply.code(checked.status).send(checked.body);
+
+      const now = new Date().toISOString();
+      const userId = request.user?.id ?? null;
+      await db.transaction().execute(async (trx) => {
+        const { id } = await trx
+          .insertInto("instances")
+          .values({ name, account_id: entry.id, created_by: userId, created_at: now })
+          .returning("id")
+          .executeTakeFirstOrThrow();
+        await trx
+          .insertInto("instance_configs")
+          .values({ ...checked.row, instance_id: id, version: 1, created_by: userId, created_at: now })
+          .execute();
+      });
+      await audit(db, {
+        action: "instance.create",
+        target: name,
+        details: { account: entry.number, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
+        userId: request.user?.id,
+      });
+      const [created] = await load(name);
+      if (!created) throw new AdapterError("not_found", `Instance ${name} vanished`);
+      return reply.code(201).send(created);
+    },
+  );
+
+  app.post(
+    "/managed-instances/:name/configs",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Save a new configuration version (also used to roll back to an old one)",
+        description: "Nothing is restarted; a running instance keeps its configuration until it is redeployed.",
+        params: NameParams,
+        body: ConfigInput,
+        response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const [instance] = await load(request.params.name);
+      const entry = instance && (await accounts.list()).find((a) => a.id === instance.account.id);
+      if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
+      const checked = await check(request.body, entry);
+      if (!checked.ok) return reply.code(checked.status).send(checked.body);
+
+      const current = instance.config;
+      const unchanged =
+        current.algo.id === checked.row.algo_id &&
+        current.symbol === checked.row.symbol &&
+        current.period === checked.row.period &&
+        canonical(current.parameters) === checked.row.parameters &&
+        current.attribution.mode === checked.row.attribution &&
+        (current.attribution.orderLabel ?? null) === checked.row.order_label;
+      if (unchanged) return reply.code(409).send({ error: "config_unchanged" });
+
+      const version = current.version + 1;
+      await db
+        .insertInto("instance_configs")
+        .values({
+          ...checked.row,
+          instance_id: instance.id,
+          version,
+          created_by: request.user?.id ?? null,
+          created_at: new Date().toISOString(),
+        })
+        .execute();
+      await audit(db, {
+        action: "instance.config",
+        target: instance.name,
+        details: { version, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
+        userId: request.user?.id,
+      });
+      const [updated] = await load(instance.name);
+      if (!updated) throw new AdapterError("not_found", `Instance ${instance.name} vanished`);
+      return reply.code(201).send(updated);
+    },
+  );
+
+  app.delete(
+    "/managed-instances/:name",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Delete a managed instance and its configuration history",
+        params: NameParams,
+        body: Type.Object({ confirm: Type.String({ description: "The instance name" }) }),
+        response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { name } = request.params;
+      if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
+      const [instance] = await load(name);
+      if (!instance) return reply.code(404).send({ error: "not_found" });
+      await db.deleteFrom("instances").where("id", "=", instance.id).execute();
+      await audit(db, {
+        action: "instance.delete",
+        target: name,
+        details: { versions: instance.config.version },
+        userId: request.user?.id,
+      });
+      return reply.code(204).send(null);
+    },
+  );
+};

@@ -58,6 +58,12 @@ export function describeBrokerAdapter(name: string, options: BrokerContractOptio
       await expectAdapterError(adapter.accounts(options.invalidCredentials!), "auth_failed");
     });
 
+    it("lists unique periods, if it knows them", () => {
+      const periods = adapter.periods?.() ?? ["any"];
+      expect(periods.length).toBeGreaterThan(0);
+      expect(new Set(periods).size).toBe(periods.length);
+    });
+
     it("lists unique symbols", async () => {
       const symbols = await adapter.symbols(c, account);
       expectSchema(Type.Array(Type.String({ minLength: 1 })), symbols);

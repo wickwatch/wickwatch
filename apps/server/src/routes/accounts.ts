@@ -8,6 +8,7 @@ import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
+import type { SymbolCache } from "../services/symbols";
 
 const Account = Type.Object({
   id: Type.Integer(),
@@ -30,11 +31,12 @@ export interface AccountRouteOptions {
   db: Db;
   cipher: Cipher | undefined;
   labelPrefix: string;
+  symbols: SymbolCache;
 }
 
 export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = async (
   app,
-  { adapters, accounts, db, cipher, labelPrefix },
+  { adapters, accounts, db, cipher, labelPrefix, symbols },
 ) => {
   /** Accounts of the active broker adapter; rows of another adapter (e.g. demo) are not usable. */
   async function loadAccounts(id?: number): Promise<Account[]> {
@@ -210,7 +212,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         tags: ["accounts"],
         summary: "Remove an account from Wickwatch (nothing changes at the broker)",
         params: Type.Object({ id: Type.Integer() }),
-        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },
     },
     async (request, reply) => {
@@ -220,9 +222,32 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         .where("id", "=", request.params.id)
         .executeTakeFirst();
       if (!account) return reply.code(404).send({ error: "not_found" });
+      const used = await db
+        .selectFrom("instances")
+        .select("id")
+        .where("account_id", "=", request.params.id)
+        .executeTakeFirst();
+      if (used) return reply.code(409).send({ error: "account_in_use" });
       await db.deleteFrom("accounts").where("id", "=", request.params.id).execute();
       await audit(db, { action: "account.delete", target: account.number, userId: request.user?.id });
       return reply.code(204).send(null);
+    },
+  );
+
+  app.get(
+    "/accounts/:id/symbols",
+    {
+      schema: {
+        tags: ["accounts"],
+        summary: "Symbols the broker offers on the account (cached for an hour)",
+        params: Type.Object({ id: Type.Integer() }),
+        response: { 200: Type.Array(Type.String()), 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const entry = (await accounts.list()).find((a) => a.id === request.params.id);
+      if (!entry) return reply.code(404).send({ error: "not_found" });
+      return [...(await symbols.get(entry))].sort((a, b) => a.localeCompare(b));
     },
   );
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AccountSummary, InstanceSummary } from "@wickwatch/core";
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, errorKey, type InstanceAction } from "../api";
+import { api, errorKey, type InstanceAction, type ManagedInstanceRow } from "../api";
 import AccountCard from "../components/AccountCard.vue";
 import AlertList from "../components/AlertList.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -31,6 +31,17 @@ const instances = computed(() =>
   ),
 );
 const canEmergencyStop = computed(() => isAdmin.value && (system.value?.capabilities.emergencyStop ?? false));
+const managed = ref<ManagedInstanceRow[]>([]);
+onMounted(() => {
+  api.managedInstances().then(
+    (rows) => (managed.value = rows),
+    () => undefined,
+  );
+});
+/** Set up in Wickwatch, but no runtime instance with that name (yet). */
+const notRunning = computed(() =>
+  managed.value.filter((m) => !(data.value?.instances ?? []).some((i) => i.ref === m.name || i.name === m.name)),
+);
 const instanceLabel = computed(() => `${system.value?.labelPrefix ?? "wickwatch"}.instance`);
 
 async function runAction(instance: InstanceSummary, action: InstanceAction) {
@@ -126,6 +137,9 @@ async function emergencyStop() {
         <div class="section__head">
           <h2 id="instances-title">{{ $t("overview.instances") }}</h2>
           <div class="filters">
+            <RouterLink v-if="isAdmin" :to="{ name: 'instance-new' }" class="btn btn--primary btn--small">
+              {{ $t("action.newInstance") }}
+            </RouterLink>
             <label>
               <span class="visually-hidden">{{ $t("overview.filterAccount") }}</span>
               <select v-model="filterAccount" class="btn btn--small">
@@ -156,6 +170,28 @@ async function emergencyStop() {
           :can-act="isAdmin"
           @action="runAction"
         />
+
+        <div v-if="notRunning.length" class="managed">
+          <h3 id="managed-title">{{ $t("overview.notDeployed") }}</h3>
+          <p class="muted">{{ $t("overview.notDeployedHint") }}</p>
+          <ul class="managed__list" aria-labelledby="managed-title">
+            <li v-for="m in notRunning" :key="m.id" class="panel managed__item">
+              <RouterLink :to="{ name: 'instance-config', params: { ref: m.name } }" class="mono managed__name">
+                {{ m.name }}
+              </RouterLink>
+              <span class="muted">
+                {{
+                  [
+                    `${m.account.displayName} · ${m.account.number}`,
+                    `${m.config.algo.name} ${m.config.algo.version}`,
+                    `${m.config.symbol} ${m.config.period}`,
+                    $t("instanceConfig.version", { version: m.config.version }),
+                  ].join(" · ")
+                }}
+              </span>
+            </li>
+          </ul>
+        </div>
       </section>
     </template>
 
@@ -186,6 +222,43 @@ async function emergencyStop() {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-4);
+}
+
+.managed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-2);
+}
+
+.managed h3,
+.managed p {
+  margin: 0;
+}
+
+.managed h3 {
+  font-size: var(--ww-size-md);
+}
+
+.managed__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.managed__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-3);
+  align-items: baseline;
+  padding: var(--ww-space-3) var(--ww-space-4);
+  font-size: var(--ww-size-sm);
+}
+
+.managed__name {
+  font-weight: 600;
 }
 
 .section__head {

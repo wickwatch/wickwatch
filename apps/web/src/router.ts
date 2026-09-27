@@ -6,6 +6,8 @@ import AccountsView from "./views/AccountsView.vue";
 import AlgosView from "./views/AlgosView.vue";
 import AccountView from "./views/AccountView.vue";
 import ChallengeView from "./views/ChallengeView.vue";
+import InstanceConfigView from "./views/InstanceConfigView.vue";
+import InstanceFormView from "./views/InstanceFormView.vue";
 import InstanceView from "./views/InstanceView.vue";
 import LoginView from "./views/LoginView.vue";
 import OverviewView from "./views/OverviewView.vue";
@@ -19,7 +21,10 @@ export const router = createRouter({
     { path: "/account", name: "account", component: AccountView },
     { path: "/accounts", name: "accounts", component: AccountsView },
     { path: "/algos", name: "algos", component: AlgosView },
+    { path: "/instances/new", name: "instance-new", component: InstanceFormView },
     { path: "/instances/:ref", name: "instance", component: InstanceView },
+    { path: "/instances/:ref/config", name: "instance-config", component: InstanceConfigView },
+    { path: "/instances/:ref/edit", name: "instance-edit", component: InstanceFormView },
     { path: "/accounts/:number/challenge", name: "challenge", component: ChallengeView },
     { path: "/login", name: "login", component: LoginView, meta: { public: true } },
     { path: "/setup", name: "setup", component: SetupView, meta: { public: true } },

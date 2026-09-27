@@ -3,7 +3,7 @@ import type { Position } from "@wickwatch/core";
 import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-import { api, errorKey, type InstanceAction } from "../api";
+import { api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import KpiTiles from "../components/KpiTiles.vue";
 import LogPanel from "../components/LogPanel.vue";
@@ -23,6 +23,20 @@ const days = ref<(typeof RANGES)[number]>(30);
 
 const { data, error, now, refresh } = usePolling(() => api.instance(instanceRef.value, days.value), 30_000);
 watch([instanceRef, days], () => void refresh());
+
+/** Set when Wickwatch manages this instance's configuration. */
+const managed = ref<ManagedInstanceDetail>();
+watch(
+  instanceRef,
+  (ref) => {
+    managed.value = undefined;
+    api.managedInstance(ref).then(
+      (m) => (managed.value = m),
+      () => undefined,
+    );
+  },
+  { immediate: true },
+);
 
 const busy = reactive(new Set<string>());
 const notice = ref<{ tone: "positive" | "negative"; text: string }>();
@@ -253,7 +267,12 @@ async function closePosition() {
 
           <section class="panel card" aria-labelledby="labels-title">
             <h2 id="labels-title">{{ $t("instance.labels") }}</h2>
-            <p class="muted card__hint">{{ $t("instance.labelsHint") }}</p>
+            <p class="muted card__hint">
+              <RouterLink v-if="managed" :to="{ name: 'instance-config', params: { ref: managed.name } }">
+                {{ $t("instance.configLink", { version: managed.config.version }) }}
+              </RouterLink>
+              <template v-else>{{ $t("instance.externallyManaged") }}</template>
+            </p>
             <dl class="labels mono">
               <template v-for="(value, key) in data.instance.labels" :key="key">
                 <dt>{{ key }}</dt>

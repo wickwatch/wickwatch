@@ -1073,6 +1073,12 @@
                           }
                         }
                       }
+                    },
+                    "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   }
                 }
@@ -4130,6 +4136,107 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{id}/symbols": {
+      "get": {
+        "summary": "Symbols the broker offers on the account (cached for an hour)",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -6109,7 +6216,7 @@
     },
     "/api/v1/algos/{id}": {
       "delete": {
-        "summary": "Delete an algo version and its file",
+        "summary": "Delete an algo version and its file (not while an instance uses it)",
         "tags": [
           "algos"
         ],
@@ -6175,6 +6282,1352 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances": {
+      "get": {
+        "summary": "Instances set up in Wickwatch, with their current configuration",
+        "tags": [
+          "instances"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "account",
+                      "createdAt",
+                      "config"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "account": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "number",
+                          "displayName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "number": {
+                            "type": "string"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "config": {
+                        "type": "object",
+                        "required": [
+                          "version",
+                          "algo",
+                          "symbol",
+                          "period",
+                          "parameters",
+                          "attribution",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "version": {
+                            "type": "integer"
+                          },
+                          "algo": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "version"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "version": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "symbol": {
+                            "type": "string"
+                          },
+                          "period": {
+                            "type": "string"
+                          },
+                          "parameters": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "attribution": {
+                            "type": "object",
+                            "required": [
+                              "mode"
+                            ],
+                            "properties": {
+                              "mode": {
+                                "enum": [
+                                  "auto",
+                                  "label",
+                                  "label-pattern",
+                                  "account-symbol"
+                                ]
+                              },
+                              "orderLabel": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            }
+                          },
+                          "comment": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "createdBy": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Set up an instance (saved only; nothing is started)",
+        "tags": [
+          "instances"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "accountId",
+                  "config"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+                  },
+                  "accountId": {
+                    "type": "integer"
+                  },
+                  "config": {
+                    "type": "object",
+                    "required": [
+                      "algoId",
+                      "symbol",
+                      "period",
+                      "parameters",
+                      "attribution"
+                    ],
+                    "properties": {
+                      "algoId": {
+                        "type": "integer"
+                      },
+                      "symbol": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "period": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 50
+                      },
+                      "parameters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      },
+                      "attribution": {
+                        "type": "object",
+                        "required": [
+                          "mode"
+                        ],
+                        "properties": {
+                          "mode": {
+                            "enum": [
+                              "auto",
+                              "label",
+                              "label-pattern",
+                              "account-symbol"
+                            ]
+                          },
+                          "orderLabel": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        }
+                      },
+                      "comment": {
+                        "type": "string",
+                        "maxLength": 500
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "account",
+                    "createdAt",
+                    "config"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "number",
+                        "displayName"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "number": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "config": {
+                      "type": "object",
+                      "required": [
+                        "version",
+                        "algo",
+                        "symbol",
+                        "period",
+                        "parameters",
+                        "attribution",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "version": {
+                          "type": "integer"
+                        },
+                        "algo": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name",
+                            "version"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "period": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "attribution": {
+                          "type": "object",
+                          "required": [
+                            "mode"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "enum": [
+                                "auto",
+                                "label",
+                                "label-pattern",
+                                "account-symbol"
+                              ]
+                            },
+                            "orderLabel": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          }
+                        },
+                        "comment": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "parameter",
+                          "code"
+                        ],
+                        "properties": {
+                          "parameter": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_type"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "below_min"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "above_max"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_option"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_format"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "unknown": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/{name}": {
+      "get": {
+        "summary": "One managed instance with all configuration versions",
+        "tags": [
+          "instances"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "account",
+                        "createdAt",
+                        "config"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "account": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "number",
+                            "displayName"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "number": {
+                              "type": "string"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "config": {
+                          "type": "object",
+                          "required": [
+                            "version",
+                            "algo",
+                            "symbol",
+                            "period",
+                            "parameters",
+                            "attribution",
+                            "createdAt"
+                          ],
+                          "properties": {
+                            "version": {
+                              "type": "integer"
+                            },
+                            "algo": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "version"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "integer",
+                                  "nullable": true
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "symbol": {
+                              "type": "string"
+                            },
+                            "period": {
+                              "type": "string"
+                            },
+                            "parameters": {
+                              "type": "object",
+                              "additionalProperties": {}
+                            },
+                            "attribution": {
+                              "type": "object",
+                              "required": [
+                                "mode"
+                              ],
+                              "properties": {
+                                "mode": {
+                                  "enum": [
+                                    "auto",
+                                    "label",
+                                    "label-pattern",
+                                    "account-symbol"
+                                  ]
+                                },
+                                "orderLabel": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 200
+                                }
+                              }
+                            },
+                            "comment": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "createdBy": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "history"
+                      ],
+                      "properties": {
+                        "history": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "version",
+                              "algo",
+                              "symbol",
+                              "period",
+                              "parameters",
+                              "attribution",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "version": {
+                                "type": "integer"
+                              },
+                              "algo": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "version"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "integer",
+                                    "nullable": true
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "version": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "symbol": {
+                                "type": "string"
+                              },
+                              "period": {
+                                "type": "string"
+                              },
+                              "parameters": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              },
+                              "attribution": {
+                                "type": "object",
+                                "required": [
+                                  "mode"
+                                ],
+                                "properties": {
+                                  "mode": {
+                                    "enum": [
+                                      "auto",
+                                      "label",
+                                      "label-pattern",
+                                      "account-symbol"
+                                    ]
+                                  },
+                                  "orderLabel": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  }
+                                }
+                              },
+                              "comment": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "createdBy": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "description": "All versions, newest first"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a managed instance and its configuration history",
+        "tags": [
+          "instances"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "description": "The instance name"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/{name}/configs": {
+      "post": {
+        "summary": "Save a new configuration version (also used to roll back to an old one)",
+        "tags": [
+          "instances"
+        ],
+        "description": "Nothing is restarted; a running instance keeps its configuration until it is redeployed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "algoId",
+                  "symbol",
+                  "period",
+                  "parameters",
+                  "attribution"
+                ],
+                "properties": {
+                  "algoId": {
+                    "type": "integer"
+                  },
+                  "symbol": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "period": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 50
+                  },
+                  "parameters": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "attribution": {
+                    "type": "object",
+                    "required": [
+                      "mode"
+                    ],
+                    "properties": {
+                      "mode": {
+                        "enum": [
+                          "auto",
+                          "label",
+                          "label-pattern",
+                          "account-symbol"
+                        ]
+                      },
+                      "orderLabel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    }
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "account",
+                    "createdAt",
+                    "config"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "number",
+                        "displayName"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "number": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "config": {
+                      "type": "object",
+                      "required": [
+                        "version",
+                        "algo",
+                        "symbol",
+                        "period",
+                        "parameters",
+                        "attribution",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "version": {
+                          "type": "integer"
+                        },
+                        "algo": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name",
+                            "version"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "symbol": {
+                          "type": "string"
+                        },
+                        "period": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "attribution": {
+                          "type": "object",
+                          "required": [
+                            "mode"
+                          ],
+                          "properties": {
+                            "mode": {
+                              "enum": [
+                                "auto",
+                                "label",
+                                "label-pattern",
+                                "account-symbol"
+                              ]
+                            },
+                            "orderLabel": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          }
+                        },
+                        "comment": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "createdBy": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "parameter",
+                          "code"
+                        ],
+                        "properties": {
+                          "parameter": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_type"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "below_min"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "above_max"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_option"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_format"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "unknown": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
             "description": "Default Response",
             "content": {
               "application/json": {

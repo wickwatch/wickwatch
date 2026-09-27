@@ -26,6 +26,8 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 - `IsoTime` must be UTC with a `Z` suffix; the schema enforces it.
 - `Position`, `PendingOrder` and `Deal` volumes are in lots; monetary values in the account currency.
 - `BrokerAdapter.emergencyStop()` only covers the broker side (close positions, cancel orders). Stopping the instances is orchestrated by the core via the runtime adapter.
+- `BrokerAdapter.periods()` (optional) lists the timeframes an instance can run on; the instance form offers them and the server checks against them. Without it the timeframe is free text.
+- `AlgoMetadata.fullAccess` tells whether the algo must be started with unrestricted access rights.
 - Adapters throw `AdapterError` with one of the codes `auth_failed`, `not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. The message is for logs only and must never contain secrets.
 
 ## First implementations

@@ -106,9 +106,25 @@ async function logout() {
     padding: var(--ww-space-3) var(--ww-space-4);
   }
 
-  nav,
   .user__name {
     display: none;
+  }
+
+  /* Logo and controls on the first row, the navigation as its own scrollable row below. */
+  .header__start {
+    display: contents;
+  }
+
+  nav {
+    order: 3;
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    gap: var(--ww-space-1);
+  }
+
+  .nav-link {
+    flex: none;
   }
 }
 </style>

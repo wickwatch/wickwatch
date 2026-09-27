@@ -96,5 +96,7 @@ export const SystemInfo = Type.Object({
   adapters: Type.Object({ runtime: Type.String(), broker: Type.String(), config: Type.String() }),
   /** The UI hides features the broker adapter does not support. */
   capabilities: Capabilities,
+  /** Timeframes offered by the broker adapter, if it knows them. */
+  periods: Type.Optional(Type.Array(Type.String())),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

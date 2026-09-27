@@ -137,12 +137,13 @@
     "noPositions": "No open positions.",
     "noOrders": "No pending orders.",
     "labels": "Labels",
-    "labelsHint": "How Wickwatch recognises this instance. Parameters and algo version follow with creating and editing instances.",
     "brokerError": "Broker data not available: {reason}",
     "closeTitle": "Close position",
     "closeConfirm": "Close position {id} ({symbol}) at market price now?",
     "positionClosed": "Position {id} closed.",
-    "closeFailed": "Closing position {id} failed: {reason}"
+    "closeFailed": "Closing position {id} failed: {reason}",
+    "configLink": "Configuration (version {version})",
+    "externallyManaged": "Defined outside Wickwatch (e.g. in a compose file); only its labels are known."
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"
@@ -189,7 +190,16 @@
       "algo_empty": "The file is empty.",
       "algo_duplicate": "This file is already uploaded.",
       "algo_unreadable": "The file could not be read as an algo.",
-      "algo_version_exists": "This version already exists; enter another version."
+      "algo_version_exists": "This version already exists; enter another version.",
+      "instance_exists": "An instance with this name already exists.",
+      "invalid_symbol": "The broker does not offer this symbol on the account.",
+      "invalid_period": "Unknown timeframe.",
+      "invalid_parameters": "Some parameters are invalid; see the marked fields.",
+      "invalid_order_label": "The order label pattern is missing or not a valid regular expression.",
+      "algo_not_found": "This algo version no longer exists.",
+      "config_unchanged": "Nothing changed compared to the current version.",
+      "account_in_use": "Instances are set up on this account; delete them first.",
+      "algo_in_use": "An instance uses this algo version; switch it to another version first."
     }
   },
   "parameterIssue": {
@@ -229,7 +239,9 @@
     "noMatches": "No instance matches the filter.",
     "filterAccount": "Account",
     "allAccounts": "All accounts",
-    "onlyRunning": "Only running"
+    "onlyRunning": "Only running",
+    "notDeployed": "Set up, not running",
+    "notDeployedHint": "Saved in Wickwatch; no container runs under this name yet."
   },
   "table": {
     "instance": "Instance",
@@ -428,5 +440,64 @@
     "default": "Default",
     "range": "Range / options",
     "deleteConfirm": "Delete {name} {version}? The file is removed."
+  },
+  "instanceForm": {
+    "newTitle": "New instance",
+    "editTitle": "Edit {name}",
+    "backToConfig": "← Back to configuration",
+    "basics": "Basics",
+    "name": "Instance name",
+    "nameHint": "Lower-case letters, digits and dashes. Also the container name and the default order label.",
+    "account": "Account",
+    "fixedHint": "Name and account cannot be changed; duplicate the instance instead.",
+    "algo": "Algo",
+    "fullAccess": "This algo asks for full access rights; it will be started with them.",
+    "symbol": "Symbol",
+    "symbolsHint": "{count} symbols from the broker of this account",
+    "symbolsFailed": "Symbols could not be loaded: {reason}",
+    "period": "Timeframe",
+    "parameters": "Parameters",
+    "parametersHint": "Fields come from the algo's metadata. Values are saved completely, so a new algo version with other defaults changes nothing unnoticed.",
+    "noParameters": "This algo has no parameters.",
+    "general": "General",
+    "dropped": "Not in this algo version and removed on saving: {names}",
+    "changed": "Changed",
+    "default": "Default {value}",
+    "reset": "Reset",
+    "attribution": "Trade attribution",
+    "attributionMode": "Mode",
+    "modes": {
+      "auto": "Automatic",
+      "label": "Order label",
+      "label-pattern": "Order label pattern",
+      "account-symbol": "Account and symbol"
+    },
+    "modeHints": {
+      "auto": "By order label (the instance name); otherwise all trades of the account if this is the only instance there, or all trades on its symbol if it is the only one on that symbol.",
+      "label": "Only trades whose order label equals the given label (default: the instance name).",
+      "label-pattern": "Only trades whose order label matches the regular expression, e.g. for third-party bots with numbered labels.",
+      "account-symbol": "Every trade of the account on this symbol. Needs to be the only instance on account and symbol."
+    },
+    "orderLabel": "Expected order label",
+    "orderPattern": "Regular expression",
+    "comment": "Comment (optional)",
+    "commentHint": "Shown in the version history, e.g. why something changed.",
+    "noRestart": "Saving does not start or restart anything.",
+    "noAlgos": "Upload an algo first:",
+    "algoMissing": "The algo version {algo} of this configuration no longer exists; choose another one.",
+    "restoreComment": "Restored from version {version}",
+    "unknownParameters": "The algo does not know these parameters: {names}"
+  },
+  "instanceConfig": {
+    "version": "Version {version}",
+    "saved": "Version {version} saved.",
+    "current": "Current configuration",
+    "currentBadge": "Current",
+    "notDeployed": "Changes take effect when the instance is (re)started from Wickwatch – not automatically.",
+    "algoGone": "Algo version deleted",
+    "value": "Value",
+    "created": "Created",
+    "restore": "Restore…",
+    "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker."
   }
 }

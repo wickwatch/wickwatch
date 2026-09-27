@@ -88,7 +88,14 @@ beforeEach(async () => {
   );
   vi.stubGlobal(
     "fetch",
-    vi.fn(() => Promise.resolve(new Response(JSON.stringify(detail), { status: 200 }))),
+    vi.fn((input: URL) =>
+      Promise.resolve(
+        // Not managed by Wickwatch, like a container from a compose file.
+        input.pathname.includes("/managed-instances/")
+          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+          : new Response(JSON.stringify(detail), { status: 200 }),
+      ),
+    ),
   );
   await router.push({ name: "instance", params: { ref: "alpha" } });
 });

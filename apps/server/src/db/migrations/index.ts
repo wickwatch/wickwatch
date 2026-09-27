@@ -4,6 +4,7 @@ import { sessions } from "./0002-sessions";
 import { challenges } from "./0003-challenges";
 import { attributionOverrides } from "./0004-attribution-overrides";
 import { algos } from "./0005-algos";
+import { instances } from "./0006-instances";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -13,4 +14,5 @@ export const migrations: Record<string, Migration> = {
   "0003-challenges": challenges,
   "0004-attribution-overrides": attributionOverrides,
   "0005-algos": algos,
+  "0006-instances": instances,
 };

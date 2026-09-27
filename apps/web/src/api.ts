@@ -1,5 +1,8 @@
 import type {
+  AttributionMode,
+  ParameterIssue,
   ParameterSchema,
+  ParameterValues,
   ChallengeProfile,
   ChallengeTemplate,
   EmergencyStopReport,
@@ -14,6 +17,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    /** Parameter problems of a rejected configuration (`invalid_parameters`). */
+    readonly details: { issues?: ParameterIssue[]; unknown?: string[] } = {},
   ) {
     super(`API error ${status}: ${code}`);
   }
@@ -41,7 +46,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const code = typeof body === "object" && body && "error" in body ? String(body.error) : "internal";
     if (res.status === 401 && code === "unauthenticated") onUnauthenticated?.();
-    throw new ApiError(res.status, code);
+    const details = typeof body === "object" && body ? (body as ApiError["details"]) : {};
+    throw new ApiError(res.status, code, {
+      ...(details.issues ? { issues: details.issues } : {}),
+      ...(details.unknown ? { unknown: details.unknown } : {}),
+    });
   }
   return body as T;
 }
@@ -83,6 +92,46 @@ export interface AlgoRow {
   fullAccess: boolean;
   parameters: ParameterSchema[];
   uploadedAt: string;
+}
+
+export interface Attribution {
+  mode: AttributionMode;
+  orderLabel?: string;
+}
+
+export interface InstanceConfigRow {
+  version: number;
+  /** `id` is null when this algo version was deleted since. */
+  algo: { id: number | null; name: string; version: string };
+  symbol: string;
+  period: string;
+  parameters: ParameterValues;
+  attribution: Attribution;
+  comment?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface ManagedInstanceRow {
+  id: number;
+  name: string;
+  account: { id: number; number: string; displayName: string };
+  createdAt: string;
+  config: InstanceConfigRow;
+}
+
+export interface ManagedInstanceDetail extends ManagedInstanceRow {
+  /** Newest first. */
+  history: InstanceConfigRow[];
+}
+
+export interface ConfigInput {
+  algoId: number;
+  symbol: string;
+  period: string;
+  parameters: ParameterValues;
+  attribution: Attribution;
+  comment?: string;
 }
 
 export interface CredentialRow {
@@ -157,6 +206,15 @@ export const api = {
       { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
     ),
   deleteAlgo: (id: number) => send<undefined>("DELETE", `algos/${String(id)}`),
+  managedInstances: () => request<ManagedInstanceRow[]>("managed-instances"),
+  managedInstance: (name: string) => request<ManagedInstanceDetail>(`managed-instances/${encodeURIComponent(name)}`),
+  createManagedInstance: (body: { name: string; accountId: number; config: ConfigInput }) =>
+    post<ManagedInstanceRow>("managed-instances", body),
+  saveInstanceConfig: (name: string, config: ConfigInput) =>
+    post<ManagedInstanceRow>(`managed-instances/${encodeURIComponent(name)}/configs`, config),
+  deleteManagedInstance: (name: string) =>
+    send<undefined>("DELETE", `managed-instances/${encodeURIComponent(name)}`, { confirm: name }),
+  accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
   accounts: () => request<AccountRow[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>
     post<AccountRow>("accounts", body),

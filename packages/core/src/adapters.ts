@@ -64,6 +64,8 @@ export interface BrokerAdapter {
   cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void>;
   emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult>;
   algoMetadata(algoPath: string): Promise<AlgoMetadata>;
+  /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */
+  periods?(): string[];
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
 }

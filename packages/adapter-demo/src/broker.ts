@@ -48,6 +48,10 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     return ACCOUNTS.map(({ number, broker, currency, live }) => ({ number, broker, currency, live }));
   }
 
+  periods(): string[] {
+    return ["M1", "M5", "M15", "M30", "H1", "H4", "D1"];
+  }
+
   async symbols(c: Credentials, account: string): Promise<string[]> {
     authenticate(c);
     this.world.account(account);

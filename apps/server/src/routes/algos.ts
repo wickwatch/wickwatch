@@ -172,14 +172,29 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       preHandler: requireAdmin,
       schema: {
         tags: ["algos"],
-        summary: "Delete an algo version and its file",
+        summary: "Delete an algo version and its file (not while an instance uses it)",
         params: Type.Object({ id: Type.Integer() }),
-        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },
     },
     async (request, reply) => {
       const row = await db.selectFrom("algos").selectAll().where("id", "=", request.params.id).executeTakeFirst();
       if (!row) return reply.code(404).send({ error: "not_found" });
+      // Old configuration versions keep name and version; the current ones need the file.
+      const current = await db
+        .selectFrom("instance_configs")
+        .select("id")
+        .where("algo_id", "=", row.id)
+        .where(
+          "id",
+          "in",
+          db
+            .selectFrom("instance_configs")
+            .select((eb) => eb.fn.max("id").as("id"))
+            .groupBy("instance_id"),
+        )
+        .executeTakeFirst();
+      if (current) return reply.code(409).send({ error: "algo_in_use" });
       await db.deleteFrom("algos").where("id", "=", row.id).execute();
       await rm(dirname(join(algosDir, row.file_path)), { recursive: true, force: true });
       await audit(db, { action: "algo.delete", target: `${row.name} ${row.version}`, userId: request.user?.id });

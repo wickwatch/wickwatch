@@ -137,12 +137,13 @@
     "noPositions": "Keine offenen Positionen.",
     "noOrders": "Keine Pending Orders.",
     "labels": "Labels",
-    "labelsHint": "Daran erkennt Wickwatch diese Instanz. Parameter und Algo-Version folgen mit dem Anlegen und Bearbeiten von Instanzen.",
     "brokerError": "Broker-Daten nicht verfügbar: {reason}",
     "closeTitle": "Position schließen",
     "closeConfirm": "Position {id} ({symbol}) jetzt zum Marktpreis schließen?",
     "positionClosed": "Position {id} geschlossen.",
-    "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}"
+    "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}",
+    "configLink": "Konfiguration (Version {version})",
+    "externallyManaged": "Außerhalb von Wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels."
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"
@@ -189,7 +190,16 @@
       "algo_empty": "Die Datei ist leer.",
       "algo_duplicate": "Diese Datei ist schon hochgeladen.",
       "algo_unreadable": "Die Datei konnte nicht als Algo gelesen werden.",
-      "algo_version_exists": "Diese Version gibt es schon; bitte eine andere Version angeben."
+      "algo_version_exists": "Diese Version gibt es schon; bitte eine andere Version angeben.",
+      "instance_exists": "Eine Instanz mit diesem Namen gibt es schon.",
+      "invalid_symbol": "Der Broker bietet dieses Symbol auf dem Konto nicht an.",
+      "invalid_period": "Unbekannter Timeframe.",
+      "invalid_parameters": "Einige Parameter sind ungültig; siehe die markierten Felder.",
+      "invalid_order_label": "Das Order-Label-Muster fehlt oder ist kein gültiger regulärer Ausdruck.",
+      "algo_not_found": "Diese Algo-Version gibt es nicht mehr.",
+      "config_unchanged": "Gegenüber der aktuellen Version hat sich nichts geändert.",
+      "account_in_use": "Auf diesem Konto sind Instanzen eingerichtet; zuerst diese löschen.",
+      "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen."
     }
   },
   "parameterIssue": {
@@ -229,7 +239,9 @@
     "noMatches": "Keine Instanz passt zum Filter.",
     "filterAccount": "Konto",
     "allAccounts": "Alle Konten",
-    "onlyRunning": "Nur laufende"
+    "onlyRunning": "Nur laufende",
+    "notDeployed": "Eingerichtet, läuft nicht",
+    "notDeployedHint": "In Wickwatch gespeichert; unter diesem Namen läuft noch kein Container."
   },
   "table": {
     "instance": "Instanz",
@@ -428,5 +440,64 @@
     "default": "Default",
     "range": "Bereich / Optionen",
     "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt."
+  },
+  "instanceForm": {
+    "newTitle": "Neue Instanz",
+    "editTitle": "{name} bearbeiten",
+    "backToConfig": "← Zurück zur Konfiguration",
+    "basics": "Grunddaten",
+    "name": "Instanzname",
+    "nameHint": "Kleinbuchstaben, Ziffern und Bindestriche. Auch Container-Name und Standard-Order-Label.",
+    "account": "Konto",
+    "fixedHint": "Name und Konto lassen sich nicht ändern; dafür die Instanz duplizieren.",
+    "algo": "Algo",
+    "fullAccess": "Dieser Algo verlangt volle Zugriffsrechte und wird mit ihnen gestartet.",
+    "symbol": "Symbol",
+    "symbolsHint": "{count} Symbole vom Broker dieses Kontos",
+    "symbolsFailed": "Symbole konnten nicht geladen werden: {reason}",
+    "period": "Timeframe",
+    "parameters": "Parameter",
+    "parametersHint": "Die Felder kommen aus den Metadaten des Algos. Werte werden vollständig gespeichert, damit eine neue Algo-Version mit anderen Defaults nichts unbemerkt ändert.",
+    "noParameters": "Dieser Algo hat keine Parameter.",
+    "general": "Allgemein",
+    "dropped": "In dieser Algo-Version nicht vorhanden, wird beim Speichern entfernt: {names}",
+    "changed": "Geändert",
+    "default": "Default {value}",
+    "reset": "Zurücksetzen",
+    "attribution": "Trade-Zuordnung",
+    "attributionMode": "Modus",
+    "modes": {
+      "auto": "Automatisch",
+      "label": "Order-Label",
+      "label-pattern": "Order-Label-Muster",
+      "account-symbol": "Konto und Symbol"
+    },
+    "modeHints": {
+      "auto": "Über das Order-Label (den Instanznamen); sonst alle Trades des Kontos, wenn dies die einzige Instanz dort ist, oder alle Trades auf ihrem Symbol, wenn sie die einzige auf diesem Symbol ist.",
+      "label": "Nur Trades, deren Order-Label dem angegebenen Label entspricht (Standard: der Instanzname).",
+      "label-pattern": "Nur Trades, deren Order-Label zum regulären Ausdruck passt, z. B. für fremde Bots mit nummerierten Labels.",
+      "account-symbol": "Jeder Trade des Kontos auf diesem Symbol. Muss die einzige Instanz auf Konto und Symbol sein."
+    },
+    "orderLabel": "Erwartetes Order-Label",
+    "orderPattern": "Regulärer Ausdruck",
+    "comment": "Kommentar (optional)",
+    "commentHint": "Erscheint in der Versionshistorie, z. B. warum etwas geändert wurde.",
+    "noRestart": "Speichern startet nichts und startet nichts neu.",
+    "noAlgos": "Zuerst einen Algo hochladen:",
+    "algoMissing": "Die Algo-Version {algo} dieser Konfiguration gibt es nicht mehr; bitte eine andere wählen.",
+    "restoreComment": "Wiederhergestellt aus Version {version}",
+    "unknownParameters": "Diese Parameter kennt der Algo nicht: {names}"
+  },
+  "instanceConfig": {
+    "version": "Version {version}",
+    "saved": "Version {version} gespeichert.",
+    "current": "Aktuelle Konfiguration",
+    "currentBadge": "Aktuell",
+    "notDeployed": "Änderungen wirken erst, wenn die Instanz aus Wickwatch (neu) gestartet wird – nicht automatisch.",
+    "algoGone": "Algo-Version gelöscht",
+    "value": "Wert",
+    "created": "Angelegt",
+    "restore": "Wiederherstellen…",
+    "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts."
   }
 }
