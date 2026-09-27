@@ -13,3 +13,4 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - English and German UI, dark and light mode.
 - Docker image, CI with DCO check, release workflow for GHCR.
 - Docker runtime adapter: finds labelled containers, start/stop/restart, logs (also followed), host status.
+- Instance detail page: key figures and realised P&L curve for 7/30/90 days, open positions (close with confirmation), pending orders, trade history, live log via SSE with filters.

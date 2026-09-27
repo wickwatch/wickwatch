@@ -154,6 +154,39 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   );
 
   app.post(
+    "/accounts/:number/positions/:positionId/close",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["accounts"],
+        summary: "Close one open position at the broker",
+        description: "Destructive. `confirm` must repeat the position id.",
+        params: Type.Object({ number: Type.String({ minLength: 1 }), positionId: Type.String({ minLength: 1 }) }),
+        body: Type.Object({ confirm: Type.String() }),
+        response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody, 502: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, positionId } = request.params;
+      if (request.body.confirm !== positionId) return reply.code(400).send({ error: "confirmation_required" });
+      const account = await findAccount(accounts, number);
+      if (!account) return reply.code(404).send({ error: "not_found" });
+
+      const userId = request.user?.id;
+      const target = `${number}/${positionId}`;
+      try {
+        await adapters.broker.closePosition(await account.credentials(), number, positionId);
+        await audit(db, { action: "position.close", target, details: { ok: true }, userId });
+      } catch (error) {
+        const code = isAdapterError(error) ? error.code : "internal";
+        await audit(db, { action: "position.close", target, details: { ok: false, error: code }, userId });
+        throw error;
+      }
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
     "/accounts/:number/emergency-stop",
     {
       preHandler: requireAdmin,

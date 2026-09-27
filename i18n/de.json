@@ -74,7 +74,21 @@
     "history": "Verlauf",
     "config": "Konfiguration",
     "liveLog": "Live-Log",
-    "versions": "Konfigurationsversionen"
+    "versions": "Konfigurationsversionen",
+    "back": "← Zur Übersicht",
+    "runningFor": "läuft seit {duration}",
+    "restarts": "{count} Neustart | {count} Neustarts",
+    "range": "Zeitraum",
+    "days": "{days} Tage",
+    "noPositions": "Keine offenen Positionen.",
+    "noOrders": "Keine Pending Orders.",
+    "labels": "Labels",
+    "labelsHint": "Daran erkennt Wickwatch diese Instanz. Parameter und Algo-Version folgen mit dem Anlegen und Bearbeiten von Instanzen.",
+    "brokerError": "Broker-Daten nicht verfügbar: {reason}",
+    "closeTitle": "Position schließen",
+    "closeConfirm": "Position {id} ({symbol}) jetzt zum Marktpreis schließen?",
+    "positionClosed": "Position {id} geschlossen.",
+    "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}"
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"
@@ -219,6 +233,62 @@
       "scan": "Scanne den QR-Code mit einer Authenticator-App (z. B. 2FAS, Aegis, Google Authenticator) und gib dann den aktuellen Code ein.",
       "qrAlt": "QR-Code für die Authenticator-App",
       "manual": "Scannen klappt nicht? Schlüssel manuell eingeben"
+    }
+  },
+  "chart": {
+    "pnlTitle": "Realisierter P&L",
+    "pnlHint": "Kumuliertes Ergebnis der geschlossenen Trades im Zeitraum, inklusive Kommission und Swap.",
+    "noTrades": "Keine geschlossenen Trades in diesem Zeitraum.",
+    "deal": "Trade",
+    "pnlSummary": "Realisierter P&L {value} nach {trades} Trades. Mit den Pfeiltasten durch die Trades gehen."
+  },
+  "kpi": {
+    "trades": "Trades",
+    "winRate": "Trefferquote",
+    "profitFactor": "Profit-Faktor",
+    "averageWin": "Ø Gewinn",
+    "averageLoss": "Ø Verlust",
+    "net": "Netto"
+  },
+  "trade": {
+    "opened": "Eröffnet",
+    "time": "Zeit",
+    "side": "Richtung",
+    "buy": "Buy",
+    "sell": "Sell",
+    "lots": "Lots",
+    "entry": "Einstieg",
+    "price": "Preis",
+    "sl": "SL",
+    "tp": "TP",
+    "pnl": "P&L",
+    "costs": "Kosten",
+    "type": "Typ",
+    "orderType": {
+      "limit": "Limit",
+      "stop": "Stop",
+      "stopLimit": "Stop-Limit"
+    },
+    "showAll": "Alle {count} Trades anzeigen",
+    "showLess": "Weniger anzeigen"
+  },
+  "log": {
+    "filter": "Log filtern",
+    "filters": {
+      "all": "Alle",
+      "problems": "Warnungen & Fehler",
+      "setups": "Setups"
+    },
+    "follow": "Mitlaufen",
+    "empty": "Keine Log-Zeilen.",
+    "state": {
+      "connecting": "Verbinde …",
+      "live": "Live",
+      "reconnecting": "Verbinde neu …"
+    },
+    "level": {
+      "warn": "WARN",
+      "error": "FEHLER"
     }
   }
 }

@@ -12,6 +12,7 @@ import type {
   RuntimeInstance,
 } from "./schemas";
 import { toIsoTime } from "./schemas";
+import { dealResult, round2 } from "./stats";
 
 export interface AccountSnapshot {
   number: string;
@@ -32,33 +33,42 @@ export interface OverviewInput {
   accounts: AccountSnapshot[];
 }
 
-const dealResult = (deal: Deal) => deal.pnl + (deal.commission ?? 0) + (deal.swap ?? 0);
-const sum = (values: number[]) => Math.round(values.reduce((a, b) => a + b, 0) * 100) / 100;
+const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
+
+/** One instance with its positions and today's P&L; shared by the overview and the detail view. */
+export function summarizeInstance(
+  instance: RuntimeInstance,
+  labelPrefix: string,
+  broker: { positions: Position[]; dealsToday: Deal[] } | undefined,
+  lastLog: LogLine | undefined,
+): InstanceSummary {
+  const labels = readLabels(labelPrefix, instance.labels);
+  const name = labels.instance ?? instance.ref;
+  const positions = broker?.positions.filter((p) => p.label === name) ?? [];
+  const deals = broker?.dealsToday.filter((d) => d.label === name) ?? [];
+  return {
+    ref: instance.ref,
+    name,
+    status: instance.status,
+    restartCount: instance.restartCount,
+    openPositions: positions.length,
+    dayPnl: sum([...deals.map(dealResult), ...positions.map((p) => p.pnl)]),
+    ...(labels.account ? { account: labels.account } : {}),
+    ...(labels.symbol ? { symbol: labels.symbol } : {}),
+    ...(labels.period ? { period: labels.period } : {}),
+    ...(instance.startedAt ? { startedAt: instance.startedAt } : {}),
+    ...(lastLog ? { lastLog } : {}),
+  };
+}
 
 /** Combines runtime and broker data into the overview. Pure: no I/O. */
 export function buildOverview(input: OverviewInput): Overview {
   const byNumber = new Map(input.accounts.map((a) => [a.number, a]));
 
-  const instances = input.instances.map((instance): InstanceSummary => {
-    const labels = readLabels(input.labelPrefix, instance.labels);
-    const name = labels.instance ?? instance.ref;
-    const data = labels.account ? byNumber.get(labels.account)?.data : undefined;
-    const positions = data?.positions.filter((p) => p.label === name) ?? [];
-    const deals = data?.dealsToday.filter((d) => d.label === name) ?? [];
-    const lastLog = input.lastLogs.get(instance.ref);
-    return {
-      ref: instance.ref,
-      name,
-      status: instance.status,
-      restartCount: instance.restartCount,
-      openPositions: positions.length,
-      dayPnl: sum([...deals.map(dealResult), ...positions.map((p) => p.pnl)]),
-      ...(labels.account ? { account: labels.account } : {}),
-      ...(labels.symbol ? { symbol: labels.symbol } : {}),
-      ...(labels.period ? { period: labels.period } : {}),
-      ...(instance.startedAt ? { startedAt: instance.startedAt } : {}),
-      ...(lastLog ? { lastLog } : {}),
-    };
+  const instances = input.instances.map((instance) => {
+    const account = readLabels(input.labelPrefix, instance.labels).account;
+    const data = account ? byNumber.get(account)?.data : undefined;
+    return summarizeInstance(instance, input.labelPrefix, data, input.lastLogs.get(instance.ref));
   });
 
   const accounts = input.accounts.map((account): AccountSummary => {

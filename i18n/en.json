@@ -74,7 +74,21 @@
     "history": "History",
     "config": "Configuration",
     "liveLog": "Live log",
-    "versions": "Configuration versions"
+    "versions": "Configuration versions",
+    "back": "← Back to overview",
+    "runningFor": "running for {duration}",
+    "restarts": "{count} restart | {count} restarts",
+    "range": "Time range",
+    "days": "{days} days",
+    "noPositions": "No open positions.",
+    "noOrders": "No pending orders.",
+    "labels": "Labels",
+    "labelsHint": "How Wickwatch recognises this instance. Parameters and algo version follow with creating and editing instances.",
+    "brokerError": "Broker data not available: {reason}",
+    "closeTitle": "Close position",
+    "closeConfirm": "Close position {id} ({symbol}) at market price now?",
+    "positionClosed": "Position {id} closed.",
+    "closeFailed": "Closing position {id} failed: {reason}"
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"
@@ -219,6 +233,62 @@
       "scan": "Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator), then enter the current code.",
       "qrAlt": "QR code for the authenticator app",
       "manual": "Can't scan? Enter the key manually"
+    }
+  },
+  "chart": {
+    "pnlTitle": "Realised P&L",
+    "pnlHint": "Cumulative result of the closed trades in the time range, including commission and swap.",
+    "noTrades": "No closed trades in this time range.",
+    "deal": "Trade",
+    "pnlSummary": "Realised P&L {value} after {trades} trades. Use the arrow keys to go through the trades."
+  },
+  "kpi": {
+    "trades": "Trades",
+    "winRate": "Win rate",
+    "profitFactor": "Profit factor",
+    "averageWin": "Avg. win",
+    "averageLoss": "Avg. loss",
+    "net": "Net"
+  },
+  "trade": {
+    "opened": "Opened",
+    "time": "Time",
+    "side": "Side",
+    "buy": "Buy",
+    "sell": "Sell",
+    "lots": "Lots",
+    "entry": "Entry",
+    "price": "Price",
+    "sl": "SL",
+    "tp": "TP",
+    "pnl": "P&L",
+    "costs": "Costs",
+    "type": "Type",
+    "orderType": {
+      "limit": "Limit",
+      "stop": "Stop",
+      "stopLimit": "Stop limit"
+    },
+    "showAll": "Show all {count} trades",
+    "showLess": "Show fewer"
+  },
+  "log": {
+    "filter": "Filter log",
+    "filters": {
+      "all": "All",
+      "problems": "Warnings & errors",
+      "setups": "Setups"
+    },
+    "follow": "Follow",
+    "empty": "No log lines.",
+    "state": {
+      "connecting": "Connecting …",
+      "live": "Live",
+      "reconnecting": "Reconnecting …"
+    },
+    "level": {
+      "warn": "WARN",
+      "error": "ERROR"
     }
   }
 }

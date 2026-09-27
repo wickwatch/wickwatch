@@ -62,7 +62,7 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
   await app.register(overviewRoutes, { adapters, accounts, labelPrefix, prefix: api });
-  await app.register(instanceRoutes, { adapters, db, prefix: api });
+  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(credentialRoutes, { db, cipher, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, prefix: api });
   await app.register(web, { basePath, distDir: config.webDistDir });

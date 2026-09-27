@@ -29,6 +29,29 @@ export function formatSigned(locale: string, value: number, digits = 2): string 
   return withMinus(format.format(value));
 }
 
+/** Prices: as many decimals as the value has, up to 5. */
+export function formatPrice(locale: string, value: number): string {
+  return withMinus(numberFormat(locale, { maximumFractionDigits: 5 }).format(value));
+}
+
+const dateTimeCache = new Map<string, Intl.DateTimeFormat>();
+
+/** Local date and time in the browser's time zone; internally everything is UTC. */
+export function formatDateTime(locale: string, iso: string, style: "datetime" | "time" | "date" = "datetime"): string {
+  const key = `${locale}|${style}`;
+  let format = dateTimeCache.get(key);
+  if (!format) {
+    const options: Intl.DateTimeFormatOptions =
+      style === "time"
+        ? { hour: "2-digit", minute: "2-digit", second: "2-digit" }
+        : style === "date"
+          ? { day: "2-digit", month: "2-digit" }
+          : { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" };
+    dateTimeCache.set(key, (format = new Intl.DateTimeFormat(locale, options)));
+  }
+  return format.format(new Date(iso));
+}
+
 export function formatPercent(locale: string, fraction: number): string {
   return numberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(fraction);
 }

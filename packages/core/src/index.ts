@@ -7,3 +7,5 @@ export * from "./parameters";
 export * from "./setup-log";
 export * from "./overview";
 export * from "./operations";
+export * from "./stats";
+export * from "./instance-detail";

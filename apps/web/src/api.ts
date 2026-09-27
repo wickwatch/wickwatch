@@ -1,4 +1,4 @@
-import type { EmergencyStopReport, HostStatus, Overview, SystemInfo } from "@wickwatch/core";
+import type { EmergencyStopReport, HostStatus, InstanceDetail, Overview, SystemInfo } from "@wickwatch/core";
 
 /** `code` is an i18n key suffix: error.adapter.* or error.api.* */
 export class ApiError extends Error {
@@ -81,6 +81,15 @@ export const api = {
   host: () => request<HostStatus>("host"),
   instanceAction: (ref: string, action: InstanceAction) =>
     post<undefined>(`instances/${encodeURIComponent(ref)}/${action}`),
+  instance: (ref: string, days: number) =>
+    request<InstanceDetail>(`instances/${encodeURIComponent(ref)}?days=${String(days)}`),
+  /** URL for an EventSource with the live log (history first, then new lines). */
+  logStreamUrl: (ref: string, tail = 200) =>
+    url(`instances/${encodeURIComponent(ref)}/logs/stream?tail=${String(tail)}`),
+  closePosition: (account: string, positionId: string) =>
+    post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
+      confirm: positionId,
+    }),
   emergencyStop: (account: string) =>
     post<EmergencyStopReport>(`accounts/${encodeURIComponent(account)}/emergency-stop`, { confirm: account }),
 };

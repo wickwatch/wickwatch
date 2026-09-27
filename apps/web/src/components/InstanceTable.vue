@@ -44,7 +44,9 @@ const uptime = (instance: InstanceSummary, now: number) => {
       <tbody>
         <tr v-for="instance in instances" :key="instance.ref">
           <th scope="row">
-            <span class="mono name">{{ instance.name }}</span>
+            <RouterLink :to="{ name: 'instance', params: { ref: instance.ref } }" class="mono name">{{
+              instance.name
+            }}</RouterLink>
             <!-- Compact meta line for narrow screens, where the detail columns are hidden. -->
             <span class="narrow muted mono meta">{{
               [instance.symbol, instance.period].filter(Boolean).join(" · ")

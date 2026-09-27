@@ -1567,6 +1567,695 @@
         }
       }
     },
+    "/api/v1/instances/{ref}": {
+      "get": {
+        "summary": "Instance detail: status, positions, orders, deals and key figures of the range",
+        "tags": [
+          "instances"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 366,
+              "default": 30
+            },
+            "in": "query",
+            "name": "days",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "time",
+                    "instance",
+                    "positions",
+                    "pendingOrders",
+                    "deals",
+                    "stats",
+                    "range"
+                  ],
+                  "properties": {
+                    "time": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "instance": {
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "ref",
+                            "name",
+                            "status",
+                            "restartCount",
+                            "openPositions",
+                            "dayPnl"
+                          ],
+                          "properties": {
+                            "ref": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "account": {
+                              "type": "string"
+                            },
+                            "symbol": {
+                              "type": "string"
+                            },
+                            "period": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "running"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "stopped"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "restarting"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "error"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                }
+                              ]
+                            },
+                            "startedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "Z$"
+                            },
+                            "restartCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "openPositions": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "dayPnl": {
+                              "type": "number"
+                            },
+                            "lastLog": {
+                              "type": "object",
+                              "required": [
+                                "time",
+                                "text"
+                              ],
+                              "properties": {
+                                "time": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "Z$"
+                                },
+                                "text": {
+                                  "type": "string"
+                                },
+                                "level": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "info"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "warn"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "error"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                "setup": {
+                                  "type": "object",
+                                  "additionalProperties": {}
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "labels"
+                          ],
+                          "properties": {
+                            "labels": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              }
+                            },
+                            "image": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "account": {
+                      "type": "object",
+                      "required": [
+                        "number",
+                        "displayName"
+                      ],
+                      "properties": {
+                        "number": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "brokerError": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "auth_failed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "not_found"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "unsupported"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "invalid_input"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "timeout"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "unavailable"
+                          ]
+                        }
+                      ]
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "symbol",
+                          "side",
+                          "volume",
+                          "entry",
+                          "pnl",
+                          "openedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "entry": {
+                            "type": "number"
+                          },
+                          "sl": {
+                            "type": "number"
+                          },
+                          "tp": {
+                            "type": "number"
+                          },
+                          "pnl": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          }
+                        }
+                      }
+                    },
+                    "pendingOrders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "symbol",
+                          "type",
+                          "side",
+                          "volume",
+                          "price"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stop"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stopLimit"
+                                ]
+                              }
+                            ]
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "price": {
+                            "type": "number"
+                          },
+                          "sl": {
+                            "type": "number"
+                          },
+                          "tp": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "deals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "positionId",
+                          "symbol",
+                          "side",
+                          "volume",
+                          "price",
+                          "pnl",
+                          "time"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "positionId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "price": {
+                            "type": "number"
+                          },
+                          "pnl": {
+                            "type": "number"
+                          },
+                          "commission": {
+                            "type": "number"
+                          },
+                          "swap": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "time": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          }
+                        }
+                      }
+                    },
+                    "stats": {
+                      "type": "object",
+                      "required": [
+                        "trades",
+                        "wins",
+                        "losses",
+                        "grossProfit",
+                        "grossLoss",
+                        "net"
+                      ],
+                      "properties": {
+                        "trades": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "wins": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "losses": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "winRate": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "profitFactor": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "averageWin": {
+                          "type": "number"
+                        },
+                        "averageLoss": {
+                          "type": "number"
+                        },
+                        "grossProfit": {
+                          "type": "number"
+                        },
+                        "grossLoss": {
+                          "type": "number"
+                        },
+                        "net": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "range": {
+                      "type": "object",
+                      "required": [
+                        "from",
+                        "to"
+                      ],
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/instances/{ref}/logs/stream": {
+      "get": {
+        "summary": "Live log as Server-Sent Events",
+        "tags": [
+          "instances"
+        ],
+        "description": "Sends the last `tail` lines, then new lines as they appear. Each event is `event: log` with a LogLine as JSON; comment lines keep the connection open. Stream errors arrive as `event: error` with `{ error }`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "default": 200
+            },
+            "in": "query",
+            "name": "tail",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instances/{ref}/{action}": {
       "post": {
         "summary": "Start, stop or restart an instance",
@@ -1577,7 +2266,8 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 200
             },
             "in": "path",
             "name": "ref",
@@ -1663,6 +2353,27 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -2443,6 +3154,189 @@
             }
           },
           "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{number}/positions/{positionId}/close": {
+      "post": {
+        "summary": "Close one open position at the broker",
+        "tags": [
+          "accounts"
+        ],
+        "description": "Destructive. `confirm` must repeat the position id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "positionId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Default Response",
             "content": {
               "application/json": {
