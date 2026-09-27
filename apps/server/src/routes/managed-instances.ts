@@ -1,11 +1,16 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   AdapterError,
   AlgoMetadata,
   ATTRIBUTION_MODES,
+  InstanceStatus,
+  managedLabels,
   ParameterIssue,
   ParameterValues,
   readLabels,
   type AttributionMode,
+  type RuntimeInstance,
 } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -32,7 +37,7 @@ const ConfigInput = Type.Object({
   algoId: Type.Integer(),
   symbol: Type.String({ minLength: 1, maxLength: 100 }),
   period: Type.String({ minLength: 1, maxLength: 50 }),
-  /** All values; parameters left out run with the algo's default. */
+  /** Parameters left out are stored with the algo's default. */
   parameters: ParameterValues,
   attribution: Attribution,
   comment: Type.Optional(Type.String({ maxLength: 500 })),
@@ -53,12 +58,22 @@ const InstanceConfig = Type.Object({
 });
 type InstanceConfig = Type.Static<typeof InstanceConfig>;
 
+/** The runtime instance of the same name, if there is one. */
+const Deployment = Type.Object({
+  status: InstanceStatus,
+  /** Created by Wickwatch; false for a container of the same name defined elsewhere. */
+  managed: Type.Boolean(),
+  /** Configuration version the instance runs with (from its labels). */
+  configVersion: Type.Optional(Type.Integer()),
+});
+
 const ManagedInstance = Type.Object({
   id: Type.Integer(),
   name: Type.String(),
   account: Type.Object({ id: Type.Integer(), number: Type.String(), displayName: Type.String() }),
   createdAt: Type.String(),
   config: InstanceConfig,
+  deployment: Type.Optional(Deployment),
 });
 type ManagedInstance = Type.Static<typeof ManagedInstance>;
 
@@ -112,11 +127,12 @@ export interface ManagedInstanceRouteOptions {
   db: Db;
   symbols: SymbolCache;
   labelPrefix: string;
+  algosDir: string;
 }
 
 export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, symbols, labelPrefix },
+  { adapters, accounts, db, symbols, labelPrefix, algosDir },
 ) => {
   const configs = () =>
     db
@@ -139,9 +155,21 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         "users.username as created_by_name",
       ]);
 
+  function deployment(runtime: RuntimeInstance | undefined): Type.Static<typeof Deployment> | undefined {
+    if (!runtime) return undefined;
+    const labels = readLabels(labelPrefix, runtime.labels);
+    const version = Number(labels["config-version"]);
+    return {
+      status: runtime.status,
+      managed: labels.managed === "true",
+      ...(Number.isInteger(version) && version > 0 ? { configVersion: version } : {}),
+    };
+  }
+
   /** Managed instances of the active broker adapter with their current configuration. */
   async function load(name?: string): Promise<ManagedInstance[]> {
-    const entries = new Map((await accounts.list()).map((a) => [a.id, a]));
+    const [entryList, runtimes] = await Promise.all([accounts.list(), adapters.runtime.list().catch(() => undefined)]);
+    const entries = new Map(entryList.map((a) => [a.id, a]));
     let query = db.selectFrom("instances").selectAll().orderBy("name");
     if (name !== undefined) query = query.where("name", "=", name);
     const rows = (await query.execute()).filter((r) => entries.has(r.account_id));
@@ -161,6 +189,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const entry = entries.get(row.account_id);
       const config = byInstance.get(row.id);
       if (!entry || !config) return [];
+      const deployed = deployment(runtimes?.find((i) => i.ref === row.name));
       return [
         {
           id: row.id,
@@ -168,6 +197,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           account: { id: entry.id, number: entry.number, displayName: entry.displayName },
           createdAt: row.created_at,
           config: toConfig(config),
+          ...(deployed ? { deployment: deployed } : {}),
         },
       ];
     });
@@ -216,7 +246,11 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         algo_version: algo.version,
         symbol,
         period,
-        parameters: canonical(input.parameters),
+        // Complete: missing parameters get the algo's default, so a version never depends on defaults.
+        parameters: canonical({
+          ...Object.fromEntries(schema.filter((p) => p.default !== undefined).map((p) => [p.name, p.default])),
+          ...input.parameters,
+        }),
         attribution: mode,
         // Only the label modes use it.
         order_label: mode === "label" || mode === "label-pattern" ? (orderLabel ?? null) : null,
@@ -364,13 +398,97 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
   );
 
+  app.post(
+    "/managed-instances/:name/deploy",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Create or replace the instance with its current configuration",
+        description:
+          "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one.",
+        params: NameParams,
+        body: Type.Object({
+          confirm: Type.String({ description: "The instance name" }),
+          start: Type.Optional(Type.Boolean()),
+        }),
+        response: {
+          200: Type.Object({ status: InstanceStatus, configVersion: Type.Integer() }),
+          400: ErrorBody,
+          403: ErrorBody,
+          404: ErrorBody,
+          409: ErrorBody,
+          501: ErrorBody,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { name } = request.params;
+      if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
+      const [instance] = await load(name);
+      const entry = instance && (await accounts.list()).find((a) => a.id === instance.account.id);
+      if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
+      if (!adapters.broker.launch) return reply.code(501).send({ error: "launch_unsupported" });
+      if (instance.deployment && !instance.deployment.managed) {
+        return reply.code(409).send({ error: "instance_exists" });
+      }
+      const { config } = instance;
+      const algo =
+        config.algo.id === null
+          ? undefined
+          : await db.selectFrom("algos").selectAll().where("id", "=", config.algo.id).executeTakeFirst();
+      if (!algo) return reply.code(409).send({ error: "algo_not_found" });
+
+      const launch = await adapters.broker.launch({
+        credentials: await entry.credentials(),
+        account: entry.number,
+        algo: {
+          name: algo.name,
+          file: await readFile(join(algosDir, algo.file_path)),
+          fullAccess: algo.full_access === 1,
+        },
+        symbol: config.symbol,
+        period: config.period,
+        parameters: config.parameters,
+      });
+      const spec = {
+        ...launch,
+        name,
+        labels: managedLabels(labelPrefix, {
+          name,
+          account: entry.number,
+          symbol: config.symbol,
+          period: config.period,
+          algoVersion: config.algo.version,
+          configVersion: config.version,
+          attribution: config.attribution.mode,
+          orderLabel: config.attribution.orderLabel,
+        }),
+      };
+      const replaced = instance.deployment !== undefined;
+      let runtime = replaced ? await adapters.runtime.update(name, spec) : await adapters.runtime.create(spec);
+      const start = request.body.start === true && runtime.status !== "running";
+      if (start) {
+        await adapters.runtime.start(name);
+        runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
+      }
+      await audit(db, {
+        action: "instance.deploy",
+        target: name,
+        details: { version: config.version, replaced, started: start, image: launch.image },
+        userId: request.user?.id,
+      });
+      return { status: runtime.status, configVersion: config.version };
+    },
+  );
+
   app.delete(
     "/managed-instances/:name",
     {
       preHandler: requireAdmin,
       schema: {
         tags: ["instances"],
-        summary: "Delete a managed instance and its configuration history",
+        summary: "Delete a managed instance, its container (stopping it) and its configuration history",
         params: NameParams,
         body: Type.Object({ confirm: Type.String({ description: "The instance name" }) }),
         response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
@@ -381,11 +499,14 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
       const [instance] = await load(name);
       if (!instance) return reply.code(404).send({ error: "not_found" });
+      // A container of the same name defined elsewhere stays untouched.
+      const removeContainer = instance.deployment?.managed === true;
+      if (removeContainer) await adapters.runtime.remove(name);
       await db.deleteFrom("instances").where("id", "=", instance.id).execute();
       await audit(db, {
         action: "instance.delete",
         target: name,
-        details: { versions: instance.config.version },
+        details: { versions: instance.config.version, containerRemoved: removeContainer },
         userId: request.user?.id,
       });
       return reply.code(204).send(null);

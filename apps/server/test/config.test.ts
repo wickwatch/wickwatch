@@ -29,7 +29,20 @@ describe("loadConfig", () => {
       algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
       ctraderCliPath: "ctrader-cli",
+      instanceRestartPolicy: "on-failure",
     });
+  });
+
+  it("requires a pinned cTrader image and a known restart policy", () => {
+    expect(load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:5.9.11" }).ctraderImage).toBe(
+      "ghcr.io/spotware/ctrader-console:5.9.11",
+    );
+    expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:latest" })).toThrow(/pinned/);
+    expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console" })).toThrow(/pinned/);
+    expect(load({ CTRADER_IMAGE: `ghcr.io/spotware/ctrader-console@sha256:${"a".repeat(64)}` }).ctraderImage).toMatch(
+      /@sha256/,
+    );
+    expect(() => load({ INSTANCE_RESTART_POLICY: "always" })).toThrow(/INSTANCE_RESTART_POLICY/);
   });
 
   it("treats empty values like unset ones, as in .env.example", () => {

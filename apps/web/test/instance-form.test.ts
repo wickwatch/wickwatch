@@ -180,11 +180,54 @@ describe("InstanceConfigView", () => {
     expect(items[1]?.find("a").attributes("href")).toContain("/instances/alpha-ger40/edit?version=1");
   });
 
+  it("creates and starts the container only after confirmation", async () => {
+    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
+    expect(wrapper.text()).toContain("No container yet.");
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Create and start")
+      ?.trigger("click");
+    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" })[0];
+    expect(dialog?.props("message")).toContain("It will trade on this account.");
+    expect(dialog?.props("message")).toContain("does not also run elsewhere");
+    expect(posted()).toEqual([]);
+    await dialog?.vm.$emit("confirm");
+    await flushPromises();
+    expect(posted()).toEqual([
+      {
+        url: expect.stringMatching(/managed-instances\/alpha-ger40\/deploy$/) as unknown,
+        body: { confirm: "alpha-ger40", start: true },
+      },
+    ]);
+  });
+
+  it("offers to apply a newer version to the running bot as a restart", async () => {
+    response = (url) =>
+      url.pathname.endsWith("/managed-instances/alpha-ger40")
+        ? new Response(
+            JSON.stringify({ ...detail, deployment: { status: "running", managed: true, configVersion: 1 } }),
+            { status: 200 },
+          )
+        : undefined;
+    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
+    expect(wrapper.text()).toContain("runs configuration version 1");
+    expect(wrapper.text()).toContain("Version 2 is saved but not applied yet.");
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Apply version 2 (restart)")
+      ?.trigger("click");
+    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" })[0];
+    expect(dialog?.props("message")).toContain("Restart the running bot with configuration version 2?");
+    await dialog?.vm.$emit("confirm");
+    await flushPromises();
+    expect(posted()[0]?.body).toEqual({ confirm: "alpha-ger40", start: false });
+  });
+
   it("deletes only after confirmation, with the name as confirmation", async () => {
     const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
     await wrapper.find(".btn--danger").trigger("click");
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
-    await wrapper.findComponent({ name: "ConfirmDialog" }).vm.$emit("confirm");
+    await wrapper.findAllComponents({ name: "ConfirmDialog" })[1]?.vm.$emit("confirm");
     await flushPromises();
     const del = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "DELETE");
     expect(JSON.parse(String((del?.[1] as RequestInit).body))).toEqual({ confirm: "alpha-ger40" });

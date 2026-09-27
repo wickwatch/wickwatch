@@ -8,6 +8,7 @@ import type {
   EmergencyStopReport,
   HostStatus,
   InstanceDetail,
+  InstanceStatus,
   Overview,
   SystemInfo,
 } from "@wickwatch/core";
@@ -112,12 +113,20 @@ export interface InstanceConfigRow {
   createdBy?: string;
 }
 
+export interface Deployment {
+  status: InstanceStatus;
+  /** False for a container of the same name that Wickwatch did not create. */
+  managed: boolean;
+  configVersion?: number;
+}
+
 export interface ManagedInstanceRow {
   id: number;
   name: string;
   account: { id: number; number: string; displayName: string };
   createdAt: string;
   config: InstanceConfigRow;
+  deployment?: Deployment;
 }
 
 export interface ManagedInstanceDetail extends ManagedInstanceRow {
@@ -214,6 +223,12 @@ export const api = {
     post<ManagedInstanceRow>(`managed-instances/${encodeURIComponent(name)}/configs`, config),
   deleteManagedInstance: (name: string) =>
     send<undefined>("DELETE", `managed-instances/${encodeURIComponent(name)}`, { confirm: name }),
+  /** Creates or replaces the container with the current configuration; `start` also starts it. */
+  deployInstance: (name: string, start: boolean) =>
+    post<{ status: InstanceStatus; configVersion: number }>(`managed-instances/${encodeURIComponent(name)}/deploy`, {
+      confirm: name,
+      start,
+    }),
   accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
   accounts: () => request<AccountRow[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>

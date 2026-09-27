@@ -23,6 +23,7 @@ export function createAdapters(config: Config): Adapters {
     docker: () =>
       new DockerRuntimeAdapter({
         labelPrefix: config.labelPrefix,
+        restartPolicy: config.instanceRestartPolicy,
         ...(config.dockerHost ? { dockerHost: config.dockerHost } : {}),
         // Disk usage is reported for the file system holding the database.
         ...(config.database.filename === ":memory:" ? {} : { diskPath: dirname(config.database.filename) }),
@@ -30,7 +31,11 @@ export function createAdapters(config: Config): Adapters {
   };
   const broker: Registry<BrokerAdapter> = {
     demo: () => getDemo().broker,
-    "ctrader-cli": () => new CtraderCliBroker({ binary: config.ctraderCliPath }),
+    "ctrader-cli": () =>
+      new CtraderCliBroker({
+        binary: config.ctraderCliPath,
+        ...(config.ctraderImage ? { image: config.ctraderImage } : {}),
+      }),
   };
   const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
 

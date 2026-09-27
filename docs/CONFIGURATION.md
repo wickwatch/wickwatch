@@ -13,9 +13,11 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DATABASE_URL` | `file:./data/wickwatch.db` | SQLite file, relative to the working directory (`/app` in the image). Postgres is planned. |
 | `LABEL_PREFIX` | `wickwatch` | Prefix of the container labels used to find instances, e.g. `wickwatch.instance`. |
 | `DEFAULT_LOCALE` | `en` | `en` or `de`; used when the browser language is not supported. |
-| `RUNTIME_ADAPTER` | `demo` | Runs bot instances. Available: `demo`, `docker` (containers with the label `<LABEL_PREFIX>.instance`). |
+| `RUNTIME_ADAPTER` | `demo` | Runs bot instances. Available: `demo`, `docker` (finds containers with the label `<LABEL_PREFIX>.instance` and creates containers for instances set up in Wickwatch). |
 | `DOCKER_HOST` | local socket | Docker API for the `docker` runtime, e.g. `tcp://socket-proxy:2375` (recommended) or `unix:///var/run/docker.sock`. |
-| `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo` (demo accounts are added to an empty database) and `ctrader-cli` (read-only for now: accounts, balances, positions, orders, deals, algo metadata). |
+| `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo` (demo accounts are added to an empty database) and `ctrader-cli` (accounts, balances, positions, orders, deals, algo metadata, starting bots in the official CLI image; closing positions and the emergency stop are not enabled yet). |
+| `CTRADER_IMAGE` | `ghcr.io/spotware/ctrader-console:5.9.11` | Image instances run with (`BROKER_ADAPTER=ctrader-cli`). Must be pinned to a version or digest, never `latest`; change it deliberately and re-apply the instances. |
+| `INSTANCE_RESTART_POLICY` | `on-failure` | Docker restart policy of created instances: `on-failure` restarts after a crash but leaves a bot stopped that stopped itself (e.g. after its own daily loss rule); `unless-stopped` always restarts; `no` never. |
 | `CTRADER_CLI_PATH` | `ctrader-cli` | cTrader CLI executable for `BROKER_ADAPTER=ctrader-cli`. It must be installed where the server runs. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files. Available: `demo`. |
 | `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. |

@@ -62,7 +62,17 @@ describe("managed instances", () => {
         algo: { id: alphaId, name: "alpha", version: "1.5.0" },
         symbol: "GER40",
         period: "M5",
-        parameters: { EntryMode: "Pullback", RiskPercent: 0.5 },
+        parameters: {
+          BotVersion: "1.5.0",
+          EntryMode: "Pullback",
+          RiskPercent: 0.5,
+          SessionEnd: "17:30",
+          SessionStart: "08:00",
+          StopLossPoints: 40,
+          TakeProfitPoints: 80,
+          TrendPeriod: "H1",
+          UseTrendFilter: true,
+        },
         attribution: { mode: "auto" },
       },
     });
@@ -154,6 +164,57 @@ describe("managed instances", () => {
       (await inject("POST", "/managed-instances", { name: "x9", accountId, config: config() }, viewer)).statusCode,
     ).toBe(403);
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" }, viewer)).statusCode).toBe(403);
+  });
+
+  it("deploys the current version, replaces it on request and removes the container with the instance", async () => {
+    await create("x1");
+    const deploy = (body: Record<string, unknown>) => inject("POST", "/managed-instances/x1/deploy", body);
+    expect((await deploy({ confirm: "nope" })).json()).toEqual({ error: "confirmation_required" });
+
+    expect((await deploy({ confirm: "x1" })).json()).toEqual({ status: "stopped", configVersion: 1 });
+    const overview = await inject("GET", "/overview");
+    const runtime = overview
+      .json<{ instances: { ref: string; name: string }[] }>()
+      .instances.find((i) => i.ref === "x1");
+    expect(runtime).toBeDefined();
+    const detail = () =>
+      inject("GET", "/managed-instances/x1").then((r) => r.json<Managed & { deployment?: unknown }>());
+    expect((await detail()).deployment).toEqual({ status: "stopped", managed: true, configVersion: 1 });
+
+    expect((await deploy({ confirm: "x1", start: true })).json()).toEqual({ status: "running", configVersion: 1 });
+    await inject("POST", "/managed-instances/x1/configs", config({ parameters: { RiskPercent: 1 } }));
+    expect((await detail()).deployment).toMatchObject({ configVersion: 1 });
+    // Replacing keeps it running, now with version 2.
+    expect((await deploy({ confirm: "x1" })).json()).toEqual({ status: "running", configVersion: 2 });
+
+    const log = await t.db
+      .selectFrom("audit_log")
+      .select(["action", "details"])
+      .where("action", "=", "instance.deploy")
+      .execute();
+    expect(log.map((l) => JSON.parse(l.details ?? "{}") as unknown)).toEqual([
+      { version: 1, replaced: false, started: false, image: "wickwatch-demo-runtime:1.0.0" },
+      { version: 1, replaced: true, started: true, image: "wickwatch-demo-runtime:1.0.0" },
+      { version: 2, replaced: true, started: false, image: "wickwatch-demo-runtime:1.0.0" },
+    ]);
+
+    // Removing stops the running instance.
+    expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(204);
+    const after = (await inject("GET", "/overview")).json<{ instances: { ref: string }[] }>();
+    expect(after.instances.some((i) => i.ref === "x1")).toBe(false);
+  });
+
+  it("never takes over a container of the same name defined elsewhere", async () => {
+    await create("x1");
+    // Simulate a compose container that appeared later under the same name.
+    await t.db.updateTable("instances").set({ name: "alpha-ger40-a" }).where("name", "=", "x1").execute();
+    const res = await inject("POST", "/managed-instances/alpha-ger40-a/deploy", { confirm: "alpha-ger40-a" });
+    expect(res.json()).toEqual({ error: "instance_exists" });
+    expect((await inject("DELETE", "/managed-instances/alpha-ger40-a", { confirm: "alpha-ger40-a" })).statusCode).toBe(
+      204,
+    );
+    const overview = (await inject("GET", "/overview")).json<{ instances: { ref: string }[] }>();
+    expect(overview.instances.some((i) => i.ref === "alpha-ger40-a")).toBe(true);
   });
 
   it("lists the broker's symbols and periods", async () => {

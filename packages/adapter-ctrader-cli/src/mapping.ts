@@ -5,6 +5,7 @@ import {
   type BrokerAccount,
   type Deal,
   type ParameterSchema,
+  type ParameterValues,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
@@ -225,4 +226,19 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
     ...(buildTime && !Number.isNaN(Date.parse(buildTime)) ? { buildTime: new Date(buildTime).toISOString() } : {}),
     parameters,
   };
+}
+
+const PARAMETER_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** cBot parameters as `--Name=Value` for `run`; names are the metadata's PropertyName. */
+export function toRunArguments(parameters: ParameterValues): string[] {
+  return Object.entries(parameters).map(([name, value]) => {
+    if (!PARAMETER_NAME.test(name)) throw new AdapterError("invalid_input", `Invalid parameter name ${name}`);
+    const text =
+      typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : "";
+    // One argument each, no shell involved; control characters could still confuse the CLI.
+    if (text === "" && value !== "") throw new AdapterError("invalid_input", `Invalid value for ${name}`);
+    if (/\p{Cc}/u.test(text)) throw new AdapterError("invalid_input", `Invalid value for ${name}`);
+    return `--${name}=${text}`;
+  });
 }

@@ -82,8 +82,10 @@ describe("demo adapter", () => {
     }
   });
 
-  it("refuses to remove a running instance", async () => {
+  it("stops and removes an instance, like the other runtimes", async () => {
     const { runtime } = createDemoAdapters({ now });
-    await expect(runtime.remove("alpha-ger40-a")).rejects.toMatchObject({ code: "invalid_input" });
+    await runtime.remove("alpha-ger40-a");
+    expect((await runtime.list()).some((i) => i.ref === "alpha-ger40-a")).toBe(false);
+    await expect(runtime.remove("alpha-ger40-a")).rejects.toMatchObject({ code: "not_found" });
   });
 });

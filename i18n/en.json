@@ -199,7 +199,8 @@
       "algo_not_found": "This algo version no longer exists.",
       "config_unchanged": "Nothing changed compared to the current version.",
       "account_in_use": "Instances are set up on this account; delete them first.",
-      "algo_in_use": "An instance uses this algo version; switch it to another version first."
+      "algo_in_use": "An instance uses this algo version; switch it to another version first.",
+      "launch_unsupported": "This broker adapter cannot start bots."
     }
   },
   "parameterIssue": {
@@ -493,11 +494,33 @@
     "saved": "Version {version} saved.",
     "current": "Current configuration",
     "currentBadge": "Current",
-    "notDeployed": "Changes take effect when the instance is (re)started from Wickwatch – not automatically.",
+    "notDeployed": "Saved versions take effect only when they are applied here.",
     "algoGone": "Algo version deleted",
     "value": "Value",
     "created": "Created",
     "restore": "Restore…",
-    "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker."
+    "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker.",
+    "deleteContainer": "Its container is stopped and removed."
+  },
+  "deploy": {
+    "title": "Runtime",
+    "none": "No container yet.",
+    "create": "Create container",
+    "createAndStart": "Create and start",
+    "foreign": "A container with this name exists but was not created by Wickwatch (e.g. from a compose file); Wickwatch leaves it alone.",
+    "runsVersion": "runs configuration version {version}",
+    "unknownVersion": "configuration version unknown",
+    "details": "Positions and log →",
+    "outdated": "Version {version} is saved but not applied yet.",
+    "apply": "Apply version {version}",
+    "applyRestart": "Apply version {version} (restart)",
+    "applyAndStart": "Apply version {version} and start",
+    "confirmCreate": "Create the container with configuration version {version}? It stays stopped.",
+    "confirmCreateStart": "Create the container with configuration version {version} and start the bot now? It will trade on this account.",
+    "confirmApply": "Replace the container with configuration version {version}? It stays stopped.",
+    "confirmApplyStart": "Replace the container with configuration version {version} and start the bot? It will trade on this account.",
+    "confirmApplyRunning": "Restart the running bot with configuration version {version}? Open positions stay open; whether the bot manages them again after the restart depends on the bot.",
+    "elsewhere": "Make sure the same bot does not also run elsewhere on this account (e.g. on another server).",
+    "done": "Configuration version {version} applied; status: {status}."
   }
 }

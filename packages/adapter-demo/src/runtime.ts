@@ -12,7 +12,7 @@ import {
   type RuntimeInstance,
 } from "@wickwatch/core";
 import { numericId, random, round } from "./random";
-import type { DemoInstance, DemoWorld } from "./world";
+import { fromDemoCommand, type DemoInstance, type DemoWorld } from "./world";
 
 const LOG_STEP_MS = 5 * 60 * 1000;
 const MAX_TAIL = 1000;
@@ -31,22 +31,25 @@ export class DemoRuntimeAdapter implements RuntimeAdapter {
     if (this.world.instances.has(spec.name)) {
       throw new AdapterError("invalid_input", `Demo instance ${spec.name} already exists`);
     }
-    const instance: DemoInstance = { ref: spec.name, spec, status: "stopped", restartCount: 0 };
+    const instance: DemoInstance = {
+      ref: spec.name,
+      spec,
+      ...fromDemoCommand(spec.command),
+      status: "stopped",
+      restartCount: 0,
+    };
     this.world.instances.set(instance.ref, instance);
     return this.toRuntimeInstance(instance);
   }
 
   async update(ref: string, spec: InstanceSpec): Promise<RuntimeInstance> {
     const instance = this.world.instance(ref);
-    instance.spec = spec;
+    Object.assign(instance, { spec, ...fromDemoCommand(spec.command) });
     return this.toRuntimeInstance(instance);
   }
 
   async remove(ref: string): Promise<void> {
-    const instance = this.world.instance(ref);
-    if (instance.status === "running") {
-      throw new AdapterError("invalid_input", `Stop demo instance ${ref} before removing it`);
-    }
+    this.world.instance(ref);
     this.world.instances.delete(ref);
   }
 
@@ -110,14 +113,15 @@ export class DemoRuntimeAdapter implements RuntimeAdapter {
       labels: { ...instance.spec.labels },
       status: instance.status,
       restartCount: instance.restartCount,
-      image: "wickwatch-demo-runtime:1.0.0",
+      image: instance.spec.image,
       ...(instance.startedAt ? { startedAt: toIsoTime(instance.startedAt) } : {}),
     };
   }
 
   /** Bot output stays untranslated, like real bot logs. */
   private logLine(instance: DemoInstance, time: Date, key: string | number): LogLine {
-    const { name, algo, symbol } = instance.spec;
+    const { algo, symbol } = instance;
+    const { name } = instance.spec;
     const r = random(this.world.seed, name, "log", key);
     let text: string;
     let level: LogLevel = "info";

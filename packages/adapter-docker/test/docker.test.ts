@@ -58,9 +58,10 @@ describe("DockerRuntimeAdapter", () => {
     expect((await adapter.list()).find((i) => i.ref === "bot-b")?.restartCount).toBe(1);
   });
 
-  it("does not create, change or remove instances yet", async () => {
-    const { adapter } = setup();
-    await expect(adapter.remove("bot-b")).rejects.toMatchObject({ code: "unsupported" });
+  it("does not remove containers defined elsewhere (e.g. compose)", async () => {
+    const { adapter, docker } = setup();
+    await expect(adapter.remove("bot-b")).rejects.toMatchObject({ code: "invalid_input" });
+    expect(docker.containers.has("bot-b")).toBe(true);
   });
 
   it("reads timestamped, multiplexed logs and guesses the level", async () => {
@@ -101,6 +102,9 @@ describe("DockerRuntimeAdapter", () => {
         container: () => {
           throw new Error("unused");
         },
+        hasImage: () => Promise.resolve(true),
+        pull: () => Promise.resolve(),
+        create: () => Promise.resolve("unused"),
       },
     });
     await expect(broken.list()).rejects.toMatchObject({ code: "unavailable" });

@@ -199,7 +199,8 @@
       "algo_not_found": "Diese Algo-Version gibt es nicht mehr.",
       "config_unchanged": "Gegenüber der aktuellen Version hat sich nichts geändert.",
       "account_in_use": "Auf diesem Konto sind Instanzen eingerichtet; zuerst diese löschen.",
-      "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen."
+      "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen.",
+      "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten."
     }
   },
   "parameterIssue": {
@@ -493,11 +494,33 @@
     "saved": "Version {version} gespeichert.",
     "current": "Aktuelle Konfiguration",
     "currentBadge": "Aktuell",
-    "notDeployed": "Änderungen wirken erst, wenn die Instanz aus Wickwatch (neu) gestartet wird – nicht automatisch.",
+    "notDeployed": "Gespeicherte Versionen wirken erst, wenn sie hier übernommen werden.",
     "algoGone": "Algo-Version gelöscht",
     "value": "Wert",
     "created": "Angelegt",
     "restore": "Wiederherstellen…",
-    "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts."
+    "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts.",
+    "deleteContainer": "Sein Container wird gestoppt und entfernt."
+  },
+  "deploy": {
+    "title": "Laufzeit",
+    "none": "Noch kein Container.",
+    "create": "Container anlegen",
+    "createAndStart": "Anlegen und starten",
+    "foreign": "Ein Container mit diesem Namen existiert, wurde aber nicht von Wickwatch angelegt (z. B. aus einer Compose-Datei); Wickwatch lässt ihn in Ruhe.",
+    "runsVersion": "läuft mit Konfigurationsversion {version}",
+    "unknownVersion": "Konfigurationsversion unbekannt",
+    "details": "Positionen und Log →",
+    "outdated": "Version {version} ist gespeichert, aber noch nicht übernommen.",
+    "apply": "Version {version} übernehmen",
+    "applyRestart": "Version {version} übernehmen (Neustart)",
+    "applyAndStart": "Version {version} übernehmen und starten",
+    "confirmCreate": "Container mit Konfigurationsversion {version} anlegen? Er bleibt gestoppt.",
+    "confirmCreateStart": "Container mit Konfigurationsversion {version} anlegen und den Bot jetzt starten? Er handelt dann auf diesem Konto.",
+    "confirmApply": "Container durch Konfigurationsversion {version} ersetzen? Er bleibt gestoppt.",
+    "confirmApplyStart": "Container durch Konfigurationsversion {version} ersetzen und den Bot starten? Er handelt dann auf diesem Konto.",
+    "confirmApplyRunning": "Den laufenden Bot mit Konfigurationsversion {version} neu starten? Offene Positionen bleiben offen; ob der Bot sie nach dem Neustart weiter verwaltet, hängt vom Bot ab.",
+    "elsewhere": "Sicherstellen, dass derselbe Bot nicht zusätzlich woanders auf diesem Konto läuft (z. B. auf einem anderen Server).",
+    "done": "Konfigurationsversion {version} übernommen; Status: {status}."
   }
 }

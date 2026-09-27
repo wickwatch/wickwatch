@@ -26,6 +26,7 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 - `IsoTime` must be UTC with a `Z` suffix; the schema enforces it.
 - `Position`, `PendingOrder` and `Deal` volumes are in lots; monetary values in the account currency.
 - `BrokerAdapter.emergencyStop()` only covers the broker side (close positions, cancel orders). Stopping the instances is orchestrated by the core via the runtime adapter.
+- `RuntimeAdapter.create()` takes a neutral `InstanceSpec`: name, pinned image, command, labels and files. The broker adapter's optional `launch()` provides image, command and files (e.g. the algo and a password file); the core adds the labels, including `managed` and `config-version`.
 - `BrokerAdapter.periods()` (optional) lists the timeframes an instance can run on; the instance form offers them and the server checks against them. Without it the timeframe is free text.
 - `AlgoMetadata.fullAccess` tells whether the algo must be started with unrestricted access rights.
 - Adapters throw `AdapterError` with one of the codes `auth_failed`, `not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. The message is for logs only and must never contain secrets.
@@ -37,10 +38,12 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
   - Status: `running` (`error` if the health check reports unhealthy), `restarting`, `stopped` for exit code 0 or a stop signal (130, 137, 143), `error` for other exit codes and dead containers.
   - Logs: Docker's timestamps; the level is guessed from the text (`error`, `failed`, `warn` …), `WW-SETUP` lines are parsed.
   - Host status: load, memory and disk of the machine Wickwatch runs on; NTP state is not reported.
-  - `create`, `update` and `remove` answer `unsupported` for now; define instances in a compose file.
-  - Socket proxy needs `CONTAINERS=1` and `POST=1`.
+  - `create` pulls the image if needed, creates a stopped container (restart policy from `INSTANCE_RESTART_POLICY`, no extra capabilities, `no-new-privileges`, log rotation) and copies the spec's files into it through the Docker API (a tar archive), so passwords never appear in `docker inspect` or host folders. It sets `<prefix>.managed=true`.
+  - `update` builds the replacement under a temporary name, then swaps it in; a running instance is started again. `update` and `remove` refuse containers without `<prefix>.managed=true`, so compose-defined containers are never touched.
+  - Socket proxy needs `CONTAINERS=1`, `IMAGES=1` and `POST=1`.
   - Integration test against a real daemon: `WICKWATCH_DOCKER_TEST=1 pnpm --filter @wickwatch/adapter-docker test`.
-- **ctrader-cli** broker ([`packages/adapter-ctrader-cli`](../packages/adapter-ctrader-cli), tested with CLI 5.9, read-only so far):
+- **ctrader-cli** broker ([`packages/adapter-ctrader-cli`](../packages/adapter-ctrader-cli), tested with CLI 5.9; no trading actions yet):
+  - `launch()`: `run <algo> --ctid --pwd-file --account --symbol --period --exit-on-stop [--full-access] --Name=Value…` in `CTRADER_IMAGE`; algo and password file are copied to `/mnt/wickwatch/` in the container. Parameter names must be plain identifiers and values free of control characters.
   - Batch commands (`accounts`, `symbols`, `metadata`) with `--pwd-file`; the password is written to a private temp file, never passed as an argument.
   - One long-running interactive shell per account for `account`, `positions`, `orders`, `deals`: login once (≈ 4 s), then answers in milliseconds. History commands return nothing as the first command of a session, so every session starts with a warm-up query.
   - Closed accounts are still listed by batch `accounts` but fail with a misleading "not available on this cTrader build"; they are reported as `active: false`.

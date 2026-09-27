@@ -1,7 +1,7 @@
 import Type from "typebox";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { RuntimeAdapter } from "../adapters";
-import { HostStatus, type InstanceSpec, LogLine, RuntimeInstance } from "../schemas";
+import type { InstanceSpec, RuntimeAdapter } from "../adapters";
+import { HostStatus, LogLine, RuntimeInstance } from "../schemas";
 import { expectAdapterError, expectSchema } from "./expect-schema";
 
 export interface RuntimeContractOptions {
@@ -79,7 +79,7 @@ export function describeRuntimeAdapter(name: string, options: RuntimeContractOpt
       await adapter.restart(created.ref);
       expect((await find())?.status).toBe("running");
 
-      const updated = await adapter.update(created.ref, { ...spec, symbol: `${spec.symbol}-updated` });
+      const updated = await adapter.update(created.ref, { ...spec, command: [...spec.command, "--updated"] });
       expectSchema(RuntimeInstance, updated);
 
       await adapter.stop(updated.ref);

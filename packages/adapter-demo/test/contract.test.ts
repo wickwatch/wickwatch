@@ -8,11 +8,9 @@ describeRuntimeAdapter("demo", {
   setup: () => setup().runtime,
   spec: {
     name: "contract-test",
-    accountId: "1111111",
-    algo: { name: "alpha", version: "1.5.0", path: demoAlgoPath("alpha", "1.5.0") },
-    symbol: "GER40",
-    period: "H1",
-    parameterFile: "sets/contract-test.json",
+    image: "wickwatch-demo-runtime:1.0.0",
+    command: ["run", demoAlgoPath("alpha", "1.5.0"), "--account=1111111", "--symbol=GER40", "--period=H1"],
+    files: [],
     labels: { "wickwatch.instance": "contract-test" },
   },
 });

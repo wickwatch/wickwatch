@@ -14,8 +14,15 @@ import {
   type RuntimeAdapter,
   type RuntimeInstance,
 } from "@wickwatch/core";
-import { createDockerClient, type ContainerDetails, type ContainerHandle, type DockerClient } from "./client";
+import {
+  createDockerClient,
+  type ContainerDetails,
+  type ContainerHandle,
+  type CreateRequest,
+  type DockerClient,
+} from "./client";
 import { demux, splitLines, toLogLine } from "./logs";
+import { tarFiles } from "./tar";
 
 export interface DockerRuntimeOptions {
   /** e.g. tcp://socket-proxy:2375; defaults to the local socket. */
@@ -25,7 +32,14 @@ export interface DockerRuntimeOptions {
   diskPath?: string;
   client?: DockerClient;
   now?: () => Date;
+  /** Restart policy of created containers; `on-failure` keeps a bot stopped that stopped itself. */
+  restartPolicy?: CreateRequest["restartPolicy"];
+  /** Seconds a bot gets to shut down cleanly on stop. */
+  stopTimeoutSeconds?: number;
 }
+
+/** Container names Docker accepts; the core's instance names are a subset. */
+const CONTAINER_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
 
 const MAX_TAIL = 1000;
 /** Exit codes after SIGINT, SIGKILL, SIGTERM: a deliberate stop, not a crash. */
@@ -39,12 +53,18 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   readonly id = "docker";
   private readonly client: DockerClient;
   private readonly instanceLabel: string;
+  private readonly managedLabel: string;
   private readonly diskPath: string;
   private readonly now: () => Date;
+  private readonly restartPolicy: CreateRequest["restartPolicy"];
+  private readonly stopTimeout: number;
 
   constructor(options: DockerRuntimeOptions = {}) {
     this.client = options.client ?? createDockerClient(options.dockerHost);
     this.instanceLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "instance");
+    this.managedLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "managed");
+    this.restartPolicy = options.restartPolicy ?? "on-failure";
+    this.stopTimeout = options.stopTimeoutSeconds ?? 30;
     this.diskPath = options.diskPath ?? process.cwd();
     this.now = options.now ?? (() => new Date());
   }
@@ -60,16 +80,43 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       .sort((a, b) => a.ref.localeCompare(b.ref));
   }
 
-  create(_spec: InstanceSpec): Promise<RuntimeInstance> {
-    return Promise.reject(unsupported());
+  async create(spec: InstanceSpec): Promise<RuntimeInstance> {
+    this.check(spec);
+    await this.ensureImage(spec.image);
+    await this.build(spec, spec.name);
+    return toRuntimeInstance(await call(() => this.client.container(spec.name).inspect()));
   }
 
-  update(_ref: string, _spec: InstanceSpec): Promise<RuntimeInstance> {
-    return Promise.reject(unsupported());
+  /**
+   * Builds the replacement under a temporary name first, so a failure leaves the old container alone;
+   * then swaps them. A running instance is started again with the new spec.
+   */
+  async update(ref: string, spec: InstanceSpec): Promise<RuntimeInstance> {
+    this.check(spec);
+    if (spec.name !== ref) throw new AdapterError("invalid_input", "An instance cannot be renamed");
+    const { handle, details } = await this.owned(ref);
+    const wasRunning = toStatus(details.State) !== "stopped";
+    await this.ensureImage(spec.image);
+    const next = `${ref}-next-${String(this.now().getTime())}`;
+    await this.build(spec, next);
+    const replacement = this.client.container(next);
+    try {
+      await callIdempotent(() => handle.stop());
+      await call(() => handle.remove());
+    } catch (error) {
+      await replacement.remove().catch(() => undefined);
+      throw mapError(error);
+    }
+    await call(() => replacement.rename(ref));
+    const created = this.client.container(ref);
+    if (wasRunning) await callIdempotent(() => created.start());
+    return toRuntimeInstance(await call(() => created.inspect()));
   }
 
-  remove(_ref: string): Promise<void> {
-    return Promise.reject(unsupported());
+  async remove(ref: string): Promise<void> {
+    const { handle } = await this.owned(ref);
+    await callIdempotent(() => handle.stop());
+    await call(() => handle.remove());
   }
 
   async start(ref: string): Promise<void> {
@@ -136,6 +183,50 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     };
   }
 
+  private check(spec: InstanceSpec): void {
+    if (!CONTAINER_NAME.test(spec.name)) throw new AdapterError("invalid_input", `Invalid instance name ${spec.name}`);
+    if (!/[:@]/.test(spec.image.split("/").pop() ?? "") || spec.image.endsWith(":latest")) {
+      throw new AdapterError("invalid_input", `Image ${spec.image} must be pinned to a version`);
+    }
+  }
+
+  private async ensureImage(image: string): Promise<void> {
+    if (!(await call(() => this.client.hasImage(image)))) await call(() => this.client.pull(image));
+  }
+
+  /** Creates the container and copies the files in; removes it again if that fails. */
+  private async build(spec: InstanceSpec, name: string): Promise<void> {
+    const labels = { ...spec.labels, [this.instanceLabel]: spec.labels[this.instanceLabel] ?? spec.name };
+    labels[this.managedLabel] = "true";
+    await call(() =>
+      this.client.create({
+        name,
+        image: spec.image,
+        command: spec.command,
+        labels,
+        restartPolicy: this.restartPolicy,
+        stopTimeout: this.stopTimeout,
+      }),
+    );
+    if (!spec.files.length) return;
+    const handle = this.client.container(name);
+    try {
+      await handle.putArchive(tarFiles(spec.files), "/");
+    } catch (error) {
+      await handle.remove().catch(() => undefined);
+      throw mapError(error);
+    }
+  }
+
+  /** Only containers Wickwatch created may be replaced or removed. */
+  private async owned(ref: string): Promise<{ handle: ContainerHandle; details: ContainerDetails }> {
+    const found = await this.managed(ref);
+    if (found.details.Config.Labels?.[this.managedLabel] !== "true") {
+      throw new AdapterError("invalid_input", `Container ${ref} is not managed by Wickwatch`);
+    }
+    return found;
+  }
+
   private async managed(ref: string): Promise<{ handle: ContainerHandle; details: ContainerDetails }> {
     const handle = this.client.container(ref);
     const details = await call(() => handle.inspect());
@@ -200,13 +291,6 @@ async function memAvailable(): Promise<number | undefined> {
 
 async function* toIterable<T>(items: T[]): AsyncGenerator<T> {
   yield* items;
-}
-
-function unsupported(): AdapterError {
-  return new AdapterError(
-    "unsupported",
-    "The docker runtime does not create, change or remove instances yet; define them in your compose file",
-  );
 }
 
 async function call<T>(fn: () => Promise<T>): Promise<T> {

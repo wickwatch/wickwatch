@@ -11,12 +11,14 @@ import {
   type EmergencyStopResult,
   type Id,
   type IsoTime,
+  type Launch,
+  type LaunchInput,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
 import { numericId, random, round } from "./random";
-import type { DemoWorld } from "./world";
-import { ACCOUNTS, ALGOS, INSTANCES, SYMBOLS, type DemoAccount } from "./world-data";
+import { DEMO_IMAGE, demoCommand, type DemoWorld } from "./world";
+import { ACCOUNTS, ALGOS, algoPath, INSTANCES, SYMBOLS, type DemoAccount } from "./world-data";
 
 /** Credentials with this secret are rejected, to exercise the login-failure path. */
 export const DEMO_INVALID_SECRET = "invalid";
@@ -46,6 +48,18 @@ export class DemoBrokerAdapter implements BrokerAdapter {
   async accounts(c: Credentials): Promise<BrokerAccount[]> {
     authenticate(c);
     return ACCOUNTS.map(({ number, broker, currency, live }) => ({ number, broker, currency, live }));
+  }
+
+  /** Demo instances run nowhere; the command only carries what the demo runtime shows. */
+  async launch(input: LaunchInput): Promise<Launch> {
+    authenticate(input.credentials);
+    this.world.account(input.account);
+    const version = ALGOS[input.algo.name]?.version ?? "0";
+    return {
+      image: DEMO_IMAGE,
+      command: demoCommand(algoPath(input.algo.name, version), input.account, input.symbol, input.period),
+      files: [],
+    };
   }
 
   periods(): string[] {

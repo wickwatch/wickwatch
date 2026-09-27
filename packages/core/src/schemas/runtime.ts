@@ -1,5 +1,5 @@
 import Type from "typebox";
-import { Id, IsoTime, Labels } from "./common";
+import { IsoTime, Labels } from "./common";
 
 export const InstanceStatus = Type.Union([
   Type.Literal("running"),
@@ -21,22 +21,6 @@ export const RuntimeInstance = Type.Object({
   image: Type.Optional(Type.String()),
 });
 export type RuntimeInstance = Type.Static<typeof RuntimeInstance>;
-
-export const InstanceSpec = Type.Object({
-  name: Type.String({ minLength: 1 }),
-  accountId: Id,
-  algo: Type.Object({
-    name: Type.String({ minLength: 1 }),
-    version: Type.String({ minLength: 1 }),
-    path: Type.String({ minLength: 1 }),
-  }),
-  symbol: Type.String({ minLength: 1 }),
-  period: Type.String({ minLength: 1 }),
-  /** Path to the parameter set. */
-  parameterFile: Type.String({ minLength: 1 }),
-  labels: Labels,
-});
-export type InstanceSpec = Type.Static<typeof InstanceSpec>;
 
 export const LogLevel = Type.Union([Type.Literal("info"), Type.Literal("warn"), Type.Literal("error")]);
 export type LogLevel = Type.Static<typeof LogLevel>;

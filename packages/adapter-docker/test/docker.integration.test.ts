@@ -1,5 +1,5 @@
 // Runs against a real Docker daemon: WICKWATCH_DOCKER_TEST=1 pnpm --filter @wickwatch/adapter-docker test
-// Creates one throw-away alpine container with its own label prefix and removes it afterwards.
+// Creates throw-away alpine containers with their own label prefix and removes them afterwards.
 import Docker from "dockerode";
 import { describeRuntimeAdapter } from "@wickwatch/core/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -37,7 +37,40 @@ describe.skipIf(!enabled)("DockerRuntimeAdapter against a real daemon", () => {
     await docker.getContainer(NAME).remove({ force: true });
   });
 
-  describeRuntimeAdapter("docker (real daemon)", { setup: adapter });
+  const managedSpec = (name: string, marker: string) => ({
+    name,
+    image: IMAGE,
+    command: ["sh", "-c", 'trap "exit 0" TERM; cat /mnt/wickwatch/marker.txt; while true; do sleep 0.2; done'],
+    labels: { [`${PREFIX}.instance`]: name },
+    files: [{ path: "/mnt/wickwatch/marker.txt", content: new TextEncoder().encode(marker), mode: 0o400 }],
+  });
+
+  describeRuntimeAdapter("docker (real daemon)", { setup: adapter, spec: managedSpec(`${NAME}-contract`, "contract") });
+
+  it("creates a managed container with its files, replaces and removes it", async () => {
+    const runtime = adapter();
+    const name = `${NAME}-managed`;
+    const firstLine = async () => {
+      await new Promise((r) => setTimeout(r, 800));
+      for await (const line of runtime.logs(name, { tail: 5 })) return line.text;
+      return undefined;
+    };
+    try {
+      expect((await runtime.create(managedSpec(name, "first"))).status).toBe("stopped");
+      await runtime.start(name);
+      expect(await firstLine()).toBe("first");
+      const updated = await runtime.update(name, managedSpec(name, "second"));
+      expect(updated.status).toBe("running");
+      expect(await firstLine()).toBe("second");
+      await runtime.remove(name);
+      expect((await runtime.list()).some((i) => i.ref === name)).toBe(false);
+    } finally {
+      await docker
+        .getContainer(name)
+        .remove({ force: true })
+        .catch(() => undefined);
+    }
+  }, 60_000);
 
   it("finds the container, follows its logs and stops and starts it", async () => {
     const runtime = adapter();

@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { api, errorKey, type AlgoRow, type InstanceConfigRow, type ManagedInstanceDetail } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import StatusBadge from "../components/StatusBadge.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
 
@@ -14,18 +15,81 @@ const router = useRouter();
 const name = computed(() => String(route.params["ref"]));
 
 const data = ref<ManagedInstanceDetail>();
+const busy = ref(false);
+const notice = ref<string>();
+/** Deploy action waiting for confirmation. */
+const pending = ref<{ start: boolean }>();
 const algos = ref<AlgoRow[]>([]);
 const error = ref<string>();
 const deleting = ref(false);
 const saved = computed(() => (typeof route.query["saved"] === "string" ? route.query["saved"] : undefined));
 
+async function load() {
+  [data.value, algos.value] = await Promise.all([api.managedInstance(name.value), api.algos()]);
+}
+
 onMounted(async () => {
   try {
-    [data.value, algos.value] = await Promise.all([api.managedInstance(name.value), api.algos()]);
+    await load();
   } catch (e) {
     error.value = t(errorKey(e));
   }
 });
+
+const deployment = computed(() => data.value?.deployment);
+/** The container runs an older configuration than the current one. */
+const outdated = computed(
+  () => deployment.value?.managed === true && deployment.value.configVersion !== data.value?.config.version,
+);
+const running = computed(() => deployment.value?.status === "running" || deployment.value?.status === "restarting");
+
+const confirmTitle = computed(() => {
+  const version = data.value?.config.version ?? 0;
+  if (!deployment.value) return pending.value?.start ? t("deploy.createAndStart") : t("deploy.create");
+  if (running.value) return t("deploy.applyRestart", { version });
+  return pending.value?.start ? t("deploy.applyAndStart", { version }) : t("deploy.apply", { version });
+});
+const confirmMessage = computed(() => {
+  const version = data.value?.config.version ?? 0;
+  const what = !deployment.value
+    ? t(pending.value?.start ? "deploy.confirmCreateStart" : "deploy.confirmCreate", { version })
+    : running.value
+      ? t("deploy.confirmApplyRunning", { version })
+      : t(pending.value?.start ? "deploy.confirmApplyStart" : "deploy.confirmApply", { version });
+  return `${what} ${pending.value?.start || running.value ? t("deploy.elsewhere") : ""}`.trim();
+});
+
+async function deploy() {
+  const start = pending.value?.start ?? false;
+  pending.value = undefined;
+  busy.value = true;
+  error.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await api.deployInstance(name.value, start);
+    notice.value = t("deploy.done", { version: result.configVersion, status: t(`status.${result.status}`) });
+    await load();
+  } catch (e) {
+    error.value = t(errorKey(e));
+  } finally {
+    busy.value = false;
+  }
+}
+
+/** Start or stop the container as it is; only a new configuration needs a deploy. */
+async function runAction(action: "start" | "stop") {
+  busy.value = true;
+  error.value = undefined;
+  notice.value = undefined;
+  try {
+    await api.instanceAction(name.value, action);
+    await load();
+  } catch (e) {
+    error.value = t(errorKey(e));
+  } finally {
+    busy.value = false;
+  }
+}
 
 const schemaOf = (config: InstanceConfigRow): ParameterSchema[] =>
   algos.value.find((a) => a.id === config.algo.id)?.parameters ?? [];
@@ -117,10 +181,77 @@ async function remove() {
           <button type="button" class="btn btn--danger" @click="deleting = true">{{ $t("action.delete") }}</button>
         </div>
       </div>
-      <p v-if="saved" class="tone-positive status" role="status">
+      <p v-if="saved && !notice" class="tone-positive status" role="status">
         {{ $t("instanceConfig.saved", { version: saved }) }}
       </p>
-      <p class="muted">{{ $t("instanceConfig.notDeployed") }}</p>
+      <p v-if="notice" class="tone-positive status" role="status">{{ notice }}</p>
+
+      <section class="panel card" aria-labelledby="runtime-title">
+        <h2 id="runtime-title">{{ $t("deploy.title") }}</h2>
+        <template v-if="!deployment">
+          <p class="muted">{{ $t("deploy.none") }}</p>
+          <div v-if="isAdmin" class="actions">
+            <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: true }">
+              {{ $t("deploy.createAndStart") }}
+            </button>
+            <button type="button" class="btn" :disabled="busy" @click="pending = { start: false }">
+              {{ $t("deploy.create") }}
+            </button>
+          </div>
+        </template>
+        <p v-else-if="!deployment.managed" class="tone-warning">{{ $t("deploy.foreign") }}</p>
+        <template v-else>
+          <p class="runtime">
+            <StatusBadge :instance="deployment.status" />
+            <span>{{
+              deployment.configVersion
+                ? $t("deploy.runsVersion", { version: deployment.configVersion })
+                : $t("deploy.unknownVersion")
+            }}</span>
+            <RouterLink :to="{ name: 'instance', params: { ref: data.name } }">{{ $t("deploy.details") }}</RouterLink>
+          </p>
+          <p v-if="outdated" class="tone-warning">
+            {{ $t("deploy.outdated", { version: data.config.version }) }}
+          </p>
+          <div v-if="isAdmin" class="actions">
+            <button
+              v-if="outdated"
+              type="button"
+              class="btn btn--primary"
+              :disabled="busy"
+              @click="pending = { start: false }"
+            >
+              {{
+                running
+                  ? $t("deploy.applyRestart", { version: data.config.version })
+                  : $t("deploy.apply", { version: data.config.version })
+              }}
+            </button>
+            <button
+              v-if="!running && outdated"
+              type="button"
+              class="btn"
+              :disabled="busy"
+              @click="pending = { start: true }"
+            >
+              {{ $t("deploy.applyAndStart", { version: data.config.version }) }}
+            </button>
+            <button
+              v-else-if="!running"
+              type="button"
+              class="btn btn--primary"
+              :disabled="busy"
+              @click="runAction('start')"
+            >
+              {{ $t("action.start") }}
+            </button>
+            <button v-else type="button" class="btn" :disabled="busy" @click="runAction('stop')">
+              {{ $t("action.stop") }}
+            </button>
+          </div>
+        </template>
+        <p class="muted field__hint">{{ $t("instanceConfig.notDeployed") }}</p>
+      </section>
 
       <section class="panel card" aria-labelledby="current-title">
         <h2 id="current-title">{{ $t("instanceConfig.current") }}</h2>
@@ -198,9 +329,21 @@ async function remove() {
     </template>
 
     <ConfirmDialog
+      :open="pending !== undefined"
+      :title="confirmTitle"
+      :message="confirmMessage"
+      :confirm-label="confirmTitle"
+      @confirm="deploy"
+      @cancel="pending = undefined"
+    />
+    <ConfirmDialog
       :open="deleting"
       :title="$t('action.delete')"
-      :message="$t('instanceConfig.deleteConfirm', { name })"
+      :message="
+        deployment?.managed
+          ? `${$t('instanceConfig.deleteConfirm', { name })} ${$t('instanceConfig.deleteContainer')}`
+          : $t('instanceConfig.deleteConfirm', { name })
+      "
       :confirm-label="$t('action.delete')"
       @confirm="remove"
       @cancel="deleting = false"
@@ -242,6 +385,13 @@ p {
 
 .status {
   font-weight: 600;
+}
+
+.runtime {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-3);
+  align-items: center;
 }
 
 .card {

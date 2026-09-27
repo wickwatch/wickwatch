@@ -6458,6 +6458,55 @@
                             "type": "string"
                           }
                         }
+                      },
+                      "deployment": {
+                        "type": "object",
+                        "required": [
+                          "status",
+                          "managed"
+                        ],
+                        "properties": {
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "running"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "restarting"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "unknown"
+                                ]
+                              }
+                            ]
+                          },
+                          "managed": {
+                            "type": "boolean"
+                          },
+                          "configVersion": {
+                            "type": "integer"
+                          }
+                        }
                       }
                     }
                   }
@@ -6693,6 +6742,55 @@
                         },
                         "createdBy": {
                           "type": "string"
+                        }
+                      }
+                    },
+                    "deployment": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "managed"
+                      ],
+                      "properties": {
+                        "status": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "running"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "stopped"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "restarting"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "error"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unknown"
+                              ]
+                            }
+                          ]
+                        },
+                        "managed": {
+                          "type": "boolean"
+                        },
+                        "configVersion": {
+                          "type": "integer"
                         }
                       }
                     }
@@ -7007,6 +7105,55 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "deployment": {
+                          "type": "object",
+                          "required": [
+                            "status",
+                            "managed"
+                          ],
+                          "properties": {
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "running"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "stopped"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "restarting"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "error"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "unknown"
+                                  ]
+                                }
+                              ]
+                            },
+                            "managed": {
+                              "type": "boolean"
+                            },
+                            "configVersion": {
+                              "type": "integer"
+                            }
+                          }
                         }
                       }
                     },
@@ -7149,7 +7296,7 @@
         }
       },
       "delete": {
-        "summary": "Delete a managed instance and its configuration history",
+        "summary": "Delete a managed instance, its container (stopping it) and its configuration history",
         "tags": [
           "instances"
         ],
@@ -7482,6 +7629,55 @@
                           "type": "string"
                         }
                       }
+                    },
+                    "deployment": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "managed"
+                      ],
+                      "properties": {
+                        "status": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "running"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "stopped"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "restarting"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "error"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unknown"
+                              ]
+                            }
+                          ]
+                        },
+                        "managed": {
+                          "type": "boolean"
+                        },
+                        "configVersion": {
+                          "type": "integer"
+                        }
+                      }
                     }
                   }
                 }
@@ -7628,6 +7824,234 @@
             }
           },
           "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/{name}/deploy": {
+      "post": {
+        "summary": "Create or replace the instance with its current configuration",
+        "tags": [
+          "instances"
+        ],
+        "description": "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "description": "The instance name"
+                  },
+                  "start": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "configVersion"
+                  ],
+                  "properties": {
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "running"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "stopped"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "restarting"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "error"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "unknown"
+                          ]
+                        }
+                      ]
+                    },
+                    "configVersion": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
             "description": "Default Response",
             "content": {
               "application/json": {

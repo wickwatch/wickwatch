@@ -32,12 +32,28 @@ export interface DemoOptions {
 export interface DemoInstance {
   ref: string;
   spec: InstanceSpec;
+  algo: { name: string; version: string };
+  symbol: string;
   status: InstanceStatus;
   startedAt?: Date;
   restartCount: number;
 }
 
 const HOUR_MS = 60 * 60 * 1000;
+
+export const DEMO_IMAGE = "wickwatch-demo-runtime:1.0.0";
+
+/** Command of a demo instance; the demo runtime reads algo and symbol back from it. */
+export function demoCommand(algo: string, account: string, symbol: string, period: string): string[] {
+  return ["run", algo, `--account=${account}`, `--symbol=${symbol}`, `--period=${period}`];
+}
+
+/** Algo name, version and symbol of a demo command. */
+export function fromDemoCommand(command: string[]): { algo: { name: string; version: string }; symbol: string } {
+  const [, name = "bot", version = "0"] = /(?:^|\/)([^/]+)\/([^/]+)\/[^/]+\.algo$/.exec(command[1] ?? "") ?? [];
+  const symbol = command.find((a) => a.startsWith("--symbol="))?.slice("--symbol=".length) ?? "EURUSD";
+  return { algo: { name, version }, symbol };
+}
 
 /** Mutable state shared by the demo runtime, broker and config adapters. */
 export class DemoWorld {
@@ -64,11 +80,9 @@ export class DemoWorld {
       const file = parameterFile(seed.name);
       const spec: InstanceSpec = {
         name: seed.name,
-        accountId: seed.account,
-        algo: { name: seed.algo, version: algo.version, path: algoPath(seed.algo, algo.version) },
-        symbol: seed.symbol,
-        period: seed.period,
-        parameterFile: file,
+        image: DEMO_IMAGE,
+        command: demoCommand(algoPath(seed.algo, algo.version), seed.account, seed.symbol, seed.period),
+        files: [],
         labels: buildLabels(this.labelPrefix, {
           instance: seed.name,
           account: seed.account,
@@ -82,6 +96,8 @@ export class DemoWorld {
       this.instances.set(seed.name, {
         ref: seed.name,
         spec,
+        algo: { name: seed.algo, version: algo.version },
+        symbol: seed.symbol,
         status: seed.status,
         restartCount: seed.restartCount,
         ...(seed.status === "running" ? { startedAt: new Date(now - seed.uptimeHours * HOUR_MS) } : {}),

@@ -22,6 +22,10 @@ export interface Config {
   dockerHost?: string;
   /** cTrader CLI executable for BROKER_ADAPTER=ctrader-cli. */
   ctraderCliPath: string;
+  /** Image instances run with (ctrader-cli); the adapter's tested version when unset. */
+  ctraderImage?: string;
+  /** Docker restart policy of created instances. */
+  instanceRestartPolicy: RestartPolicy;
   /** Directory with challenge templates (*.json). */
   challengeTemplatesDir: string;
   /** Where uploaded algo files are stored, versioned as <name>/<version>/<name>.algo. */
@@ -41,6 +45,9 @@ export class ConfigError extends Error {
   }
 }
 
+export const RESTART_POLICIES = ["on-failure", "unless-stopped", "no"] as const;
+export type RestartPolicy = (typeof RESTART_POLICIES)[number];
+
 const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"];
 
 /** Reads the configuration from environment variables; reports every problem at once. */
@@ -58,6 +65,15 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (basePath === undefined) problems.push("BASE_PATH must look like /bots (letters, digits, - _ . ~ and /)");
 
   const logLevel = get("LOG_LEVEL") ?? "info";
+
+  const instanceRestartPolicy = get("INSTANCE_RESTART_POLICY") ?? "on-failure";
+  if (!(RESTART_POLICIES as readonly string[]).includes(instanceRestartPolicy)) {
+    problems.push(`INSTANCE_RESTART_POLICY must be one of ${RESTART_POLICIES.join(", ")}`);
+  }
+  const ctraderImage = get("CTRADER_IMAGE");
+  if (ctraderImage && /:latest$|^[^:]+$/.test(ctraderImage.replace(/@sha256:.*/, "x:y"))) {
+    problems.push("CTRADER_IMAGE must be pinned to a version or digest, not latest");
+  }
   if (!LOG_LEVELS.includes(logLevel)) problems.push(`LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")}`);
 
   const masterKey = parseMasterKey(get("MASTER_KEY"), problems);
@@ -99,6 +115,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
     algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
     ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
+    ...(ctraderImage ? { ctraderImage } : {}),
+    instanceRestartPolicy: instanceRestartPolicy as RestartPolicy,
     accountPollSeconds,
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",

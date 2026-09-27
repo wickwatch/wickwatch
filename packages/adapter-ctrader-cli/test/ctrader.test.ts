@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describeBrokerAdapter } from "@wickwatch/core/testing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cliError, CtraderCliBroker, extractJson } from "../src";
+import { cliError, CtraderCliBroker, DEFAULT_CTRADER_IMAGE, extractJson, toRunArguments } from "../src";
 
 const FAKE = join(__dirname, "fake-cli.mjs");
 const c = { login: "user@example.com", secret: "correct horse" };
@@ -135,6 +135,60 @@ describe("CtraderCliBroker", () => {
   it("is read-only for now", async () => {
     expect(broker.capabilities()).toMatchObject({ emergencyStop: false, pendingOrders: true });
     await expect(broker.closePosition()).rejects.toMatchObject({ code: "unsupported" });
+  });
+
+  it("launches `run` in the pinned image with password and algo as files, never as arguments", async () => {
+    const algo = new TextEncoder().encode("algo-bytes");
+    const launch = await broker.launch({
+      credentials: c,
+      account: "1111111",
+      algo: { name: "Sample Bot", file: algo, fullAccess: true },
+      symbol: "US100.cash",
+      period: "m5",
+      parameters: { Period: 14, Mode: "Slow", UseFilter: false, Start: "15:30", Risk: 0.5 },
+    });
+    expect(launch.image).toBe(DEFAULT_CTRADER_IMAGE);
+    expect(launch.command).toEqual([
+      "run",
+      "/mnt/wickwatch/Sample-Bot.algo",
+      "--ctid=user@example.com",
+      "--pwd-file=/mnt/wickwatch/ctid.pwd",
+      "--account=1111111",
+      "--symbol=US100.cash",
+      "--period=m5",
+      "--exit-on-stop",
+      "--full-access",
+      "--Period=14",
+      "--Mode=Slow",
+      "--UseFilter=false",
+      "--Start=15:30",
+      "--Risk=0.5",
+    ]);
+    expect(launch.command.join(" ")).not.toContain("correct horse");
+    expect(launch.files.map((f) => [f.path, f.mode])).toEqual([
+      ["/mnt/wickwatch/Sample-Bot.algo", 0o444],
+      ["/mnt/wickwatch/ctid.pwd", 0o400],
+    ]);
+    expect(new TextDecoder().decode(launch.files[1]?.content)).toBe("correct horse");
+    expect(
+      (
+        await new CtraderCliBroker({ image: "example/ctrader:1.0" }).launch({
+          credentials: c,
+          account: "1",
+          algo: { name: "a", file: algo, fullAccess: false },
+          symbol: "X",
+          period: "h1",
+          parameters: {},
+        })
+      ).command,
+    ).not.toContain("--full-access");
+  });
+
+  it("rejects parameter names and values that could smuggle in other options", () => {
+    expect(() => toRunArguments({ "account=2 --x": 1 })).toThrow(/name/);
+    expect(() => toRunArguments({ Note: "a\nb" })).toThrow(/value/);
+    expect(() => toRunArguments({ Obj: { a: 1 } })).toThrow(/value/);
+    expect(toRunArguments({ Note: "" })).toEqual(["--Note="]);
   });
 
   it("starts a new session after the old one died", async () => {

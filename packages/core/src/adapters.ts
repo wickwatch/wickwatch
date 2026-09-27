@@ -7,8 +7,8 @@ import type {
   EmergencyStopResult,
   HostStatus,
   Id,
-  InstanceSpec,
   IsoTime,
+  Labels,
   LogLine,
   OptimizationRange,
   ParameterSchema,
@@ -33,12 +33,48 @@ export interface LogOptions {
   signal?: AbortSignal;
 }
 
+/** A file placed into an instance before it starts. May hold secrets: never log or serialise it. */
+export interface InstanceFile {
+  /** Absolute path inside the instance, e.g. `/mnt/wickwatch/bot.algo`. */
+  path: string;
+  content: Uint8Array;
+  /** Unix permissions, e.g. 0o400 for a password file. */
+  mode: number;
+}
+
+/** How a broker platform runs an algo: the runtime needs nothing else. */
+export interface Launch {
+  /** Pinned image, never `latest`. */
+  image: string;
+  command: string[];
+  files: InstanceFile[];
+}
+
+/** Everything a runtime needs to create an instance. The core adds the labels to a broker's Launch. */
+export interface InstanceSpec extends Launch {
+  /** Runtime ref, e.g. the container name. */
+  name: string;
+  labels: Labels;
+}
+
+export interface LaunchInput {
+  credentials: Credentials;
+  account: string;
+  algo: { name: string; file: Uint8Array; fullAccess: boolean };
+  symbol: string;
+  period: string;
+  parameters: ParameterValues;
+}
+
 /** Runs bot instances (e.g. Docker containers). */
 export interface RuntimeAdapter {
   readonly id: string;
   list(): Promise<RuntimeInstance[]>;
+  /** Creates a stopped instance. Only instances created this way may be updated or removed. */
   create(spec: InstanceSpec): Promise<RuntimeInstance>;
+  /** Replaces an instance created by `create`; a running instance keeps running with the new spec. */
   update(ref: string, spec: InstanceSpec): Promise<RuntimeInstance>;
+  /** Stops and removes an instance created by `create`. */
   remove(ref: string): Promise<void>;
   start(ref: string): Promise<void>;
   stop(ref: string): Promise<void>;
@@ -64,6 +100,8 @@ export interface BrokerAdapter {
   cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void>;
   emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult>;
   algoMetadata(algoPath: string): Promise<AlgoMetadata>;
+  /** How to run an algo on an account; missing when this broker cannot run bots itself. */
+  launch?(input: LaunchInput): Promise<Launch>;
   /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */
   periods?(): string[];
   /** Releases long-lived resources (sessions, processes) on shutdown. */

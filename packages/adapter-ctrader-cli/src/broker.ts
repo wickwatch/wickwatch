@@ -9,6 +9,8 @@ import {
   type Deal,
   type EmergencyStopResult,
   type IsoTime,
+  type Launch,
+  type LaunchInput,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
@@ -20,11 +22,22 @@ import {
   toDeals,
   toPendingOrders,
   toPositions,
+  toRunArguments,
   toSymbols,
 } from "./mapping";
 import { SessionPool } from "./session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Official image of the CLI; pinned, the version the adapter was tested with. */
+export const DEFAULT_CTRADER_IMAGE = "ghcr.io/spotware/ctrader-console:5.9.11";
+/** Where Wickwatch puts the algo and the password file inside an instance. */
+const MOUNT = "/mnt/wickwatch";
+
+export interface CtraderCliBrokerOptions extends Partial<CliOptions> {
+  /** Image instances run with, e.g. ghcr.io/spotware/ctrader-console:5.9.11. */
+  image?: string;
+}
 const ACCOUNTS_CACHE_MS = 60_000;
 
 const dateOnly = (time: number) => new Date(time).toISOString().slice(0, 10);
@@ -56,7 +69,10 @@ export class CtraderCliBroker implements BrokerAdapter {
   private readonly pool: SessionPool;
   private accountsCache: { key: string; at: number; accounts: BrokerAccount[] } | undefined;
 
-  constructor(options: Partial<CliOptions> = {}) {
+  private readonly image: string;
+
+  constructor({ image, ...options }: CtraderCliBrokerOptions = {}) {
+    this.image = image ?? DEFAULT_CTRADER_IMAGE;
     this.options = { ...DEFAULT_CLI_OPTIONS, ...options };
     this.pool = new SessionPool(this.options);
   }
@@ -74,6 +90,34 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   periods(): string[] {
     return PERIODS;
+  }
+
+  /**
+   * `run` in the official image. The password is a file copied into the instance, never an argument;
+   * `--exit-on-stop` ends the container when the cBot stops, so its state is visible and restarts work.
+   */
+  async launch(input: LaunchInput): Promise<Launch> {
+    const algoFile = `${MOUNT}/${input.algo.name.replace(/[^A-Za-z0-9._-]/g, "-")}.algo`;
+    const pwdFile = `${MOUNT}/ctid.pwd`;
+    return {
+      image: this.image,
+      command: [
+        "run",
+        algoFile,
+        `--ctid=${input.credentials.login}`,
+        `--pwd-file=${pwdFile}`,
+        `--account=${input.account}`,
+        `--symbol=${input.symbol}`,
+        `--period=${input.period}`,
+        "--exit-on-stop",
+        ...(input.algo.fullAccess ? ["--full-access"] : []),
+        ...toRunArguments(input.parameters),
+      ],
+      files: [
+        { path: algoFile, content: input.algo.file, mode: 0o444 },
+        { path: pwdFile, content: new TextEncoder().encode(input.credentials.secret), mode: 0o400 },
+      ],
+    };
   }
 
   /** All linked accounts; `active` is false for closed ones (they fail with a misleading message). */

@@ -74,7 +74,15 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, { db, templates, prefix: api });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
-  await app.register(managedInstanceRoutes, { adapters, accounts, db, symbols, labelPrefix, prefix: api });
+  await app.register(managedInstanceRoutes, {
+    adapters,
+    accounts,
+    db,
+    symbols,
+    labelPrefix,
+    algosDir: config.algosDir,
+    prefix: api,
+  });
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {
