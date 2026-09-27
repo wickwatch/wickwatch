@@ -1,0 +1,165 @@
+{
+  "app": {
+    "name": "Wickwatch",
+    "skipToContent": "Zum Inhalt springen"
+  },
+  "nav": {
+    "overview": "Übersicht",
+    "accounts": "Konten",
+    "backtests": "Backtests"
+  },
+  "status": {
+    "running": "Läuft",
+    "stopped": "Gestoppt",
+    "restarting": "Startet neu",
+    "error": "Fehler",
+    "stale": "Daten veraltet",
+    "unknown": "Unbekannt"
+  },
+  "action": {
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Neustart",
+    "edit": "Bearbeiten",
+    "duplicate": "Duplizieren",
+    "delete": "Löschen",
+    "newInstance": "Neue Instanz",
+    "emergencyStop": "Notstopp",
+    "closePosition": "Schließen",
+    "save": "Speichern",
+    "saveAndStart": "Speichern & starten",
+    "cancel": "Abbrechen"
+  },
+  "account": {
+    "balance": "Balance",
+    "equity": "Equity",
+    "dayPnl": "Tages-P&L",
+    "noProfile": "Kein Challenge-Profil",
+    "number": "Konto {number}",
+    "openPositions": "Offene Positionen",
+    "noProfileHint": "Kein Challenge-Profil hinterlegt.",
+    "instancesActive": "{running} von {total} Instanz aktiv | {running} von {total} Instanzen aktiv",
+    "state": {
+      "running": "Läuft",
+      "attention": "Achtung",
+      "stopped": "Bot gestoppt",
+      "idle": "Keine Instanzen",
+      "error": "Nicht erreichbar"
+    }
+  },
+  "challenge": {
+    "profitTarget": "Profit-Ziel",
+    "dailyLoss": "Tagesverlust",
+    "maxDrawdown": "Max-Drawdown",
+    "tradingDays": "Handelstage",
+    "ofValue": "{value} von {limit}"
+  },
+  "instance": {
+    "positions": "Offene Positionen",
+    "pendingOrders": "Pending Orders",
+    "history": "Verlauf",
+    "config": "Konfiguration",
+    "liveLog": "Live-Log",
+    "versions": "Konfigurationsversionen"
+  },
+  "confirm": {
+    "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"
+  },
+  "theme": {
+    "dark": "Dunkel",
+    "light": "Hell",
+    "system": "System",
+    "label": "Darstellung"
+  },
+  "error": {
+    "adapter": {
+      "auth_failed": "Login fehlgeschlagen – Zugangsdaten prüfen.",
+      "not_found": "Nicht gefunden.",
+      "unsupported": "Von diesem Adapter nicht unterstützt.",
+      "invalid_input": "Ungültige Eingabe.",
+      "timeout": "Keine Antwort in der Zeit – erneut versuchen.",
+      "unavailable": "Dienst nicht erreichbar – später erneut versuchen."
+    },
+    "api": {
+      "internal": "Unerwarteter Serverfehler.",
+      "confirmation_required": "Bestätigung fehlt.",
+      "network": "Server nicht erreichbar."
+    }
+  },
+  "parameterIssue": {
+    "invalid_type": "Falscher Typ",
+    "below_min": "Unter dem Minimum",
+    "above_max": "Über dem Maximum",
+    "invalid_option": "Keine erlaubte Option",
+    "invalid_format": "Ungültiges Format"
+  },
+  "header": {
+    "mainNav": "Hauptnavigation",
+    "serverStatus": "Server-Status"
+  },
+  "host": {
+    "cpu": "CPU {value}",
+    "ram": "RAM {used} / {total}",
+    "disk": "Disk {value}",
+    "ntpSynced": "NTP synchron",
+    "ntpNotSynced": "NTP nicht synchron"
+  },
+  "language": {
+    "label": "Sprache",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "overview": {
+    "title": "Übersicht",
+    "accounts": "Konten",
+    "instances": "Instanzen",
+    "alerts": "Warnungen",
+    "updated": "Aktualisiert {time}",
+    "polling": "Polling alle {seconds} s",
+    "loading": "Wird geladen …",
+    "loadFailed": "Daten konnten nicht geladen werden – neuer Versuch folgt automatisch.",
+    "noAccounts": "Keine Konten eingerichtet.",
+    "noInstances": "Keine Instanzen gefunden. Wickwatch sucht Container mit dem Label {label}.",
+    "noMatches": "Keine Instanz passt zum Filter.",
+    "filterAccount": "Konto",
+    "allAccounts": "Alle Konten",
+    "onlyRunning": "Nur laufende"
+  },
+  "table": {
+    "instance": "Instanz",
+    "account": "Konto",
+    "symbol": "Symbol",
+    "period": "TF",
+    "status": "Status",
+    "uptime": "Uptime",
+    "positions": "Pos.",
+    "dayPnl": "Tages-P&L",
+    "lastLog": "Letzte Log-Zeile",
+    "actions": "Aktionen"
+  },
+  "alert": {
+    "level": {
+      "error": "Fehler",
+      "warning": "Achtung"
+    },
+    "instance_error": "{subject}: Fehler, {restarts} Neustarts",
+    "instance_stopped": "{subject} ist gestoppt",
+    "account_error": "Konto {subject} nicht erreichbar: {reason}"
+  },
+  "emergencyStop": {
+    "title": "Notstopp",
+    "confirmAction": "Alles stoppen und schließen",
+    "done": "Notstopp {account}: {instances} Instanzen gestoppt, {closed} Positionen geschlossen, {cancelled} Orders gelöscht.",
+    "partial": "Nicht gestoppt: {names}. Die Positionen wurden trotzdem geschlossen.",
+    "failed": "Notstopp {account} fehlgeschlagen: {reason}"
+  },
+  "notice": {
+    "actionFailed": "{action} {name} fehlgeschlagen: {reason}"
+  },
+  "format": {
+    "daysHours": "{d} T {h} h",
+    "hoursMinutes": "{h} h {m} min",
+    "minutes": "{m} min",
+    "none": "–"
+  }
+}

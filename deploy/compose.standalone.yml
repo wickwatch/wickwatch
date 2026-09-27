@@ -1,0 +1,30 @@
+# Wickwatch standalone: dashboard on its own port. Use TLS or keep it inside a VPN (e.g. Tailscale).
+services:
+  wickwatch:
+    image: ghcr.io/wickwatch/wickwatch:latest # pin a version in production
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    networks: [internal]
+
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging: *logging
+    networks: [internal]
+
+networks:
+  internal:

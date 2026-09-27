@@ -1,0 +1,7 @@
+# Generated or hand-authored content that Prettier must not reflow
+pnpm-lock.yaml
+*.md
+docs/
+assets/
+design/tokens.css
+LICENSE

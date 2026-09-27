@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "paths": {
+      "@i18n/*": ["../../i18n/*"],
+      "@design/*": ["../../design/*"],
+      "@assets/*": ["../../assets/*"]
+    }
+  },
+  "include": ["src", "test", "env.d.ts"]
+}

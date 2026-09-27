@@ -1,0 +1,20 @@
+{
+  "id": "example-firm-phase-1",
+  "firm": "Example Firm",
+  "program": "Example Challenge",
+  "phase": "Phase 1",
+  "name": { "en": "Example Challenge – Phase 1", "de": "Example Challenge – Phase 1" },
+  "profitTargetPct": 0,
+  "dailyLoss": {
+    "limitPct": 0,
+    "reference": "balance-or-equity-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": { "limitPct": 0, "type": "static" },
+  "minTradingDays": 0,
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-trade-opened",
+  "source": "https://example.com/rules",
+  "asOf": "YYYY-MM-DD"
+}

@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.github
+.vscode
+.env
+.env.*
+data
+secrets
+docs
+assets/logo/*.png
+*.log

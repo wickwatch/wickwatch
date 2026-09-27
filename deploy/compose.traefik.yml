@@ -1,0 +1,18 @@
+# Behind Traefik v2/v3 with Let's Encrypt.
+# Usage: docker compose -f compose.standalone.yml -f compose.traefik.yml up -d
+services:
+  wickwatch:
+    ports: !reset []
+    environment:
+      TRUST_PROXY: "true"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.wickwatch.rule: Host(`bots.example.com`)
+      traefik.http.routers.wickwatch.entrypoints: websecure
+      traefik.http.routers.wickwatch.tls.certresolver: letsencrypt
+      traefik.http.services.wickwatch.loadbalancer.server.port: "3000"
+    networks: [internal, traefik]
+
+networks:
+  traefik:
+    external: true

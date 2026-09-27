@@ -1,0 +1,43 @@
+import { describe, expect, it } from "vitest";
+import { validateParameters, type ParameterSchema } from "../src";
+
+const schema: ParameterSchema[] = [
+  { name: "Risk", type: "double", min: 0.1, max: 2 },
+  { name: "Lookback", type: "int", min: 1 },
+  { name: "UseFilter", type: "bool" },
+  { name: "Mode", type: "enum", options: ["Fast", "Slow"] },
+  { name: "SessionStart", type: "time" },
+  { name: "Symbol", type: "symbol" },
+];
+
+const valid = { Risk: 0.5, Lookback: 20, UseFilter: true, Mode: "Fast", SessionStart: "08:00", Symbol: "EURUSD" };
+
+describe("validateParameters", () => {
+  it("accepts valid values", () => {
+    expect(validateParameters(valid, schema)).toEqual({ errors: [], unknown: [], missing: [] });
+  });
+
+  it("reports unknown and missing parameters", () => {
+    const { Mode: _, ...rest } = valid;
+    expect(validateParameters({ ...rest, Extra: 1 }, schema)).toEqual({
+      errors: [],
+      unknown: ["Extra"],
+      missing: ["Mode"],
+    });
+  });
+
+  it.each([
+    ["Risk", "0.5", "invalid_type"],
+    ["Risk", 0.05, "below_min"],
+    ["Risk", 3, "above_max"],
+    ["Risk", Number.NaN, "invalid_type"],
+    ["Lookback", 1.5, "invalid_type"],
+    ["UseFilter", "true", "invalid_type"],
+    ["Mode", "Medium", "invalid_option"],
+    ["SessionStart", "8:00", "invalid_format"],
+    ["SessionStart", "24:00", "invalid_format"],
+    ["Symbol", 42, "invalid_type"],
+  ])("flags %s = %j as %s", (parameter, value, code) => {
+    expect(validateParameters({ ...valid, [parameter]: value }, schema).errors).toEqual([{ parameter, code }]);
+  });
+});

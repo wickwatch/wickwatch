@@ -1,0 +1,165 @@
+{
+  "app": {
+    "name": "Wickwatch",
+    "skipToContent": "Skip to content"
+  },
+  "nav": {
+    "overview": "Overview",
+    "accounts": "Accounts",
+    "backtests": "Backtests"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "restarting": "Restarting",
+    "error": "Error",
+    "stale": "Data outdated",
+    "unknown": "Unknown"
+  },
+  "action": {
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "newInstance": "New instance",
+    "emergencyStop": "Emergency stop",
+    "closePosition": "Close",
+    "save": "Save",
+    "saveAndStart": "Save & start",
+    "cancel": "Cancel"
+  },
+  "account": {
+    "balance": "Balance",
+    "equity": "Equity",
+    "dayPnl": "Today's P&L",
+    "noProfile": "No challenge profile",
+    "number": "Account {number}",
+    "openPositions": "Open positions",
+    "noProfileHint": "No challenge profile set up.",
+    "instancesActive": "{running} of {total} instance active | {running} of {total} instances active",
+    "state": {
+      "running": "Running",
+      "attention": "Attention",
+      "stopped": "Bot stopped",
+      "idle": "No instances",
+      "error": "Not reachable"
+    }
+  },
+  "challenge": {
+    "profitTarget": "Profit target",
+    "dailyLoss": "Daily loss",
+    "maxDrawdown": "Max drawdown",
+    "tradingDays": "Trading days",
+    "ofValue": "{value} of {limit}"
+  },
+  "instance": {
+    "positions": "Open positions",
+    "pendingOrders": "Pending orders",
+    "history": "History",
+    "config": "Configuration",
+    "liveLog": "Live log",
+    "versions": "Configuration versions"
+  },
+  "confirm": {
+    "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "label": "Theme"
+  },
+  "error": {
+    "adapter": {
+      "auth_failed": "Login failed – check the credentials.",
+      "not_found": "Not found.",
+      "unsupported": "Not supported by this adapter.",
+      "invalid_input": "Invalid input.",
+      "timeout": "No response in time – try again.",
+      "unavailable": "Service not reachable – try again later."
+    },
+    "api": {
+      "internal": "Unexpected server error.",
+      "confirmation_required": "Confirmation missing.",
+      "network": "Server not reachable."
+    }
+  },
+  "parameterIssue": {
+    "invalid_type": "Wrong type",
+    "below_min": "Below minimum",
+    "above_max": "Above maximum",
+    "invalid_option": "Not an allowed option",
+    "invalid_format": "Invalid format"
+  },
+  "header": {
+    "mainNav": "Main navigation",
+    "serverStatus": "Server status"
+  },
+  "host": {
+    "cpu": "CPU {value}",
+    "ram": "RAM {used} / {total}",
+    "disk": "Disk {value}",
+    "ntpSynced": "NTP synced",
+    "ntpNotSynced": "NTP not synced"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "de": "Deutsch"
+  },
+  "overview": {
+    "title": "Overview",
+    "accounts": "Accounts",
+    "instances": "Instances",
+    "alerts": "Alerts",
+    "updated": "Updated {time}",
+    "polling": "polling every {seconds} s",
+    "loading": "Loading…",
+    "loadFailed": "Could not load data – retrying automatically.",
+    "noAccounts": "No accounts configured.",
+    "noInstances": "No instances found. Wickwatch looks for containers with the label {label}.",
+    "noMatches": "No instance matches the filter.",
+    "filterAccount": "Account",
+    "allAccounts": "All accounts",
+    "onlyRunning": "Only running"
+  },
+  "table": {
+    "instance": "Instance",
+    "account": "Account",
+    "symbol": "Symbol",
+    "period": "TF",
+    "status": "Status",
+    "uptime": "Uptime",
+    "positions": "Pos.",
+    "dayPnl": "Today's P&L",
+    "lastLog": "Last log line",
+    "actions": "Actions"
+  },
+  "alert": {
+    "level": {
+      "error": "Error",
+      "warning": "Warning"
+    },
+    "instance_error": "{subject}: error, {restarts} restarts",
+    "instance_stopped": "{subject} is stopped",
+    "account_error": "Account {subject} not reachable: {reason}"
+  },
+  "emergencyStop": {
+    "title": "Emergency stop",
+    "confirmAction": "Stop and close everything",
+    "done": "Emergency stop {account}: {instances} instances stopped, {closed} positions closed, {cancelled} orders cancelled.",
+    "partial": "Could not stop: {names}. Positions were closed anyway.",
+    "failed": "Emergency stop {account} failed: {reason}"
+  },
+  "notice": {
+    "actionFailed": "{action} {name} failed: {reason}"
+  },
+  "format": {
+    "daysHours": "{d} d {h} h",
+    "hoursMinutes": "{h} h {m} min",
+    "minutes": "{m} min",
+    "none": "–"
+  }
+}

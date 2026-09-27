@@ -1,0 +1,115 @@
+/* Wickwatch design tokens. Generated from tokens.json – edit there. */
+:root {
+  --ww-brand-amber-300: #F4C06F;
+  --ww-brand-amber-500: #E8A33D;
+  --ww-brand-amber-700: #C9821F;
+  --ww-brand-blue-200: #9CCBF0;
+  --ww-brand-blue-400: #5AA9E6;
+  --ww-brand-blue-600: #2F7FC1;
+  --ww-brand-ink: #1B2230;
+  --ww-brand-paper: #F4F1EA;
+  --ww-font-display: 'Space Grotesk', system-ui, sans-serif;
+  --ww-font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --ww-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ww-size-xs: 12px;
+  --ww-size-sm: 13px;
+  --ww-size-md: 14px;
+  --ww-size-lg: 16px;
+  --ww-size-xl: 18px;
+  --ww-size-2xl: 20px;
+  --ww-size-3xl: 28px;
+  --ww-size-4xl: 36px;
+  --ww-space-1: 4px;
+  --ww-space-2: 8px;
+  --ww-space-3: 12px;
+  --ww-space-4: 16px;
+  --ww-space-5: 20px;
+  --ww-space-6: 24px;
+  --ww-space-8: 32px;
+  --ww-space-10: 40px;
+  --ww-space-12: 48px;
+  --ww-radius-sm: 6px;
+  --ww-radius-md: 8px;
+  --ww-radius-lg: 12px;
+  --ww-radius-xl: 16px;
+  --ww-radius-full: 999px;
+  --ww-touch-target: 44px;
+  color-scheme: light dark;
+}
+
+/* Light (default when the system prefers light) */
+:root {
+  --ww-bg: #F7F6F2;
+  --ww-surface: #FFFFFF;
+  --ww-surface-raised: #F1EFE9;
+  --ww-inset: #F1EFE9;
+  --ww-border: #E2DED5;
+  --ww-border-strong: #CFCAC0;
+  --ww-text: #1B2230;
+  --ww-text-muted: #5B6470;
+  --ww-text-subtle: #646C77;
+  --ww-accent: #E8A33D;
+  --ww-accent-hover: #C9821F;
+  --ww-on-accent: #15110A;
+  --ww-link: #9A5E0C;
+  --ww-info: #2A6FAA;
+  --ww-positive: #1C7A55;
+  --ww-positive-bg: #E3F4EC;
+  --ww-negative: #B83E24;
+  --ww-negative-bg: #FBE8E3;
+  --ww-warning: #8A6A00;
+  --ww-warning-bg: #FBF3D6;
+  --ww-focus: #2A6FAA;
+}
+
+/* Dark: system preference, unless the user picked light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ww-bg: #0F1318;
+    --ww-surface: #171C23;
+    --ww-surface-raised: #1E252E;
+    --ww-inset: #0B0E12;
+    --ww-border: #262D37;
+    --ww-border-strong: #353D48;
+    --ww-text: #E7EAEE;
+    --ww-text-muted: #9AA3AF;
+    --ww-text-subtle: #7C8592;
+    --ww-accent: #E8A33D;
+    --ww-accent-hover: #F4C06F;
+    --ww-on-accent: #15110A;
+    --ww-link: #E8A33D;
+    --ww-info: #5AA9E6;
+    --ww-positive: #3DBE8B;
+    --ww-positive-bg: #15302A;
+    --ww-negative: #F07152;
+    --ww-negative-bg: #2A1714;
+    --ww-warning: #E8C33D;
+    --ww-warning-bg: #29240F;
+    --ww-focus: #5AA9E6;
+  }
+}
+
+/* Dark: explicit choice in the header switch */
+:root[data-theme="dark"] {
+  --ww-bg: #0F1318;
+  --ww-surface: #171C23;
+  --ww-surface-raised: #1E252E;
+  --ww-inset: #0B0E12;
+  --ww-border: #262D37;
+  --ww-border-strong: #353D48;
+  --ww-text: #E7EAEE;
+  --ww-text-muted: #9AA3AF;
+  --ww-text-subtle: #7C8592;
+  --ww-accent: #E8A33D;
+  --ww-accent-hover: #F4C06F;
+  --ww-on-accent: #15110A;
+  --ww-link: #E8A33D;
+  --ww-info: #5AA9E6;
+  --ww-positive: #3DBE8B;
+  --ww-positive-bg: #15302A;
+  --ww-negative: #F07152;
+  --ww-negative-bg: #2A1714;
+  --ww-warning: #E8C33D;
+  --ww-warning-bg: #29240F;
+  --ww-focus: #5AA9E6;
+}

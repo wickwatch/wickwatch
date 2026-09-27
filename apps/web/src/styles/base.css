@@ -1,0 +1,158 @@
+/* Global base styles. Colours come from design/tokens.css only (BRAND.md). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ww-bg);
+  color: var(--ww-text);
+  font-family: var(--ww-font-body);
+  font-size: var(--ww-size-md);
+  line-height: 1.45;
+}
+
+a {
+  color: var(--ww-link);
+}
+
+a:hover {
+  color: var(--ww-accent-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ww-focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-size: var(--ww-size-xl);
+  font-weight: 600;
+}
+
+.mono {
+  font-family: var(--ww-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--ww-text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.panel {
+  background: var(--ww-surface);
+  border: 1px solid var(--ww-border);
+  border-radius: var(--ww-radius-xl);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ww-space-2);
+  min-height: var(--ww-touch-target);
+  padding: var(--ww-space-2) var(--ww-space-3);
+  border: 1px solid var(--ww-border);
+  border-radius: var(--ww-radius-md);
+  background: var(--ww-surface-raised);
+  color: var(--ww-text);
+  font: inherit;
+  font-size: var(--ww-size-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--ww-border-strong);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ww-text-muted);
+  font-weight: 400;
+}
+
+.btn--ghost[aria-pressed="true"] {
+  background: var(--ww-surface-raised);
+  color: var(--ww-text);
+  font-weight: 600;
+}
+
+.btn--danger {
+  border-color: color-mix(in srgb, var(--ww-negative) 45%, transparent);
+  background: var(--ww-negative-bg);
+  color: var(--ww-negative);
+}
+
+.btn--small {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: var(--ww-size-xs);
+}
+
+@media (pointer: coarse) {
+  .btn--small {
+    min-height: var(--ww-touch-target);
+  }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--ww-radius-full);
+  font-size: var(--ww-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tone-positive {
+  color: var(--ww-positive);
+}
+
+.tone-negative {
+  color: var(--ww-negative);
+}
+
+.tone-warning {
+  color: var(--ww-warning);
+}
+
+.tone-muted {
+  color: var(--ww-text-muted);
+}
+
+.pill.tone-positive {
+  background: var(--ww-positive-bg);
+}
+
+.pill.tone-negative {
+  background: var(--ww-negative-bg);
+}
+
+.pill.tone-warning {
+  background: var(--ww-warning-bg);
+}
+
+.pill.tone-muted {
+  background: var(--ww-surface-raised);
+}

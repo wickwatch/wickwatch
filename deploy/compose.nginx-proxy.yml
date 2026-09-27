@@ -1,0 +1,15 @@
+# Behind nginx-proxy (nginxproxy/nginx-proxy, formerly jwilder) with acme-companion.
+# Usage: docker compose -f compose.standalone.yml -f compose.nginx-proxy.yml up -d
+services:
+  wickwatch:
+    ports: !reset []
+    environment:
+      VIRTUAL_HOST: bots.example.com
+      VIRTUAL_PORT: 3000
+      LETSENCRYPT_HOST: bots.example.com
+      TRUST_PROXY: "true"
+    networks: [internal, proxy]
+
+networks:
+  proxy:
+    external: true # the network your nginx-proxy is attached to
