@@ -13,7 +13,8 @@ Requires Node 24+ and pnpm (version pinned in `package.json`, `corepack enable` 
 pnpm install
 cp .env.example .env   # then set MASTER_KEY=$(openssl rand -base64 32)
 pnpm dev:server     # API on :3000, reads .env
-pnpm dev:web        # SPA with hot reload, proxies /api to the server
+pnpm dev:web        # SPA with hot reload on :5173, proxies /api to the server
+pnpm start          # production build of both, served together on :3000
 pnpm check          # format check, lint, typecheck, tests – the same as CI
 ```
 

@@ -45,7 +45,21 @@
       "stopped": "Bot gestoppt",
       "idle": "Keine Instanzen",
       "error": "Nicht erreichbar"
-    }
+    },
+    "title": "Konto",
+    "role": "Rolle",
+    "roles": {
+      "admin": "Admin",
+      "viewer": "Nur lesen"
+    },
+    "totpOn": "2FA an",
+    "totpOff": "2FA aus",
+    "enableTotp": "2FA einrichten",
+    "confirmTotp": "2FA aktivieren",
+    "passwordToDisable": "Passwort (zum Abschalten von 2FA)",
+    "disableTotp": "2FA abschalten",
+    "totpEnabledNotice": "2FA ist an. Ab jetzt brauchst du beim Anmelden einen Code.",
+    "totpDisabledNotice": "2FA ist aus. Du meldest dich nur mit dem Passwort an."
   },
   "challenge": {
     "profitTarget": "Profit-Ziel",
@@ -93,7 +107,10 @@
       "setup_done": "Die Einrichtung ist bereits abgeschlossen. Bitte anmelden.",
       "master_key_missing": "MASTER_KEY ist auf dem Server nicht gesetzt.",
       "weak_password": "Das Passwort ist zu kurz.",
-      "invalid_code": "Der Code ist falsch oder abgelaufen. Uhrzeit am Gerät prüfen."
+      "invalid_code": "Der Code ist falsch oder abgelaufen. Uhrzeit am Gerät prüfen.",
+      "totp_required": "Gib den Code aus deiner Authenticator-App ein.",
+      "totp_already_enabled": "2FA ist bereits an.",
+      "invalid_password": "Das Passwort ist falsch."
     }
   },
   "parameterIssue": {
@@ -189,14 +206,19 @@
       "token": "Setup-Token",
       "tokenHint": "Steht im Server-Log: „No admin yet … setup token: …“",
       "next": "Weiter",
-      "scan": "Scanne den QR-Code mit einer Authenticator-App und gib dann ein Passwort und den aktuellen Code ein.",
-      "qrAlt": "QR-Code für die Authenticator-App",
-      "manual": "Scannen klappt nicht? Schlüssel manuell eingeben",
       "passwordHint": "Mindestens {min} Zeichen.",
       "repeat": "Passwort wiederholen",
       "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen.",
       "passwordMismatch": "Die Passwörter stimmen nicht überein.",
-      "finish": "Admin anlegen und anmelden"
+      "finishWithTotp": "2FA aktivieren und abschließen",
+      "skipTotp": "Überspringen – später unter Konto einrichten"
+    },
+    "totp": {
+      "title": "Zwei-Faktor-Authentisierung",
+      "recommended": "Empfohlen: Wickwatch kann Bots stoppen und Positionen schließen. Ein Code aus einer Authenticator-App schützt auch dann, wenn das Passwort bekannt wird.",
+      "scan": "Scanne den QR-Code mit einer Authenticator-App (z. B. 2FAS, Aegis, Google Authenticator) und gib dann den aktuellen Code ein.",
+      "qrAlt": "QR-Code für die Authenticator-App",
+      "manual": "Scannen klappt nicht? Schlüssel manuell eingeben"
     }
   }
 }

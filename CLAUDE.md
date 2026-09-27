@@ -9,7 +9,7 @@ Wickwatch: a self-hosted, open-source (AGPL-3.0) dashboard to monitor and contro
 - **Core is broker- and strategy-neutral.** No cTrader types, paths or strategy names in core code. Everything cTrader-specific lives in adapters (`docs/ADAPTERS.md`).
 - **i18n from day one.** English source strings, German translation. No UI strings in components; use `i18n/en.json`, `i18n/de.json`. Format numbers/dates with `Intl`.
 - **Design tokens only.** Use `design/tokens.css` variables (`--ww-*`), never hard-coded colours. Dark and light mode must both work. Rules in `BRAND.md`.
-- **Security:** credentials encrypted at rest (master key from env), never logged. Docker access only through docker-socket-proxy. Built-in auth (admin login + TOTP).
+- **Security:** credentials encrypted at rest (master key from env), never logged. Docker access only through docker-socket-proxy. Built-in auth (admin login, optional TOTP).
 - **Proxy-agnostic:** configurable host/port/base path, `TRUST_PROXY`, `/healthz`. SSE sends `X-Accel-Buffering: no`.
 - **Colour never carries meaning alone** (status always with text or sign).
 - **Destructive actions** (emergency stop, close position) require confirmation and are audit-logged.

@@ -30,7 +30,9 @@ async function logout() {
       <HostStatus v-if="currentUser" class="header__host" />
       <HeaderControls />
       <div v-if="currentUser" class="user">
-        <span class="user__name muted">{{ currentUser.username }}</span>
+        <RouterLink to="/account" class="user__name" :title="$t('account.title')">{{
+          currentUser.username
+        }}</RouterLink>
         <button type="button" class="btn btn--small" @click="logout">{{ $t("auth.logout") }}</button>
       </div>
     </div>
@@ -85,6 +87,7 @@ async function logout() {
 }
 
 .user__name {
+  color: var(--ww-text-muted);
   font-size: var(--ww-size-sm);
 }
 

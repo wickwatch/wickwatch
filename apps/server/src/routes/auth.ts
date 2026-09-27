@@ -1,4 +1,5 @@
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import QRCode from "qrcode";
 import Type from "typebox";
 import { type SetupState, needsSetup } from "../auth/setup";
@@ -14,6 +15,7 @@ import { audit } from "../services/audit";
 const User = Type.Object({
   username: Type.String(),
   role: Type.Union([Type.Literal("admin"), Type.Literal("viewer")]),
+  totpEnabled: Type.Boolean(),
 });
 
 const Session = Type.Object({
@@ -23,10 +25,18 @@ const Session = Type.Object({
   user: Type.Optional(User),
 });
 
+const TotpSetup = Type.Object({
+  secret: Type.String(),
+  uri: Type.String(),
+  /** PNG data URL of the QR code. */
+  qr: Type.String(),
+});
+
 const Username = Type.String({ minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9._@-]+$" });
+const Password = Type.String({ maxLength: 256 });
 const Code = Type.String({ minLength: 6, maxLength: 8 });
 
-// Login and setup are the only unauthenticated write endpoints; slow down guessing.
+// Endpoints that check passwords or codes: slow down guessing.
 const limited = { rateLimit: { max: 10, timeWindow: "1 minute" } };
 
 export interface AuthRouteOptions {
@@ -36,17 +46,35 @@ export interface AuthRouteOptions {
   basePath: string;
 }
 
+async function totpSetup(secret: string, username: string) {
+  const uri = totpUri(secret, username);
+  return { secret, uri, qr: await QRCode.toDataURL(uri, { margin: 1, width: 240 }) };
+}
+
 export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (app, { db, cipher, setup, basePath }) => {
+  /** Secrets shown to logged-in users who are enabling 2FA, until they confirm a code. */
+  const pendingTotp = new Map<number, string>();
+
+  const loadUser = (id: number) => db.selectFrom("users").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
+
+  function requireUser(request: FastifyRequest, reply: FastifyReply) {
+    if (!request.user) void reply.code(401).send({ error: "unauthenticated" });
+    return request.user;
+  }
+
   app.get(
     "/session",
     {
       schema: { tags: ["auth"], summary: "Who is logged in, and whether setup is needed", response: { 200: Session } },
     },
-    async (request) => ({
-      setupRequired: await needsSetup(db),
-      masterKeyConfigured: cipher !== undefined,
-      ...(request.user ? { user: { username: request.user.username, role: request.user.role } } : {}),
-    }),
+    async (request) => {
+      const user = request.user ? await loadUser(request.user.id) : undefined;
+      return {
+        setupRequired: await needsSetup(db),
+        masterKeyConfigured: cipher !== undefined,
+        ...(user ? { user: { username: user.username, role: user.role, totpEnabled: user.totp_secret !== null } } : {}),
+      };
+    },
   );
 
   app.post(
@@ -55,26 +83,16 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       config: limited,
       schema: {
         tags: ["auth"],
-        summary: "First run: get a TOTP secret for the admin account",
+        summary: "First run: check the setup token and get a TOTP secret for the admin (2FA is optional)",
         body: Type.Object({ token: Type.String(), username: Username }),
-        response: {
-          200: Type.Object({ secret: Type.String(), uri: Type.String(), qr: Type.String() }),
-          429: ErrorBody,
-          400: ErrorBody,
-          403: ErrorBody,
-          409: ErrorBody,
-          503: ErrorBody,
-        },
+        response: { 200: TotpSetup, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
       if (!(await needsSetup(db))) return reply.code(409).send({ error: "setup_done" });
       if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       if (!setup.matches(request.body.token)) return reply.code(403).send({ error: "invalid_setup_token" });
-
-      const secret = (setup.pendingTotpSecret ??= generateTotpSecret());
-      const uri = totpUri(secret, request.body.username);
-      return { secret, uri, qr: await QRCode.toDataURL(uri, { margin: 1, width: 240 }) };
+      return totpSetup((setup.pendingTotpSecret ??= generateTotpSecret()), request.body.username);
     },
   );
 
@@ -85,12 +103,9 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       schema: {
         tags: ["auth"],
         summary: "First run: create the admin account and log in",
-        body: Type.Object({
-          token: Type.String(),
-          username: Username,
-          password: Type.String({ maxLength: 256 }),
-          code: Code,
-        }),
+        description:
+          "Without `code` the admin is created without 2FA; with it, the code must match the secret from /setup/totp.",
+        body: Type.Object({ token: Type.String(), username: Username, password: Password, code: Type.Optional(Code) }),
         response: { 200: User, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
@@ -101,9 +116,13 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       if (!setup.matches(token)) return reply.code(403).send({ error: "invalid_setup_token" });
       if (password.length < MIN_PASSWORD_LENGTH) return reply.code(400).send({ error: "weak_password" });
 
-      const secret = setup.pendingTotpSecret;
-      const counter = secret ? verifyTotp(secret, code, Date.now()) : undefined;
-      if (!secret || counter === undefined) return reply.code(400).send({ error: "invalid_code" });
+      let totp: { secret: string; counter: number } | undefined;
+      if (code !== undefined) {
+        const secret = setup.pendingTotpSecret;
+        const counter = secret ? verifyTotp(secret, code, Date.now()) : undefined;
+        if (!secret || counter === undefined) return reply.code(400).send({ error: "invalid_code" });
+        totp = { secret, counter };
+      }
 
       const now = new Date().toISOString();
       const { id } = await db
@@ -111,8 +130,8 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         .values({
           username,
           password_hash: await hashPassword(password),
-          totp_secret: cipher.encrypt(secret, "totp-secret"),
-          totp_last_counter: counter,
+          totp_secret: totp ? cipher.encrypt(totp.secret, "totp-secret") : null,
+          totp_last_counter: totp?.counter ?? null,
           role: "admin",
           created_at: now,
           updated_at: now,
@@ -121,9 +140,9 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         .executeTakeFirstOrThrow();
       setup.complete();
 
-      await audit(db, { action: "auth.setup", target: username, userId: id });
+      await audit(db, { action: "auth.setup", target: username, userId: id, details: { totp: totp !== undefined } });
       setSessionCookie(reply, await createSession(db, id), basePath);
-      return { username, role: "admin" as const };
+      return { username, role: "admin" as const, totpEnabled: totp !== undefined };
     },
   );
 
@@ -133,12 +152,10 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       config: limited,
       schema: {
         tags: ["auth"],
-        summary: "Log in with password and TOTP code",
-        body: Type.Object({
-          username: Type.String({ maxLength: 64 }),
-          password: Type.String({ maxLength: 256 }),
-          code: Code,
-        }),
+        summary: "Log in with password, plus TOTP code if 2FA is enabled",
+        description:
+          "Wrong user name, password or code: 401 `invalid_credentials`. Right password but 2FA enabled and no `code`: 401 `totp_required`.",
+        body: Type.Object({ username: Type.String({ maxLength: 64 }), password: Password, code: Type.Optional(Code) }),
         response: { 200: User, 401: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
@@ -150,21 +167,24 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       const passwordOk = user
         ? await verifyPassword(password, user.password_hash)
         : await verifyDummyPassword(password);
-      const counter =
-        passwordOk && user?.totp_secret
-          ? verifyTotp(cipher.decrypt(user.totp_secret, "totp-secret"), code, Date.now(), user.totp_last_counter ?? -1)
-          : undefined;
+      const fail = async (error: string, details: Record<string, unknown> = {}) => {
+        await audit(db, { action: "auth.login", target: username, details: { ok: false, ...details } });
+        return reply.code(401).send({ error });
+      };
+      // One answer for unknown user and wrong password: do not reveal which one was wrong.
+      if (!user || !passwordOk) return fail("invalid_credentials");
 
-      if (!user || counter === undefined) {
-        await audit(db, { action: "auth.login", target: username, details: { ok: false } });
-        // One answer for every failure: do not reveal whether the user, password or code was wrong.
-        return reply.code(401).send({ error: "invalid_credentials" });
+      if (user.totp_secret) {
+        if (code === undefined) return fail("totp_required", { totpRequired: true });
+        const secret = cipher.decrypt(user.totp_secret, "totp-secret");
+        const counter = verifyTotp(secret, code, Date.now(), user.totp_last_counter ?? -1);
+        if (counter === undefined) return fail("invalid_credentials");
+        await db.updateTable("users").set({ totp_last_counter: counter }).where("id", "=", user.id).execute();
       }
 
-      await db.updateTable("users").set({ totp_last_counter: counter }).where("id", "=", user.id).execute();
       await audit(db, { action: "auth.login", target: username, userId: user.id, details: { ok: true } });
       setSessionCookie(reply, await createSession(db, user.id), basePath);
-      return { username: user.username, role: user.role };
+      return { username: user.username, role: user.role, totpEnabled: user.totp_secret !== null };
     },
   );
 
@@ -177,6 +197,101 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       if (request.user)
         await audit(db, { action: "auth.logout", target: request.user.username, userId: request.user.id });
       clearSessionCookie(reply, basePath);
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
+    "/totp/setup",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Start enabling 2FA for the logged-in user: get a new TOTP secret",
+        security: [{ session: [] }],
+        response: { 200: TotpSetup, 401: ErrorBody, 409: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      if ((await loadUser(current.id)).totp_secret) return reply.code(409).send({ error: "totp_already_enabled" });
+      const secret = generateTotpSecret();
+      pendingTotp.set(current.id, secret);
+      return totpSetup(secret, current.username);
+    },
+  );
+
+  app.post(
+    "/totp/enable",
+    {
+      config: limited,
+      schema: {
+        tags: ["auth"],
+        summary: "Finish enabling 2FA with a code for the secret from /totp/setup",
+        security: [{ session: [] }],
+        body: Type.Object({ code: Code }),
+        response: { 204: Type.Null(), 400: ErrorBody, 401: ErrorBody, 429: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
+      const secret = pendingTotp.get(current.id);
+      const counter = secret ? verifyTotp(secret, request.body.code, Date.now()) : undefined;
+      if (!secret || counter === undefined) return reply.code(400).send({ error: "invalid_code" });
+
+      await db
+        .updateTable("users")
+        .set({
+          totp_secret: cipher.encrypt(secret, "totp-secret"),
+          totp_last_counter: counter,
+          updated_at: new Date().toISOString(),
+        })
+        .where("id", "=", current.id)
+        .execute();
+      pendingTotp.delete(current.id);
+      await audit(db, { action: "auth.totp_enable", target: current.username, userId: current.id });
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
+    "/totp/disable",
+    {
+      config: limited,
+      schema: {
+        tags: ["auth"],
+        summary: "Turn 2FA off for the logged-in user; needs the password",
+        security: [{ session: [] }],
+        body: Type.Object({ password: Password }),
+        response: { 204: Type.Null(), 401: ErrorBody, 403: ErrorBody, 429: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      const user = await loadUser(current.id);
+      if (!(await verifyPassword(request.body.password, user.password_hash))) {
+        await audit(db, {
+          action: "auth.totp_disable",
+          target: current.username,
+          userId: current.id,
+          details: { ok: false },
+        });
+        return reply.code(403).send({ error: "invalid_password" });
+      }
+      await db
+        .updateTable("users")
+        .set({ totp_secret: null, totp_last_counter: null, updated_at: new Date().toISOString() })
+        .where("id", "=", current.id)
+        .execute();
+      await audit(db, {
+        action: "auth.totp_disable",
+        target: current.username,
+        userId: current.id,
+        details: { ok: true },
+      });
       return reply.code(204).send(null);
     },
   );

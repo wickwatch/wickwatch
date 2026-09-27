@@ -3,6 +3,8 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { api, errorKey, type TotpSetup } from "../api";
 import AuthCard from "../components/AuthCard.vue";
+import CodeInput from "../components/CodeInput.vue";
+import TotpEnroll from "../components/TotpEnroll.vue";
 import { loadSession, session } from "../session";
 
 const MIN_PASSWORD_LENGTH = 12;
@@ -35,19 +37,21 @@ async function run(action: () => Promise<void>) {
   }
 }
 
-const start = () =>
+/** Step 1: checks the token and gets the QR code for the optional 2FA step. */
+const next = () =>
   run(async () => {
+    if (passwordProblem.value) return;
     totp.value = await api.setupTotp({ token: token.value.trim(), username: username.value });
   });
 
-const finish = () =>
+/** Step 2: with a code 2FA is enabled; without, it is skipped. */
+const finish = (withCode: boolean) =>
   run(async () => {
-    if (passwordProblem.value) return;
     await api.setup({
       token: token.value.trim(),
       username: username.value,
       password: password.value,
-      code: code.value,
+      ...(withCode ? { code: code.value } : {}),
     });
     await loadSession();
     await router.replace("/");
@@ -60,7 +64,7 @@ const finish = () =>
       {{ $t("auth.masterKeyMissing") }}
     </p>
 
-    <form v-if="!totp" class="form" @submit.prevent="start">
+    <form v-if="!totp" class="form" @submit.prevent="next">
       <p class="muted">{{ $t("auth.setup.intro") }}</p>
       <label class="field">
         {{ $t("auth.setup.token") }}
@@ -71,17 +75,6 @@ const finish = () =>
         {{ $t("auth.username") }}
         <input v-model="username" class="input" autocomplete="username" pattern="[A-Za-z0-9._@\-]+" required />
       </label>
-      <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-      <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.setup.next") }}</button>
-    </form>
-
-    <form v-else class="form" @submit.prevent="finish">
-      <p class="muted">{{ $t("auth.setup.scan") }}</p>
-      <img class="qr" :src="totp.qr" :alt="$t('auth.setup.qrAlt')" width="240" height="240" />
-      <details>
-        <summary>{{ $t("auth.setup.manual") }}</summary>
-        <code class="mono secret">{{ totp.secret }}</code>
-      </details>
       <label class="field">
         {{ $t("auth.password") }}
         <input v-model="password" class="input" type="password" autocomplete="new-password" required />
@@ -91,22 +84,22 @@ const finish = () =>
         {{ $t("auth.setup.repeat") }}
         <input v-model="repeat" class="input" type="password" autocomplete="new-password" required />
       </label>
-      <label class="field">
-        {{ $t("auth.code") }}
-        <input
-          v-model="code"
-          class="input mono"
-          autocomplete="one-time-code"
-          inputmode="numeric"
-          pattern="[0-9 ]{6,8}"
-          maxlength="8"
-          required
-        />
-      </label>
       <p v-if="passwordProblem" class="tone-warning">{{ $t(passwordProblem, { min: MIN_PASSWORD_LENGTH }) }}</p>
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <button type="submit" class="btn btn--primary" :disabled="busy || !!passwordProblem">
-        {{ $t("auth.setup.finish") }}
+        {{ $t("auth.setup.next") }}
+      </button>
+    </form>
+
+    <form v-else class="form" @submit.prevent="finish(true)">
+      <h2>{{ $t("auth.totp.title") }}</h2>
+      <p class="muted">{{ $t("auth.totp.recommended") }}</p>
+      <TotpEnroll :totp="totp" />
+      <CodeInput v-model="code" :label="$t('auth.code')" required />
+      <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
+      <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.setup.finishWithTotp") }}</button>
+      <button type="button" class="btn btn--ghost" :disabled="busy" @click="finish(false)">
+        {{ $t("auth.setup.skipTotp") }}
       </button>
     </form>
   </AuthCard>
@@ -123,14 +116,7 @@ p {
   margin: 0;
 }
 
-.qr {
-  align-self: center;
-  border-radius: var(--ww-radius-md);
-}
-
-.secret {
-  display: block;
-  margin-top: var(--ww-space-2);
-  word-break: break-all;
+h2 {
+  font-size: var(--ww-size-lg);
 }
 </style>

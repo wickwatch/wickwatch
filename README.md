@@ -16,12 +16,18 @@ docker build -t wickwatch .
 docker run --rm -p 3000:3000 -e MASTER_KEY="$(openssl rand -base64 32)" -v wickwatch-data:/app/data wickwatch
 ```
 
-Or from source (Node 24+, pnpm), see [`CONTRIBUTING.md`](CONTRIBUTING.md#development).
+Or from source (Node 24+, pnpm):
+
+```sh
+pnpm install
+cp .env.example .env    # then set MASTER_KEY=$(openssl rand -base64 32) in .env
+pnpm start
+```
 
 Then:
 1. Copy the **setup token** from the log line `No admin yet. Open /setup and enter the setup token: …`.
-2. Open http://localhost:3000, enter the token, choose a user name and scan the QR code with an authenticator app (e.g. Aegis, 2FAS, Google Authenticator).
-3. Set a password and enter the current code. The overview with demo data opens.
+2. Open http://localhost:3000, enter the token, a user name and a password.
+3. Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator) and enter the code, or skip two-factor authentication and set it up later under *Account*. The overview with demo data opens.
 
 The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login. Deployment behind a reverse proxy: [`deploy/`](deploy/README.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 

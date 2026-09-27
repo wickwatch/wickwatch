@@ -45,7 +45,8 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
     transform: ({ schema, url }) => {
       const path = basePath && url.startsWith(basePath) ? url.slice(basePath.length) : url;
       const isPublic = PUBLIC_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix));
-      if (isPublic) return { schema: { ...schema, security: [] }, url: path };
+      // Routes under /auth/ that need a session declare `security` themselves.
+      if (isPublic) return { schema: { security: [], ...schema }, url: path };
       const response = { ...(schema.response as Record<string, unknown> | undefined), 401: ErrorBody };
       return { schema: { ...schema, security: [{ session: [] }], response }, url: path };
     },

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createAdapters } from "./adapters";
 import { buildApp } from "./app";
@@ -11,8 +12,13 @@ import { VERSION } from "./version";
 
 try {
   const config = loadConfig(process.env);
-  // In the Docker image the SPA sits next to the server bundle (/app/web).
-  config.webDistDir ??= fileURLToPath(new URL("../web", import.meta.url));
+  // Docker image: /app/web next to the bundle. Repo checkout (`pnpm start`): apps/web/dist.
+  const webDistDir =
+    config.webDistDir ??
+    [new URL("../web", import.meta.url), new URL("../../web/dist", import.meta.url)]
+      .map((url) => fileURLToPath(url))
+      .find((dir) => existsSync(dir));
+  if (webDistDir) config.webDistDir = webDistDir;
 
   const db = createDatabase(config.database);
   const adapters = createAdapters(config);

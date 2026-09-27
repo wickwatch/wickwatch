@@ -34,8 +34,8 @@ export async function startApp(env: Record<string, string> = {}, { seed = true }
 
 export const currentCode = (secret: string) => totpCode(secret, totpCounter(Date.now()));
 
-/** Inserts a user directly and returns its TOTP secret. */
-export async function createUser(t: TestApp, username: string, role: Role): Promise<string> {
+/** Inserts a user directly and returns its TOTP secret (unused when `totp` is false). */
+export async function createUser(t: TestApp, username: string, role: Role, { totp = true } = {}): Promise<string> {
   const secret = generateTotpSecret();
   const now = new Date().toISOString();
   await t.db
@@ -43,7 +43,7 @@ export async function createUser(t: TestApp, username: string, role: Role): Prom
     .values({
       username,
       password_hash: await hashPassword(PASSWORD),
-      totp_secret: t.cipher.encrypt(secret, "totp-secret"),
+      totp_secret: totp ? t.cipher.encrypt(secret, "totp-secret") : null,
       totp_last_counter: null,
       role,
       created_at: now,

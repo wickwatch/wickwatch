@@ -56,7 +56,11 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   setLocale("en", false);
-  session.value = { setupRequired: false, masterKeyConfigured: true, user: { username: "admin", role: "admin" } };
+  session.value = {
+    setupRequired: false,
+    masterKeyConfigured: true,
+    user: { username: "admin", role: "admin", totpEnabled: true },
+  };
   system.value = {
     version: "test",
     defaultLocale: "en",
@@ -108,7 +112,11 @@ describe("OverviewView", () => {
   });
 
   it("hides actions and the emergency stop from viewers", async () => {
-    session.value = { setupRequired: false, masterKeyConfigured: true, user: { username: "anna", role: "viewer" } };
+    session.value = {
+      setupRequired: false,
+      masterKeyConfigured: true,
+      user: { username: "anna", role: "viewer", totpEnabled: false },
+    };
     const wrapper = await render();
     const labels = wrapper.findAll("button").map((b) => b.text());
     expect(labels).not.toContain("Stop");

@@ -45,7 +45,21 @@
       "stopped": "Bot stopped",
       "idle": "No instances",
       "error": "Not reachable"
-    }
+    },
+    "title": "Account",
+    "role": "Role",
+    "roles": {
+      "admin": "Admin",
+      "viewer": "Viewer"
+    },
+    "totpOn": "2FA on",
+    "totpOff": "2FA off",
+    "enableTotp": "Set up 2FA",
+    "confirmTotp": "Enable 2FA",
+    "passwordToDisable": "Password (to turn 2FA off)",
+    "disableTotp": "Turn 2FA off",
+    "totpEnabledNotice": "2FA is on. From now on you need a code to log in.",
+    "totpDisabledNotice": "2FA is off. You log in with the password only."
   },
   "challenge": {
     "profitTarget": "Profit target",
@@ -93,7 +107,10 @@
       "setup_done": "Setup is already complete. Log in instead.",
       "master_key_missing": "MASTER_KEY is not set on the server.",
       "weak_password": "The password is too short.",
-      "invalid_code": "The code is wrong or expired. Check the time on your device."
+      "invalid_code": "The code is wrong or expired. Check the time on your device.",
+      "totp_required": "Enter the code from your authenticator app.",
+      "totp_already_enabled": "2FA is already on.",
+      "invalid_password": "The password is wrong."
     }
   },
   "parameterIssue": {
@@ -189,14 +206,19 @@
       "token": "Setup token",
       "tokenHint": "Shown in the server log: “No admin yet … setup token: …”",
       "next": "Continue",
-      "scan": "Scan the QR code with an authenticator app, then enter a password and the current code.",
-      "qrAlt": "QR code for the authenticator app",
-      "manual": "Can't scan? Enter the key manually",
       "passwordHint": "At least {min} characters.",
       "repeat": "Repeat password",
       "passwordTooShort": "The password needs at least {min} characters.",
       "passwordMismatch": "The passwords do not match.",
-      "finish": "Create admin and log in"
+      "finishWithTotp": "Enable 2FA and finish",
+      "skipTotp": "Skip for now – set up later under Account"
+    },
+    "totp": {
+      "title": "Two-factor authentication",
+      "recommended": "Recommended: Wickwatch can stop bots and close positions. A code from an authenticator app protects it even if the password leaks.",
+      "scan": "Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator), then enter the current code.",
+      "qrAlt": "QR code for the authenticator app",
+      "manual": "Can't scan? Enter the key manually"
     }
   }
 }

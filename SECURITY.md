@@ -6,7 +6,7 @@ Include steps to reproduce, affected version and impact. We aim to respond withi
 
 ## How Wickwatch protects your data
 
-- **Login:** built-in accounts with password (scrypt) and mandatory TOTP. Failed logins get one generic answer, are rate-limited (10 per minute per IP) and written to the audit log.
+- **Login:** built-in accounts with password (scrypt) and optional, recommended TOTP (two-factor authentication), which can be switched on or off per user under *Account* (switching off needs the password). Failed logins are rate-limited (10 per minute per IP) and written to the audit log; an unknown user and a wrong password get the same answer. When 2FA is on, the code is asked for only after the right password.
 - **First run:** while no user exists, the server prints a one-time **setup token** to its log. Only someone with access to the log can create the admin.
 - **Sessions:** random tokens in an `HttpOnly`, `SameSite=Strict` cookie (`Secure` over HTTPS), stored only as a hash. They end after 12 hours without use and after 7 days at the latest. State-changing requests from other origins are rejected.
 - **Roles:** `admin` may act (start/stop, emergency stop, credentials, accounts); `viewer` may only read.

@@ -10,6 +10,7 @@
   "scripts": {
     "dev:server": "pnpm --filter @wickwatch/server dev",
     "dev:web": "pnpm --filter @wickwatch/web dev",
+    "start": "pnpm build && node --env-file-if-exists=.env apps/server/dist/main.js",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . && stylelint \"**/*.{css,vue,html}\"",

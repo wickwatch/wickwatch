@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { api, errorKey } from "../api";
+import { api, ApiError, errorKey } from "../api";
 import AuthCard from "../components/AuthCard.vue";
+import CodeInput from "../components/CodeInput.vue";
 import { loadSession, session } from "../session";
 
 const router = useRouter();
@@ -10,20 +11,33 @@ const route = useRoute();
 const username = ref("");
 const password = ref("");
 const code = ref("");
+/** Shown once the server says 2FA is enabled for this user. */
+const needsCode = ref(false);
 const error = ref<string>();
 const busy = ref(false);
+const form = ref<HTMLFormElement>();
 
 async function submit() {
   busy.value = true;
   error.value = undefined;
   try {
-    await api.login({ username: username.value, password: password.value, code: code.value });
+    await api.login({
+      username: username.value,
+      password: password.value,
+      ...(needsCode.value ? { code: code.value } : {}),
+    });
     await loadSession();
     const redirect = typeof route.query["redirect"] === "string" ? route.query["redirect"] : "/";
     await router.replace(redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/");
   } catch (e) {
-    error.value = errorKey(e);
-    code.value = "";
+    if (e instanceof ApiError && e.code === "totp_required") {
+      needsCode.value = true;
+      await nextTick();
+      form.value?.querySelector<HTMLInputElement>("[autocomplete=one-time-code]")?.focus();
+    } else {
+      error.value = errorKey(e);
+      code.value = "";
+    }
   } finally {
     busy.value = false;
   }
@@ -35,28 +49,23 @@ async function submit() {
     <p v-if="session && !session.masterKeyConfigured" class="tone-negative" role="alert">
       {{ $t("auth.masterKeyMissing") }}
     </p>
-    <form class="form" @submit.prevent="submit">
+    <form ref="form" class="form" @submit.prevent="submit">
       <label class="field">
         {{ $t("auth.username") }}
-        <input v-model="username" class="input" autocomplete="username" required autofocus />
+        <input v-model="username" class="input" autocomplete="username" required autofocus :readonly="needsCode" />
       </label>
       <label class="field">
         {{ $t("auth.password") }}
-        <input v-model="password" class="input" type="password" autocomplete="current-password" required />
-      </label>
-      <label class="field">
-        {{ $t("auth.code") }}
         <input
-          v-model="code"
-          class="input mono"
-          autocomplete="one-time-code"
-          inputmode="numeric"
-          pattern="[0-9 ]{6,8}"
-          maxlength="8"
+          v-model="password"
+          class="input"
+          type="password"
+          autocomplete="current-password"
           required
+          :readonly="needsCode"
         />
-        <span class="field__hint">{{ $t("auth.codeHint") }}</span>
       </label>
+      <CodeInput v-if="needsCode" v-model="code" :label="$t('auth.code')" :hint="$t('auth.codeHint')" required />
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.login.submit") }}</button>
     </form>

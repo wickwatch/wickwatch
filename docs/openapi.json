@@ -130,7 +130,8 @@
                       "type": "object",
                       "required": [
                         "username",
-                        "role"
+                        "role",
+                        "totpEnabled"
                       ],
                       "properties": {
                         "username": {
@@ -151,6 +152,9 @@
                               ]
                             }
                           ]
+                        },
+                        "totpEnabled": {
+                          "type": "boolean"
                         }
                       }
                     }
@@ -164,7 +168,7 @@
     },
     "/api/v1/auth/setup/totp": {
       "post": {
-        "summary": "First run: get a TOTP secret for the admin account",
+        "summary": "First run: check the setup token and get a TOTP secret for the admin (2FA is optional)",
         "tags": [
           "auth"
         ],
@@ -335,6 +339,7 @@
         "tags": [
           "auth"
         ],
+        "description": "Without `code` the admin is created without 2FA; with it, the code must match the secret from /setup/totp.",
         "requestBody": {
           "required": true,
           "content": {
@@ -344,8 +349,7 @@
                 "required": [
                   "token",
                   "username",
-                  "password",
-                  "code"
+                  "password"
                 ],
                 "properties": {
                   "token": {
@@ -381,7 +385,8 @@
                   "type": "object",
                   "required": [
                     "username",
-                    "role"
+                    "role",
+                    "totpEnabled"
                   ],
                   "properties": {
                     "username": {
@@ -402,6 +407,9 @@
                           ]
                         }
                       ]
+                    },
+                    "totpEnabled": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -518,10 +526,11 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "summary": "Log in with password and TOTP code",
+        "summary": "Log in with password, plus TOTP code if 2FA is enabled",
         "tags": [
           "auth"
         ],
+        "description": "Wrong user name, password or code: 401 `invalid_credentials`. Right password but 2FA enabled and no `code`: 401 `totp_required`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -530,8 +539,7 @@
                 "type": "object",
                 "required": [
                   "username",
-                  "password",
-                  "code"
+                  "password"
                 ],
                 "properties": {
                   "username": {
@@ -562,7 +570,8 @@
                   "type": "object",
                   "required": [
                     "username",
-                    "role"
+                    "role",
+                    "totpEnabled"
                   ],
                   "properties": {
                     "username": {
@@ -583,6 +592,9 @@
                           ]
                         }
                       ]
+                    },
+                    "totpEnabled": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -665,6 +677,311 @@
         "responses": {
           "204": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/totp/setup": {
+      "post": {
+        "summary": "Start enabling 2FA for the logged-in user: get a new TOTP secret",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "secret",
+                    "uri",
+                    "qr"
+                  ],
+                  "properties": {
+                    "secret": {
+                      "type": "string"
+                    },
+                    "uri": {
+                      "type": "string"
+                    },
+                    "qr": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/totp/enable": {
+      "post": {
+        "summary": "Finish enabling 2FA with a code for the secret from /totp/setup",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/totp/disable": {
+      "post": {
+        "summary": "Turn 2FA off for the logged-in user; needs the password",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "maxLength": 256
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

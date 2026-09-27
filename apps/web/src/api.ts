@@ -48,6 +48,7 @@ export type InstanceAction = "start" | "stop" | "restart";
 export interface SessionUser {
   username: string;
   role: "admin" | "viewer";
+  totpEnabled: boolean;
 }
 
 export interface SessionInfo {
@@ -65,11 +66,16 @@ export interface TotpSetup {
 
 export const api = {
   session: () => request<SessionInfo>("auth/session"),
-  login: (body: { username: string; password: string; code: string }) => post<SessionUser>("auth/login", body),
+  /** Throws ApiError "totp_required" when 2FA is on and no code was given. */
+  login: (body: { username: string; password: string; code?: string }) => post<SessionUser>("auth/login", body),
   logout: () => post<undefined>("auth/logout"),
   setupTotp: (body: { token: string; username: string }) => post<TotpSetup>("auth/setup/totp", body),
-  setup: (body: { token: string; username: string; password: string; code: string }) =>
+  /** Without `code` the admin is created without 2FA. */
+  setup: (body: { token: string; username: string; password: string; code?: string }) =>
     post<SessionUser>("auth/setup", body),
+  totpSetup: () => post<TotpSetup>("auth/totp/setup"),
+  totpEnable: (code: string) => post<undefined>("auth/totp/enable", { code }),
+  totpDisable: (password: string) => post<undefined>("auth/totp/disable", { password }),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   host: () => request<HostStatus>("host"),
