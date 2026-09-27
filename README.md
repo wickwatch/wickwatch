@@ -6,6 +6,25 @@
 
 > **Status:** early development. Login with TOTP works; data comes from the demo adapter, broker and Docker adapters are not there yet.
 
+## Try it
+Wickwatch starts with a **demo adapter**: fake accounts, instances, positions and logs, so you can look around without a broker or bots.
+
+With Docker:
+
+```sh
+docker build -t wickwatch .
+docker run --rm -p 3000:3000 -e MASTER_KEY="$(openssl rand -base64 32)" -v wickwatch-data:/app/data wickwatch
+```
+
+Or from source (Node 24+, pnpm), see [`CONTRIBUTING.md`](CONTRIBUTING.md#development).
+
+Then:
+1. Copy the **setup token** from the log line `No admin yet. Open /setup and enter the setup token: …`.
+2. Open http://localhost:3000, enter the token, choose a user name and scan the QR code with an authenticator app (e.g. Aegis, 2FAS, Google Authenticator).
+3. Set a password and enter the current code. The overview with demo data opens.
+
+The API is described with OpenAPI: interactive docs at `/api/docs` after login. Deployment behind a reverse proxy: [`deploy/`](deploy/README.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
+
 ## Planned features (phase 1)
 - Instance overview with start, stop, restart, edit and create
 - Instance detail: parameters, open positions and orders, history, equity curve, live logs
@@ -23,7 +42,7 @@ A strategy- and broker-neutral core talks to pluggable adapters:
 | Broker (accounts, positions, deals, metadata) | cTrader CLI |
 | Config (parameter files) | `.cbotset` / `.optset` |
 
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.md).
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.md). Security model: [`SECURITY.md`](SECURITY.md).
 
 ## About the name
 A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick.

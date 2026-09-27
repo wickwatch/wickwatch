@@ -19,6 +19,21 @@ pnpm check          # format check, lint, typecheck, tests – the same as CI
 
 The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or Docker is needed for development. On the first start the server adds the demo accounts and prints a one-time setup token; open the web app, enter the token, create the admin and scan the QR code with an authenticator app.
 
+### Repository layout
+| Path | Content |
+| --- | --- |
+| `apps/server` | Fastify server: config, auth, database and migrations, REST API with OpenAPI, serves the web app |
+| `apps/web` | Vue 3 single-page app |
+| `packages/core` | Broker- and strategy-neutral types, adapter contracts, shared logic and contract tests |
+| `packages/adapter-*` | Adapter implementations (`adapter-demo` so far) |
+| `i18n/` | UI translations (`en.json` is the source, `de.json` the first translation) |
+| `design/`, `assets/` | Design tokens and logo files, see `BRAND.md` |
+| `templates/challenges/` | Prop-challenge templates as JSON |
+| `deploy/` | Example compose files |
+| `docs/` | Roadmap, adapter contracts, bot contract, configuration |
+
+Database changes are Kysely migrations in `apps/server/src/db/migrations/`: add a new file and register it in `index.ts`; never edit or rename an existing one.
+
 ## Developer Certificate of Origin (DCO)
 Every commit must be signed off to certify that you wrote the code or have the right to submit it under the project licence (AGPL-3.0):
 

@@ -12,6 +12,8 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 | `labels.ts` | Label keys and helpers for the configurable prefix |
 | `parameters.ts` | `validateParameters()`, format-independent, reusable by every config adapter |
 | `setup-log.ts` | `parseSetupLine()` for `WW-SETUP` lines (see [BOT-CONTRACT.md](BOT-CONTRACT.md)) |
+| `overview.ts` | `buildOverview()`: combines runtime and broker data into accounts, instances and alerts (pure, no I/O) |
+| `operations.ts` | `emergencyStopAccount()`: stops the account's instances first, then closes positions and cancels orders |
 | `testing/` | Contract test suites, exported as `@wickwatch/core/testing` |
 
 ## Changes from the first draft
