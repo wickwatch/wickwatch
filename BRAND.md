@@ -56,8 +56,3 @@ Sizes: 12, 13, 14 (default), 16, 18, 20, 28, 36 px (`--ww-size-*`). Numbers in t
 - No promises about profits, no hype, no financial advice.
 - Numbers first, adjectives last.
 - English is the source language; German is the first translation. Keep UI strings in the i18n files, never in components.
-
----
-
-### Kurzfassung auf Deutsch
-Zwei Modi (dunkel und hell), beide Pflicht. Nur Tokens verwenden, keine festen Farbwerte. Statusfarben immer zusammen mit Text oder Vorzeichen. Schriften: Space Grotesk für Logo und Titel, IBM Plex Sans für Text, IBM Plex Mono für Zahlen und Logs. Tonalität sachlich und kurz, keine Gewinnversprechen.

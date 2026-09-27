@@ -28,8 +28,6 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.
 ## About the name
 A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick.
 
-**Zum Namen:** Der *Wick* ist der Docht einer Chart-Kerze, also die dünne Linie, die zeigt, wie weit sich der Kurs bewegt hat. *Wickwatch* behält deine Trading-Bots im Blick, bis zu jedem Docht.
-
 ## Contributing
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md). Commits must be signed off (DCO).
 
