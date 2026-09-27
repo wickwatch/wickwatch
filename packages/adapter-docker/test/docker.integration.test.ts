@@ -40,7 +40,11 @@ describe.skipIf(!enabled)("DockerRuntimeAdapter against a real daemon", () => {
   const managedSpec = (name: string, marker: string) => ({
     name,
     image: IMAGE,
-    command: ["sh", "-c", 'trap "exit 0" TERM; echo "$(cat /mnt/wickwatch/marker.txt)"; while true; do sleep 0.2; done'],
+    command: [
+      "sh",
+      "-c",
+      'trap "exit 0" TERM; echo "$(cat /mnt/wickwatch/marker.txt)"; while true; do sleep 0.2; done',
+    ],
     labels: { [`${PREFIX}.instance`]: name },
     files: [{ path: "/mnt/wickwatch/marker.txt", content: new TextEncoder().encode(marker), mode: 0o400 }],
   });
