@@ -241,3 +241,25 @@ describe("managing logins and accounts", () => {
     expect((await patch("/api/v1/accounts/999", { displayName: "x" })).statusCode).toBe(404);
   });
 });
+
+describe("accounts of another broker adapter", () => {
+  it("are not listed", async () => {
+    const now = new Date().toISOString();
+    await t.db
+      .insertInto("accounts")
+      .values({
+        adapter: "other",
+        number: "7777777",
+        broker: "X",
+        currency: "USD",
+        display_name: "Other",
+        credential_id: null,
+        timezone: null,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    const numbers = (await get("/api/v1/accounts")).json<{ number: string }[]>().map((a) => a.number);
+    expect(numbers).toEqual(["1111111", "2222222", "3333333"]);
+  });
+});

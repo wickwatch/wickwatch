@@ -36,6 +36,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   app,
   { adapters, accounts, db, cipher, labelPrefix },
 ) => {
+  /** Accounts of the active broker adapter; rows of another adapter (e.g. demo) are not usable. */
   async function loadAccounts(id?: number): Promise<Account[]> {
     let query = db
       .selectFrom("accounts")
@@ -53,6 +54,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         "credentials.label as credential_label",
         "challenge_profiles.account_id as challenge_account",
       ])
+      .where("accounts.adapter", "=", adapters.broker.id)
       .orderBy("accounts.id");
     if (id !== undefined) query = query.where("accounts.id", "=", id);
     return (await query.execute()).map((a) => ({
@@ -88,7 +90,13 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
 
   app.get(
     "/accounts",
-    { schema: { tags: ["accounts"], summary: "Configured broker accounts", response: { 200: Type.Array(Account) } } },
+    {
+      schema: {
+        tags: ["accounts"],
+        summary: "Configured accounts of the active broker adapter",
+        response: { 200: Type.Array(Account) },
+      },
+    },
     () => loadAccounts(),
   );
 

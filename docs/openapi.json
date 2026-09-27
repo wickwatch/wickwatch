@@ -3494,7 +3494,7 @@
     },
     "/api/v1/accounts": {
       "get": {
-        "summary": "Configured broker accounts",
+        "summary": "Configured accounts of the active broker adapter",
         "tags": [
           "accounts"
         ],
