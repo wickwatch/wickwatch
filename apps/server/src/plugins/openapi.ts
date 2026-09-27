@@ -36,6 +36,7 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
         { name: "overview", description: "Aggregated views" },
         { name: "instances", description: "Bot instances" },
         { name: "accounts", description: "Broker accounts and stored credentials" },
+        { name: "algos", description: "Uploaded bot versions" },
       ],
       components: {
         securitySchemes: { session: { type: "apiKey", in: "cookie", name: SESSION_COOKIE } },

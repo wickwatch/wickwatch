@@ -6,7 +6,8 @@
   "nav": {
     "overview": "Overview",
     "accounts": "Accounts",
-    "backtests": "Backtests"
+    "backtests": "Backtests",
+    "algos": "Algos"
   },
   "status": {
     "running": "Running",
@@ -184,7 +185,11 @@
       "credential_not_found": "Login not found.",
       "account_exists": "This account is already added.",
       "account_not_found_at_broker": "The broker does not offer this account for the login.",
-      "account_inactive": "This account is not active at the broker."
+      "account_inactive": "This account is not active at the broker.",
+      "algo_empty": "The file is empty.",
+      "algo_duplicate": "This file is already uploaded.",
+      "algo_unreadable": "The file could not be read as an algo.",
+      "algo_version_exists": "This version already exists; enter another version."
     }
   },
   "parameterIssue": {
@@ -402,5 +407,26 @@
     "restored": "Position {id} counts for this instance again.",
     "excludedTitle": "Excluded trades ({count})",
     "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures."
+  },
+  "algos": {
+    "intro": "Bot files (.algo), stored per version with their parameters. Old versions stay for rollbacks.",
+    "upload": "Upload algo",
+    "file": "Algo file (.algo)",
+    "version": "Version (optional)",
+    "versionHint": "Default: the bot's BotVersion parameter, else its build time.",
+    "uploaded": "{name} {version} uploaded.",
+    "deleted": "{name} {version} deleted.",
+    "none": "No algos uploaded yet.",
+    "fullAccess": "Needs full access",
+    "built": "built {time}",
+    "uploadedAt": "uploaded {time}",
+    "hash": "SHA-256 {hash}…",
+    "parameters": "{count} parameters",
+    "parameter": "Parameter",
+    "group": "Group",
+    "type": "Type",
+    "default": "Default",
+    "range": "Range / options",
+    "deleteConfirm": "Delete {name} {version}? The file is removed."
   }
 }

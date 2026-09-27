@@ -12,6 +12,7 @@ import { openapi } from "./plugins/openapi";
 import { web } from "./plugins/web";
 import { loadChallengeTemplates } from "./challenges/templates";
 import { accountRoutes } from "./routes/accounts";
+import { algoRoutes } from "./routes/algos";
 import { challengeRoutes } from "./routes/challenges";
 import { authRoutes } from "./routes/auth";
 import { credentialRoutes } from "./routes/credentials";
@@ -69,6 +70,7 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, { db, templates, prefix: api });
+  await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {

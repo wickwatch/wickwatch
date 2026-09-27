@@ -217,8 +217,11 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
     };
   });
   const buildTime = str(data["BuildTime"]);
+  const accessRights = str(data["AccessRights"]);
   return {
     name: str(data["Name"]) as string,
+    // "None" runs in the sandbox; anything else (e.g. "FullTrust") needs --full-access.
+    ...(accessRights ? { fullAccess: accessRights !== "None" } : {}),
     ...(buildTime && !Number.isNaN(Date.parse(buildTime)) ? { buildTime: new Date(buildTime).toISOString() } : {}),
     parameters,
   };

@@ -5676,6 +5676,527 @@
           }
         }
       }
+    },
+    "/api/v1/algos": {
+      "get": {
+        "summary": "Uploaded algo versions",
+        "tags": [
+          "algos"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "version",
+                      "sha256",
+                      "size",
+                      "fullAccess",
+                      "parameters",
+                      "uploadedAt"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      },
+                      "sha256": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "type": "integer"
+                      },
+                      "buildTime": {
+                        "type": "string"
+                      },
+                      "fullAccess": {
+                        "type": "boolean"
+                      },
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "type"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "type": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "int"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "double"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "bool"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "string"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "enum"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "time"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "symbol"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "period"
+                                  ]
+                                }
+                              ]
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "group": {
+                              "type": "string"
+                            },
+                            "default": {},
+                            "min": {
+                              "type": "number"
+                            },
+                            "max": {
+                              "type": "number"
+                            },
+                            "step": {
+                              "type": "number"
+                            },
+                            "options": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "uploadedAt": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload an algo file (body: the file, application/octet-stream)",
+        "tags": [
+          "algos"
+        ],
+        "description": "The name comes from the algo's metadata. `version` defaults to the bot's BotVersion parameter, else its build time.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "in": "query",
+            "name": "fileName",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+            },
+            "in": "query",
+            "name": "version",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "version",
+                    "sha256",
+                    "size",
+                    "fullAccess",
+                    "parameters",
+                    "uploadedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "buildTime": {
+                      "type": "string"
+                    },
+                    "fullAccess": {
+                      "type": "boolean"
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "type"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "int"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "double"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "bool"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "string"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "enum"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "time"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "symbol"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "period"
+                                ]
+                              }
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string"
+                          },
+                          "default": {},
+                          "min": {
+                            "type": "number"
+                          },
+                          "max": {
+                            "type": "number"
+                          },
+                          "step": {
+                            "type": "number"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "uploadedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/algos/{id}": {
+      "delete": {
+        "summary": "Delete an algo version and its file",
+        "tags": [
+          "algos"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": [
@@ -5703,6 +6224,10 @@
     {
       "name": "accounts",
       "description": "Broker accounts and stored credentials"
+    },
+    {
+      "name": "algos",
+      "description": "Uploaded bot versions"
     }
   ]
 }

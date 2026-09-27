@@ -3,6 +3,7 @@ import { setUnauthenticatedHandler } from "./api";
 import { clearUser, loadSession, session } from "./session";
 import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
+import AlgosView from "./views/AlgosView.vue";
 import AccountView from "./views/AccountView.vue";
 import ChallengeView from "./views/ChallengeView.vue";
 import InstanceView from "./views/InstanceView.vue";
@@ -17,6 +18,7 @@ export const router = createRouter({
     { path: "/", name: "overview", component: OverviewView },
     { path: "/account", name: "account", component: AccountView },
     { path: "/accounts", name: "accounts", component: AccountsView },
+    { path: "/algos", name: "algos", component: AlgosView },
     { path: "/instances/:ref", name: "instance", component: InstanceView },
     { path: "/accounts/:number/challenge", name: "challenge", component: ChallengeView },
     { path: "/login", name: "login", component: LoginView, meta: { public: true } },

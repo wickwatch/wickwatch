@@ -1,4 +1,5 @@
 import type {
+  ParameterSchema,
   ChallengeProfile,
   ChallengeTemplate,
   EmergencyStopReport,
@@ -72,6 +73,18 @@ export interface AccountRow {
   hasChallenge: boolean;
 }
 
+export interface AlgoRow {
+  id: number;
+  name: string;
+  version: string;
+  sha256: string;
+  size: number;
+  buildTime?: string;
+  fullAccess: boolean;
+  parameters: ParameterSchema[];
+  uploadedAt: string;
+}
+
 export interface CredentialRow {
   id: number;
   label: string;
@@ -137,6 +150,13 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,
     }),
+  algos: () => request<AlgoRow[]>("algos"),
+  uploadAlgo: (file: File, version?: string) =>
+    request<AlgoRow>(
+      `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}`,
+      { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
+    ),
+  deleteAlgo: (id: number) => send<undefined>("DELETE", `algos/${String(id)}`),
   accounts: () => request<AccountRow[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>
     post<AccountRow>("accounts", body),

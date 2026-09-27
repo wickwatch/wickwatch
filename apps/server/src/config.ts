@@ -24,6 +24,8 @@ export interface Config {
   ctraderCliPath: string;
   /** Directory with challenge templates (*.json). */
   challengeTemplatesDir: string;
+  /** Where uploaded algo files are stored, versioned as <name>/<version>/<name>.algo. */
+  algosDir: string;
   /** How often balance and equity of every account are sampled. */
   accountPollSeconds: number;
   webDistDir?: string;
@@ -95,6 +97,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     labelPrefix,
     defaultLocale,
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
+    algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
     ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
     accountPollSeconds,
     adapters: {

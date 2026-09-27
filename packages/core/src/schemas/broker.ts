@@ -101,6 +101,8 @@ export const AlgoMetadata = Type.Object({
   version: Type.Optional(Type.String()),
   /** When the algo file was built, if the platform records it. */
   buildTime: Type.Optional(IsoTime),
+  /** The algo asks for unrestricted access rights (file system, network) and must be started with them. */
+  fullAccess: Type.Optional(Type.Boolean()),
   parameters: Type.Array(ParameterSchema),
 });
 export type AlgoMetadata = Type.Static<typeof AlgoMetadata>;

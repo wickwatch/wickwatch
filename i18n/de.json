@@ -6,7 +6,8 @@
   "nav": {
     "overview": "Übersicht",
     "accounts": "Konten",
-    "backtests": "Backtests"
+    "backtests": "Backtests",
+    "algos": "Algos"
   },
   "status": {
     "running": "Läuft",
@@ -184,7 +185,11 @@
       "credential_not_found": "Login nicht gefunden.",
       "account_exists": "Dieses Konto ist bereits hinzugefügt.",
       "account_not_found_at_broker": "Der Broker bietet dieses Konto für den Login nicht an.",
-      "account_inactive": "Dieses Konto ist beim Broker nicht aktiv."
+      "account_inactive": "Dieses Konto ist beim Broker nicht aktiv.",
+      "algo_empty": "Die Datei ist leer.",
+      "algo_duplicate": "Diese Datei ist schon hochgeladen.",
+      "algo_unreadable": "Die Datei konnte nicht als Algo gelesen werden.",
+      "algo_version_exists": "Diese Version gibt es schon; bitte eine andere Version angeben."
     }
   },
   "parameterIssue": {
@@ -402,5 +407,26 @@
     "restored": "Position {id} zählt wieder für diese Instanz.",
     "excludedTitle": "Ausgeschlossene Trades ({count})",
     "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen."
+  },
+  "algos": {
+    "intro": "Bot-Dateien (.algo), pro Version abgelegt mit ihren Parametern. Alte Versionen bleiben für ein Rollback erhalten.",
+    "upload": "Algo hochladen",
+    "file": "Algo-Datei (.algo)",
+    "version": "Version (optional)",
+    "versionHint": "Standard: der Parameter BotVersion des Bots, sonst seine Build-Zeit.",
+    "uploaded": "{name} {version} hochgeladen.",
+    "deleted": "{name} {version} gelöscht.",
+    "none": "Noch keine Algos hochgeladen.",
+    "fullAccess": "Braucht vollen Zugriff",
+    "built": "gebaut {time}",
+    "uploadedAt": "hochgeladen {time}",
+    "hash": "SHA-256 {hash}…",
+    "parameters": "{count} Parameter",
+    "parameter": "Parameter",
+    "group": "Gruppe",
+    "type": "Typ",
+    "default": "Default",
+    "range": "Bereich / Optionen",
+    "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt."
   }
 }

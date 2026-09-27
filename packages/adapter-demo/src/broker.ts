@@ -120,11 +120,19 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     return { closed: positions.length, cancelled: orders.length };
   }
 
+  /** Knows the demo algos by file name (`alpha.algo`, `beta.algo`) in any folder, e.g. after an upload. */
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
-    const [, name, version] = /^algos\/([^/]+)\/([^/]+)\/\1\.algo$/.exec(algoPath) ?? [];
+    const [, name] = /(?:^|\/)([^/]+)\.algo$/.exec(algoPath) ?? [];
     const algo = name ? ALGOS[name] : undefined;
-    if (!name || !version || !algo) throw new AdapterError("not_found", `Unknown demo algo ${algoPath}`);
-    return { name, version, parameters: structuredClone(algo.parameters) };
+    if (!name || !algo) throw new AdapterError("not_found", `Unknown demo algo ${algoPath}`);
+    // Only the stored layout …/<name>/<version>/<name>.algo carries a version.
+    const version = new RegExp(`(?:^|/)${name}/([^/]+)/${name}\\.algo$`).exec(algoPath)?.[1];
+    return {
+      name,
+      version: version ?? algo.version,
+      fullAccess: false,
+      parameters: structuredClone(algo.parameters),
+    };
   }
 
   private openPositions(account: string): Position[] {

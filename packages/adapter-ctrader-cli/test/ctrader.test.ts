@@ -113,6 +113,7 @@ describe("CtraderCliBroker", () => {
     const metadata = await broker.algoMetadata("/algos/bot.algo");
     expect(metadata).toEqual({
       name: "SampleBot",
+      fullAccess: false,
       buildTime: "2026-09-18T13:33:03.586Z",
       parameters: [
         { name: "Start", type: "string", label: "Session start", group: "Session", default: "15:30" },

@@ -26,6 +26,7 @@ describe("loadConfig", () => {
       defaultLocale: "en",
       adapters: { runtime: "demo", broker: "demo", config: "demo" },
       challengeTemplatesDir: "/srv/wickwatch/templates/challenges",
+      algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
       ctraderCliPath: "ctrader-cli",
     });

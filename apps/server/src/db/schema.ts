@@ -92,6 +92,22 @@ export interface AttributionOverridesTable {
   created_at: string;
 }
 
+export interface AlgosTable {
+  id: Generated<number>;
+  name: string;
+  version: string;
+  sha256: string;
+  /** Relative to ALGOS_DIR. */
+  file_path: string;
+  size: number;
+  build_time: string | null;
+  full_access: number;
+  /** AlgoMetadata as JSON. */
+  metadata: string;
+  uploaded_by: number | null;
+  uploaded_at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -101,4 +117,5 @@ export interface Database {
   challenge_profiles: ChallengeProfilesTable;
   daily_stats: DailyStatsTable;
   attribution_overrides: AttributionOverridesTable;
+  algos: AlgosTable;
 }
