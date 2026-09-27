@@ -13,6 +13,7 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
       },
       servers: [{ url: basePath || "/" }],
       tags: [
+        { name: "auth", description: "Setup, login and session" },
         { name: "system", description: "Health, version and capabilities" },
         { name: "overview", description: "Aggregated views" },
         { name: "instances", description: "Bot instances" },

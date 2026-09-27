@@ -11,6 +11,8 @@ defineProps<{
   accountNames: ReadonlyMap<string, string>;
   busy: ReadonlySet<string>;
   now: number;
+  /** Viewers see no action buttons. */
+  canAct: boolean;
 }>();
 defineEmits<{ action: [instance: InstanceSummary, action: InstanceAction] }>();
 
@@ -36,7 +38,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <th scope="col" class="wide num">{{ $t("table.positions") }}</th>
           <th scope="col" class="num">{{ $t("table.dayPnl") }}</th>
           <th scope="col" class="wide">{{ $t("table.lastLog") }}</th>
-          <th scope="col">{{ $t("table.actions") }}</th>
+          <th v-if="canAct" scope="col">{{ $t("table.actions") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -64,7 +66,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <td class="wide log mono" :class="instance.lastLog?.level ? `log--${instance.lastLog.level}` : ''">
             <span :title="instance.lastLog?.text">{{ instance.lastLog?.text ?? "" }}</span>
           </td>
-          <td>
+          <td v-if="canAct">
             <div class="actions">
               <button
                 v-if="instance.status === 'running' || instance.status === 'restarting'"

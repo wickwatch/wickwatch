@@ -10,6 +10,7 @@ export interface UsersTable {
   password_hash: string;
   /** Encrypted with the master key; null until 2FA is set up. */
   totp_secret: string | null;
+  totp_last_counter: number | null;
   role: Role;
   created_at: string;
   updated_at: string;
@@ -40,6 +41,15 @@ export interface AccountsTable {
   updated_at: string;
 }
 
+export interface SessionsTable {
+  /** SHA-256 (hex) of the token in the cookie. */
+  id: string;
+  user_id: number;
+  created_at: string;
+  expires_at: string;
+  last_seen_at: string;
+}
+
 export interface AuditLogTable {
   id: Generated<number>;
   time: string;
@@ -55,4 +65,5 @@ export interface Database {
   credentials: CredentialsTable;
   accounts: AccountsTable;
   audit_log: AuditLogTable;
+  sessions: SessionsTable;
 }

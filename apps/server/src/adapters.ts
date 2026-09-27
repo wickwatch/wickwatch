@@ -1,27 +1,12 @@
-import { createDemoAdapters, DEMO_ACCOUNTS } from "@wickwatch/adapter-demo";
+import { createDemoAdapters } from "@wickwatch/adapter-demo";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
-import type { AccountDirectory } from "./accounts";
 import { ConfigError, type Config } from "./config";
 
 export interface Adapters {
   runtime: RuntimeAdapter;
   broker: BrokerAdapter;
   config: ConfigAdapter;
-  accounts: AccountDirectory;
 }
-
-/** Demo accounts need no stored credentials; the demo broker accepts any login. */
-const demoAccounts: AccountDirectory = {
-  list: () =>
-    Promise.resolve(
-      DEMO_ACCOUNTS.map((a) => ({
-        number: a.number,
-        displayName: a.displayName,
-        credentialLabel: a.credentialLabel,
-        credentials: () => Promise.resolve({ login: "demo", secret: "demo" }),
-      })),
-    ),
-};
 
 type Registry<T> = Record<string, (() => T) | undefined>;
 
@@ -47,8 +32,5 @@ export function createAdapters(config: Config): Adapters {
     config: pick("CONFIG_ADAPTER", configAdapters, config.adapters.config),
   };
   if (!adapters.runtime || !adapters.broker || !adapters.config) throw new ConfigError(problems);
-  // Accounts stored in the database (with encrypted credentials) replace this once real brokers exist.
-  const accounts = config.adapters.broker === "demo" ? demoAccounts : undefined;
-  if (!accounts) throw new ConfigError(["Only the demo broker adapter is available so far"]);
-  return { runtime: adapters.runtime, broker: adapters.broker, config: adapters.config, accounts };
+  return { runtime: adapters.runtime, broker: adapters.broker, config: adapters.config };
 }

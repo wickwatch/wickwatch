@@ -83,7 +83,17 @@
     "api": {
       "internal": "Unerwarteter Serverfehler.",
       "confirmation_required": "Bestätigung fehlt.",
-      "network": "Server nicht erreichbar."
+      "network": "Server nicht erreichbar.",
+      "unauthenticated": "Bitte erneut anmelden.",
+      "forbidden": "Deine Rolle erlaubt das nicht.",
+      "forbidden_origin": "Anfrage blockiert: Sie kam von einer anderen Website.",
+      "invalid_credentials": "Benutzername, Passwort oder Code ist falsch.",
+      "rate_limited": "Zu viele Versuche – eine Minute warten und erneut versuchen.",
+      "invalid_setup_token": "Der Setup-Token ist falsch. Aus dem Server-Log kopieren.",
+      "setup_done": "Die Einrichtung ist bereits abgeschlossen. Bitte anmelden.",
+      "master_key_missing": "MASTER_KEY ist auf dem Server nicht gesetzt.",
+      "weak_password": "Das Passwort ist zu kurz.",
+      "invalid_code": "Der Code ist falsch oder abgelaufen. Uhrzeit am Gerät prüfen."
     }
   },
   "parameterIssue": {
@@ -161,5 +171,32 @@
     "hoursMinutes": "{h} h {m} min",
     "minutes": "{m} min",
     "none": "–"
+  },
+  "auth": {
+    "username": "Benutzername",
+    "password": "Passwort",
+    "code": "Code aus der Authenticator-App",
+    "codeHint": "6-stelliger Code aus deiner Authenticator-App.",
+    "logout": "Abmelden",
+    "masterKeyMissing": "MASTER_KEY ist auf dem Server nicht gesetzt. Setzen (openssl rand -base64 32) und Wickwatch neu starten.",
+    "login": {
+      "title": "Anmelden",
+      "submit": "Anmelden"
+    },
+    "setup": {
+      "title": "Wickwatch einrichten",
+      "intro": "Lege das Admin-Konto an. Der Setup-Token steht einmalig im Server-Log.",
+      "token": "Setup-Token",
+      "tokenHint": "Steht im Server-Log: „No admin yet … setup token: …“",
+      "next": "Weiter",
+      "scan": "Scanne den QR-Code mit einer Authenticator-App und gib dann ein Passwort und den aktuellen Code ein.",
+      "qrAlt": "QR-Code für die Authenticator-App",
+      "manual": "Scannen klappt nicht? Schlüssel manuell eingeben",
+      "passwordHint": "Mindestens {min} Zeichen.",
+      "repeat": "Passwort wiederholen",
+      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "finish": "Admin anlegen und anmelden"
+    }
   }
 }

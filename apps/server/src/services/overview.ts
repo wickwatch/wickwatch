@@ -8,7 +8,7 @@ import {
   type RuntimeInstance,
 } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
-import type { AccountEntry } from "../accounts";
+import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -16,13 +16,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Queries runtime and broker in parallel and builds the overview. Failures per account become alerts. */
 export async function loadOverview(
   adapters: Adapters,
+  directory: AccountDirectory,
   labelPrefix: string,
   log: FastifyBaseLogger,
   now = new Date(),
 ): Promise<Overview> {
   // Day boundary in UTC until accounts carry their own reset time and time zone.
   const dayStart = new Date(Math.floor(now.getTime() / DAY_MS) * DAY_MS);
-  const [instances, entries] = await Promise.all([adapters.runtime.list(), adapters.accounts.list()]);
+  const [instances, entries] = await Promise.all([adapters.runtime.list(), directory.list()]);
   const [lastLogs, accounts] = await Promise.all([
     lastLogLines(adapters.runtime, instances),
     Promise.all(entries.map((entry) => snapshot(adapters, entry, dayStart, now, log))),

@@ -1,3 +1,4 @@
+import { NO_MIGRATIONS } from "kysely/migration";
 import { afterEach, describe, expect, it } from "vitest";
 import { createDatabase, createMigrator, migrateToLatest, type Db } from "../src/db";
 
@@ -9,13 +10,13 @@ afterEach(async () => {
 describe("database", () => {
   it("migrates up, is idempotent and migrates down", async () => {
     db = createDatabase({ client: "sqlite", filename: ":memory:" });
-    expect((await migrateToLatest(db)).map((r) => r.status)).toEqual(["Success"]);
+    expect((await migrateToLatest(db)).map((r) => r.status)).toEqual(["Success", "Success"]);
     expect(await migrateToLatest(db)).toEqual([]);
 
     const tables = (await db.introspection.getTables()).map((t) => t.name).sort();
-    expect(tables).toEqual(["accounts", "audit_log", "credentials", "users"]);
+    expect(tables).toEqual(["accounts", "audit_log", "credentials", "sessions", "users"]);
 
-    const { error } = await createMigrator(db).migrateDown();
+    const { error } = await createMigrator(db).migrateTo(NO_MIGRATIONS);
     expect(error).toBeUndefined();
     expect(await db.introspection.getTables()).toEqual([]);
   });
@@ -24,7 +25,14 @@ describe("database", () => {
     db = createDatabase({ client: "sqlite", filename: ":memory:" });
     await migrateToLatest(db);
     const now = new Date().toISOString();
-    const user = { username: "admin", password_hash: "x", totp_secret: null, created_at: now, updated_at: now };
+    const user = {
+      username: "admin",
+      password_hash: "x",
+      totp_secret: null,
+      totp_last_counter: null,
+      created_at: now,
+      updated_at: now,
+    };
 
     await expect(
       db

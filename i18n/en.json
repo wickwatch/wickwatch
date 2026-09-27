@@ -83,7 +83,17 @@
     "api": {
       "internal": "Unexpected server error.",
       "confirmation_required": "Confirmation missing.",
-      "network": "Server not reachable."
+      "network": "Server not reachable.",
+      "unauthenticated": "Please log in again.",
+      "forbidden": "Your role does not allow this.",
+      "forbidden_origin": "Request blocked: it came from another website.",
+      "invalid_credentials": "User name, password or code is wrong.",
+      "rate_limited": "Too many attempts – wait a minute and try again.",
+      "invalid_setup_token": "The setup token is wrong. Copy it from the server log.",
+      "setup_done": "Setup is already complete. Log in instead.",
+      "master_key_missing": "MASTER_KEY is not set on the server.",
+      "weak_password": "The password is too short.",
+      "invalid_code": "The code is wrong or expired. Check the time on your device."
     }
   },
   "parameterIssue": {
@@ -161,5 +171,32 @@
     "hoursMinutes": "{h} h {m} min",
     "minutes": "{m} min",
     "none": "–"
+  },
+  "auth": {
+    "username": "User name",
+    "password": "Password",
+    "code": "Authenticator code",
+    "codeHint": "6-digit code from your authenticator app.",
+    "logout": "Log out",
+    "masterKeyMissing": "MASTER_KEY is not set on the server. Set it (openssl rand -base64 32) and restart Wickwatch.",
+    "login": {
+      "title": "Log in",
+      "submit": "Log in"
+    },
+    "setup": {
+      "title": "Set up Wickwatch",
+      "intro": "Create the admin account. The setup token is printed once in the server log.",
+      "token": "Setup token",
+      "tokenHint": "Shown in the server log: “No admin yet … setup token: …”",
+      "next": "Continue",
+      "scan": "Scan the QR code with an authenticator app, then enter a password and the current code.",
+      "qrAlt": "QR code for the authenticator app",
+      "manual": "Can't scan? Enter the key manually",
+      "passwordHint": "At least {min} characters.",
+      "repeat": "Repeat password",
+      "passwordTooShort": "The password needs at least {min} characters.",
+      "passwordMismatch": "The passwords do not match.",
+      "finish": "Create admin and log in"
+    }
   }
 }

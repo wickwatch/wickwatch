@@ -4,7 +4,7 @@
 
 **Wickwatch** is a self-hosted dashboard to monitor and control trading bots: see what runs where and with which parameters, start and stop instances, follow positions and deals live, and keep prop-firm challenge limits in view.
 
-> **Status:** early development. Runs with demo data only; broker and Docker adapters are not there yet.
+> **Status:** early development. Login with TOTP works; data comes from the demo adapter, broker and Docker adapters are not there yet.
 
 ## Planned features (phase 1)
 - Instance overview with start, stop, restart, edit and create

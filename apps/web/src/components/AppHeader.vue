@@ -1,20 +1,38 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
+import { api } from "../api";
+import { clearUser, currentUser } from "../session";
 import AppLogo from "./AppLogo.vue";
 import HeaderControls from "./HeaderControls.vue";
 import HostStatus from "./HostStatus.vue";
+
+const router = useRouter();
+
+async function logout() {
+  try {
+    await api.logout();
+  } finally {
+    clearUser();
+    await router.replace({ name: "login" });
+  }
+}
 </script>
 
 <template>
   <header class="header">
     <div class="header__start">
       <RouterLink to="/" class="header__home"><AppLogo /></RouterLink>
-      <nav :aria-label="$t('header.mainNav')">
+      <nav v-if="currentUser" :aria-label="$t('header.mainNav')">
         <RouterLink to="/" class="nav-link" active-class="nav-link--active">{{ $t("nav.overview") }}</RouterLink>
       </nav>
     </div>
     <div class="header__end">
-      <HostStatus class="header__host" />
+      <HostStatus v-if="currentUser" class="header__host" />
       <HeaderControls />
+      <div v-if="currentUser" class="user">
+        <span class="user__name muted">{{ currentUser.username }}</span>
+        <button type="button" class="btn btn--small" @click="logout">{{ $t("auth.logout") }}</button>
+      </div>
     </div>
   </header>
 </template>
@@ -39,6 +57,10 @@ import HostStatus from "./HostStatus.vue";
   gap: var(--ww-space-6);
 }
 
+.header__end {
+  gap: var(--ww-space-4);
+}
+
 .header__home {
   display: inline-flex;
 }
@@ -56,6 +78,16 @@ import HostStatus from "./HostStatus.vue";
   font-weight: 600;
 }
 
+.user {
+  display: flex;
+  align-items: center;
+  gap: var(--ww-space-2);
+}
+
+.user__name {
+  font-size: var(--ww-size-sm);
+}
+
 @media (max-width: 1100px) {
   .header__host {
     display: none;
@@ -67,7 +99,8 @@ import HostStatus from "./HostStatus.vue";
     padding: var(--ww-space-3) var(--ww-space-4);
   }
 
-  nav {
+  nav,
+  .user__name {
     display: none;
   }
 }

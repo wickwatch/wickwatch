@@ -9,6 +9,7 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import InstanceTable from "../components/InstanceTable.vue";
 import { usePolling } from "../composables/usePolling";
 import { formatRelative } from "../format";
+import { isAdmin } from "../session";
 import { system } from "../system";
 
 const POLL_MS = 30_000;
@@ -29,7 +30,7 @@ const instances = computed(() =>
       (!filterAccount.value || i.account === filterAccount.value) && (!onlyRunning.value || i.status === "running"),
   ),
 );
-const canEmergencyStop = computed(() => system.value?.capabilities.emergencyStop ?? false);
+const canEmergencyStop = computed(() => isAdmin.value && (system.value?.capabilities.emergencyStop ?? false));
 const instanceLabel = computed(() => `${system.value?.labelPrefix ?? "wickwatch"}.instance`);
 
 async function runAction(instance: InstanceSummary, action: InstanceAction) {
@@ -151,6 +152,7 @@ async function emergencyStop() {
           :account-names="accountNames"
           :busy="busy"
           :now="now"
+          :can-act="isAdmin"
           @action="runAction"
         />
       </section>

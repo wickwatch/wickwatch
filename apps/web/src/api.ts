@@ -13,6 +13,13 @@ export class ApiError extends Error {
 // Relative to <base href>, so the SPA works under any BASE_PATH.
 const url = (path: string) => new URL(`api/v1/${path}`, document.baseURI);
 
+let onUnauthenticated: (() => void) | undefined;
+
+/** Called when the session has expired, e.g. to show the login page. */
+export function setUnauthenticatedHandler(handler: () => void): void {
+  onUnauthenticated = handler;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -24,6 +31,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body: unknown = await res.json().catch(() => undefined);
   if (!res.ok) {
     const code = typeof body === "object" && body && "error" in body ? String(body.error) : "internal";
+    if (res.status === 401 && code === "unauthenticated") onUnauthenticated?.();
     throw new ApiError(res.status, code);
   }
   return body as T;
@@ -37,7 +45,31 @@ const post = <T>(path: string, body?: unknown) =>
 
 export type InstanceAction = "start" | "stop" | "restart";
 
+export interface SessionUser {
+  username: string;
+  role: "admin" | "viewer";
+}
+
+export interface SessionInfo {
+  setupRequired: boolean;
+  masterKeyConfigured: boolean;
+  user?: SessionUser;
+}
+
+export interface TotpSetup {
+  secret: string;
+  uri: string;
+  /** PNG data URL of the QR code. */
+  qr: string;
+}
+
 export const api = {
+  session: () => request<SessionInfo>("auth/session"),
+  login: (body: { username: string; password: string; code: string }) => post<SessionUser>("auth/login", body),
+  logout: () => post<undefined>("auth/logout"),
+  setupTotp: (body: { token: string; username: string }) => post<TotpSetup>("auth/setup/totp", body),
+  setup: (body: { token: string; username: string; password: string; code: string }) =>
+    post<SessionUser>("auth/setup", body),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   host: () => request<HostStatus>("host"),
@@ -47,9 +79,12 @@ export const api = {
     post<EmergencyStopReport>(`accounts/${encodeURIComponent(account)}/emergency-stop`, { confirm: account }),
 };
 
+const ADAPTER_CODES = ["auth_failed", "not_found", "unsupported", "invalid_input", "timeout", "unavailable"];
+
+/** i18n key for an error: adapter codes under error.adapter.*, everything else under error.api.* */
 export const errorKey = (error: unknown): string =>
   error instanceof ApiError
-    ? ["network", "internal", "confirmation_required"].includes(error.code)
-      ? `error.api.${error.code}`
-      : `error.adapter.${error.code}`
+    ? ADAPTER_CODES.includes(error.code)
+      ? `error.adapter.${error.code}`
+      : `error.api.${error.code}`
     : "error.api.internal";

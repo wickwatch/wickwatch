@@ -5,7 +5,7 @@ export interface AuditEntry {
   target?: string;
   /** Action-specific data; never secrets. */
   details?: Record<string, unknown>;
-  userId?: number;
+  userId?: number | undefined;
 }
 
 export async function audit(db: Db, entry: AuditEntry): Promise<void> {

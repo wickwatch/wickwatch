@@ -24,6 +24,12 @@ export const errors = fp(async (app) => {
     if (error instanceof Error && "validation" in error) {
       return reply.code(400).send({ error: "invalid_input", message: error.message });
     }
+    // Fastify and plugin errors such as 413, 415 or 429 (rate limit) keep their status.
+    const status =
+      typeof error === "object" && error !== null && "statusCode" in error ? Number(error.statusCode) : 500;
+    if (status >= 400 && status < 500) {
+      return reply.code(status).send({ error: status === 429 ? "rate_limited" : "invalid_input" });
+    }
     request.log.error({ err: error }, "Unhandled error");
     return reply.code(500).send({ error: "internal" });
   });

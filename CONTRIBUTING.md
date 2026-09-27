@@ -11,12 +11,13 @@ Requires Node 24+ and pnpm (version pinned in `package.json`, `corepack enable` 
 
 ```sh
 pnpm install
-pnpm dev:server     # API on :3000
+cp .env.example .env   # then set MASTER_KEY=$(openssl rand -base64 32)
+pnpm dev:server     # API on :3000, reads .env
 pnpm dev:web        # SPA with hot reload, proxies /api to the server
 pnpm check          # format check, lint, typecheck, tests – the same as CI
 ```
 
-The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or Docker is needed for development.
+The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or Docker is needed for development. On the first start the server adds the demo accounts and prints a one-time setup token; open the web app, enter the token, create the admin and scan the QR code with an authenticator app.
 
 ## Developer Certificate of Origin (DCO)
 Every commit must be signed off to certify that you wrote the code or have the right to submit it under the project licence (AGPL-3.0):

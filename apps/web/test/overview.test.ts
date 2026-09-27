@@ -3,6 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
+import { session } from "../src/session";
 import { system } from "../src/system";
 import OverviewView from "../src/views/OverviewView.vue";
 
@@ -55,6 +56,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   setLocale("en", false);
+  session.value = { setupRequired: false, masterKeyConfigured: true, user: { username: "admin", role: "admin" } };
   system.value = {
     version: "test",
     defaultLocale: "en",
@@ -102,6 +104,16 @@ describe("OverviewView", () => {
     expect(text).toContain("Not reachable");
     expect(text).toContain("Account 2222222 not reachable: Login failed – check the credentials.");
     expect(text).toContain("2 of 2 instances active");
+    wrapper.unmount();
+  });
+
+  it("hides actions and the emergency stop from viewers", async () => {
+    session.value = { setupRequired: false, masterKeyConfigured: true, user: { username: "anna", role: "viewer" } };
+    const wrapper = await render();
+    const labels = wrapper.findAll("button").map((b) => b.text());
+    expect(labels).not.toContain("Stop");
+    expect(labels).not.toContain("Emergency stop");
+    expect(wrapper.text()).not.toContain("Actions");
     wrapper.unmount();
   });
 

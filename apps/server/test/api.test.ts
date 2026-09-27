@@ -1,31 +1,32 @@
 import { Value } from "typebox/value";
 import { Overview, type EmergencyStopReport } from "@wickwatch/core";
-import { afterEach, describe, expect, it } from "vitest";
-import { createAdapters } from "../src/adapters";
-import { buildApp, type App } from "../src/app";
-import { loadConfig } from "../src/config";
-import { createDatabase, migrateToLatest, type Db } from "../src/db";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { loginAs, startApp, type TestApp } from "./helpers";
 
-let app: App | undefined;
-let db: Db;
+let t: TestApp;
+let admin: string;
+beforeEach(async () => {
+  t = await startApp();
+  admin = await loginAs(t, "admin");
+});
 afterEach(async () => {
-  await app?.close();
-  app = undefined;
+  await t.app.close();
 });
 
-async function start() {
-  const config = loadConfig({ DATABASE_URL: "file::memory:" });
-  db = createDatabase(config.database);
-  await migrateToLatest(db);
-  app = await buildApp({ config, db, adapters: createAdapters(config), version: "1.2.3", logger: false });
-  return app;
-}
-
-const auditRows = () => db.selectFrom("audit_log").select(["action", "target", "details"]).orderBy("id").execute();
+const get = (url: string, cookie = admin) => t.app.inject({ url, headers: { cookie } });
+const post = (url: string, payload?: object, cookie = admin) =>
+  t.app.inject({ method: "POST", url, headers: { cookie }, ...(payload ? { payload } : {}) });
+const auditRows = () =>
+  t.db
+    .selectFrom("audit_log")
+    .select(["action", "target", "details", "user_id"])
+    .where("action", "not like", "auth.%")
+    .orderBy("id")
+    .execute();
 
 describe("overview API", () => {
-  it("returns a schema-valid overview built from the demo adapters", async () => {
-    const res = await (await start()).inject("/api/v1/overview");
+  it("returns a schema-valid overview for the seeded demo accounts", async () => {
+    const res = await get("/api/v1/overview");
     expect(res.statusCode).toBe(200);
     const overview = res.json<Overview>();
     expect(Value.Errors(Overview, overview)).toEqual([]);
@@ -34,7 +35,11 @@ describe("overview API", () => {
       ["2222222", "running"],
       ["3333333", "stopped"],
     ]);
-    expect(overview.accounts[0]).toMatchObject({ displayName: "Demo Prop A Challenge", currency: "USD" });
+    expect(overview.accounts[0]).toMatchObject({
+      displayName: "Demo Prop A Challenge",
+      currency: "USD",
+      credentialLabel: "Demo login A",
+    });
     expect(overview.instances.find((i) => i.name === "alpha-ger40-a")).toMatchObject({
       openPositions: 1,
       account: "1111111",
@@ -45,51 +50,61 @@ describe("overview API", () => {
   });
 
   it("returns the host status", async () => {
-    const res = await (await start()).inject("/api/v1/host");
-    expect(res.json()).toMatchObject({ ntpSynced: true, memTotal: 4 * 1024 ** 3 });
+    expect((await get("/api/v1/host")).json()).toMatchObject({ ntpSynced: true, memTotal: 4 * 1024 ** 3 });
+  });
+
+  it("requires a login", async () => {
+    const res = await t.app.inject("/api/v1/overview");
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ error: "unauthenticated" });
   });
 });
 
 describe("instance actions", () => {
-  it("stops and starts an instance and writes the audit log", async () => {
-    const server = await start();
-    expect((await server.inject({ method: "POST", url: "/api/v1/instances/alpha-ger40-a/stop" })).statusCode).toBe(204);
+  it("stops and starts an instance and writes the audit log with the user", async () => {
+    expect((await post("/api/v1/instances/alpha-ger40-a/stop")).statusCode).toBe(204);
     const status = async () =>
-      (await server.inject("/api/v1/overview")).json<Overview>().instances.find((i) => i.ref === "alpha-ger40-a")
-        ?.status;
+      (await get("/api/v1/overview")).json<Overview>().instances.find((i) => i.ref === "alpha-ger40-a")?.status;
     expect(await status()).toBe("stopped");
-    await server.inject({ method: "POST", url: "/api/v1/instances/alpha-ger40-a/start" });
+    await post("/api/v1/instances/alpha-ger40-a/start");
     expect(await status()).toBe("running");
-    expect((await auditRows()).map((r) => r.action)).toEqual(["instance.stop", "instance.start"]);
+    const rows = await auditRows();
+    expect(rows.map((r) => r.action)).toEqual(["instance.stop", "instance.start"]);
+    expect(rows.every((r) => r.user_id !== null)).toBe(true);
   });
 
   it("answers 404 for unknown instances and 400 for unknown actions", async () => {
-    const server = await start();
-    const unknown = await server.inject({ method: "POST", url: "/api/v1/instances/nope/start" });
+    const unknown = await post("/api/v1/instances/nope/start");
     expect(unknown.statusCode).toBe(404);
     expect(unknown.json()).toEqual({ error: "not_found" });
     expect((await auditRows())[0]).toMatchObject({ action: "instance.start", target: "nope" });
-    expect((await server.inject({ method: "POST", url: "/api/v1/instances/alpha-ger40-a/delete" })).statusCode).toBe(
-      400,
+    expect((await post("/api/v1/instances/alpha-ger40-a/delete")).statusCode).toBe(400);
+  });
+
+  it("lets viewers read but not act", async () => {
+    const viewer = await loginAs(t, "viewer");
+    expect((await get("/api/v1/overview", viewer)).statusCode).toBe(200);
+    const res = await post("/api/v1/instances/alpha-ger40-a/stop", undefined, viewer);
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toEqual({ error: "forbidden" });
+    expect((await post("/api/v1/accounts/1111111/emergency-stop", { confirm: "1111111" }, viewer)).statusCode).toBe(
+      403,
     );
   });
 });
 
 describe("emergency stop", () => {
-  const stop = (server: App, number: string, confirm: string) =>
-    server.inject({ method: "POST", url: `/api/v1/accounts/${number}/emergency-stop`, payload: { confirm } });
+  const stop = (number: string, confirm: string) => post(`/api/v1/accounts/${number}/emergency-stop`, { confirm });
 
   it("requires the account number as confirmation", async () => {
-    const server = await start();
-    const res = await stop(server, "1111111", "yes");
+    const res = await stop("1111111", "yes");
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: "confirmation_required" });
     expect(await auditRows()).toEqual([]);
   });
 
   it("stops the account's instances, closes positions, cancels orders and audits it", async () => {
-    const server = await start();
-    const res = await stop(server, "1111111", "1111111");
+    const res = await stop("1111111", "1111111");
     expect(res.statusCode).toBe(200);
     expect(res.json<EmergencyStopReport>()).toEqual({
       stoppedInstances: ["alpha-ger40-a", "beta-nas100-a"],
@@ -98,9 +113,8 @@ describe("emergency stop", () => {
       cancelled: 1,
     });
 
-    const overview = (await server.inject("/api/v1/overview")).json<Overview>();
+    const overview = (await get("/api/v1/overview")).json<Overview>();
     expect(overview.accounts.find((a) => a.number === "1111111")).toMatchObject({ state: "stopped", openPositions: 0 });
-    // Other accounts are untouched.
     expect(overview.accounts.find((a) => a.number === "2222222")).toMatchObject({ state: "running", openPositions: 1 });
 
     const [row] = await auditRows();
@@ -109,6 +123,71 @@ describe("emergency stop", () => {
   });
 
   it("answers 404 for unknown accounts", async () => {
-    expect((await stop(await start(), "999", "999")).statusCode).toBe(404);
+    expect((await stop("999", "999")).statusCode).toBe(404);
+  });
+});
+
+describe("credentials and accounts", () => {
+  it("stores secrets encrypted and never returns them", async () => {
+    const created = await post("/api/v1/credentials", {
+      label: "Main login",
+      login: "me@example.com",
+      secret: "s3cret!",
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.body).not.toContain("s3cret!");
+
+    const list = await get("/api/v1/credentials");
+    expect(list.body).not.toContain("s3cret!");
+    expect(list.json()).toContainEqual(expect.objectContaining({ label: "Main login", login: "me@example.com" }));
+
+    const row = await t.db
+      .selectFrom("credentials")
+      .select("secret")
+      .where("label", "=", "Main login")
+      .executeTakeFirstOrThrow();
+    expect(row.secret).toMatch(/^v1\./);
+    expect(t.cipher.decrypt(row.secret, "credential-secret")).toBe("s3cret!");
+  });
+
+  it("adds an account only if the broker knows it, and removes it again", async () => {
+    await t.db.deleteFrom("accounts").where("number", "=", "2222222").execute();
+    const { id: credentialId } = await t.db.selectFrom("credentials").select("id").executeTakeFirstOrThrow();
+
+    const unknown = await post("/api/v1/accounts", { number: "999", displayName: "Nope", credentialId });
+    expect(unknown.json()).toEqual({ error: "account_not_found_at_broker" });
+
+    const duplicate = await post("/api/v1/accounts", { number: "1111111", displayName: "Again", credentialId });
+    expect(duplicate.statusCode).toBe(409);
+
+    const created = await post("/api/v1/accounts", {
+      number: "2222222",
+      displayName: "Prop B",
+      credentialId,
+      timezone: "Europe/Berlin",
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({ broker: "Demo Broker", currency: "USD", timezone: "Europe/Berlin" });
+
+    const inUse = await t.app.inject({
+      method: "DELETE",
+      url: `/api/v1/credentials/${credentialId}`,
+      headers: { cookie: admin },
+    });
+    expect(inUse.json()).toEqual({ error: "credential_in_use" });
+
+    const id = created.json<{ id: number }>().id;
+    const removed = await t.app.inject({ method: "DELETE", url: `/api/v1/accounts/${id}`, headers: { cookie: admin } });
+    expect(removed.statusCode).toBe(204);
+    expect((await get("/api/v1/accounts")).json<{ number: string }[]>().map((a) => a.number)).toEqual([
+      "1111111",
+      "3333333",
+    ]);
+  });
+
+  it("keeps credentials away from viewers", async () => {
+    const viewer = await loginAs(t, "viewer");
+    expect((await get("/api/v1/credentials", viewer)).statusCode).toBe(403);
+    expect((await get("/api/v1/accounts", viewer)).statusCode).toBe(200);
   });
 });

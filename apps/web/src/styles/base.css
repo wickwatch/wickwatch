@@ -156,3 +156,37 @@ h2 {
 .pill.tone-muted {
   background: var(--ww-surface-raised);
 }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-1);
+  font-size: var(--ww-size-sm);
+}
+
+.field__hint {
+  color: var(--ww-text-muted);
+  font-size: var(--ww-size-xs);
+}
+
+.input {
+  min-height: var(--ww-touch-target);
+  padding: var(--ww-space-2) var(--ww-space-3);
+  border: 1px solid var(--ww-border-strong);
+  border-radius: var(--ww-radius-md);
+  background: var(--ww-inset);
+  color: var(--ww-text);
+  font: inherit;
+  font-size: var(--ww-size-md);
+}
+
+.btn--primary {
+  border-color: var(--ww-accent);
+  background: var(--ww-accent);
+  color: var(--ww-on-accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  border-color: var(--ww-accent-hover);
+  background: var(--ww-accent-hover);
+}
