@@ -59,6 +59,7 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         body: Type.Object({ token: Type.String(), username: Username }),
         response: {
           200: Type.Object({ secret: Type.String(), uri: Type.String(), qr: Type.String() }),
+          429: ErrorBody,
           400: ErrorBody,
           403: ErrorBody,
           409: ErrorBody,
@@ -90,7 +91,7 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
           password: Type.String({ maxLength: 256 }),
           code: Code,
         }),
-        response: { 200: User, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody, 503: ErrorBody },
+        response: { 200: User, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
@@ -138,7 +139,7 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
           password: Type.String({ maxLength: 256 }),
           code: Code,
         }),
-        response: { 200: User, 401: ErrorBody, 503: ErrorBody },
+        response: { 200: User, 401: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {

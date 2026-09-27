@@ -1,6 +1,23 @@
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import fp from "fastify-plugin";
+import { SESSION_COOKIE } from "../auth/sessions";
+import { ErrorBody } from "./errors";
+
+const DESCRIPTION = `REST API of Wickwatch.
+
+**Authentication:** log in with \`POST /api/v1/auth/login\` (password and TOTP code); the server sets the
+\`${SESSION_COOKIE}\` cookie (HttpOnly, SameSite=Strict). All other endpoints except \`/healthz\` and
+\`/api/v1/auth/*\` need it. Viewers may call GET endpoints only; state changes need the \`admin\` role.
+State-changing requests with an \`Origin\` header from another site are rejected.
+
+**Errors** are JSON \`{ "error": "<code>" }\`. Codes of the broker/runtime adapters: \`auth_failed\`,
+\`not_found\`, \`unsupported\`, \`invalid_input\`, \`timeout\`, \`unavailable\`. Others: \`unauthenticated\`,
+\`forbidden\`, \`forbidden_origin\`, \`rate_limited\`, \`internal\` and endpoint-specific codes.
+
+**Time** values are ISO 8601 in UTC; money is in the account currency.`;
+
+const PUBLIC_PREFIXES = ["/healthz", "/api/v1/auth/"];
 
 /** OpenAPI description at <base>/api/openapi.json, interactive docs at <base>/api/docs. */
 export const openapi = fp<{ basePath: string; version: string }>(async (app, { basePath, version }) => {
@@ -9,6 +26,7 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
       info: {
         title: "Wickwatch API",
         version,
+        description: DESCRIPTION,
         license: { name: "AGPL-3.0-only", url: "https://www.gnu.org/licenses/agpl-3.0.html" },
       },
       servers: [{ url: basePath || "/" }],
@@ -17,14 +35,20 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
         { name: "system", description: "Health, version and capabilities" },
         { name: "overview", description: "Aggregated views" },
         { name: "instances", description: "Bot instances" },
-        { name: "accounts", description: "Broker accounts" },
+        { name: "accounts", description: "Broker accounts and stored credentials" },
       ],
+      components: {
+        securitySchemes: { session: { type: "apiKey", in: "cookie", name: SESSION_COOKIE } },
+      },
     },
-    // Paths in the document are relative to the server URL above.
-    transform: ({ schema, url }) => ({
-      schema,
-      url: basePath && url.startsWith(basePath) ? url.slice(basePath.length) : url,
-    }),
+    // Paths are relative to the server URL; protected routes get the session scheme and a 401 answer.
+    transform: ({ schema, url }) => {
+      const path = basePath && url.startsWith(basePath) ? url.slice(basePath.length) : url;
+      const isPublic = PUBLIC_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix));
+      if (isPublic) return { schema: { ...schema, security: [] }, url: path };
+      const response = { ...(schema.response as Record<string, unknown> | undefined), 401: ErrorBody };
+      return { schema: { ...schema, security: [{ session: [] }], response }, url: path };
+    },
   });
   await app.register(swaggerUi, { routePrefix: `${basePath}/api/docs` });
   app.get(`${basePath}/api/openapi.json`, { schema: { hide: true } }, () => app.swagger());

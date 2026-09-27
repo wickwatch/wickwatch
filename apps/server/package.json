@@ -9,7 +9,8 @@
     "build": "node build.mjs",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "openapi": "tsx scripts/openapi.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

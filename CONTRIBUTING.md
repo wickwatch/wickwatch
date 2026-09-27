@@ -30,7 +30,9 @@ The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or D
 | `design/`, `assets/` | Design tokens and logo files, see `BRAND.md` |
 | `templates/challenges/` | Prop-challenge templates as JSON |
 | `deploy/` | Example compose files |
-| `docs/` | Roadmap, adapter contracts, bot contract, configuration |
+| `docs/` | Roadmap, adapter contracts, bot contract, configuration, OpenAPI document |
+
+API changes: the OpenAPI document is generated from the route schemas. Run `pnpm --filter @wickwatch/server openapi` to update `docs/openapi.json`; a test fails when it is out of date.
 
 Database changes are Kysely migrations in `apps/server/src/db/migrations/`: add a new file and register it in `index.ts`; never edit or rename an existing one.
 

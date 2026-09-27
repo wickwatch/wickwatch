@@ -23,7 +23,7 @@ Then:
 2. Open http://localhost:3000, enter the token, choose a user name and scan the QR code with an authenticator app (e.g. Aegis, 2FAS, Google Authenticator).
 3. Set a password and enter the current code. The overview with demo data opens.
 
-The API is described with OpenAPI: interactive docs at `/api/docs` after login. Deployment behind a reverse proxy: [`deploy/`](deploy/README.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
+The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login. Deployment behind a reverse proxy: [`deploy/`](deploy/README.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 
 ## Planned features (phase 1)
 - Instance overview with start, stop, restart, edit and create
