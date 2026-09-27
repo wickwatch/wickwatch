@@ -1,6 +1,9 @@
 import {
   buildOverview,
   isAdapterError,
+  profileDay,
+  tradingDayStart,
+  type ChallengeProfile,
   type AccountSnapshot,
   type LogLine,
   type Overview,
@@ -10,6 +13,8 @@ import {
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
+import { evaluateForAccount, readProfiles } from "../challenges/store";
+import type { Db } from "../db";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -17,27 +22,38 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export async function loadOverview(
   adapters: Adapters,
   directory: AccountDirectory,
+  db: Db,
   labelPrefix: string,
   log: FastifyBaseLogger,
   now = new Date(),
 ): Promise<Overview> {
-  // Day boundary in UTC until accounts carry their own reset time and time zone.
-  const dayStart = new Date(Math.floor(now.getTime() / DAY_MS) * DAY_MS);
-  const [instances, entries] = await Promise.all([adapters.runtime.list(), directory.list()]);
+  // "Today" is the UTC day; accounts with a challenge profile also need their own trading day.
+  const utcDayStart = new Date(Math.floor(now.getTime() / DAY_MS) * DAY_MS);
+  const [instances, entries, profiles] = await Promise.all([
+    adapters.runtime.list(),
+    directory.list(),
+    readProfiles(db),
+  ]);
   const [lastLogs, accounts] = await Promise.all([
     lastLogLines(adapters.runtime, instances),
-    Promise.all(entries.map((entry) => snapshot(adapters, entry, dayStart, now, log))),
+    Promise.all(entries.map((entry) => snapshot(adapters, db, entry, profiles.get(entry.id), utcDayStart, now, log))),
   ]);
   return buildOverview({ time: now, labelPrefix, instances, lastLogs, accounts });
 }
 
 async function snapshot(
   { broker }: Adapters,
+  db: Db,
   entry: AccountEntry,
-  dayStart: Date,
+  profile: ChallengeProfile | undefined,
+  utcDayStart: Date,
   now: Date,
   log: FastifyBaseLogger,
 ): Promise<AccountSnapshot> {
+  const { resetTime, timeZone } = profileDay(profile?.rules ?? {});
+  const from = profile
+    ? new Date(Math.min(utcDayStart.getTime(), tradingDayStart(now, resetTime, timeZone).getTime()))
+    : utcDayStart;
   const base = {
     number: entry.number,
     displayName: entry.displayName,
@@ -45,17 +61,22 @@ async function snapshot(
   };
   try {
     const c = await entry.credentials();
-    const [brokerAccounts, stats, positions, dealsToday] = await Promise.all([
+    const [brokerAccounts, stats, positions, deals] = await Promise.all([
       broker.accounts(c),
       broker.stats(c, entry.number),
       broker.positions(c, entry.number),
-      broker.deals(c, entry.number, dayStart.toISOString(), now.toISOString()),
+      broker.deals(c, entry.number, from.toISOString(), now.toISOString()),
     ]);
     const info = brokerAccounts.find((a) => a.number === entry.number);
+    const dealsToday = deals.filter((d) => Date.parse(d.time) >= utcDayStart.getTime());
+    const challenge = profile
+      ? await evaluateForAccount(db, entry.id, profile, { balance: stats.balance, equity: stats.equity, deals }, now)
+      : undefined;
     return {
       ...base,
       ...(info ? { broker: info.broker, currency: info.currency } : {}),
       data: { stats, positions, dealsToday },
+      ...(challenge ? { challenge } : {}),
     };
   } catch (error) {
     if (!isAdapterError(error)) log.error({ err: error, account: entry.number }, "Broker query failed");

@@ -10,7 +10,9 @@ import { auth } from "./plugins/auth";
 import { errors } from "./plugins/errors";
 import { openapi } from "./plugins/openapi";
 import { web } from "./plugins/web";
+import { loadChallengeTemplates } from "./challenges/templates";
 import { accountRoutes } from "./routes/accounts";
+import { challengeRoutes } from "./routes/challenges";
 import { authRoutes } from "./routes/auth";
 import { credentialRoutes } from "./routes/credentials";
 import { healthRoutes } from "./routes/health";
@@ -61,10 +63,12 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   const api = `${basePath}/api/v1`;
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
-  await app.register(overviewRoutes, { adapters, accounts, labelPrefix, prefix: api });
+  await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(credentialRoutes, { db, cipher, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, prefix: api });
+  const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
+  await app.register(challengeRoutes, { db, templates, prefix: api });
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {

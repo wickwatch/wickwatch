@@ -4,6 +4,8 @@ import type { Cipher } from "./security/cipher";
 
 /** A broker account known to Wickwatch, with a way to get its (decrypted) credentials. */
 export interface AccountEntry {
+  /** Database id. */
+  id: number;
   number: string;
   displayName: string;
   credentialLabel?: string;
@@ -26,6 +28,7 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
         .selectFrom("accounts")
         .leftJoin("credentials", "credentials.id", "accounts.credential_id")
         .select([
+          "accounts.id",
           "accounts.number",
           "accounts.display_name",
           "credentials.label as credential_label",
@@ -37,6 +40,7 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
         .execute();
 
       return rows.map((row) => ({
+        id: row.id,
         number: row.number,
         displayName: row.display_name,
         ...(row.credential_label ? { credentialLabel: row.credential_label } : {}),

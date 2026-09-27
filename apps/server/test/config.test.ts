@@ -25,6 +25,8 @@ describe("loadConfig", () => {
       labelPrefix: "wickwatch",
       defaultLocale: "en",
       adapters: { runtime: "demo", broker: "demo", config: "demo" },
+      challengeTemplatesDir: "/srv/wickwatch/templates/challenges",
+      accountPollSeconds: 60,
     });
   });
 

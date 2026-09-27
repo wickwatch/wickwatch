@@ -2,10 +2,11 @@
 import type { AccountSummary } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
 import { formatNumber } from "../format";
+import ChallengeRules from "./ChallengeRules.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
-defineProps<{ account: AccountSummary; canEmergencyStop: boolean; busy: boolean }>();
+defineProps<{ account: AccountSummary; canEmergencyStop: boolean; canEdit: boolean; busy: boolean }>();
 defineEmits<{ emergencyStop: [account: AccountSummary] }>();
 const { locale } = useI18n();
 </script>
@@ -43,12 +44,18 @@ const { locale } = useI18n();
       </div>
     </dl>
 
-    <div class="card__profile muted">
-      <div>{{ $t("account.noProfileHint") }}</div>
-      <div class="card__row">
-        <span>{{ $t("account.openPositions") }}</span>
-        <span class="mono card__value">{{ account.openPositions }}</span>
-      </div>
+    <div class="card__profile">
+      <ChallengeRules v-if="account.challenge" :challenge="account.challenge" />
+      <template v-else>
+        <div class="muted">{{ $t("account.noProfileHint") }}</div>
+        <div class="card__row muted">
+          <span>{{ $t("account.openPositions") }}</span>
+          <span class="mono card__value">{{ account.openPositions }}</span>
+        </div>
+      </template>
+      <RouterLink v-if="canEdit" :to="{ name: 'challenge', params: { number: account.number } }" class="card__link">
+        {{ account.challenge ? $t("challenge.edit") : $t("challenge.add") }}
+      </RouterLink>
     </div>
 
     <div class="card__foot">
@@ -134,5 +141,10 @@ dd {
 
 .card__value {
   color: var(--ww-text);
+}
+
+.card__link {
+  font-size: var(--ww-size-sm);
+  font-weight: 600;
 }
 </style>

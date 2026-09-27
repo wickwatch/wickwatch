@@ -115,6 +115,7 @@ async function emergencyStop() {
             :key="account.number"
             :account="account"
             :can-emergency-stop="canEmergencyStop"
+            :can-edit="isAdmin"
             :busy="busy.has(account.number)"
             @emergency-stop="confirming = $event"
           />

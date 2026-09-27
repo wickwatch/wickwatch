@@ -74,7 +74,10 @@ export default defineConfig(
     files: ["**/*.vue"],
     languageOptions: { parserOptions: { parser: tseslint.parser } },
     rules: {
-      "vue/no-bare-strings-in-template": ["error", { allowlist: ["Wickwatch", "·", "–", "+", "−", "%", "/", ":"] }],
+      "vue/no-bare-strings-in-template": [
+        "error",
+        { allowlist: ["Wickwatch", "·", "–", "+", "−", "%", "(%)", "≈", "/", ":"] },
+      ],
     },
   },
 

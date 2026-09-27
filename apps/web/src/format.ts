@@ -56,6 +56,12 @@ export function formatPercent(locale: string, fraction: number): string {
   return numberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(fraction);
 }
 
+/** A value that is already in percent (4.2 → "4.2%" / "4,2 %"), with one decimal. */
+export function formatPercentValue(locale: string, percent: number): string {
+  const options = { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 } as const;
+  return withMinus(numberFormat(locale, options).format(percent / 100));
+}
+
 export function formatGigabytes(locale: string, bytes: number): string {
   return numberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1024 ** 3);
 }

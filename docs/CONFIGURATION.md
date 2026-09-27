@@ -17,6 +17,8 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DOCKER_HOST` | local socket | Docker API for the `docker` runtime, e.g. `tcp://socket-proxy:2375` (recommended) or `unix:///var/run/docker.sock`. |
 | `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo`. With `demo`, demo accounts are added to an empty database. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files. Available: `demo`. |
+| `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. |
+| `CHALLENGE_TEMPLATES_DIR` | `templates/challenges` | Directory with challenge templates (`*.json`, see its README). |
 | `WEB_DIST_DIR` | next to the server | Directory of the built web app. Only needed when running the server outside the image. |
 | `HEARTBEAT_URL` | – | Reserved for availability alerts; not used yet. |
 | `ALERT_WEBHOOK_URL` | – | Reserved for availability alerts; not used yet. |

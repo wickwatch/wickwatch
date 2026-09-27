@@ -1,13 +1,15 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { dbAccountDirectory } from "./accounts";
 import { createAdapters } from "./adapters";
 import { buildApp } from "./app";
 import { deleteExpiredSessions } from "./auth/sessions";
 import { needsSetup, SetupState } from "./auth/setup";
 import { ConfigError, loadConfig } from "./config";
 import { createDatabase, migrateToLatest } from "./db";
-import { seedDemoAccounts } from "./demo-seed";
+import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
+import { AccountPoller } from "./services/poller";
 import { VERSION } from "./version";
 
 try {
@@ -34,9 +36,22 @@ try {
     app.log.warn(
       "MASTER_KEY is not set: setup, login and stored credentials are unavailable (openssl rand -base64 32)",
     );
-  } else if (adapters.broker.id === "demo" && (await seedDemoAccounts(db, createCipher(config.masterKey)))) {
-    app.log.info("Demo accounts added");
+  } else if (adapters.broker.id === "demo") {
+    if (await seedDemoAccounts(db, createCipher(config.masterKey))) app.log.info("Demo accounts added");
+    if (await seedDemoChallenges(db)) app.log.info("Demo challenge profiles added");
   }
+
+  const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
+  const poller = new AccountPoller({
+    db,
+    adapters,
+    accounts: dbAccountDirectory(db, cipher, adapters.broker.id),
+    log: app.log,
+    statsIntervalMs: config.accountPollSeconds * 1000,
+  });
+  app.addHook("onClose", () => {
+    poller.stop();
+  });
 
   if (await needsSetup(db)) {
     // One-time bootstrap secret for the first admin; not a broker credential. Invalid after setup.
@@ -54,6 +69,7 @@ try {
   }
 
   await app.listen({ host: config.host, port: config.port });
+  poller.start();
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(error.message);

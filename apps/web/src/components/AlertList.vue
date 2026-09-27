@@ -10,6 +10,7 @@ const message = (alert: Alert) =>
     ...alert.params,
     subject: alert.subject,
     ...(alert.code === "account_error" ? { reason: t(`error.adapter.${String(alert.params["reason"])}`) } : {}),
+    ...(alert.params["rule"] !== undefined ? { rule: t(`challenge.rule.${String(alert.params["rule"])}`) } : {}),
   });
 </script>
 
@@ -49,6 +50,15 @@ const message = (alert: Alert) =>
 .alert--warning {
   border-color: color-mix(in srgb, var(--ww-warning) 35%, transparent);
   background: var(--ww-warning-bg);
+}
+
+.alert--info {
+  border-color: color-mix(in srgb, var(--ww-positive) 35%, transparent);
+  background: var(--ww-positive-bg);
+}
+
+.alert--info .alert__level {
+  color: var(--ww-positive);
 }
 
 .alert__level {

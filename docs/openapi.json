@@ -1263,6 +1263,179 @@
                                 "minimum": 0
                               }
                             }
+                          },
+                          "challenge": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "day",
+                              "status",
+                              "rules",
+                              "tradingDayStart"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "phase": {
+                                "type": "string"
+                              },
+                              "day": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "status": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "running"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "warning"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "breached"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "passed"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "rules": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "id",
+                                    "status",
+                                    "value",
+                                    "limit",
+                                    "usage",
+                                    "unit"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "profitTarget"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "dailyLoss"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "maxLoss"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "tradingDays"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "duration"
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    "status": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "ok"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "warning"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "danger"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "breached"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "open"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "reached"
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "number"
+                                    },
+                                    "limit": {
+                                      "type": "number"
+                                    },
+                                    "usage": {
+                                      "type": "number"
+                                    },
+                                    "unit": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "percent"
+                                          ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "days"
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    "approximate": {
+                                      "type": "boolean"
+                                    }
+                                  }
+                                }
+                              },
+                              "tradingDayStart": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "Z$"
+                              }
+                            }
                           }
                         }
                       }
@@ -1415,6 +1588,12 @@
                                 "enum": [
                                   "warning"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "info"
+                                ]
                               }
                             ]
                           },
@@ -1436,6 +1615,24 @@
                                 "type": "string",
                                 "enum": [
                                   "account_error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_breached"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_passed"
                                 ]
                               }
                             ]
@@ -3546,6 +3743,935 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/challenge-templates": {
+      "get": {
+        "summary": "Challenge templates from templates/challenges/*.json",
+        "tags": [
+          "accounts"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "profitTargetPct": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1000
+                          },
+                          "dailyLoss": {
+                            "type": "object",
+                            "required": [
+                              "limitPct",
+                              "reference",
+                              "resetTime",
+                              "timezone"
+                            ],
+                            "properties": {
+                              "limitPct": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "maximum": 100
+                              },
+                              "reference": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "balance-or-equity-at-day-start"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "balance-at-day-start"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "equity-at-day-start"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "resetTime": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "timezone": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "limitBasis": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "initial-balance"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "day-start"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "maxLoss": {
+                            "type": "object",
+                            "required": [
+                              "limitPct",
+                              "type"
+                            ],
+                            "properties": {
+                              "limitPct": {
+                                "type": "number",
+                                "exclusiveMinimum": 0,
+                                "maximum": 100
+                              },
+                              "type": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "static"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "trailing"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "minTradingDays": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000
+                          },
+                          "durationDays": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 3650,
+                            "nullable": true
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "firm",
+                          "program",
+                          "phase",
+                          "name",
+                          "source",
+                          "asOf"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9][a-z0-9-]*$"
+                          },
+                          "firm": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "program": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "phase": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "tradingDayDefinition": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "asOf": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{number}/challenge": {
+      "get": {
+        "summary": "The account's challenge profile",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "startDate",
+                    "startBalance",
+                    "rules"
+                  ],
+                  "properties": {
+                    "templateId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "phase": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "startBalance": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "rules": {
+                      "type": "object",
+                      "properties": {
+                        "profitTargetPct": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "dailyLoss": {
+                          "type": "object",
+                          "required": [
+                            "limitPct",
+                            "reference",
+                            "resetTime",
+                            "timezone"
+                          ],
+                          "properties": {
+                            "limitPct": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "reference": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "balance-or-equity-at-day-start"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "balance-at-day-start"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "equity-at-day-start"
+                                  ]
+                                }
+                              ]
+                            },
+                            "resetTime": {
+                              "type": "string",
+                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "timezone": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "limitBasis": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "initial-balance"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "day-start"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "maxLoss": {
+                          "type": "object",
+                          "required": [
+                            "limitPct",
+                            "type"
+                          ],
+                          "properties": {
+                            "limitPct": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "type": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "static"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "trailing"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "minTradingDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "durationDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 3650,
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set or replace the account's challenge profile",
+        "tags": [
+          "accounts"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "startDate",
+                  "startBalance",
+                  "rules"
+                ],
+                "properties": {
+                  "templateId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "phase": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "startBalance": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "rules": {
+                    "type": "object",
+                    "properties": {
+                      "profitTargetPct": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1000
+                      },
+                      "dailyLoss": {
+                        "type": "object",
+                        "required": [
+                          "limitPct",
+                          "reference",
+                          "resetTime",
+                          "timezone"
+                        ],
+                        "properties": {
+                          "limitPct": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100
+                          },
+                          "reference": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "balance-or-equity-at-day-start"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "balance-at-day-start"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "equity-at-day-start"
+                                ]
+                              }
+                            ]
+                          },
+                          "resetTime": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "timezone": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "limitBasis": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "initial-balance"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "day-start"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "maxLoss": {
+                        "type": "object",
+                        "required": [
+                          "limitPct",
+                          "type"
+                        ],
+                        "properties": {
+                          "limitPct": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "static"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "trailing"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "minTradingDays": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                      },
+                      "durationDays": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3650,
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "startDate",
+                    "startBalance",
+                    "rules"
+                  ],
+                  "properties": {
+                    "templateId": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "phase": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "startDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "startBalance": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "rules": {
+                      "type": "object",
+                      "properties": {
+                        "profitTargetPct": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "dailyLoss": {
+                          "type": "object",
+                          "required": [
+                            "limitPct",
+                            "reference",
+                            "resetTime",
+                            "timezone"
+                          ],
+                          "properties": {
+                            "limitPct": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "reference": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "balance-or-equity-at-day-start"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "balance-at-day-start"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "equity-at-day-start"
+                                  ]
+                                }
+                              ]
+                            },
+                            "resetTime": {
+                              "type": "string",
+                              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "timezone": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "limitBasis": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "initial-balance"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "day-start"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "maxLoss": {
+                          "type": "object",
+                          "required": [
+                            "limitPct",
+                            "type"
+                          ],
+                          "properties": {
+                            "limitPct": {
+                              "type": "number",
+                              "exclusiveMinimum": 0,
+                              "maximum": 100
+                            },
+                            "type": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "static"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "trailing"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "minTradingDays": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "durationDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 3650,
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove the account's challenge profile",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

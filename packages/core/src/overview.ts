@@ -4,6 +4,7 @@ import type {
   AccountStats,
   AccountSummary,
   Alert,
+  ChallengeEvaluation,
   Deal,
   InstanceSummary,
   LogLine,
@@ -23,6 +24,7 @@ export interface AccountSnapshot {
   /** Broker data; missing when the query failed. */
   data?: { stats: AccountStats; positions: Position[]; dealsToday: Deal[] };
   error?: AdapterErrorCode;
+  challenge?: ChallengeEvaluation;
 }
 
 export interface OverviewInput {
@@ -85,6 +87,7 @@ export function buildOverview(input: OverviewInput): Overview {
       ...(account.broker ? { broker: account.broker } : {}),
       ...(account.currency ? { currency: account.currency } : {}),
       ...(account.error ? { error: account.error } : {}),
+      ...(account.challenge ? { challenge: account.challenge } : {}),
       ...(data
         ? {
             balance: data.stats.balance,
@@ -115,6 +118,25 @@ function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[]): Aler
         subject: account.number,
         params: { reason: account.error },
       });
+    }
+    const challenge = account.challenge;
+    if (!challenge) continue;
+    const breached = challenge.rules.find((r) => r.status === "breached");
+    const near = challenge.rules
+      .filter((r) => r.status === "danger" || r.status === "warning")
+      .sort((a, b) => b.usage - a.usage)[0];
+    if (breached) {
+      result.push({
+        level: "error",
+        code: "challenge_breached",
+        subject: account.number,
+        params: { rule: breached.id },
+      });
+    } else if (near) {
+      const params = { rule: near.id, used: Math.round(near.usage * 100) };
+      result.push({ level: "warning", code: "challenge_limit", subject: account.number, params });
+    } else if (challenge.status === "passed") {
+      result.push({ level: "info", code: "challenge_passed", subject: account.number, params: {} });
     }
   }
   for (const i of instances) {

@@ -1,6 +1,7 @@
 import Type from "typebox";
 import { AdapterErrorCode } from "../errors";
 import { Capabilities } from "./capabilities";
+import { ChallengeEvaluation } from "./challenge";
 import { IsoTime } from "./common";
 import { InstanceStatus, LogLine } from "./runtime";
 
@@ -45,6 +46,8 @@ export const AccountSummary = Type.Object({
   dayPnl: Type.Optional(Type.Number()),
   openPositions: Type.Integer({ minimum: 0 }),
   instances: Type.Object({ total: Type.Integer({ minimum: 0 }), running: Type.Integer({ minimum: 0 }) }),
+  /** Present when the account has a challenge profile and the broker could be queried. */
+  challenge: Type.Optional(ChallengeEvaluation),
 });
 export type AccountSummary = Type.Static<typeof AccountSummary>;
 
@@ -52,12 +55,15 @@ export const AlertCode = Type.Union([
   Type.Literal("instance_error"),
   Type.Literal("instance_stopped"),
   Type.Literal("account_error"),
+  Type.Literal("challenge_breached"),
+  Type.Literal("challenge_limit"),
+  Type.Literal("challenge_passed"),
 ]);
 export type AlertCode = Type.Static<typeof AlertCode>;
 
 /** `code` and `params` map to an i18n message; `subject` is the instance name or account number. */
 export const Alert = Type.Object({
-  level: Type.Union([Type.Literal("error"), Type.Literal("warning")]),
+  level: Type.Union([Type.Literal("error"), Type.Literal("warning"), Type.Literal("info")]),
   code: AlertCode,
   subject: Type.String(),
   params: Type.Record(Type.String(), Type.Union([Type.String(), Type.Number()])),

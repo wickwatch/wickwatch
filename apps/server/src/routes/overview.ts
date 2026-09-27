@@ -2,13 +2,15 @@ import { HostStatus, Overview } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
+import type { Db } from "../db";
 import { loadOverview } from "../services/overview";
 
 export const overviewRoutes: FastifyPluginAsyncTypebox<{
   adapters: Adapters;
   accounts: AccountDirectory;
+  db: Db;
   labelPrefix: string;
-}> = async (app, { adapters, accounts, labelPrefix }) => {
+}> = async (app, { adapters, accounts, db, labelPrefix }) => {
   app.get(
     "/overview",
     {
@@ -18,7 +20,7 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
         response: { 200: Overview },
       },
     },
-    async (request) => loadOverview(adapters, accounts, labelPrefix, request.log),
+    async (request) => loadOverview(adapters, accounts, db, labelPrefix, request.log),
   );
 
   app.get(

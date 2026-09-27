@@ -62,11 +62,64 @@
     "totpDisabledNotice": "2FA ist aus. Du meldest dich nur mit dem Passwort an."
   },
   "challenge": {
-    "profitTarget": "Profit-Ziel",
-    "dailyLoss": "Tagesverlust",
-    "maxDrawdown": "Max-Drawdown",
-    "tradingDays": "Handelstage",
-    "ofValue": "{value} von {limit}"
+    "label": "Challenge",
+    "ofValue": "{value} von {limit}",
+    "day": "Tag {day}",
+    "rule": {
+      "profitTarget": "Profit-Ziel",
+      "dailyLoss": "Tagesverlust",
+      "maxLoss": "Max-Drawdown",
+      "tradingDays": "Handelstage",
+      "duration": "Laufzeit"
+    },
+    "status": {
+      "running": "Läuft",
+      "warning": "Limit-Nähe",
+      "breached": "Verletzt",
+      "passed": "Ziele erreicht"
+    },
+    "ruleStatus": {
+      "warning": "{used} % des Limits verbraucht",
+      "danger": "{used} % des Limits verbraucht",
+      "breached": "Limit verletzt",
+      "reached": "Erreicht"
+    },
+    "approximate": "Geschätzt: Die Equity zu Tagesbeginn wurde nicht erfasst (Wickwatch lief beim Reset nicht).",
+    "add": "Challenge-Profil hinzufügen",
+    "edit": "Challenge-Profil bearbeiten",
+    "editorTitle": "Challenge-Profil · Konto {account}",
+    "template": "Vorlage",
+    "noTemplate": "Keine Vorlage – Regeln selbst eingeben",
+    "templateSource": "Regeln mit Stand {date}, Quelle:",
+    "noTemplatesHint": "Keine Vorlagen installiert. Trage die Regeln von der offiziellen Regelseite deiner Firma ein oder lege eine Vorlage unter templates/challenges/ ab.",
+    "basics": "Challenge",
+    "name": "Name",
+    "phase": "Phase",
+    "startDate": "Startdatum",
+    "startBalance": "Startbalance",
+    "rules": "Regeln",
+    "rulesHint": "Feld leer lassen, wenn die Regel nicht gilt. Werte mit den offiziellen Regeln der Firma abgleichen; Wickwatch überwacht nur – der harte Stopp gehört in den Bot.",
+    "reference": "Tagesverlust wird gemessen ab",
+    "references": {
+      "balance-or-equity-at-day-start": "dem höheren Wert aus Balance und Equity zu Tagesbeginn",
+      "balance-at-day-start": "der Balance zu Tagesbeginn",
+      "equity-at-day-start": "der Equity zu Tagesbeginn"
+    },
+    "resetTime": "Tages-Reset (Ortszeit)",
+    "timezone": "Zeitzone des Resets",
+    "limitBasis": "Tageslimit in Prozent von",
+    "basis": {
+      "initialBalance": "der Startbalance",
+      "dayStart": "dem Wert zu Tagesbeginn"
+    },
+    "maxLossType": "Art des Max-Drawdowns",
+    "maxLossTypes": {
+      "static": "Statisch (ab Startbalance)",
+      "trailing": "Trailing (ab höchster Equity)"
+    },
+    "durationDays": "Laufzeit (Tage)",
+    "delete": "Profil entfernen",
+    "deleteConfirm": "Challenge-Profil von Konto {account} entfernen? Erfasste Handelstage bleiben erhalten."
   },
   "instance": {
     "positions": "Offene Positionen",
@@ -124,7 +177,9 @@
       "invalid_code": "Der Code ist falsch oder abgelaufen. Uhrzeit am Gerät prüfen.",
       "totp_required": "Gib den Code aus deiner Authenticator-App ein.",
       "totp_already_enabled": "2FA ist bereits an.",
-      "invalid_password": "Das Passwort ist falsch."
+      "invalid_password": "Das Passwort ist falsch.",
+      "invalid_timezone": "Unbekannte Zeitzone.",
+      "template_not_found": "Vorlage nicht gefunden."
     }
   },
   "parameterIssue": {
@@ -181,11 +236,15 @@
   "alert": {
     "level": {
       "error": "Fehler",
-      "warning": "Achtung"
+      "warning": "Achtung",
+      "info": "Info"
     },
     "instance_error": "{subject}: Fehler, {restarts} Neustarts",
     "instance_stopped": "{subject} ist gestoppt",
-    "account_error": "Konto {subject} nicht erreichbar: {reason}"
+    "account_error": "Konto {subject} nicht erreichbar: {reason}",
+    "challenge_breached": "Konto {subject}: Challenge-Regel verletzt – {rule}",
+    "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",
+    "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht"
   },
   "emergencyStop": {
     "title": "Notstopp",

@@ -60,10 +60,35 @@ export interface AuditLogTable {
   details: string | null;
 }
 
+export interface ChallengeProfilesTable {
+  account_id: number;
+  template_id: string | null;
+  /** ChallengeProfile as JSON. */
+  profile: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyStatsTable {
+  account_id: number;
+  /** YYYY-MM-DD, local date of the trading-day reset. */
+  day: string;
+  start_balance: number | null;
+  start_equity: number | null;
+  min_equity: number | null;
+  max_equity: number | null;
+  first_sample_at: string | null;
+  last_sample_at: string | null;
+  /** 1 when at least one trade closed that day. */
+  traded: Generated<number>;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
   accounts: AccountsTable;
   audit_log: AuditLogTable;
   sessions: SessionsTable;
+  challenge_profiles: ChallengeProfilesTable;
+  daily_stats: DailyStatsTable;
 }

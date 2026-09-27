@@ -1,4 +1,12 @@
-import type { EmergencyStopReport, HostStatus, InstanceDetail, Overview, SystemInfo } from "@wickwatch/core";
+import type {
+  ChallengeProfile,
+  ChallengeTemplate,
+  EmergencyStopReport,
+  HostStatus,
+  InstanceDetail,
+  Overview,
+  SystemInfo,
+} from "@wickwatch/core";
 
 /** `code` is an i18n key suffix: error.adapter.* or error.api.* */
 export class ApiError extends Error {
@@ -40,6 +48,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, {
     method: "POST",
+    ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
+  });
+
+const send = <T>(method: "PUT" | "DELETE", path: string, body?: unknown) =>
+  request<T>(path, {
+    method,
     ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
 
@@ -90,6 +104,11 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,
     }),
+  challengeTemplates: () => request<ChallengeTemplate[]>("challenge-templates"),
+  challenge: (account: string) => request<ChallengeProfile>(`accounts/${encodeURIComponent(account)}/challenge`),
+  saveChallenge: (account: string, profile: ChallengeProfile) =>
+    send<ChallengeProfile>("PUT", `accounts/${encodeURIComponent(account)}/challenge`, profile),
+  deleteChallenge: (account: string) => send<undefined>("DELETE", `accounts/${encodeURIComponent(account)}/challenge`),
   emergencyStop: (account: string) =>
     post<EmergencyStopReport>(`accounts/${encodeURIComponent(account)}/emergency-stop`, { confirm: account }),
 };

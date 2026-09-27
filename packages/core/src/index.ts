@@ -9,3 +9,5 @@ export * from "./overview";
 export * from "./operations";
 export * from "./stats";
 export * from "./instance-detail";
+export * from "./trading-day";
+export * from "./challenge";

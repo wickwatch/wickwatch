@@ -20,6 +20,10 @@ export interface Config {
   adapters: { runtime: string; broker: string; config: string };
   /** Docker API for the docker runtime adapter, e.g. tcp://socket-proxy:2375. */
   dockerHost?: string;
+  /** Directory with challenge templates (*.json). */
+  challengeTemplatesDir: string;
+  /** How often balance and equity of every account are sampled. */
+  accountPollSeconds: number;
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
@@ -67,6 +71,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
   const webDistDir = get("WEB_DIST_DIR");
   const dockerHost = get("DOCKER_HOST");
+  const accountPollSeconds = Number(get("ACCOUNT_POLL_SECONDS") ?? 60);
+  if (!Number.isInteger(accountPollSeconds) || accountPollSeconds < 10 || accountPollSeconds > 3600) {
+    problems.push("ACCOUNT_POLL_SECONDS must be an integer between 10 and 3600");
+  }
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
   }
@@ -84,6 +92,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     database,
     labelPrefix,
     defaultLocale,
+    challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
+    accountPollSeconds,
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",
       broker: get("BROKER_ADAPTER") ?? "demo",
