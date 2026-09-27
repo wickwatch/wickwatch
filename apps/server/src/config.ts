@@ -18,6 +18,8 @@ export interface Config {
   labelPrefix: string;
   defaultLocale: Locale;
   adapters: { runtime: string; broker: string; config: string };
+  /** Docker API for the docker runtime adapter, e.g. tcp://socket-proxy:2375. */
+  dockerHost?: string;
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
@@ -64,6 +66,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
   const webDistDir = get("WEB_DIST_DIR");
+  const dockerHost = get("DOCKER_HOST");
+  if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
+    problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
+  }
 
   if (problems.length > 0 || basePath === undefined || !database || !isLocale(defaultLocale)) {
     throw new ConfigError(problems);
@@ -85,6 +91,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     },
     ...(masterKey ? { masterKey } : {}),
     ...(webDistDir ? { webDistDir: resolve(cwd, webDistDir) } : {}),
+    ...(dockerHost ? { dockerHost } : {}),
     ...(heartbeatUrl ? { heartbeatUrl } : {}),
     ...(alertWebhookUrl ? { alertWebhookUrl } : {}),
   };

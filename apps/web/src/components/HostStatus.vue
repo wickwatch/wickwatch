@@ -20,7 +20,7 @@ const { data } = usePolling(api.host, 30_000);
       }}
     </li>
     <li>{{ $t("host.disk", { value: formatPercent(locale, data.diskUsed / data.diskTotal) }) }}</li>
-    <li :class="data.ntpSynced ? 'tone-positive' : 'tone-negative'">
+    <li v-if="data.ntpSynced !== undefined" :class="data.ntpSynced ? 'tone-positive' : 'tone-negative'">
       {{ data.ntpSynced ? $t("host.ntpSynced") : $t("host.ntpNotSynced") }}
     </li>
   </ul>

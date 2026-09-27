@@ -13,7 +13,8 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DATABASE_URL` | `file:./data/wickwatch.db` | SQLite file, relative to the working directory (`/app` in the image). Postgres is planned. |
 | `LABEL_PREFIX` | `wickwatch` | Prefix of the container labels used to find instances, e.g. `wickwatch.instance`. |
 | `DEFAULT_LOCALE` | `en` | `en` or `de`; used when the browser language is not supported. |
-| `RUNTIME_ADAPTER` | `demo` | Runs bot instances. Available: `demo`. |
+| `RUNTIME_ADAPTER` | `demo` | Runs bot instances. Available: `demo`, `docker` (containers with the label `<LABEL_PREFIX>.instance`). |
+| `DOCKER_HOST` | local socket | Docker API for the `docker` runtime, e.g. `tcp://socket-proxy:2375` (recommended) or `unix:///var/run/docker.sock`. |
 | `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo`. With `demo`, demo accounts are added to an empty database. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files. Available: `demo`. |
 | `WEB_DIST_DIR` | next to the server | Directory of the built web app. Only needed when running the server outside the image. |

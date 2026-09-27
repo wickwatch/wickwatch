@@ -57,6 +57,7 @@ export const HostStatus = Type.Object({
   memTotal: Type.Number({ minimum: 0 }),
   diskUsed: Type.Number({ minimum: 0 }),
   diskTotal: Type.Number({ minimum: 0 }),
-  ntpSynced: Type.Boolean(),
+  /** Missing when the adapter cannot tell. */
+  ntpSynced: Type.Optional(Type.Boolean()),
 });
 export type HostStatus = Type.Static<typeof HostStatus>;

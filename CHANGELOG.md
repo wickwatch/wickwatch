@@ -12,3 +12,4 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Encrypted broker credentials (AES-256-GCM, `MASTER_KEY`), accounts stored in the database.
 - English and German UI, dark and light mode.
 - Docker image, CI with DCO check, release workflow for GHCR.
+- Docker runtime adapter: finds labelled containers, start/stop/restart, logs (also followed), host status.

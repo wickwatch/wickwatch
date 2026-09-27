@@ -29,7 +29,14 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 
 ## First implementations
 - **demo** (all three): fake data, deterministic, used for development, tests and screenshots.
-- **docker** runtime: dockerode via `tecnativa/docker-socket-proxy`; one container per instance, discovery via labels.
+- **docker** runtime ([`packages/adapter-docker`](../packages/adapter-docker)): dockerode via `tecnativa/docker-socket-proxy`; one container per instance.
+  - Discovery: containers with the label `<prefix>.instance`. Containers without it are treated as not found, so the API can never start or stop unrelated containers (the proxy, Wickwatch itself).
+  - Status: `running` (`error` if the health check reports unhealthy), `restarting`, `stopped` for exit code 0 or a stop signal (130, 137, 143), `error` for other exit codes and dead containers.
+  - Logs: Docker's timestamps; the level is guessed from the text (`error`, `failed`, `warn` …), `WW-SETUP` lines are parsed.
+  - Host status: load, memory and disk of the machine Wickwatch runs on; NTP state is not reported.
+  - `create`, `update` and `remove` answer `unsupported` for now; define instances in a compose file.
+  - Socket proxy needs `CONTAINERS=1` and `POST=1`.
+  - Integration test against a real daemon: `WICKWATCH_DOCKER_TEST=1 pnpm --filter @wickwatch/adapter-docker test`.
 - **ctrader-cli** broker: batch commands with `--pwd-file`, interactive commands with `--password` + `-q` as one-shot calls; a queue limits parallel calls, timeouts and retries with backoff.
 - **cbotset** config; `.optset` export in phase 2 (reverse-engineer format from a file exported by cTrader Desktop).
 

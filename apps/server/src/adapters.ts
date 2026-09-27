@@ -1,4 +1,6 @@
+import { dirname } from "node:path";
 import { createDemoAdapters } from "@wickwatch/adapter-demo";
+import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
 import { ConfigError, type Config } from "./config";
 
@@ -15,7 +17,16 @@ export function createAdapters(config: Config): Adapters {
   let demo: ReturnType<typeof createDemoAdapters> | undefined;
   const getDemo = () => (demo ??= createDemoAdapters({ labelPrefix: config.labelPrefix }));
 
-  const runtime: Registry<RuntimeAdapter> = { demo: () => getDemo().runtime };
+  const runtime: Registry<RuntimeAdapter> = {
+    demo: () => getDemo().runtime,
+    docker: () =>
+      new DockerRuntimeAdapter({
+        labelPrefix: config.labelPrefix,
+        ...(config.dockerHost ? { dockerHost: config.dockerHost } : {}),
+        // Disk usage is reported for the file system holding the database.
+        ...(config.database.filename === ":memory:" ? {} : { diskPath: dirname(config.database.filename) }),
+      }),
+  };
   const broker: Registry<BrokerAdapter> = { demo: () => getDemo().broker };
   const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
 

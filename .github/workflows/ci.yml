@@ -30,6 +30,10 @@ jobs:
       - run: pnpm typecheck
       # Includes the adapter contract tests (demo adapter).
       - run: pnpm test:coverage
+      # Docker runtime adapter against the runner's Docker daemon.
+      - run: pnpm --filter @wickwatch/adapter-docker test
+        env:
+          WICKWATCH_DOCKER_TEST: "1"
       - run: pnpm build
 
   dco:

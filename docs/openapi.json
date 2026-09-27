@@ -1194,8 +1194,7 @@
                     "memUsed",
                     "memTotal",
                     "diskUsed",
-                    "diskTotal",
-                    "ntpSynced"
+                    "diskTotal"
                   ],
                   "properties": {
                     "cpu": {
