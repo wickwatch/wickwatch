@@ -60,6 +60,25 @@ async function act(action: InstanceAction) {
   }
 }
 
+/** Removes a position (and its deals) from this instance, or restores it. */
+async function toggleAttribution(positionId: string, restore: boolean) {
+  const account = data.value?.account?.number;
+  if (!account) return;
+  busy.add(positionId);
+  notice.value = undefined;
+  try {
+    if (restore) await api.clearAttribution(account, positionId);
+    else await api.setAttribution(account, positionId, null);
+    const key = restore ? "attribution.restored" : "attribution.excluded";
+    notice.value = { tone: "positive", text: t(key, { id: positionId }) };
+  } catch (e) {
+    notice.value = { tone: "negative", text: t(errorKey(e)) };
+  } finally {
+    busy.delete(positionId);
+    await refresh();
+  }
+}
+
 async function closePosition() {
   const position = closing.value;
   const account = data.value?.account?.number;
@@ -162,8 +181,10 @@ async function closePosition() {
               kind="positions"
               :positions="data.positions"
               :can-close="isAdmin"
+              :can-attribute="isAdmin"
               :busy="busy"
               @close="closing = $event"
+              @attribution="toggleAttribution($event, false)"
             />
           </section>
 
@@ -176,7 +197,51 @@ async function closePosition() {
           <section class="panel card" aria-labelledby="history-title">
             <h2 id="history-title">{{ $t("instance.history") }}</h2>
             <p v-if="!data.deals.length" class="muted">{{ $t("chart.noTrades") }}</p>
-            <TradeTables v-else kind="deals" :deals="data.deals" />
+            <TradeTables
+              v-else
+              kind="deals"
+              :deals="data.deals"
+              :can-attribute="isAdmin"
+              :busy="busy"
+              @attribution="toggleAttribution($event, false)"
+            />
+          </section>
+
+          <section
+            v-if="data.excludedPositions.length || data.excludedDeals.length"
+            class="panel card"
+            aria-labelledby="excluded-title"
+          >
+            <details>
+              <summary>
+                <h2 id="excluded-title" class="inline-heading">
+                  {{
+                    $t("attribution.excludedTitle", {
+                      count: data.excludedPositions.length + data.excludedDeals.length,
+                    })
+                  }}
+                </h2>
+              </summary>
+              <p class="muted card__hint">{{ $t("attribution.excludedHint") }}</p>
+              <TradeTables
+                v-if="data.excludedPositions.length"
+                kind="positions"
+                :positions="data.excludedPositions"
+                :can-attribute="isAdmin"
+                excluded
+                :busy="busy"
+                @attribution="toggleAttribution($event, true)"
+              />
+              <TradeTables
+                v-if="data.excludedDeals.length"
+                kind="deals"
+                :deals="data.excludedDeals"
+                :can-attribute="isAdmin"
+                excluded
+                :busy="busy"
+                @attribution="toggleAttribution($event, true)"
+              />
+            </details>
           </section>
         </div>
 
@@ -299,6 +364,18 @@ p[role="alert"] {
 
 .card__hint {
   font-size: var(--ww-size-xs);
+}
+
+.inline-heading {
+  display: inline;
+}
+
+details summary {
+  cursor: pointer;
+}
+
+details[open] summary {
+  margin-bottom: var(--ww-space-3);
 }
 
 .labels {

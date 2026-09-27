@@ -15,6 +15,7 @@ import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
+import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -29,16 +30,17 @@ export async function loadOverview(
 ): Promise<Overview> {
   // "Today" is the UTC day; accounts with a challenge profile also need their own trading day.
   const utcDayStart = new Date(Math.floor(now.getTime() / DAY_MS) * DAY_MS);
-  const [instances, entries, profiles] = await Promise.all([
+  const [instances, entries, profiles, overrides] = await Promise.all([
     adapters.runtime.list(),
     directory.list(),
     readProfiles(db),
+    loadOverrides(db),
   ]);
   const [lastLogs, accounts] = await Promise.all([
     lastLogLines(adapters.runtime, instances),
     Promise.all(entries.map((entry) => snapshot(adapters, db, entry, profiles.get(entry.id), utcDayStart, now, log))),
   ]);
-  return buildOverview({ time: now, labelPrefix, instances, lastLogs, accounts });
+  return buildOverview({ time: now, labelPrefix, instances, lastLogs, accounts, overrides });
 }
 
 async function snapshot(

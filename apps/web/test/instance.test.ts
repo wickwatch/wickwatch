@@ -50,6 +50,8 @@ const detail: InstanceDetail = {
       time: "2026-09-24T09:21:00.000Z",
     },
   ],
+  excludedPositions: [],
+  excludedDeals: [],
   stats: { trades: 1, wins: 1, losses: 0, winRate: 1, averageWin: 429.5, grossProfit: 429.5, grossLoss: 0, net: 429.5 },
   range: { from: "2026-08-26T12:00:00.000Z", to: "2026-09-25T12:00:00.000Z" },
 };

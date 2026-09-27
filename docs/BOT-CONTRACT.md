@@ -8,7 +8,7 @@ Wickwatch has to know which positions, orders and deals of an account belong to 
 
 | `<prefix>.attribution` | Rule | Use when |
 | --- | --- | --- |
-| `auto` (default) | Order label equals `<prefix>.order-label` (default: the instance name). Otherwise every trade on the instance's account and symbol, **if it is the only instance there**. | Almost always. One bot per account and symbol (typical for prop challenges) works even with third-party bots. |
+| `auto` (default) | Order label equals `<prefix>.order-label` (default: the instance name). Otherwise: the **only instance on the account** takes every trade there, whatever the symbol; with several instances on the account, the only one on the trade's symbol takes it. | Almost always. One bot per account (typical for prop challenges) works even with third-party bots and bots trading several symbols. |
 | `label` | Only the order label, never the symbol. | Several of your own bots, or manual trades, on the same account and symbol. |
 | `label-pattern` | The order label matches the regular expression in `<prefix>.order-label`. | Third-party bots on one account and symbol that use recognisable labels. |
 | `account-symbol` | Every trade on the account and symbol. | Explicitly "this account and symbol belong to this bot". Two instances on the same account and symbol with this mode are reported as a conflict. |
@@ -17,6 +17,7 @@ Notes:
 - In `auto` and `account-symbol` mode, manual trades on the same account and symbol count for the instance.
 - The symbol must be the broker's symbol name (e.g. `US100.cash`), as in `<prefix>.symbol`.
 - Trades that match no instance stay "not attributed"; account totals still include them.
+- **Manual corrections:** on the instance page, admins can mark a position as "not from this bot" (e.g. a manual trade). This applies to the position and all its deals, is audit-logged and can be undone under "Excluded trades". Manual corrections win over every rule.
 
 ## Recommendations for bots you write
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInstanceDetail, buildLabels, dealStats, type Deal } from "../src";
+import { buildInstanceDetail, buildLabels, dealStats, overrideKey, type Deal } from "../src";
 
 const deal = (pnl: number, extra: Partial<Deal> = {}): Deal => ({
   id: `d${pnl}${extra.time ?? ""}`,
@@ -104,5 +104,31 @@ describe("buildInstanceDetail", () => {
     // Today's P&L: today's deal (30 − 2) plus the open position (5).
     expect(detail.instance).toMatchObject({ name: "alpha", dayPnl: 33, openPositions: 1, image: "bot:1" });
     expect(detail.account).toEqual({ number: "111", displayName: "Main", currency: "USD" });
+    expect(detail.excludedDeals).toEqual([]);
+  });
+
+  it("lists trades removed by hand separately, so they can be restored", () => {
+    const detail = buildInstanceDetail({
+      time: new Date("2026-09-25T12:00:00.000Z"),
+      from: new Date("2026-08-26T12:00:00.000Z"),
+      labelPrefix: "ww",
+      instance: alpha,
+      overrides: new Map([[overrideKey("111", "manual-pos"), null]]),
+      account: {
+        number: "111",
+        displayName: "Main",
+        data: {
+          positions: [],
+          pendingOrders: [],
+          deals: [
+            deal(30, { positionId: "bot-pos" }),
+            deal(-80, { positionId: "manual-pos", label: "", time: "2026-09-24T08:00:00.000Z" }),
+          ],
+        },
+      },
+    });
+    expect(detail.deals.map((d) => d.positionId)).toEqual(["bot-pos"]);
+    expect(detail.excludedDeals.map((d) => d.positionId)).toEqual(["manual-pos"]);
+    expect(detail.stats.trades).toBe(1);
   });
 });

@@ -34,6 +34,9 @@ export const InstanceDetail = Type.Object({
   pendingOrders: Type.Array(PendingOrder),
   /** Deals of this instance in the range, oldest first. */
   deals: Type.Array(Deal),
+  /** Positions and deals the rules would attribute here, but removed by hand (e.g. manual trades). */
+  excludedPositions: Type.Array(Position),
+  excludedDeals: Type.Array(Deal),
   stats: DealStats,
   range: Type.Object({ from: IsoTime, to: IsoTime }),
 });

@@ -251,6 +251,75 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
   );
 
+  const PositionParams = Type.Object({
+    number: Type.String({ minLength: 1 }),
+    positionId: Type.String({ minLength: 1 }),
+  });
+  const accountId = async (number: string) =>
+    (await db.selectFrom("accounts").select("id").where("number", "=", number).executeTakeFirst())?.id;
+
+  app.put(
+    "/accounts/:number/positions/:positionId/attribution",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["accounts"],
+        summary: "Attribute a position (and its deals) by hand",
+        description: "`instance: null` means the position belongs to no instance, e.g. a manual trade.",
+        params: PositionParams,
+        body: Type.Object({ instance: Type.Union([Type.String({ minLength: 1, maxLength: 200 }), Type.Null()]) }),
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, positionId } = request.params;
+      const id = await accountId(number);
+      if (id === undefined) return reply.code(404).send({ error: "not_found" });
+      const row = {
+        instance: request.body.instance,
+        user_id: request.user?.id ?? null,
+        created_at: new Date().toISOString(),
+      };
+      await db
+        .insertInto("attribution_overrides")
+        .values({ account_id: id, position_id: positionId, ...row })
+        .onConflict((oc) => oc.columns(["account_id", "position_id"]).doUpdateSet(row))
+        .execute();
+      await audit(db, {
+        action: "attribution.set",
+        target: `${number}/${positionId}`,
+        details: { instance: request.body.instance },
+        userId: request.user?.id,
+      });
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.delete(
+    "/accounts/:number/positions/:positionId/attribution",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["accounts"],
+        summary: "Remove a manual attribution; the rules decide again",
+        params: PositionParams,
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, positionId } = request.params;
+      const id = await accountId(number);
+      if (id === undefined) return reply.code(404).send({ error: "not_found" });
+      await db
+        .deleteFrom("attribution_overrides")
+        .where("account_id", "=", id)
+        .where("position_id", "=", positionId)
+        .execute();
+      await audit(db, { action: "attribution.clear", target: `${number}/${positionId}`, userId: request.user?.id });
+      return reply.code(204).send(null);
+    },
+  );
+
   app.post(
     "/accounts/:number/emergency-stop",
     {

@@ -83,6 +83,15 @@ export interface DailyStatsTable {
   traded: Generated<number>;
 }
 
+export interface AttributionOverridesTable {
+  account_id: number;
+  position_id: string;
+  /** Instance name, or null: the position belongs to no instance (e.g. a manual trade). */
+  instance: string | null;
+  user_id: number | null;
+  created_at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -91,4 +100,5 @@ export interface Database {
   sessions: SessionsTable;
   challenge_profiles: ChallengeProfilesTable;
   daily_stats: DailyStatsTable;
+  attribution_overrides: AttributionOverridesTable;
 }

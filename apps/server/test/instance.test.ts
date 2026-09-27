@@ -98,3 +98,52 @@ describe("close position", () => {
     expect((await close("unknown", "unknown")).statusCode).toBe(404);
   });
 });
+
+describe("manual attribution", () => {
+  const set = (positionId: string, instance: string | null, cookie = admin) =>
+    t.app.inject({
+      method: "PUT",
+      url: `/api/v1/accounts/1111111/positions/${positionId}/attribution`,
+      headers: { cookie },
+      payload: { instance },
+    });
+
+  it("removes a position from an instance, lists it as excluded and restores it", async () => {
+    const [position] = (await get("/api/v1/instances/alpha-ger40-a")).json<InstanceDetail>().positions;
+    expect(position).toBeDefined();
+    expect((await set(position!.id, null)).statusCode).toBe(204);
+
+    const excluded = (await get("/api/v1/instances/alpha-ger40-a")).json<InstanceDetail>();
+    expect(excluded.positions).toEqual([]);
+    expect(excluded.excludedPositions.map((p) => p.id)).toEqual([position!.id]);
+
+    const restore = await t.app.inject({
+      method: "DELETE",
+      url: `/api/v1/accounts/1111111/positions/${position!.id}/attribution`,
+      headers: { cookie: admin },
+    });
+    expect(restore.statusCode).toBe(204);
+    const restored = (await get("/api/v1/instances/alpha-ger40-a")).json<InstanceDetail>();
+    expect(restored.positions.map((p) => p.id)).toEqual([position!.id]);
+
+    const actions = await t.db
+      .selectFrom("audit_log")
+      .select("action")
+      .where("action", "like", "attribution.%")
+      .execute();
+    expect(actions.map((a) => a.action)).toEqual(["attribution.set", "attribution.clear"]);
+  });
+
+  it("is admin-only and needs a known account", async () => {
+    const viewer = await loginAs(t, "viewer");
+    expect((await set("x", null, viewer)).statusCode).toBe(403);
+    expect((await set("x", null)).statusCode).toBe(204);
+    const unknown = await t.app.inject({
+      method: "PUT",
+      url: "/api/v1/accounts/999/positions/x/attribution",
+      headers: { cookie: admin },
+      payload: { instance: null },
+    });
+    expect(unknown.statusCode).toBe(404);
+  });
+});

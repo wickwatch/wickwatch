@@ -156,6 +156,20 @@ export const api = {
   saveChallenge: (account: string, profile: ChallengeProfile) =>
     send<ChallengeProfile>("PUT", `accounts/${encodeURIComponent(account)}/challenge`, profile),
   deleteChallenge: (account: string) => send<undefined>("DELETE", `accounts/${encodeURIComponent(account)}/challenge`),
+  /** `instance: null`: the position belongs to no instance (e.g. a manual trade). */
+  setAttribution: (account: string, positionId: string, instance: string | null) =>
+    send<undefined>(
+      "PUT",
+      `accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/attribution`,
+      {
+        instance,
+      },
+    ),
+  clearAttribution: (account: string, positionId: string) =>
+    send<undefined>(
+      "DELETE",
+      `accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/attribution`,
+    ),
   emergencyStop: (account: string) =>
     post<EmergencyStopReport>(`accounts/${encodeURIComponent(account)}/emergency-stop`, { confirm: account }),
 };

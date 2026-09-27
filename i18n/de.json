@@ -394,5 +394,13 @@
     "encrypted": "Wird verschlüsselt gespeichert; Wickwatch nutzt es nur für die Verbindung zum Broker.",
     "loginOption": "{label} ({login})",
     "inactive": "(inaktiv – beim Broker geschlossen)"
+  },
+  "attribution": {
+    "exclude": "Gehört nicht zu diesem Bot",
+    "restore": "Wiederherstellen",
+    "excluded": "Position {id} zählt nicht mehr für diese Instanz.",
+    "restored": "Position {id} zählt wieder für diese Instanz.",
+    "excludedTitle": "Ausgeschlossene Trades ({count})",
+    "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen."
   }
 }

@@ -36,7 +36,15 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       },
     },
     async (request) =>
-      loadInstanceDetail(adapters, accounts, labelPrefix, request.params.ref, request.query.days ?? 30, request.log),
+      loadInstanceDetail(
+        adapters,
+        accounts,
+        db,
+        labelPrefix,
+        request.params.ref,
+        request.query.days ?? 30,
+        request.log,
+      ),
   );
 
   app.get(

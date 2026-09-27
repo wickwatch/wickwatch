@@ -1823,6 +1823,8 @@
                     "positions",
                     "pendingOrders",
                     "deals",
+                    "excludedPositions",
+                    "excludedDeals",
                     "stats",
                     "range"
                   ],
@@ -2176,6 +2178,141 @@
                       }
                     },
                     "deals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "positionId",
+                          "symbol",
+                          "side",
+                          "volume",
+                          "price",
+                          "pnl",
+                          "time"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "positionId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "price": {
+                            "type": "number"
+                          },
+                          "pnl": {
+                            "type": "number"
+                          },
+                          "commission": {
+                            "type": "number"
+                          },
+                          "swap": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "time": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          }
+                        }
+                      }
+                    },
+                    "excludedPositions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "symbol",
+                          "side",
+                          "volume",
+                          "entry",
+                          "pnl",
+                          "openedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "entry": {
+                            "type": "number"
+                          },
+                          "sl": {
+                            "type": "number"
+                          },
+                          "tp": {
+                            "type": "number"
+                          },
+                          "pnl": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          }
+                        }
+                      }
+                    },
+                    "excludedDeals": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -4157,6 +4294,228 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{number}/positions/{positionId}/attribution": {
+      "put": {
+        "summary": "Attribute a position (and its deals) by hand",
+        "tags": [
+          "accounts"
+        ],
+        "description": "`instance: null` means the position belongs to no instance, e.g. a manual trade.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "instance"
+                ],
+                "properties": {
+                  "instance": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "positionId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a manual attribution; the rules decide again",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "positionId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

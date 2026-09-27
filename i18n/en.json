@@ -394,5 +394,13 @@
     "encrypted": "Stored encrypted; Wickwatch uses it only to talk to the broker.",
     "loginOption": "{label} ({login})",
     "inactive": "(inactive – closed at the broker)"
+  },
+  "attribution": {
+    "exclude": "Not from this bot",
+    "restore": "Restore",
+    "excluded": "Position {id} no longer counts for this instance.",
+    "restored": "Position {id} counts for this instance again.",
+    "excludedTitle": "Excluded trades ({count})",
+    "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures."
   }
 }

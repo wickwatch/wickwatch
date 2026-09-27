@@ -1,5 +1,5 @@
 import type { AdapterErrorCode } from "./errors";
-import { createAttributor, type Attributor } from "./attribution";
+import { createAttributor, type AttributionOverrides, type Attributor, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
 import type {
   AccountStats,
@@ -34,9 +34,14 @@ export interface OverviewInput {
   instances: RuntimeInstance[];
   lastLogs: ReadonlyMap<string, LogLine>;
   accounts: AccountSnapshot[];
+  /** Manual attribution per position, see attribution.ts. */
+  overrides?: AttributionOverrides;
 }
 
 const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
+
+/** Positions are overridden by their id; deals carry `positionId` themselves. */
+export const positionItem = (p: Position): TradeItem => ({ label: p.label, symbol: p.symbol, positionId: p.id });
 
 /** One instance with its positions and today's P&L; shared by the overview and the detail view. */
 export function summarizeInstance(
@@ -48,9 +53,8 @@ export function summarizeInstance(
 ): InstanceSummary {
   const labels = readLabels(labelPrefix, instance.labels);
   const name = labels.instance ?? instance.ref;
-  const owns = (item: { label?: string | undefined; symbol: string }) =>
-    labels.account !== undefined && attributor.owner(labels.account, item) === name;
-  const positions = broker?.positions.filter(owns) ?? [];
+  const owns = (item: TradeItem) => labels.account !== undefined && attributor.owner(labels.account, item) === name;
+  const positions = broker?.positions.filter((p) => owns(positionItem(p))) ?? [];
   const deals = broker?.dealsToday.filter(owns) ?? [];
   return {
     ref: instance.ref,
@@ -71,7 +75,7 @@ export function summarizeInstance(
 export function buildOverview(input: OverviewInput): Overview {
   const byNumber = new Map(input.accounts.map((a) => [a.number, a]));
 
-  const attributor = createAttributor(input.instances, input.labelPrefix);
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
   const instances = input.instances.map((instance) => {
     const account = readLabels(input.labelPrefix, instance.labels).account;
     const data = account ? byNumber.get(account)?.data : undefined;

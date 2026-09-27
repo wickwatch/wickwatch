@@ -11,9 +11,12 @@ const props = defineProps<{
   orders?: PendingOrder[];
   deals?: Deal[];
   canClose?: boolean;
+  /** Offer "not from this bot" (or "restore" when `excluded`). */
+  canAttribute?: boolean;
+  excluded?: boolean;
   busy?: ReadonlySet<string>;
 }>();
-defineEmits<{ close: [position: Position] }>();
+defineEmits<{ close: [position: Position]; attribution: [positionId: string] }>();
 const { locale } = useI18n();
 
 const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
@@ -37,7 +40,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
           <th scope="col" class="num">{{ $t("trade.pnl") }}</th>
-          <th v-if="canClose" scope="col">
+          <th v-if="canClose || canAttribute" scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
         </tr>
@@ -51,15 +54,27 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="mono num">{{ price(p.sl) }}</td>
           <td class="mono num">{{ price(p.tp) }}</td>
           <td class="num"><SignedValue :value="p.pnl" /></td>
-          <td v-if="canClose" class="num">
-            <button
-              type="button"
-              class="btn btn--danger btn--small"
-              :disabled="busy?.has(p.id)"
-              @click="$emit('close', p)"
-            >
-              {{ $t("action.closePosition") }}
-            </button>
+          <td v-if="canClose || canAttribute" class="num">
+            <div class="actions">
+              <button
+                v-if="canAttribute"
+                type="button"
+                class="btn btn--ghost btn--small"
+                :disabled="busy?.has(p.id)"
+                @click="$emit('attribution', p.id)"
+              >
+                {{ excluded ? $t("attribution.restore") : $t("attribution.exclude") }}
+              </button>
+              <button
+                v-if="canClose && !excluded"
+                type="button"
+                class="btn btn--danger btn--small"
+                :disabled="busy?.has(p.id)"
+                @click="$emit('close', p)"
+              >
+                {{ $t("action.closePosition") }}
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -97,6 +112,9 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <th scope="col" class="num">{{ $t("trade.price") }}</th>
           <th scope="col" class="num">{{ $t("trade.pnl") }}</th>
           <th scope="col" class="num">{{ $t("trade.costs") }}</th>
+          <th v-if="canAttribute" scope="col">
+            <span class="visually-hidden">{{ $t("table.actions") }}</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -107,6 +125,16 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="mono num">{{ price(d.price) }}</td>
           <td class="num"><SignedValue :value="d.pnl" /></td>
           <td class="num"><SignedValue :value="costs(d)" /></td>
+          <td v-if="canAttribute" class="num">
+            <button
+              type="button"
+              class="btn btn--ghost btn--small"
+              :disabled="busy?.has(d.positionId)"
+              @click="$emit('attribution', d.positionId)"
+            >
+              {{ excluded ? $t("attribution.restore") : $t("attribution.exclude") }}
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -154,6 +182,12 @@ thead th {
 
 .num {
   text-align: right;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ww-space-2);
 }
 
 .more {
