@@ -3221,6 +3221,12 @@
                           },
                           "live": {
                             "type": "boolean"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
                           }
                         }
                       },

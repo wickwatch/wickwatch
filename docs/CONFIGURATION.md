@@ -15,7 +15,8 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DEFAULT_LOCALE` | `en` | `en` or `de`; used when the browser language is not supported. |
 | `RUNTIME_ADAPTER` | `demo` | Runs bot instances. Available: `demo`, `docker` (containers with the label `<LABEL_PREFIX>.instance`). |
 | `DOCKER_HOST` | local socket | Docker API for the `docker` runtime, e.g. `tcp://socket-proxy:2375` (recommended) or `unix:///var/run/docker.sock`. |
-| `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo`. With `demo`, demo accounts are added to an empty database. |
+| `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo` (demo accounts are added to an empty database) and `ctrader-cli` (read-only for now: accounts, balances, positions, orders, deals, algo metadata). |
+| `CTRADER_CLI_PATH` | `ctrader-cli` | cTrader CLI executable for `BROKER_ADAPTER=ctrader-cli`. It must be installed where the server runs. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files. Available: `demo`. |
 | `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. |
 | `CHALLENGE_TEMPLATES_DIR` | `templates/challenges` | Directory with challenge templates (`*.json`, see its README). |

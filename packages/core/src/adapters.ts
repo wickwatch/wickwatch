@@ -64,6 +64,8 @@ export interface BrokerAdapter {
   cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void>;
   emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult>;
   algoMetadata(algoPath: string): Promise<AlgoMetadata>;
+  /** Releases long-lived resources (sessions, processes) on shutdown. */
+  dispose?(): Promise<void>;
 }
 
 /** Reads and writes parameter files. */

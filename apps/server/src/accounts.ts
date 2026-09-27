@@ -8,6 +8,8 @@ export interface AccountEntry {
   id: number;
   number: string;
   displayName: string;
+  broker: string;
+  currency: string;
   credentialLabel?: string;
   credentials(): Promise<Credentials>;
 }
@@ -31,6 +33,8 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
           "accounts.id",
           "accounts.number",
           "accounts.display_name",
+          "accounts.broker",
+          "accounts.currency",
           "credentials.label as credential_label",
           "credentials.login",
           "credentials.secret",
@@ -43,6 +47,8 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
         id: row.id,
         number: row.number,
         displayName: row.display_name,
+        broker: row.broker,
+        currency: row.currency,
         ...(row.credential_label ? { credentialLabel: row.credential_label } : {}),
         credentials: () => {
           if (!cipher) return Promise.reject(new AdapterError("unavailable", "MASTER_KEY is not set"));

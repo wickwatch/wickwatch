@@ -183,7 +183,8 @@
       "credential_in_use": "Dieser Login wird noch von Konten genutzt.",
       "credential_not_found": "Login nicht gefunden.",
       "account_exists": "Dieses Konto ist bereits hinzugefügt.",
-      "account_not_found_at_broker": "Der Broker bietet dieses Konto für den Login nicht an."
+      "account_not_found_at_broker": "Der Broker bietet dieses Konto für den Login nicht an.",
+      "account_inactive": "Dieses Konto ist beim Broker nicht aktiv."
     }
   },
   "parameterIssue": {
@@ -391,6 +392,7 @@
     "addLogin": "Login hinzufügen",
     "loginAdded": "Login hinzugefügt.",
     "encrypted": "Wird verschlüsselt gespeichert; Wickwatch nutzt es nur für die Verbindung zum Broker.",
-    "loginOption": "{label} ({login})"
+    "loginOption": "{label} ({login})",
+    "inactive": "(inaktiv – beim Broker geschlossen)"
   }
 }

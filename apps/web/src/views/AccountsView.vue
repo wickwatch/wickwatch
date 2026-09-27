@@ -71,13 +71,18 @@ const confirmRemove = () => {
 
 // --- adding an account from the broker's list
 const adding = reactive({ credentialId: 0, number: "", displayName: "" });
+const selectable = (o: OfferedAccount) => !o.added && o.active !== false;
+const choose = (o: OfferedAccount) => {
+  adding.number = o.number;
+  adding.displayName = o.name ?? "";
+};
 const offered = ref<OfferedAccount[]>();
 const fetchOffered = () =>
   run(async () => {
     offered.value = await api.brokerAccounts(adding.credentialId);
-    const first = offered.value.find((a) => !a.added);
+    const first = offered.value.find(selectable);
     adding.number = first?.number ?? "";
-    adding.displayName = "";
+    adding.displayName = first?.name ?? "";
   });
 const addAccount = () =>
   run(async () => {
@@ -211,13 +216,23 @@ const saveSecret = () =>
               <fieldset class="offered">
                 <legend>{{ $t("accounts.offered") }}</legend>
                 <p v-if="!offered.length" class="muted">{{ $t("accounts.noneOffered") }}</p>
-                <label v-for="o in offered" :key="o.number" class="offered__item" :class="{ muted: o.added }">
-                  <input v-model="adding.number" type="radio" name="offered" :value="o.number" :disabled="o.added" />
+                <label v-for="o in offered" :key="o.number" class="offered__item" :class="{ muted: !selectable(o) }">
+                  <input
+                    type="radio"
+                    name="offered"
+                    :value="o.number"
+                    :checked="adding.number === o.number"
+                    :disabled="!selectable(o)"
+                    @change="choose(o)"
+                  />
                   <span class="mono">{{ o.number }}</span>
                   <span>{{
-                    [o.broker, o.currency, o.live ? $t("accounts.live") : $t("accounts.demo")].join(" · ")
+                    [o.name, o.broker, o.currency, o.live ? $t("accounts.live") : $t("accounts.demo")]
+                      .filter(Boolean)
+                      .join(" · ")
                   }}</span>
                   <span v-if="o.added">{{ $t("accounts.alreadyAdded") }}</span>
+                  <span v-else-if="o.active === false">{{ $t("accounts.inactive") }}</span>
                 </label>
               </fieldset>
               <label class="field">

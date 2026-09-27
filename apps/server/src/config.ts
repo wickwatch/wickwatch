@@ -20,6 +20,8 @@ export interface Config {
   adapters: { runtime: string; broker: string; config: string };
   /** Docker API for the docker runtime adapter, e.g. tcp://socket-proxy:2375. */
   dockerHost?: string;
+  /** cTrader CLI executable for BROKER_ADAPTER=ctrader-cli. */
+  ctraderCliPath: string;
   /** Directory with challenge templates (*.json). */
   challengeTemplatesDir: string;
   /** How often balance and equity of every account are sampled. */
@@ -93,6 +95,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     labelPrefix,
     defaultLocale,
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
+    ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
     accountPollSeconds,
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",

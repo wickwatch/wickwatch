@@ -61,20 +61,20 @@ async function snapshot(
   };
   try {
     const c = await entry.credentials();
-    const [brokerAccounts, stats, positions, deals] = await Promise.all([
-      broker.accounts(c),
+    // Broker name and currency come from the database: asking the broker for them on every poll is expensive.
+    const [stats, positions, deals] = await Promise.all([
       broker.stats(c, entry.number),
       broker.positions(c, entry.number),
       broker.deals(c, entry.number, from.toISOString(), now.toISOString()),
     ]);
-    const info = brokerAccounts.find((a) => a.number === entry.number);
     const dealsToday = deals.filter((d) => Date.parse(d.time) >= utcDayStart.getTime());
     const challenge = profile
       ? await evaluateForAccount(db, entry.id, profile, { balance: stats.balance, equity: stats.equity, deals }, now)
       : undefined;
     return {
       ...base,
-      ...(info ? { broker: info.broker, currency: info.currency } : {}),
+      broker: entry.broker,
+      currency: entry.currency,
       data: { stats, positions, dealsToday },
       ...(challenge ? { challenge } : {}),
     };

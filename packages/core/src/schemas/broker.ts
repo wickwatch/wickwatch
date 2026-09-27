@@ -6,6 +6,10 @@ export const BrokerAccount = Type.Object({
   broker: Type.String({ minLength: 1 }),
   currency: Type.String({ minLength: 3, maxLength: 3 }),
   live: Type.Boolean(),
+  /** False for closed or disabled accounts the broker still lists. Missing: unknown. */
+  active: Type.Optional(Type.Boolean()),
+  /** Name the broker shows for the account, e.g. a challenge name. */
+  name: Type.Optional(Type.String()),
 });
 export type BrokerAccount = Type.Static<typeof BrokerAccount>;
 
@@ -95,6 +99,8 @@ export type ParameterSchema = Type.Static<typeof ParameterSchema>;
 export const AlgoMetadata = Type.Object({
   name: Type.String({ minLength: 1 }),
   version: Type.Optional(Type.String()),
+  /** When the algo file was built, if the platform records it. */
+  buildTime: Type.Optional(IsoTime),
   parameters: Type.Array(ParameterSchema),
 });
 export type AlgoMetadata = Type.Static<typeof AlgoMetadata>;

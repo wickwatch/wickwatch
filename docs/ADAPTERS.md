@@ -38,7 +38,13 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
   - `create`, `update` and `remove` answer `unsupported` for now; define instances in a compose file.
   - Socket proxy needs `CONTAINERS=1` and `POST=1`.
   - Integration test against a real daemon: `WICKWATCH_DOCKER_TEST=1 pnpm --filter @wickwatch/adapter-docker test`.
-- **ctrader-cli** broker: batch commands with `--pwd-file`, interactive commands with `--password` + `-q` as one-shot calls; a queue limits parallel calls, timeouts and retries with backoff.
+- **ctrader-cli** broker ([`packages/adapter-ctrader-cli`](../packages/adapter-ctrader-cli), tested with CLI 5.9, read-only so far):
+  - Batch commands (`accounts`, `symbols`, `metadata`) with `--pwd-file`; the password is written to a private temp file, never passed as an argument.
+  - One long-running interactive shell per account for `account`, `positions`, `orders`, `deals`: login once (≈ 4 s), then answers in milliseconds. History commands return nothing as the first command of a session, so every session starts with a warm-up query.
+  - Closed accounts are still listed by batch `accounts` but fail with a misleading "not available on this cTrader build"; they are reported as `active: false`.
+  - `deals --from/--to` take whole UTC days with an exclusive end; the adapter asks one day more and filters.
+  - Closing positions, cancelling orders and the emergency stop answer `unsupported` until verified on a demo account.
+  - Integration test against the real CLI (read-only): `WICKWATCH_CTRADER_TEST=1 CTRADER_CTID=… CTRADER_PWD_FILE=… CTRADER_ACCOUNT=… pnpm --filter @wickwatch/adapter-ctrader-cli test`.
 - **cbotset** config; `.optset` export in phase 2 (reverse-engineer format from a file exported by cTrader Desktop).
 
 ## Contract tests

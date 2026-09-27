@@ -12,6 +12,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Encrypted broker credentials (AES-256-GCM, `MASTER_KEY`), accounts stored in the database.
 - English and German UI, dark and light mode.
 - Docker image, CI with DCO check, release workflow for GHCR.
+- cTrader CLI broker adapter (read-only): accounts with active flag and names, balances, positions, orders, deals, algo metadata; one shell session per account.
 - Docker runtime adapter: finds labelled containers, start/stop/restart, logs (also followed), host status.
 - Accounts page: add accounts from the broker's list, rename, switch login, remove; broker logins with password change (encrypted, never shown again).
 - Challenge profiles per account (from a template or entered manually): profit target, daily loss with reset time and time zone, static or trailing max drawdown, minimum trading days, duration; traffic light on the account card and alerts near limits. A background poller records balance and equity per trading day.

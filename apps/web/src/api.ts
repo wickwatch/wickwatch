@@ -85,6 +85,10 @@ export interface OfferedAccount {
   broker: string;
   currency: string;
   live: boolean;
+  /** False for closed accounts the broker still lists. */
+  active?: boolean;
+  /** Name the broker shows, e.g. a challenge name. */
+  name?: string;
   added: boolean;
 }
 

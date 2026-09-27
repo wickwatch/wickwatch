@@ -52,17 +52,15 @@ async function brokerData(
   now: Date,
   log: FastifyBaseLogger,
 ): Promise<NonNullable<InstanceDetailInput["account"]>> {
-  const base = { number: entry.number, displayName: entry.displayName };
+  const base = { number: entry.number, displayName: entry.displayName, currency: entry.currency };
   try {
     const c = await entry.credentials();
-    const [accounts, positions, pendingOrders, deals] = await Promise.all([
-      broker.accounts(c),
+    const [positions, pendingOrders, deals] = await Promise.all([
       broker.positions(c, entry.number),
       broker.capabilities().pendingOrders ? broker.pendingOrders(c, entry.number) : Promise.resolve([]),
       broker.deals(c, entry.number, from.toISOString(), now.toISOString()),
     ]);
-    const currency = accounts.find((a) => a.number === entry.number)?.currency;
-    return { ...base, ...(currency ? { currency } : {}), data: { positions, pendingOrders, deals } };
+    return { ...base, data: { positions, pendingOrders, deals } };
   } catch (error) {
     if (!isAdapterError(error)) log.error({ err: error, account: entry.number }, "Broker query failed");
     return { ...base, error: isAdapterError(error) ? error.code : "unavailable" };

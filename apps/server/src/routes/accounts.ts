@@ -125,6 +125,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const { credential, found } = await brokerKnows(credentialId, number);
       if (!credential) return reply.code(400).send({ error: "credential_not_found" });
       if (!found) return reply.code(400).send({ error: "account_not_found_at_broker" });
+      if (found.active === false) return reply.code(400).send({ error: "account_inactive" });
 
       const now = new Date().toISOString();
       const row = {

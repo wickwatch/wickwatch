@@ -27,6 +27,7 @@ describe("loadConfig", () => {
       adapters: { runtime: "demo", broker: "demo", config: "demo" },
       challengeTemplatesDir: "/srv/wickwatch/templates/challenges",
       accountPollSeconds: 60,
+      ctraderCliPath: "ctrader-cli",
     });
   });
 

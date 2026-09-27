@@ -72,6 +72,7 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {
+    await adapters.broker.dispose?.();
     await db.destroy();
   });
 

@@ -26,7 +26,7 @@ The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or D
 | `apps/server` | Fastify server: config, auth, database and migrations, REST API with OpenAPI, serves the web app |
 | `apps/web` | Vue 3 single-page app |
 | `packages/core` | Broker- and strategy-neutral types, adapter contracts, shared logic and contract tests |
-| `packages/adapter-*` | Adapter implementations (`adapter-demo`, `adapter-docker`) |
+| `packages/adapter-*` | Adapter implementations (`adapter-demo`, `adapter-docker`, `adapter-ctrader-cli`) |
 | `i18n/` | UI translations (`en.json` is the source, `de.json` the first translation) |
 | `design/`, `assets/` | Design tokens and logo files, see `BRAND.md` |
 | `templates/challenges/` | Prop-challenge templates as JSON |

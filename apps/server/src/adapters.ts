@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import { createDemoAdapters } from "@wickwatch/adapter-demo";
+import { CtraderCliBroker } from "@wickwatch/adapter-ctrader-cli";
 import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
 import { ConfigError, type Config } from "./config";
@@ -27,7 +28,10 @@ export function createAdapters(config: Config): Adapters {
         ...(config.database.filename === ":memory:" ? {} : { diskPath: dirname(config.database.filename) }),
       }),
   };
-  const broker: Registry<BrokerAdapter> = { demo: () => getDemo().broker };
+  const broker: Registry<BrokerAdapter> = {
+    demo: () => getDemo().broker,
+    "ctrader-cli": () => new CtraderCliBroker({ binary: config.ctraderCliPath }),
+  };
   const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
 
   const problems: string[] = [];
