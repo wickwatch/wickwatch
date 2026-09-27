@@ -11,3 +11,10 @@ updates:
     groups:
       dev-tooling:
         dependency-type: development
+    ignore:
+      # Types follow the Node.js major the image and CI run on (NODE_VERSION); raise them together.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # vue-tsc does not support TypeScript 7 yet.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
