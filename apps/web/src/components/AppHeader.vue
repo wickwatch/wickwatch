@@ -23,7 +23,10 @@ async function logout() {
     <div class="header__start">
       <RouterLink to="/" class="header__home"><AppLogo /></RouterLink>
       <nav v-if="currentUser" :aria-label="$t('header.mainNav')">
-        <RouterLink to="/" class="nav-link" active-class="nav-link--active">{{ $t("nav.overview") }}</RouterLink>
+        <RouterLink to="/" class="nav-link" exact-active-class="nav-link--active">{{ $t("nav.overview") }}</RouterLink>
+        <RouterLink to="/accounts" class="nav-link" active-class="nav-link--active">{{
+          $t("nav.accounts")
+        }}</RouterLink>
       </nav>
     </div>
     <div class="header__end">

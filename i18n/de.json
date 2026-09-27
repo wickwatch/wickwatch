@@ -179,7 +179,11 @@
       "totp_already_enabled": "2FA ist bereits an.",
       "invalid_password": "Das Passwort ist falsch.",
       "invalid_timezone": "Unbekannte Zeitzone.",
-      "template_not_found": "Vorlage nicht gefunden."
+      "template_not_found": "Vorlage nicht gefunden.",
+      "credential_in_use": "Dieser Login wird noch von Konten genutzt.",
+      "credential_not_found": "Login nicht gefunden.",
+      "account_exists": "Dieses Konto ist bereits hinzugefügt.",
+      "account_not_found_at_broker": "Der Broker bietet dieses Konto für den Login nicht an."
     }
   },
   "parameterIssue": {
@@ -349,5 +353,42 @@
       "warn": "WARN",
       "error": "FEHLER"
     }
+  },
+  "accounts": {
+    "accounts": "Eingerichtete Konten",
+    "name": "Name",
+    "broker": "Broker",
+    "currency": "Währung",
+    "login": "Broker-Login",
+    "challengeSet": "Profil hinterlegt",
+    "challengeAdd": "Hinzufügen",
+    "remove": "Entfernen",
+    "saved": "Gespeichert.",
+    "removed": "Entfernt.",
+    "removeAccountConfirm": "Konto {name} ({number}) aus Wickwatch entfernen? Beim Broker ändert sich nichts; Challenge-Profil und erfasste Handelstage werden gelöscht.",
+    "removeLoginConfirm": "Login {label} entfernen? Das verschlüsselte Passwort wird gelöscht.",
+    "addAccount": "Konto hinzufügen",
+    "needLogin": "Lege zuerst unten einen Broker-Login an.",
+    "chooseLogin": "Login wählen",
+    "fetchOffered": "Konten beim Broker abrufen",
+    "offered": "Mit diesem Login verfügbare Konten",
+    "noneOffered": "Der Broker bietet für diesen Login keine Konten an.",
+    "live": "live",
+    "demo": "Demo",
+    "alreadyAdded": "(schon hinzugefügt)",
+    "added": "Konto hinzugefügt.",
+    "logins": "Broker-Logins",
+    "loginsHint": "Passwörter werden mit MASTER_KEY verschlüsselt gespeichert und nie wieder angezeigt. Ein Login kann mehrere Konten bedienen.",
+    "label": "Bezeichnung",
+    "loginName": "Benutzername beim Broker",
+    "usedBy": "Konten",
+    "changePassword": "Passwort ändern",
+    "newPassword": "Neues Passwort",
+    "passwordChanged": "Passwort geändert.",
+    "loginInUse": "Wird von Konten genutzt – diese zuerst entfernen oder umstellen.",
+    "addLogin": "Login hinzufügen",
+    "loginAdded": "Login hinzugefügt.",
+    "encrypted": "Wird verschlüsselt gespeichert; Wickwatch nutzt es nur für die Verbindung zum Broker.",
+    "loginOption": "{label} ({login})"
   }
 }

@@ -191,3 +191,53 @@ describe("credentials and accounts", () => {
     expect((await get("/api/v1/accounts", viewer)).statusCode).toBe(200);
   });
 });
+
+describe("managing logins and accounts", () => {
+  const patch = (url: string, payload: object, cookie = admin) =>
+    t.app.inject({ method: "PATCH", url, headers: { cookie }, payload });
+
+  it("lists logins with usage and changes a password without exposing it", async () => {
+    const list = (await get("/api/v1/credentials")).json<{ id: number; label: string; accounts: number }[]>();
+    expect(list.map((c) => [c.label, c.accounts])).toEqual([
+      ["Demo login A", 2],
+      ["Demo login B", 1],
+    ]);
+    const id = list[0]!.id;
+    const res = await patch(`/api/v1/credentials/${String(id)}`, { secret: "new-password!" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).not.toContain("new-password!");
+    const row = await t.db.selectFrom("credentials").select("secret").where("id", "=", id).executeTakeFirstOrThrow();
+    expect(t.cipher.decrypt(row.secret, "credential-secret")).toBe("new-password!");
+    const audit = await t.db
+      .selectFrom("audit_log")
+      .select("details")
+      .where("action", "=", "credential.update")
+      .executeTakeFirstOrThrow();
+    expect(audit.details).toBe(JSON.stringify({ changed: ["secret"] }));
+  });
+
+  it("offers the broker's accounts for a login and marks those already added", async () => {
+    const [login] = (await get("/api/v1/credentials")).json<{ id: number }[]>();
+    const offered = (await get(`/api/v1/credentials/${String(login!.id)}/broker-accounts`)).json<
+      { number: string; added: boolean }[]
+    >();
+    expect(offered.map((a) => [a.number, a.added])).toEqual([
+      ["1111111", true],
+      ["2222222", true],
+      ["3333333", true],
+    ]);
+  });
+
+  it("renames an account and switches its login", async () => {
+    const accounts = (await get("/api/v1/accounts")).json<
+      { id: number; number: string; credentialLabel: string; hasChallenge: boolean }[]
+    >();
+    const own = accounts.find((a) => a.number === "3333333")!;
+    expect(own).toMatchObject({ credentialLabel: "Demo login A", hasChallenge: false });
+    const logins = (await get("/api/v1/credentials")).json<{ id: number; label: string }[]>();
+    const loginB = logins.find((c) => c.label === "Demo login B")!;
+    const res = await patch(`/api/v1/accounts/${String(own.id)}`, { displayName: "Personal", credentialId: loginB.id });
+    expect(res.json()).toMatchObject({ displayName: "Personal", credentialLabel: "Demo login B" });
+    expect((await patch("/api/v1/accounts/999", { displayName: "x" })).statusCode).toBe(404);
+  });
+});

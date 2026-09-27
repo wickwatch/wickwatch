@@ -51,13 +51,42 @@ const post = <T>(path: string, body?: unknown) =>
     ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
 
-const send = <T>(method: "PUT" | "DELETE", path: string, body?: unknown) =>
+const send = <T>(method: "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
   request<T>(path, {
     method,
     ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
 
 export type InstanceAction = "start" | "stop" | "restart";
+
+export interface AccountRow {
+  id: number;
+  adapter: string;
+  number: string;
+  broker: string;
+  currency: string;
+  displayName: string;
+  credentialId: number | null;
+  credentialLabel: string | null;
+  timezone: string | null;
+  hasChallenge: boolean;
+}
+
+export interface CredentialRow {
+  id: number;
+  label: string;
+  login: string;
+  createdAt: string;
+  accounts: number;
+}
+
+export interface OfferedAccount {
+  number: string;
+  broker: string;
+  currency: string;
+  live: boolean;
+  added: boolean;
+}
 
 export interface SessionUser {
   username: string;
@@ -104,6 +133,20 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,
     }),
+  accounts: () => request<AccountRow[]>("accounts"),
+  createAccount: (body: { number: string; displayName: string; credentialId: number }) =>
+    post<AccountRow>("accounts", body),
+  updateAccount: (id: number, body: { displayName?: string; credentialId?: number }) =>
+    send<AccountRow>("PATCH", `accounts/${String(id)}`, body),
+  deleteAccount: (id: number) => send<undefined>("DELETE", `accounts/${String(id)}`),
+  credentials: () => request<CredentialRow[]>("credentials"),
+  createCredential: (body: { label: string; login: string; secret: string }) =>
+    post<CredentialRow>("credentials", body),
+  updateCredential: (id: number, body: { label?: string; login?: string; secret?: string }) =>
+    send<CredentialRow>("PATCH", `credentials/${String(id)}`, body),
+  deleteCredential: (id: number) => send<undefined>("DELETE", `credentials/${String(id)}`),
+  brokerAccounts: (credentialId: number) =>
+    request<OfferedAccount[]>(`credentials/${String(credentialId)}/broker-accounts`),
   challengeTemplates: () => request<ChallengeTemplate[]>("challenge-templates"),
   challenge: (account: string) => request<ChallengeProfile>(`accounts/${encodeURIComponent(account)}/challenge`),
   saveChallenge: (account: string, profile: ChallengeProfile) =>

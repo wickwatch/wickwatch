@@ -65,7 +65,7 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
   await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
   await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, prefix: api });
-  await app.register(credentialRoutes, { db, cipher, prefix: api });
+  await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, { db, templates, prefix: api });

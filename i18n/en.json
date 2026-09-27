@@ -179,7 +179,11 @@
       "totp_already_enabled": "2FA is already on.",
       "invalid_password": "The password is wrong.",
       "invalid_timezone": "Unknown time zone.",
-      "template_not_found": "Template not found."
+      "template_not_found": "Template not found.",
+      "credential_in_use": "This login is still used by accounts.",
+      "credential_not_found": "Login not found.",
+      "account_exists": "This account is already added.",
+      "account_not_found_at_broker": "The broker does not offer this account for the login."
     }
   },
   "parameterIssue": {
@@ -349,5 +353,42 @@
       "warn": "WARN",
       "error": "ERROR"
     }
+  },
+  "accounts": {
+    "accounts": "Configured accounts",
+    "name": "Name",
+    "broker": "Broker",
+    "currency": "Currency",
+    "login": "Broker login",
+    "challengeSet": "Profile set",
+    "challengeAdd": "Add",
+    "remove": "Remove",
+    "saved": "Saved.",
+    "removed": "Removed.",
+    "removeAccountConfirm": "Remove account {name} ({number}) from Wickwatch? Nothing changes at the broker; its challenge profile and recorded trading days are deleted.",
+    "removeLoginConfirm": "Remove the login {label}? The encrypted password is deleted.",
+    "addAccount": "Add account",
+    "needLogin": "Add a broker login first (below).",
+    "chooseLogin": "Choose a login",
+    "fetchOffered": "Get accounts from the broker",
+    "offered": "Accounts available with this login",
+    "noneOffered": "The broker offers no accounts for this login.",
+    "live": "live",
+    "demo": "demo",
+    "alreadyAdded": "(already added)",
+    "added": "Account added.",
+    "logins": "Broker logins",
+    "loginsHint": "Passwords are stored encrypted with MASTER_KEY and never shown again. One login can serve several accounts.",
+    "label": "Label",
+    "loginName": "User name at the broker",
+    "usedBy": "Accounts",
+    "changePassword": "Change password",
+    "newPassword": "New password",
+    "passwordChanged": "Password changed.",
+    "loginInUse": "Used by accounts – remove or switch them first.",
+    "addLogin": "Add login",
+    "loginAdded": "Login added.",
+    "encrypted": "Stored encrypted; Wickwatch uses it only to talk to the broker.",
+    "loginOption": "{label} ({login})"
   }
 }

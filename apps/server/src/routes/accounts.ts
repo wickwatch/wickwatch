@@ -1,4 +1,4 @@
-import { EmergencyStopReport, emergencyStopAccount, isAdapterError } from "@wickwatch/core";
+import { EmergencyStopReport, emergencyStopAccount, isAdapterError, isTimeZone } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import { findAccount, type AccountDirectory } from "../accounts";
@@ -17,17 +17,12 @@ const Account = Type.Object({
   currency: Type.String(),
   displayName: Type.String(),
   credentialId: Type.Union([Type.Integer(), Type.Null()]),
+  /** Label of the login (never the secret), so viewers can see which login an account uses. */
+  credentialLabel: Type.Union([Type.String(), Type.Null()]),
   timezone: Type.Union([Type.String(), Type.Null()]),
+  hasChallenge: Type.Boolean(),
 });
-
-const isTimeZone = (tz: string) => {
-  try {
-    new Intl.DateTimeFormat("en", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-};
+type Account = Type.Static<typeof Account>;
 
 export interface AccountRouteOptions {
   adapters: Adapters;
@@ -41,20 +36,60 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   app,
   { adapters, accounts, db, cipher, labelPrefix },
 ) => {
+  async function loadAccounts(id?: number): Promise<Account[]> {
+    let query = db
+      .selectFrom("accounts")
+      .leftJoin("credentials", "credentials.id", "accounts.credential_id")
+      .leftJoin("challenge_profiles", "challenge_profiles.account_id", "accounts.id")
+      .select([
+        "accounts.id",
+        "accounts.adapter",
+        "accounts.number",
+        "accounts.broker",
+        "accounts.currency",
+        "accounts.display_name",
+        "accounts.credential_id",
+        "accounts.timezone",
+        "credentials.label as credential_label",
+        "challenge_profiles.account_id as challenge_account",
+      ])
+      .orderBy("accounts.id");
+    if (id !== undefined) query = query.where("accounts.id", "=", id);
+    return (await query.execute()).map((a) => ({
+      id: a.id,
+      adapter: a.adapter,
+      number: a.number,
+      broker: a.broker,
+      currency: a.currency,
+      displayName: a.display_name,
+      credentialId: a.credential_id,
+      credentialLabel: a.credential_label,
+      timezone: a.timezone,
+      hasChallenge: a.challenge_account !== null,
+    }));
+  }
+
+  /** Whether the broker shows this account for the given stored login. */
+  async function brokerKnows(credentialId: number, number: string) {
+    const credential = await db.selectFrom("credentials").selectAll().where("id", "=", credentialId).executeTakeFirst();
+    if (!credential || !cipher) return { credential, found: undefined };
+    const offered = await adapters.broker.accounts({
+      login: credential.login,
+      secret: cipher.decrypt(credential.secret, "credential-secret"),
+    });
+    return { credential, found: offered.find((a) => a.number === number) };
+  }
+
+  async function loadAccount(id: number): Promise<Account> {
+    const [account] = await loadAccounts(id);
+    if (!account) throw new Error(`Account ${String(id)} not found after write`);
+    return account;
+  }
+
   app.get(
     "/accounts",
     { schema: { tags: ["accounts"], summary: "Configured broker accounts", response: { 200: Type.Array(Account) } } },
-    async () =>
-      (await db.selectFrom("accounts").selectAll().orderBy("id").execute()).map((a) => ({
-        id: a.id,
-        adapter: a.adapter,
-        number: a.number,
-        broker: a.broker,
-        currency: a.currency,
-        displayName: a.display_name,
-        credentialId: a.credential_id,
-        timezone: a.timezone,
-      })),
+    () => loadAccounts(),
   );
 
   app.post(
@@ -78,13 +113,6 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       if (timezone !== undefined && !isTimeZone(timezone)) return reply.code(400).send({ error: "invalid_timezone" });
 
-      const credential = await db
-        .selectFrom("credentials")
-        .selectAll()
-        .where("id", "=", credentialId)
-        .executeTakeFirst();
-      if (!credential) return reply.code(400).send({ error: "credential_not_found" });
-
       const brokerId = adapters.broker.id;
       const duplicate = await db
         .selectFrom("accounts")
@@ -94,12 +122,8 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         .executeTakeFirst();
       if (duplicate) return reply.code(409).send({ error: "account_exists" });
 
-      const found = (
-        await adapters.broker.accounts({
-          login: credential.login,
-          secret: cipher.decrypt(credential.secret, "credential-secret"),
-        })
-      ).find((a) => a.number === number);
+      const { credential, found } = await brokerKnows(credentialId, number);
+      if (!credential) return reply.code(400).send({ error: "credential_not_found" });
       if (!found) return reply.code(400).send({ error: "account_not_found_at_broker" });
 
       const now = new Date().toISOString();
@@ -116,16 +140,56 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       };
       const { id } = await db.insertInto("accounts").values(row).returning("id").executeTakeFirstOrThrow();
       await audit(db, { action: "account.create", target: number, userId: request.user?.id });
-      return reply.code(201).send({
-        id,
-        adapter: brokerId,
-        number,
-        broker: found.broker,
-        currency: found.currency,
-        displayName,
-        credentialId,
-        timezone: row.timezone,
+      return reply.code(201).send(await loadAccount(id));
+    },
+  );
+
+  app.patch(
+    "/accounts/:id",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["accounts"],
+        summary: "Rename an account or switch it to another stored login",
+        params: Type.Object({ id: Type.Integer() }),
+        body: Type.Object({
+          displayName: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+          credentialId: Type.Optional(Type.Integer()),
+        }),
+        response: { 200: Account, 400: ErrorBody, 403: ErrorBody, 404: ErrorBody, 502: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const { displayName, credentialId } = request.body;
+      const account = await db
+        .selectFrom("accounts")
+        .select(["number", "credential_id"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+      if (!account) return reply.code(404).send({ error: "not_found" });
+      if (credentialId !== undefined && credentialId !== account.credential_id) {
+        if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
+        const { credential, found } = await brokerKnows(credentialId, account.number);
+        if (!credential) return reply.code(400).send({ error: "credential_not_found" });
+        if (!found) return reply.code(400).send({ error: "account_not_found_at_broker" });
+      }
+      await db
+        .updateTable("accounts")
+        .set({
+          ...(displayName !== undefined ? { display_name: displayName } : {}),
+          ...(credentialId !== undefined ? { credential_id: credentialId } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .where("id", "=", id)
+        .execute();
+      await audit(db, {
+        action: "account.update",
+        target: account.number,
+        details: { changed: Object.keys(request.body) },
+        userId: request.user?.id,
       });
+      return loadAccount(id);
     },
   );
 
