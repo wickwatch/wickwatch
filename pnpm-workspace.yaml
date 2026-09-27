@@ -10,7 +10,9 @@ catalog:
 allowBuilds:
   # Ships prebuilt binaries; building from source is not needed.
   better-sqlite3: false
-  cpu-features: set this to true or false
+  # Optional SSH transport of dockerode; Wickwatch talks to docker-socket-proxy over TCP.
+  cpu-features: false
+  ssh2: false
+  # Only a version check after install.
+  protobufjs: false
   esbuild: true
-  protobufjs: set this to true or false
-  ssh2: set this to true or false
