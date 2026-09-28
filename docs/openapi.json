@@ -2907,6 +2907,7 @@
         "tags": [
           "accounts"
         ],
+        "description": "Logins used only by accounts of another broker adapter (e.g. the demo data) are left out, like those accounts.",
         "security": [
           {
             "session": []

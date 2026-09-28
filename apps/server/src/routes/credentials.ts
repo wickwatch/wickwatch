@@ -25,16 +25,18 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
   cipher: Cipher | undefined;
   adapters: Adapters;
 }> = async (app, { db, cipher, adapters }) => {
-  const usage = async (id: number) =>
-    Number(
-      (
-        await db
-          .selectFrom("accounts")
-          .select((eb) => eb.fn.countAll().as("n"))
-          .where("credential_id", "=", id)
-          .executeTakeFirstOrThrow()
-      ).n,
-    );
+  /** Accounts using this login: of the active broker adapter, and of other ones (hidden, like their accounts). */
+  const usage = async (id: number) => {
+    const rows = await db
+      .selectFrom("accounts")
+      .select(["adapter", (eb) => eb.fn.countAll().as("n")])
+      .where("credential_id", "=", id)
+      .groupBy("adapter")
+      .execute();
+    const count = (mine: boolean) =>
+      rows.filter((r) => (r.adapter === adapters.broker.id) === mine).reduce((sum, r) => sum + Number(r.n), 0);
+    return { active: count(true), other: count(false) };
+  };
 
   app.get(
     "/credentials",
@@ -43,6 +45,8 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
       schema: {
         tags: ["accounts"],
         summary: "Stored broker logins (without secrets)",
+        description:
+          "Logins used only by accounts of another broker adapter (e.g. the demo data) are left out, like those accounts.",
         response: { 200: Type.Array(Credential), 403: ErrorBody },
       },
     },
@@ -52,15 +56,14 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         .select(["id", "label", "login", "created_at"])
         .orderBy("id")
         .execute();
-      return Promise.all(
-        rows.map(async (c) => ({
-          id: c.id,
-          label: c.label,
-          login: c.login,
-          createdAt: c.created_at,
-          accounts: await usage(c.id),
-        })),
+      const listed = await Promise.all(
+        rows.map(async (c) => {
+          const used = await usage(c.id);
+          if (used.active === 0 && used.other > 0) return undefined;
+          return { id: c.id, label: c.label, login: c.login, createdAt: c.created_at, accounts: used.active };
+        }),
       );
+      return listed.filter((c) => c !== undefined);
     },
   );
 
@@ -143,7 +146,13 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         .select(["id", "label", "login", "created_at"])
         .where("id", "=", id)
         .executeTakeFirstOrThrow();
-      return { id: row.id, label: row.label, login: row.login, createdAt: row.created_at, accounts: await usage(id) };
+      return {
+        id: row.id,
+        label: row.label,
+        login: row.login,
+        createdAt: row.created_at,
+        accounts: (await usage(id)).active,
+      };
     },
   );
 

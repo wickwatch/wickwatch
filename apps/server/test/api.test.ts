@@ -263,3 +263,27 @@ describe("accounts of another broker adapter", () => {
     expect(numbers).toEqual(["1111111", "2222222", "3333333"]);
   });
 });
+
+describe("logins of another broker adapter", () => {
+  it("hides logins that only accounts of another adapter use, like those accounts", async () => {
+    // The demo data (logins and accounts of the demo broker) stays in the database after switching.
+    const other = await startApp({ BROKER_ADAPTER: "ctrader-cli" });
+    try {
+      const cookie = await loginAs(other, "admin");
+      await other.app.inject({
+        method: "POST",
+        url: "/api/v1/credentials",
+        headers: { cookie },
+        payload: { label: "cTrader", login: "me@example.com", secret: "s3cret!" },
+      });
+      const list = await other.app.inject({ url: "/api/v1/credentials", headers: { cookie } });
+      expect(list.json<{ label: string; accounts: number }[]>().map((c) => [c.label, c.accounts])).toEqual([
+        ["cTrader", 0],
+      ]);
+      expect((await other.app.inject({ url: "/api/v1/accounts", headers: { cookie } })).json()).toEqual([]);
+    } finally {
+      await other.app.close();
+      await other.db.destroy();
+    }
+  });
+});
