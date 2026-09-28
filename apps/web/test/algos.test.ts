@@ -97,6 +97,26 @@ describe("AlgosView", () => {
     expect(wrapper.find("[role=alert]").text()).toBe("This version already exists; enter another version.");
   });
 
+  it("shows no field problem after a successful upload clears the form", async () => {
+    asRole("admin");
+    fetchMock.mockImplementation((_input: URL, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "POST"
+          ? new Response(JSON.stringify(algos[0]), { status: 201 })
+          : new Response(JSON.stringify(algos), { status: 200 }),
+      ),
+    );
+    const wrapper = await render();
+    const input = wrapper.find("input[type=file]");
+    Object.defineProperty(input.element, "files", { value: [new File(["x"], "SampleBot.algo")], configurable: true });
+    await input.trigger("change");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.text()).toContain("uploaded");
+    expect(wrapper.findAll(".field__error")).toHaveLength(0);
+    expect(input.attributes("aria-invalid")).toBeUndefined();
+  });
+
   it("deletes a version only after confirmation", async () => {
     asRole("admin");
     const wrapper = await render();

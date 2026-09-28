@@ -65,6 +65,8 @@ const upload = () =>
       file.value = undefined;
       version.value = "";
       if (fileInput.value) fileInput.value.value = "";
+      // A cleared form shows no "Required." until the next attempt.
+      form.reset();
     },
     () => t("algos.uploaded", { name: uploaded?.name ?? "", version: uploaded?.version ?? "" }),
   );
