@@ -145,6 +145,7 @@ if (command === "metadata") {
         EnumValues: { Fast: 0, Slow: 1 },
       },
       { PropertyName: "UseFilter", GroupName: "Filter", Type: "Boolean", DefaultValue: false },
+      { PropertyName: "LineColor", GroupName: "Chart", Type: "Color", DefaultValue: { A: 128, R: 255, G: 0, B: 10 } },
     ],
   });
   process.exit(0);

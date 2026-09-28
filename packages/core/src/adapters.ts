@@ -12,6 +12,7 @@ import type {
   LogEvent,
   LogLine,
   OptimizationRange,
+  ParameterFile,
   ParameterSchema,
   ParameterValues,
   PendingOrder,
@@ -61,7 +62,8 @@ export interface InstanceSpec extends Launch {
 export interface LaunchInput {
   credentials: Credentials;
   account: string;
-  algo: { name: string; file: Uint8Array; fullAccess: boolean };
+  /** `parameters`: the algo's schema, e.g. to store enums the way the platform expects. */
+  algo: { name: string; file: Uint8Array; fullAccess: boolean; parameters: ParameterSchema[] };
   symbol: string;
   period: string;
   parameters: ParameterValues;
@@ -127,16 +129,21 @@ export interface BrokerAdapter {
   periods?(): string[];
   /** Recognises platform events in a line an instance logged, e.g. a lost broker connection. */
   logEvent?(text: string): LogEvent | undefined;
+  /** Hides secrets the platform prints in an instance's log, e.g. a licence key among the parameters at start. */
+  redactLog?(text: string): string;
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
 }
 
-/** Reads and writes parameter files. */
+/** Reads and writes the parameter files of a trading platform (e.g. `.cbotset`). */
 export interface ConfigAdapter {
   readonly id: string;
+  /** File extensions without dot, e.g. `cbotset`; the first one is used for downloads. */
   formats(): string[];
-  read(path: string): Promise<ParameterValues>;
-  write(path: string, values: ParameterValues): Promise<void>;
+  /** A file uploaded for an algo. A file that is not in the format at all: `invalid_input`. */
+  parse(content: Uint8Array, schema: ParameterSchema[]): ParameterFile;
+  /** The file for a configuration, e.g. to open it in the platform or to back it up. */
+  serialize(values: ParameterValues, schema: ParameterSchema[], chart: { symbol: string; period: string }): Uint8Array;
   validate(values: ParameterValues, schema: ParameterSchema[]): ValidationResult;
   exportOptimization?(values: ParameterValues, ranges: Record<string, OptimizationRange>): Promise<string>;
 }

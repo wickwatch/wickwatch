@@ -17,17 +17,19 @@ import {
   type Position,
 } from "@wickwatch/core";
 import { basename } from "node:path";
+import { CbotsetConfigAdapter } from "@wickwatch/adapter-cbotset";
 import { cliError, DEFAULT_CLI_OPTIONS, extractJson, passwordFile, runBatch, type CliOptions } from "./cli";
 import {
   toAccountStats,
   toAlgoMetadata,
   toBrokerAccounts,
   toDeals,
+  checkParameterNames,
+  redactStartupTable,
   toLogEvent,
   positionsWithoutPrices,
   toPendingOrders,
   toPositions,
-  toRunArguments,
   toSymbols,
 } from "./mapping";
 import { SessionPool } from "./session";
@@ -103,18 +105,26 @@ export class CtraderCliBroker implements BrokerAdapter {
     return toLogEvent(text);
   }
 
+  redactLog(text: string): string {
+    return redactStartupTable(text);
+  }
+
   /**
-   * `run` in the official image. The password is a file copied into the instance, never an argument;
+   * `run` in the official image. Password and parameters are files copied into the instance, never
+   * arguments, so `docker inspect` shows neither (parameter sets may hold licence keys);
    * `--exit-on-stop` ends the container when the cBot stops, so its state is visible and restarts work.
    */
   async launch(input: LaunchInput): Promise<Launch> {
     const algoFile = `${MOUNT}/${input.algo.name.replace(/[^A-Za-z0-9._-]/g, "-")}.algo`;
     const pwdFile = `${MOUNT}/ctid.pwd`;
+    const parametersFile = `${MOUNT}/parameters.cbotset`;
+    checkParameterNames(input.parameters);
     return {
       image: this.image,
       command: [
         "run",
         algoFile,
+        parametersFile,
         `--ctid=${input.credentials.login}`,
         `--pwd-file=${pwdFile}`,
         `--account=${input.account}`,
@@ -122,11 +132,18 @@ export class CtraderCliBroker implements BrokerAdapter {
         `--period=${input.period}`,
         "--exit-on-stop",
         ...(input.algo.fullAccess ? ["--full-access"] : []),
-        ...toRunArguments(input.parameters),
       ],
       files: [
         { path: algoFile, content: input.algo.file, mode: 0o444 },
         { path: pwdFile, content: new TextEncoder().encode(input.credentials.secret), mode: 0o400 },
+        {
+          path: parametersFile,
+          content: new CbotsetConfigAdapter().serialize(input.parameters, input.algo.parameters, {
+            symbol: input.symbol,
+            period: input.period,
+          }),
+          mode: 0o400,
+        },
       ],
     };
   }

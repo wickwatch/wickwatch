@@ -27,6 +27,12 @@ import type { SymbolCache } from "../services/symbols";
 /** Lower case, digits and dashes: usable as a container name and host name. */
 const NAME = "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$";
 
+/** The parameter schema of a stored algo; empty if its metadata is unreadable. */
+function schemaOf(metadataJson: string) {
+  const metadata: unknown = JSON.parse(metadataJson);
+  return Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
+}
+
 const Attribution = Type.Object({
   mode: Type.Enum(ATTRIBUTION_MODES),
   /** Expected order label (`label`, default: the instance name) or regular expression (`label-pattern`). */
@@ -206,8 +212,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   async function check(input: ConfigInput, entry: AccountEntry): Promise<Checked> {
     const algo = await db.selectFrom("algos").selectAll().where("id", "=", input.algoId).executeTakeFirst();
     if (!algo) return { ok: false, status: 404, body: { error: "algo_not_found" } };
-    const metadata: unknown = JSON.parse(algo.metadata);
-    const schema = Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
+    const schema = schemaOf(algo.metadata);
 
     const periods = adapters.broker.periods?.();
     const period = periods
@@ -446,6 +451,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           name: algo.name,
           file: await readFile(join(algosDir, algo.file_path)),
           fullAccess: algo.full_access === 1,
+          parameters: schemaOf(algo.metadata),
         },
         symbol: config.symbol,
         period: config.period,

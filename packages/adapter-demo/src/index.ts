@@ -24,7 +24,7 @@ export function createDemoAdapters(options: DemoOptions = {}): DemoAdapters {
   return {
     runtime: new DemoRuntimeAdapter(world),
     broker: new DemoBrokerAdapter(world),
-    config: new DemoConfigAdapter(world),
+    config: new DemoConfigAdapter(),
     world,
   };
 }

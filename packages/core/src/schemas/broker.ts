@@ -79,6 +79,8 @@ export const ParameterType = Type.Union([
   Type.Literal("time"),
   Type.Literal("symbol"),
   Type.Literal("period"),
+  /** Text: `#AARRGGBB` (alpha first), `#RRGGBB` or a colour name like `Blue`. */
+  Type.Literal("color"),
 ]);
 export type ParameterType = Type.Static<typeof ParameterType>;
 
@@ -93,6 +95,8 @@ export const ParameterSchema = Type.Object({
   max: Type.Optional(Type.Number()),
   step: Type.Optional(Type.Number()),
   options: Type.Optional(Type.Array(Type.String())),
+  /** Numbers behind `options`, same order, where the platform stores enums as numbers. */
+  optionValues: Type.Optional(Type.Array(Type.Number())),
 });
 export type ParameterSchema = Type.Static<typeof ParameterSchema>;
 

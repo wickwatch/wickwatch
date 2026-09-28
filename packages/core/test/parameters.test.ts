@@ -40,4 +40,15 @@ describe("validateParameters", () => {
   ])("flags %s = %j as %s", (parameter, value, code) => {
     expect(validateParameters({ ...valid, [parameter]: value }, schema).errors).toEqual([{ parameter, code }]);
   });
+
+  it("accepts colours as #AARRGGBB, #RRGGBB or a name, as `run` does", () => {
+    const schema = [{ name: "LineColor", type: "color" as const }];
+    for (const ok of ["#FFFF0000", "#00ff00", "Blue"]) {
+      expect(validateParameters({ LineColor: ok }, schema).errors, ok).toEqual([]);
+    }
+    expect(validateParameters({ LineColor: "#FFF" }, schema).errors).toEqual([
+      { parameter: "LineColor", code: "invalid_format" },
+    ]);
+    expect(validateParameters({ LineColor: { A: 255 } }, schema).errors[0]?.code).toBe("invalid_type");
+  });
 });

@@ -199,9 +199,18 @@ const PARAMETER_TYPES: Record<string, ParameterSchema["type"]> = {
   Boolean: "bool",
   String: "string",
   Enum: "enum",
+  Color: "color",
   Symbol: "symbol",
   TimeFrame: "period",
 };
+
+/** `{ "A": 255, "R": 255, "G": 0, "B": 0 }` → `#FFFF0000`. */
+export function toColor(value: unknown): string | undefined {
+  if (!isObject(value)) return typeof value === "string" ? value : undefined;
+  const parts = [value["A"], value["R"], value["G"], value["B"]];
+  if (!parts.every((v) => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 255)) return undefined;
+  return `#${(parts as number[]).map((v) => v.toString(16).padStart(2, "0").toUpperCase()).join("")}`;
+}
 
 /** Batch `metadata`: `Name, BuildTime, Parameters[{PropertyName, FriendlyName, GroupName, Type, DefaultValue, MinValue, MaxValue, EnumValues}]`. */
 export function toAlgoMetadata(data: unknown): AlgoMetadata {
@@ -214,10 +223,13 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
     const type = PARAMETER_TYPES[str(p["Type"]) ?? ""] ?? "string";
     const enumValues = isObject(p["EnumValues"]) ? (p["EnumValues"] as Record<string, unknown>) : undefined;
     // Enum defaults are numbers in the CLI output; the core works with the option names.
+    // Colour defaults are { A, R, G, B }; `run` takes them as #AARRGGBB.
     const defaultValue =
       type === "enum" && enumValues
         ? Object.keys(enumValues).find((k) => enumValues[k] === p["DefaultValue"])
-        : p["DefaultValue"];
+        : type === "color"
+          ? toColor(p["DefaultValue"])
+          : p["DefaultValue"];
     return {
       name,
       type,
@@ -228,6 +240,9 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
       ...optional("max", num(p["MaxValue"])),
       ...optional("step", num(p["Step"])),
       ...(enumValues ? { options: Object.keys(enumValues) } : {}),
+      ...(enumValues && Object.values(enumValues).every((v) => typeof v === "number")
+        ? { optionValues: Object.values(enumValues) as number[] }
+        : {}),
     };
   });
   const buildTime = str(data["BuildTime"]);
@@ -243,17 +258,25 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
 
 const PARAMETER_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/** cBot parameters as `--Name=Value` for `run`; names are the metadata's PropertyName. */
-export function toRunArguments(parameters: ParameterValues): string[] {
-  return Object.entries(parameters).map(([name, value]) => {
+/** Parameter names are the metadata's PropertyName: plain identifiers, nothing else. */
+export function checkParameterNames(parameters: ParameterValues): void {
+  for (const name of Object.keys(parameters)) {
     if (!PARAMETER_NAME.test(name)) throw new AdapterError("invalid_input", `Invalid parameter name ${name}`);
-    const text =
-      typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : "";
-    // One argument each, no shell involved; control characters could still confuse the CLI.
-    if (text === "" && value !== "") throw new AdapterError("invalid_input", `Invalid value for ${name}`);
-    if (/\p{Cc}/u.test(text)) throw new AdapterError("invalid_input", `Invalid value for ${name}`);
-    return `--${name}=${text}`;
-  });
+  }
+}
+
+// `run` prints every parameter at start: "| Name                 | Value                     | Source |".
+const TABLE_ROW = /^(\|\s*([A-Za-z_][A-Za-z0-9_]*)\s*\|)([^|]*)(\|\s*(?:cbotset|cmd arg|default value)\s*\|\s*)$/;
+const SECRET_NAME = /key|token|secret|passw|licen[cs]e|credential|api/i;
+const HIDDEN = " ••••••";
+
+/** The value of parameters that look like secrets (licence keys, tokens) in the start table. */
+export function redactStartupTable(text: string): string {
+  const row = TABLE_ROW.exec(text);
+  const cell = row?.[3];
+  if (!row?.[2] || !SECRET_NAME.test(row[2]) || !cell?.trim()) return text;
+  // The whole cell, so the columns keep their width.
+  return `${row[1] ?? ""}${HIDDEN.padEnd(cell.length)}${row[4] ?? ""}`;
 }
 
 // Platform lines of `run` start with the time or with the message, never with a level like the

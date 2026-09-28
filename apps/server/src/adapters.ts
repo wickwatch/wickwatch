@@ -1,4 +1,5 @@
 import { dirname } from "node:path";
+import { CbotsetConfigAdapter } from "@wickwatch/adapter-cbotset";
 import { createDemoAdapters } from "@wickwatch/adapter-demo";
 import { CtraderCliBroker, DEFAULT_CTRADER_IMAGE, toolRunner } from "@wickwatch/adapter-ctrader-cli";
 import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
@@ -49,7 +50,10 @@ export function createAdapters(config: Config): Adapters {
       return new CtraderCliBroker({ image, ...(runTool ? { runner: toolRunner(runTool, image) } : {}) });
     },
   };
-  const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
+  const configAdapters: Registry<ConfigAdapter> = {
+    demo: () => getDemo().config,
+    cbotset: () => new CbotsetConfigAdapter(),
+  };
 
   const adapters = {
     runtime: selectedRuntime,
@@ -57,6 +61,7 @@ export function createAdapters(config: Config): Adapters {
     config: pick("CONFIG_ADAPTER", configAdapters, config.adapters.config),
   };
   if (problems.length || !adapters.runtime || !adapters.broker || !adapters.config) throw new ConfigError(problems);
-  const logEvent = adapters.broker.logEvent?.bind(adapters.broker);
-  return { runtime: withLogEvents(adapters.runtime, logEvent), broker: adapters.broker, config: adapters.config };
+  const { broker: b } = adapters;
+  const logs = { logEvent: b.logEvent?.bind(b), redactLog: b.redactLog?.bind(b) };
+  return { runtime: withLogEvents(adapters.runtime, logs), broker: adapters.broker, config: adapters.config };
 }

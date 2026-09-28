@@ -8,9 +8,43 @@ afterEach(async () => {
 });
 
 describe("database", () => {
+  it("repairs colour parameters of algos uploaded before the colour type", async () => {
+    db = createDatabase({ client: "sqlite", filename: ":memory:" });
+    await createMigrator(db).migrateTo("0008-guard-trips");
+    const metadata = {
+      name: "Oldman",
+      parameters: [
+        { name: "SLColor", type: "string", default: { A: 255, R: 255, G: 0, B: 0 } },
+        { name: "Tag", type: "string", default: "x" },
+      ],
+    };
+    await db
+      .insertInto("algos")
+      .values({
+        name: "Oldman",
+        version: "4.03",
+        sha256: "a".repeat(64),
+        file_path: "Oldman/4.03/Oldman.algo",
+        size: 1,
+        build_time: null,
+        full_access: 1,
+        metadata: JSON.stringify(metadata),
+        uploaded_by: null,
+        uploaded_at: "2026-09-28T00:00:00.000Z",
+      })
+      .execute();
+    await migrateToLatest(db);
+    const row = await db.selectFrom("algos").select("metadata").executeTakeFirstOrThrow();
+    expect((JSON.parse(row.metadata) as typeof metadata).parameters).toEqual([
+      { name: "SLColor", type: "color", default: "#FFFF0000" },
+      { name: "Tag", type: "string", default: "x" },
+    ]);
+  });
+
   it("migrates up, is idempotent and migrates down", async () => {
     db = createDatabase({ client: "sqlite", filename: ":memory:" });
     expect((await migrateToLatest(db)).map((r) => r.status)).toEqual([
+      "Success",
       "Success",
       "Success",
       "Success",

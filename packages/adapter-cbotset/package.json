@@ -1,5 +1,5 @@
 {
-  "name": "@wickwatch/adapter-ctrader-cli",
+  "name": "@wickwatch/adapter-cbotset",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@wickwatch/adapter-cbotset": "workspace:*",
     "@wickwatch/core": "workspace:*"
   },
   "devDependencies": {

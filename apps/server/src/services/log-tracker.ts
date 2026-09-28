@@ -11,14 +11,20 @@ import type {
 /** Lines read per instance and call; in a busier log an event in between can be missed. */
 const MAX_LINES = 1000;
 
-/** Adds the broker's platform events (e.g. a lost connection) to every line the runtime reads. */
-export function withLogEvents(
-  runtime: RuntimeAdapter,
-  logEvent: ((text: string) => LogEvent | undefined) | undefined,
-): RuntimeAdapter {
-  if (!logEvent) return runtime;
+export interface LogReading {
+  logEvent?: ((text: string) => LogEvent | undefined) | undefined;
+  redactLog?: ((text: string) => string) | undefined;
+}
+
+/**
+ * Every line the runtime reads, as the broker sees it: secrets it printed hidden (e.g. a licence key
+ * among the start parameters) and platform events added (e.g. a lost connection).
+ */
+export function withLogEvents(runtime: RuntimeAdapter, { logEvent, redactLog }: LogReading): RuntimeAdapter {
+  if (!logEvent && !redactLog) return runtime;
   async function* annotate(lines: AsyncIterable<LogLine>): AsyncIterable<LogLine> {
-    for await (const line of lines) {
+    for await (const raw of lines) {
+      const line = redactLog ? { ...raw, text: redactLog(raw.text) } : raw;
       const event = logEvent?.(line.text);
       if (!event) yield line;
       else if (event === "connection_lost" && line.level !== "error") yield { ...line, event, level: "warn" };

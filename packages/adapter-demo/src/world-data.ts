@@ -107,10 +107,6 @@ export function algoPath(name: string, version: string): string {
   return `algos/${name}/${version}/${name}.algo`;
 }
 
-export function parameterFile(instance: string): string {
-  return `sets/${instance}.json`;
-}
-
 export interface DemoInstanceSeed {
   name: string;
   account: string;

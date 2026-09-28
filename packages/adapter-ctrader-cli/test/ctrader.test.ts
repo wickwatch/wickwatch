@@ -3,7 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describeBrokerAdapter } from "@wickwatch/core/testing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cliError, CtraderCliBroker, DEFAULT_CTRADER_IMAGE, extractJson, toLogEvent, toRunArguments } from "../src";
+import {
+  checkParameterNames,
+  cliError,
+  CtraderCliBroker,
+  DEFAULT_CTRADER_IMAGE,
+  extractJson,
+  redactStartupTable,
+  toLogEvent,
+} from "../src";
 
 const FAKE = join(__dirname, "fake-cli.mjs");
 const c = { login: "user@example.com", secret: "correct horse" };
@@ -112,7 +120,7 @@ describe("CtraderCliBroker", () => {
     expect(all.some((a) => a.startsWith("--password"))).toBe(false);
   });
 
-  it("maps metadata: enum defaults by name, build time, friendly names and groups", async () => {
+  it("maps metadata: enum defaults by name, colours as #AARRGGBB, build time, friendly names and groups", async () => {
     const metadata = await broker.algoMetadata("/algos/bot.algo");
     expect(metadata).toEqual({
       name: "SampleBot",
@@ -121,8 +129,17 @@ describe("CtraderCliBroker", () => {
       parameters: [
         { name: "Start", type: "string", label: "Session start", group: "Session", default: "15:30" },
         { name: "Period", type: "int", label: "ATR period", group: "Signal", default: 14, min: 5, max: 50 },
-        { name: "Mode", type: "enum", label: "Mode", group: "Signal", default: "Slow", options: ["Fast", "Slow"] },
+        {
+          name: "Mode",
+          type: "enum",
+          label: "Mode",
+          group: "Signal",
+          default: "Slow",
+          options: ["Fast", "Slow"],
+          optionValues: [0, 1],
+        },
         { name: "UseFilter", type: "bool", group: "Filter", default: false },
+        { name: "LineColor", type: "color", group: "Chart", default: "#80FF000A" },
       ],
     });
     await expect(broker.algoMetadata("/algos/missing.txt")).rejects.toMatchObject({ code: "invalid_input" });
@@ -199,20 +216,26 @@ describe("CtraderCliBroker", () => {
     }
   });
 
-  it("launches `run` in the pinned image with password and algo as files, never as arguments", async () => {
+  it("launches `run` in the pinned image with password, algo and parameters as files, never as arguments", async () => {
     const algo = new TextEncoder().encode("algo-bytes");
+    const schema = [
+      { name: "Period", type: "int" as const },
+      { name: "Mode", type: "enum" as const, options: ["Fast", "Slow"], optionValues: [0, 1] },
+      { name: "LicenseKey", type: "string" as const },
+    ];
     const launch = await broker.launch({
       credentials: c,
       account: "1111111",
-      algo: { name: "Sample Bot", file: algo, fullAccess: true },
+      algo: { name: "Sample Bot", file: algo, fullAccess: true, parameters: schema },
       symbol: "US100.cash",
       period: "m5",
-      parameters: { Period: 14, Mode: "Slow", UseFilter: false, Start: "15:30", Risk: 0.5 },
+      parameters: { Period: 14, Mode: "Slow", LicenseKey: "ABCD-1234" },
     });
     expect(launch.image).toBe(DEFAULT_CTRADER_IMAGE);
     expect(launch.command).toEqual([
       "run",
       "/mnt/wickwatch/Sample-Bot.algo",
+      "/mnt/wickwatch/parameters.cbotset",
       "--ctid=user@example.com",
       "--pwd-file=/mnt/wickwatch/ctid.pwd",
       "--account=1111111",
@@ -220,24 +243,25 @@ describe("CtraderCliBroker", () => {
       "--period=m5",
       "--exit-on-stop",
       "--full-access",
-      "--Period=14",
-      "--Mode=Slow",
-      "--UseFilter=false",
-      "--Start=15:30",
-      "--Risk=0.5",
     ]);
-    expect(launch.command.join(" ")).not.toContain("correct horse");
+    expect(launch.command.join(" ")).not.toMatch(/correct horse|ABCD-1234/);
     expect(launch.files.map((f) => [f.path, f.mode])).toEqual([
       ["/mnt/wickwatch/Sample-Bot.algo", 0o444],
       ["/mnt/wickwatch/ctid.pwd", 0o400],
+      ["/mnt/wickwatch/parameters.cbotset", 0o400],
     ]);
     expect(new TextDecoder().decode(launch.files[1]?.content)).toBe("correct horse");
+    // Enums as their numbers, like a cTrader export (verified with ctrader-console 5.9.11).
+    expect(JSON.parse(new TextDecoder().decode(launch.files[2]?.content))).toEqual({
+      Chart: { Symbol: "US100.cash", Period: "m5" },
+      Parameters: { Period: 14, Mode: 1, LicenseKey: "ABCD-1234" },
+    });
     expect(
       (
         await new CtraderCliBroker({ image: "example/ctrader:1.0" }).launch({
           credentials: c,
           account: "1",
-          algo: { name: "a", file: algo, fullAccess: false },
+          algo: { name: "a", file: algo, fullAccess: false, parameters: [] },
           symbol: "X",
           period: "h1",
           parameters: {},
@@ -246,19 +270,24 @@ describe("CtraderCliBroker", () => {
     ).not.toContain("--full-access");
   });
 
-  it("rejects parameter names and values that could smuggle in other options", () => {
-    expect(() => toRunArguments({ "account=2 --x": 1 })).toThrow(/name/);
-    expect(() => toRunArguments({ Note: "a\nb" })).toThrow(/value/);
-    expect(() => toRunArguments({ Obj: { a: 1 } })).toThrow(/value/);
-    expect(toRunArguments({ Note: "" })).toEqual(["--Note="]);
+  it("accepts plain parameter names only", () => {
+    expect(() => {
+      checkParameterNames({ "account=2 --x": 1 });
+    }).toThrow(/name/);
+    expect(() => {
+      checkParameterNames({ Risk_2: 1 });
+    }).not.toThrow();
   });
 
-  it("formats values the way the CLI parses them", () => {
-    // Verified with ctrader-console 5.9.11: invalid values (e.g. "2,5" or "1" for a bool) silently fall
-    // back to the default, and the startup table still shows the given value. So the format must be right.
-    expect(
-      toRunArguments({ Risk: 0.25, Tiny: 0.0000001, Huge: 1e21, Flag: true, Mode: "Gamma", Time: "09:05" }),
-    ).toEqual(["--Risk=0.25", "--Tiny=1e-7", "--Huge=1e+21", "--Flag=true", "--Mode=Gamma", "--Time=09:05"]);
+  it("hides the values of secret-looking parameters in the start table", () => {
+    // As printed by `run` (5.9) before the cBot starts.
+    const row = (name: string, value: string, source = "cbotset") =>
+      `| ${name.padEnd(20)} | ${value.padEnd(25)} | ${source.padEnd(20)} |`;
+    expect(redactStartupTable(row("LicenseKey", "WXYZ-1234-ABCD"))).toBe(row("LicenseKey", "••••••"));
+    expect(redactStartupTable(row("ApiToken", "abc", "cmd arg"))).toBe(row("ApiToken", "••••••", "cmd arg"));
+    expect(redactStartupTable(row("RiskPercent", "1.0"))).toBe(row("RiskPercent", "1.0"));
+    expect(redactStartupTable(row("LicenseKey", "", "default value"))).toBe(row("LicenseKey", "", "default value"));
+    expect(redactStartupTable("28/09/2026 | Info | LicenseKey WXYZ")).toBe("28/09/2026 | Info | LicenseKey WXYZ");
   });
 
   it("starts a new session after the old one died", async () => {

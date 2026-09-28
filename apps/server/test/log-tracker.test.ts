@@ -43,20 +43,25 @@ describe("withLogEvents", () => {
       line("2026-09-28T16:35:21.356Z", "tick"),
     ]);
     const lines: LogLine[] = [];
-    for await (const l of withLogEvents(runtime, classify).logs("ww-probe")) lines.push(l);
+    for await (const l of withLogEvents(runtime, { logEvent: classify }).logs("ww-probe")) lines.push(l);
     expect(lines.map((l) => [l.event, l.level])).toEqual([
       ["connection_lost", "warn"],
       ["connection_restored", "info"],
       [undefined, "info"],
     ]);
-    expect(withLogEvents(runtime, undefined)).toBe(runtime);
+    expect(withLogEvents(runtime, {})).toBe(runtime);
+
+    const redacted: LogLine[] = [];
+    const hide = withLogEvents(runtime, { redactLog: (text) => text.replace("lost", "•••") });
+    for await (const l of hide.logs("ww-probe")) redacted.push(l);
+    expect(redacted.map((l) => l.text)).toEqual(["•••", "restored", "tick"]);
   });
 });
 
 describe("LogTracker", () => {
   it("reports a lost connection until the log says it is back", async () => {
     const { runtime, reads, lines } = fakeRuntime([line("2026-09-28T16:33:36.000Z", "tick")]);
-    const tracker = new LogTracker(withLogEvents(runtime, classify));
+    const tracker = new LogTracker(withLogEvents(runtime, { logEvent: classify }));
 
     expect(await tracker.states([running()])).toEqual(new Map());
     expect(reads[0]).toMatchObject({ since: STARTED });
@@ -83,7 +88,7 @@ describe("LogTracker", () => {
       line("2026-09-28T16:39:01.899Z", "crash one"),
       line("2026-09-28T16:39:01.899Z", "tick"),
     ]);
-    const tracker = new LogTracker(withLogEvents(runtime, classify));
+    const tracker = new LogTracker(withLogEvents(runtime, { logEvent: classify }));
     const crashes = async () => (await tracker.states([running()])).get("ww-probe")?.crashes;
 
     expect(await crashes()).toEqual({ count: 1, lastAt: "2026-09-28T16:39:01.899Z", lastText: "crash one" });
@@ -98,7 +103,7 @@ describe("LogTracker", () => {
 
   it("starts from scratch when the instance was restarted or stopped", async () => {
     const { runtime, lines } = fakeRuntime([line("2026-09-28T16:34:50.272Z", "lost")]);
-    const tracker = new LogTracker(withLogEvents(runtime, classify));
+    const tracker = new LogTracker(withLogEvents(runtime, { logEvent: classify }));
     expect((await tracker.states([running()])).size).toBe(1);
 
     expect(await tracker.states([{ ...running(), status: "stopped" }])).toEqual(new Map());
@@ -110,7 +115,7 @@ describe("LogTracker", () => {
 
   it("keeps what it knew when the log cannot be read", async () => {
     const { runtime } = fakeRuntime([line("2026-09-28T16:34:50.272Z", "lost")]);
-    const annotated = withLogEvents(runtime, classify);
+    const annotated = withLogEvents(runtime, { logEvent: classify });
     let broken = false;
     const flaky = new Proxy(annotated, {
       get: (target, key) =>

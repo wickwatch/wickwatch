@@ -28,6 +28,21 @@ export const ValidationResult = Type.Object({
 });
 export type ValidationResult = Type.Static<typeof ValidationResult>;
 
+/** A parameter file read for an algo: values converted to the schema's types, e.g. enum numbers to names. */
+export const ParameterFile = Type.Object({
+  values: ParameterValues,
+  /** The chart the file was saved for, if it says. */
+  symbol: Type.Optional(Type.String()),
+  period: Type.Optional(Type.String()),
+  /** Values the file has but that do not fit the schema; they are left out of `values`. */
+  issues: Type.Array(ParameterIssue),
+  /** Parameters in the file that the algo does not know; left out. */
+  unknown: Type.Array(Type.String()),
+  /** Algo parameters the file does not set. */
+  missing: Type.Array(Type.String()),
+});
+export type ParameterFile = Type.Static<typeof ParameterFile>;
+
 export const OptimizationRange = Type.Object({
   min: Type.Number(),
   max: Type.Number(),

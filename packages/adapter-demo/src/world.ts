@@ -4,7 +4,6 @@ import {
   DEFAULT_LABEL_PREFIX,
   type InstanceSpec,
   type InstanceStatus,
-  type ParameterValues,
 } from "@wickwatch/core";
 import { random, round } from "./random";
 import {
@@ -12,7 +11,6 @@ import {
   ALGOS,
   algoPath,
   INSTANCES,
-  parameterFile,
   SYMBOLS,
   type DemoAccount,
   type DemoAlgo,
@@ -65,7 +63,6 @@ export class DemoWorld {
   readonly instances = new Map<string, DemoInstance>();
   readonly closedPositions = new Set<string>();
   readonly cancelledOrders = new Set<string>();
-  readonly files = new Map<string, ParameterValues>();
 
   constructor(options: DemoOptions = {}) {
     this.seed = options.seed ?? 1;
@@ -77,7 +74,6 @@ export class DemoWorld {
     for (const seed of INSTANCES) {
       const algo = this.algo(seed.algo);
       const account = this.account(seed.account);
-      const file = parameterFile(seed.name);
       const spec: InstanceSpec = {
         name: seed.name,
         image: DEMO_IMAGE,
@@ -102,7 +98,6 @@ export class DemoWorld {
         restartCount: seed.restartCount,
         ...(seed.status === "running" ? { startedAt: new Date(now - seed.uptimeHours * HOUR_MS) } : {}),
       });
-      this.files.set(file, Object.fromEntries(algo.parameters.map((p) => [p.name, p.default])));
     }
   }
 

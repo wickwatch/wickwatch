@@ -507,7 +507,8 @@
     "noAlgos": "Zuerst einen Algo hochladen:",
     "algoMissing": "Die Algo-Version {algo} dieser Konfiguration gibt es nicht mehr; bitte eine andere wählen.",
     "restoreComment": "Wiederhergestellt aus Version {version}",
-    "unknownParameters": "Diese Parameter kennt der Algo nicht: {names}"
+    "unknownParameters": "Diese Parameter kennt der Algo nicht: {names}",
+    "pickColor": "Farbe wählen"
   },
   "instanceConfig": {
     "version": "Version {version}",

@@ -26,6 +26,18 @@ function onNumber(event: Event) {
 const onText = (event: Event) => {
   emit("update:modelValue", (event.target as HTMLInputElement | HTMLSelectElement).value);
 };
+
+// Colours are #AARRGGBB (alpha first); the browser's picker knows #RRGGBB only, so the alpha is kept.
+const COLOR = /^#(?:([0-9A-Fa-f]{2}))?([0-9A-Fa-f]{6})$/;
+const pickerValue = computed(() => {
+  const match = COLOR.exec(text.value);
+  return match ? `#${(match[2] ?? "000000").toLowerCase()}` : "#000000";
+});
+function onPick(event: Event) {
+  const rgb = (event.target as HTMLInputElement).value.slice(1).toUpperCase();
+  const alpha = COLOR.exec(text.value)?.[1]?.toUpperCase() ?? "FF";
+  emit("update:modelValue", `#${alpha}${rgb}`);
+}
 </script>
 
 <template>
@@ -66,6 +78,24 @@ const onText = (event: Event) => {
       :aria-invalid="issue ? 'true' : undefined"
       @input="onNumber"
     />
+    <div v-else-if="param.type === 'color'" class="param__color">
+      <input
+        :id="id"
+        class="input mono"
+        :value="text"
+        autocomplete="off"
+        spellcheck="false"
+        :aria-invalid="issue ? 'true' : undefined"
+        @input="onText"
+      />
+      <input
+        type="color"
+        class="param__swatch"
+        :value="pickerValue"
+        :aria-label="$t('instanceForm.pickColor')"
+        @input="onPick"
+      />
+    </div>
     <input
       v-else
       :id="id"
@@ -119,6 +149,27 @@ const onText = (event: Event) => {
   height: var(--ww-space-5);
   margin: var(--ww-space-2) 0;
   accent-color: var(--ww-accent);
+}
+
+.param__color {
+  display: flex;
+  gap: var(--ww-space-2);
+  align-items: center;
+}
+
+.param__color .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.param__swatch {
+  width: var(--ww-touch-target);
+  height: var(--ww-touch-target);
+  padding: 0;
+  border: 1px solid var(--ww-border-strong);
+  border-radius: var(--ww-radius-md);
+  background: var(--ww-inset);
+  cursor: pointer;
 }
 
 .param--changed .input {

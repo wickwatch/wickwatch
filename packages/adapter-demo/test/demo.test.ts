@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { validateParameters, type LogLine } from "@wickwatch/core";
-import { createDemoAdapters, demoAlgoPath } from "../src";
+import type { LogLine } from "@wickwatch/core";
+import { createDemoAdapters } from "../src";
 
 const now = () => new Date("2026-09-25T12:00:00.000Z");
 const c = { login: "demo", secret: "demo" };
@@ -68,18 +68,6 @@ describe("demo adapter", () => {
     expect(await broker.positions(c, "1111111")).toEqual([]);
     expect(await broker.pendingOrders(c, "1111111")).toEqual([]);
     expect(await broker.positions(c, "2222222")).toHaveLength(1);
-  });
-
-  it("ships parameter sets that match the algo metadata", async () => {
-    const { broker, config, runtime } = createDemoAdapters({ now });
-    for (const instance of await runtime.list()) {
-      const ref = instance.labels["wickwatch.instance"]!;
-      const algo = ref.startsWith("alpha") ? "alpha" : "beta";
-      const version = instance.labels["wickwatch.algo-version"]!;
-      const { parameters } = await broker.algoMetadata(demoAlgoPath(algo, version));
-      const values = await config.read(`sets/${ref}.json`);
-      expect(validateParameters(values, parameters)).toEqual({ errors: [], unknown: [], missing: [] });
-    }
   });
 
   it("stops and removes an instance, like the other runtimes", async () => {

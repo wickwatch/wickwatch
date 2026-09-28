@@ -25,7 +25,6 @@ describeBrokerAdapter("demo", {
 
 describeConfigAdapter("demo", {
   setup: () => setup().config,
-  path: "sets/contract-test.json",
   values: { Risk: 0.5, Lookback: 20, UseFilter: true, Mode: "Fast", Start: "08:00", Chart: "H1" },
   schema: [
     { name: "Risk", type: "double", min: 0.1, max: 2 },

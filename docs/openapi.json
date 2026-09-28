@@ -6237,6 +6237,12 @@
                                   "enum": [
                                     "period"
                                   ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "color"
+                                  ]
                                 }
                               ]
                             },
@@ -6260,6 +6266,12 @@
                               "type": "array",
                               "items": {
                                 "type": "string"
+                              }
+                            },
+                            "optionValues": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
                               }
                             }
                           }
@@ -6430,6 +6442,12 @@
                                 "enum": [
                                   "period"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "color"
+                                ]
                               }
                             ]
                           },
@@ -6453,6 +6471,12 @@
                             "type": "array",
                             "items": {
                               "type": "string"
+                            }
+                          },
+                          "optionValues": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
                             }
                           }
                         }

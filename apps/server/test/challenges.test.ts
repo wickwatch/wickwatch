@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ChallengeProfile, Overview } from "@wickwatch/core";
+import { tradingDayKey, type ChallengeProfile, type Overview } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dbAccountDirectory } from "../src/accounts";
 import { createAdapters } from "../src/adapters";
@@ -118,7 +118,8 @@ describe("challenge profile API", () => {
   });
 
   it("shows the evaluation in the overview", async () => {
-    await call("PUT", "1111111", { ...profile, startDate: new Date().toISOString().slice(0, 10) });
+    // Today in the profile's zone (Prague), not the UTC date: they differ around midnight.
+    await call("PUT", "1111111", { ...profile, startDate: tradingDayKey(new Date(), "00:00", "Europe/Prague") });
     const overview = (await t.app.inject({ url: "/api/v1/overview", headers: { cookie: admin } })).json<Overview>();
     const challenge = overview.accounts.find((a) => a.number === "1111111")?.challenge;
     expect(challenge).toMatchObject({ name: "Prop A – Phase 1", day: 1 });

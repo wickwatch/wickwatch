@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { ConfigAdapter } from "../adapters";
-import { ValidationResult, type ParameterSchema, type ParameterValues } from "../schemas";
+import { ParameterFile, ValidationResult, type ParameterSchema, type ParameterValues } from "../schemas";
 import { expectAdapterError, expectSchema } from "./expect-schema";
 
 export interface ConfigContractOptions {
   /** Returns a fresh adapter; called before every test. */
   setup: () => ConfigAdapter | Promise<ConfigAdapter>;
-  /** A writable path for the round-trip test. */
-  path: string;
   /** Valid values for `schema`, covering every parameter type the format supports. */
   values: ParameterValues;
   schema: ParameterSchema[];
@@ -25,13 +23,30 @@ export function describeConfigAdapter(name: string, options: ConfigContractOptio
       expect(adapter.formats().length).toBeGreaterThan(0);
     });
 
-    it("reads back what it wrote", async () => {
-      await adapter.write(options.path, options.values);
-      expect(await adapter.read(options.path)).toEqual(options.values);
+    const chart = { symbol: "GER40", period: "h1" };
+
+    it("reads back what it wrote, with the chart", () => {
+      const file = adapter.parse(adapter.serialize(options.values, options.schema, chart), options.schema);
+      expectSchema(ParameterFile, file);
+      expect(file).toEqual({ values: options.values, ...chart, issues: [], unknown: [], missing: [] });
     });
 
-    it("rejects reading a missing file with not_found", async () => {
-      await expectAdapterError(adapter.read(`${options.path}.missing`), "not_found");
+    it("reports parameters the algo does not know or the file does not set", () => {
+      const [first, ...rest] = options.schema;
+      if (!first) return;
+      const extra: ParameterSchema = { name: "WickwatchContractExtra", type: "string" };
+      const { [first.name]: _left, ...values } = options.values;
+      const content = adapter.serialize({ ...values, [extra.name]: "x" }, [...rest, extra], chart);
+      const file = adapter.parse(content, options.schema);
+      expect(file.unknown).toEqual([extra.name]);
+      expect(file.missing).toEqual([first.name]);
+    });
+
+    it("rejects content that is not a parameter file with invalid_input", async () => {
+      await expectAdapterError(
+        Promise.resolve().then(() => adapter.parse(new Uint8Array(64), options.schema)),
+        "invalid_input",
+      );
     });
 
     it("accepts the valid values", () => {
