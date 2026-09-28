@@ -13,6 +13,8 @@ import {
   type LogOptions,
   type RuntimeAdapter,
   type RuntimeInstance,
+  type ToolProcess,
+  type ToolSpec,
 } from "@wickwatch/core";
 import {
   createDockerClient,
@@ -54,6 +56,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly client: DockerClient;
   private readonly instanceLabel: string;
   private readonly managedLabel: string;
+  private readonly toolLabel: string;
+  private orphansRemoved: Promise<void> | undefined;
   private readonly diskPath: string;
   private readonly now: () => Date;
   private readonly restartPolicy: CreateRequest["restartPolicy"];
@@ -63,6 +67,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     this.client = options.client ?? createDockerClient(options.dockerHost);
     this.instanceLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "instance");
     this.managedLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "managed");
+    this.toolLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "tool");
     this.restartPolicy = options.restartPolicy ?? "on-failure";
     this.stopTimeout = options.stopTimeoutSeconds ?? 30;
     this.diskPath = options.diskPath ?? process.cwd();
@@ -183,11 +188,76 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     };
   }
 
+  /**
+   * A throwaway container with open stdin that removes itself when the tool ends. It carries
+   * `<prefix>.tool`, not `<prefix>.instance`, so it never shows up as an instance.
+   */
+  async runTool(spec: ToolSpec): Promise<ToolProcess> {
+    checkPinned(spec.image);
+    await this.ensureImage(spec.image);
+    // Tools of an earlier run (e.g. shell sessions when Wickwatch was killed) are ended once.
+    this.orphansRemoved ??= this.removeOrphans();
+    await this.orphansRemoved;
+
+    const id = await call(() =>
+      this.client.createTool({ image: spec.image, command: spec.command, labels: { [this.toolLabel]: "true" } }),
+    );
+    const handle = this.client.container(id);
+    let stream: NodeJS.ReadWriteStream;
+    let exited: Promise<number>;
+    try {
+      if (spec.files.length) await handle.putArchive(tarFiles(spec.files), "/");
+      stream = await handle.attach();
+      exited = handle.wait();
+      await handle.start();
+    } catch (error) {
+      await handle.remove().catch(() => undefined);
+      throw mapError(error);
+    }
+
+    // Output that arrives before the first listener is kept for it.
+    const listeners: ((text: string) => void)[] = [];
+    const early: string[] = [];
+    const drained = (async () => {
+      for await (const chunk of demux(stream as AsyncIterable<Buffer>)) {
+        const text = chunk.toString();
+        if (listeners.length) for (const listener of listeners) listener(text);
+        else early.push(text);
+      }
+    })().catch(() => undefined);
+    const exit = exited.then(
+      async (code) => {
+        await drained;
+        return code;
+      },
+      () => null,
+    );
+    return {
+      write: (text) => void stream.write(text),
+      onOutput: (listener) => {
+        listeners.push(listener);
+        for (const text of early.splice(0)) listener(text);
+      },
+      exit,
+      kill: () => void handle.kill().catch(() => undefined),
+    };
+  }
+
+  private async removeOrphans(): Promise<void> {
+    const orphans = await call(() => this.client.listByLabel(this.toolLabel)).catch(() => []);
+    await Promise.all(
+      orphans.map((o) =>
+        this.client
+          .container(o.Id)
+          .kill()
+          .catch(() => undefined),
+      ),
+    );
+  }
+
   private check(spec: InstanceSpec): void {
     if (!CONTAINER_NAME.test(spec.name)) throw new AdapterError("invalid_input", `Invalid instance name ${spec.name}`);
-    if (!/[:@]/.test(spec.image.split("/").pop() ?? "") || spec.image.endsWith(":latest")) {
-      throw new AdapterError("invalid_input", `Image ${spec.image} must be pinned to a version`);
-    }
+    checkPinned(spec.image);
   }
 
   private async ensureImage(image: string): Promise<void> {
@@ -234,6 +304,12 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       throw new AdapterError("not_found", `Container ${ref} is not a Wickwatch instance`);
     }
     return { handle, details };
+  }
+}
+
+function checkPinned(image: string): void {
+  if (!/[:@]/.test(image.split("/").pop() ?? "") || image.endsWith(":latest")) {
+    throw new AdapterError("invalid_input", `Image ${image} must be pinned to a version`);
   }
 }
 

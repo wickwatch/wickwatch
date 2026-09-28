@@ -36,6 +36,11 @@ export interface ContainerHandle {
   putArchive(tar: Buffer, path: string): Promise<unknown>;
   rename(name: string): Promise<unknown>;
   remove(): Promise<unknown>;
+  /** stdin, stdout and stderr of a container created with `createTool` (multiplexed output). */
+  attach(): Promise<NodeJS.ReadWriteStream>;
+  /** Resolves with the exit code once the container has stopped; call it before `start`. */
+  wait(): Promise<number>;
+  kill(): Promise<unknown>;
 }
 
 export interface CreateRequest {
@@ -48,6 +53,12 @@ export interface CreateRequest {
   stopTimeout: number;
 }
 
+export interface ToolRequest {
+  image: string;
+  command: string[];
+  labels: Record<string, string>;
+}
+
 export interface DockerClient {
   listByLabel(label: string): Promise<ContainerSummary[]>;
   container(idOrName: string): ContainerHandle;
@@ -55,6 +66,8 @@ export interface DockerClient {
   pull(ref: string): Promise<void>;
   /** Creates a stopped container; returns its id. */
   create(request: CreateRequest): Promise<string>;
+  /** Creates a stopped container with open stdin that removes itself when it ends; returns its id. */
+  createTool(request: ToolRequest): Promise<string>;
 }
 
 /** Connects to DOCKER_HOST (tcp://, http(s)://, unix://) or the default socket. */
@@ -109,6 +122,26 @@ function wrap(docker: Docker): DockerClient {
       });
       return container.id;
     },
+    async createTool({ image, command, labels }) {
+      const container = await docker.createContainer({
+        Image: image,
+        Cmd: command,
+        Labels: labels,
+        AttachStdin: true,
+        AttachStdout: true,
+        AttachStderr: true,
+        OpenStdin: true,
+        StdinOnce: true,
+        Tty: false,
+        HostConfig: {
+          AutoRemove: true,
+          LogConfig: { Type: "none", Config: {} },
+          CapDrop: ["ALL"],
+          SecurityOpt: ["no-new-privileges:true"],
+        },
+      });
+      return container.id;
+    },
     listByLabel: (label) => docker.listContainers({ all: true, filters: JSON.stringify({ label: [label] }) }),
     container(idOrName) {
       const c = docker.getContainer(idOrName);
@@ -120,6 +153,16 @@ function wrap(docker: Docker): DockerClient {
         putArchive: (tar, path) => c.putArchive(tar, { path }),
         rename: (name) => c.rename({ name }),
         remove: () => c.remove(),
+        attach: () =>
+          c.attach({
+            stream: true,
+            stdin: true,
+            stdout: true,
+            stderr: true,
+            hijack: true,
+          }),
+        wait: async () => ((await c.wait({ condition: "next-exit" })) as { StatusCode: number }).StatusCode,
+        kill: () => c.kill(),
         logs: ({ tail, since, follow }) => {
           const base = {
             stdout: true,

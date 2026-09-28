@@ -15,7 +15,8 @@ import {
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
-import { cliError, DEFAULT_CLI_OPTIONS, extractJson, runBatch, SecretFile, type CliOptions } from "./cli";
+import { basename } from "node:path";
+import { cliError, DEFAULT_CLI_OPTIONS, extractJson, passwordFile, runBatch, type CliOptions } from "./cli";
 import {
   toAccountStats,
   toAlgoMetadata,
@@ -193,7 +194,11 @@ export class CtraderCliBroker implements BrokerAdapter {
   }
 
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
-    const { code, output } = await runBatch(this.options, ["metadata", algoPath]);
+    // The CLI takes the algo's name from the file name, so the file keeps it.
+    const name = basename(algoPath);
+    const { code, output } = await runBatch(this.options, (path) => ["metadata", path(name)], [
+      { name, path: algoPath, mode: 0o444 },
+    ]);
     if (code !== 0) throw cliError(output, `Cannot read metadata of ${algoPath}`);
     return toAlgoMetadata(extractJson(output));
   }
@@ -204,17 +209,12 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   /** Batch commands authenticate with a temporary password file. */
   private async batch(c: Credentials, args: string[]): Promise<string> {
-    const secret = await SecretFile.create(c.secret);
-    try {
-      const { code, output } = await runBatch(this.options, [
-        ...args,
-        `--ctid=${c.login}`,
-        `--pwd-file=${secret.path}`,
-      ]);
-      if (code !== 0) throw cliError(output);
-      return output;
-    } finally {
-      await secret.remove();
-    }
+    const { code, output } = await runBatch(
+      this.options,
+      (path) => [...args, `--ctid=${c.login}`, `--pwd-file=${path("pwd")}`],
+      [passwordFile(c.secret)],
+    );
+    if (code !== 0) throw cliError(output);
+    return output;
   }
 }

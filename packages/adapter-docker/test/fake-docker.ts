@@ -1,5 +1,12 @@
-import { PassThrough } from "node:stream";
-import type { ContainerDetails, ContainerHandle, CreateRequest, DockerClient, LogRequest } from "../src/client";
+import { Duplex, PassThrough } from "node:stream";
+import type {
+  ContainerDetails,
+  ContainerHandle,
+  CreateRequest,
+  DockerClient,
+  LogRequest,
+  ToolRequest,
+} from "../src/client";
 
 export interface FakeContainer {
   details: ContainerDetails;
@@ -8,6 +15,19 @@ export interface FakeContainer {
   streams: PassThrough[];
   created?: CreateRequest;
   archives: { tar: Buffer; path: string }[];
+  /** Tool containers: what was written to stdin, and how to end them. */
+  tool?: FakeTool;
+}
+
+export interface FakeTool {
+  request: ToolRequest;
+  stdin: string[];
+  /** Multiplexed output the tool sends. */
+  output: PassThrough;
+  /** Ends the tool with this exit code; it removes itself like with AutoRemove. */
+  exit(code: number): void;
+  /** Answers each stdin write; default: none. */
+  reply?: (text: string) => string | undefined;
 }
 
 /** One multiplexed Docker log frame (stream 1 = stdout). */
@@ -78,6 +98,38 @@ export class FakeDocker implements DockerClient {
     });
   }
 
+  private tools = 0;
+
+  createTool(request: ToolRequest) {
+    return Promise.resolve().then(() => {
+      if (!this.images.has(request.image)) throw httpError(404);
+      const id = `tool-${String(++this.tools)}`;
+      const c: FakeContainer = {
+        ...fakeContainer(id, request.labels, { Status: "created", StartedAt: "0001-01-01T00:00:00Z" }),
+        lines: [],
+      };
+      let finish: (code: number) => void = () => undefined;
+      const ended = new Promise<number>((resolve) => (finish = resolve));
+      const output = new PassThrough();
+      c.tool = {
+        request,
+        stdin: [],
+        output,
+        exit: (code) => {
+          c.details.State = { ...c.details.State, Status: "exited", ExitCode: code };
+          output.end();
+          this.containers.delete(id);
+          finish(code);
+        },
+      };
+      this.toolEnds.set(id, ended);
+      this.containers.set(id, c);
+      return id;
+    });
+  }
+
+  private readonly toolEnds = new Map<string, Promise<number>>();
+
   add(container: FakeContainer): this {
     this.containers.set(container.details.Name.slice(1), container);
     return this;
@@ -136,6 +188,34 @@ export class FakeDocker implements DockerClient {
           const c = get();
           if (c.details.State.Status === "running") throw httpError(409);
           this.containers.delete(name);
+        }),
+      attach: () =>
+        Promise.resolve().then(() => {
+          const tool = get().tool;
+          if (!tool) throw httpError(409);
+          const duplex = new Duplex({
+            read() {},
+            write(chunk: Buffer, _encoding, done) {
+              const text = chunk.toString();
+              tool.stdin.push(text);
+              const answer = tool.reply?.(text);
+              if (answer !== undefined) tool.output.write(frame(answer));
+              done();
+            },
+          });
+          tool.output.on("data", (d: Buffer) => duplex.push(d));
+          tool.output.on("end", () => duplex.push(null));
+          return duplex;
+        }),
+      wait: () => {
+        const ended = this.toolEnds.get(name);
+        return ended ?? Promise.reject(httpError(404));
+      },
+      kill: () =>
+        Promise.resolve().then(() => {
+          const c = get();
+          if (c.tool) c.tool.exit(137);
+          else setState("exited", 137);
         }),
       logs: (request) =>
         Promise.resolve().then(() => {

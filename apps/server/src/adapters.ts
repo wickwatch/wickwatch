@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { createDemoAdapters } from "@wickwatch/adapter-demo";
-import { CtraderCliBroker } from "@wickwatch/adapter-ctrader-cli";
+import { CtraderCliBroker, DEFAULT_CTRADER_IMAGE, toolRunner } from "@wickwatch/adapter-ctrader-cli";
 import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
 import { ConfigError, type Config } from "./config";
@@ -30,16 +30,6 @@ export function createAdapters(config: Config): Adapters {
         ...(config.database.filename === ":memory:" ? {} : { diskPath: dirname(config.database.filename) }),
       }),
   };
-  const broker: Registry<BrokerAdapter> = {
-    demo: () => getDemo().broker,
-    "ctrader-cli": () =>
-      new CtraderCliBroker({
-        binary: config.ctraderCliPath,
-        ...(config.ctraderImage ? { image: config.ctraderImage } : {}),
-      }),
-  };
-  const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
-
   const problems: string[] = [];
   const pick = <T>(name: string, registry: Registry<T>, selected: string): T | undefined => {
     const factory = registry[selected];
@@ -47,12 +37,26 @@ export function createAdapters(config: Config): Adapters {
     return factory?.();
   };
 
+  const selectedRuntime = pick("RUNTIME_ADAPTER", runtime, config.adapters.runtime);
+  const broker: Registry<BrokerAdapter> = {
+    demo: () => getDemo().broker,
+    "ctrader-cli": () => {
+      const image = config.ctraderImage ?? DEFAULT_CTRADER_IMAGE;
+      if (config.ctraderCli === "local") return new CtraderCliBroker({ binary: config.ctraderCliPath, image });
+      // In the Wickwatch image: the CLI of the official image, in a throwaway container per call or session.
+      const runTool = selectedRuntime?.runTool?.bind(selectedRuntime);
+      if (!runTool) problems.push("CTRADER_CLI=container needs a runtime that runs tools, e.g. RUNTIME_ADAPTER=docker");
+      return new CtraderCliBroker({ image, ...(runTool ? { runner: toolRunner(runTool, image) } : {}) });
+    },
+  };
+  const configAdapters: Registry<ConfigAdapter> = { demo: () => getDemo().config };
+
   const adapters = {
-    runtime: pick("RUNTIME_ADAPTER", runtime, config.adapters.runtime),
+    runtime: selectedRuntime,
     broker: pick("BROKER_ADAPTER", broker, config.adapters.broker),
     config: pick("CONFIG_ADAPTER", configAdapters, config.adapters.config),
   };
-  if (!adapters.runtime || !adapters.broker || !adapters.config) throw new ConfigError(problems);
+  if (problems.length || !adapters.runtime || !adapters.broker || !adapters.config) throw new ConfigError(problems);
   const logEvent = adapters.broker.logEvent?.bind(adapters.broker);
   return { runtime: withLogEvents(adapters.runtime, logEvent), broker: adapters.broker, config: adapters.config };
 }

@@ -1,7 +1,6 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash } from "node:crypto";
-import { AdapterError, type Credentials } from "@wickwatch/core";
-import { cliError, SecretFile, type CliOptions } from "./cli";
+import { AdapterError, type Credentials, type ToolProcess } from "@wickwatch/core";
+import { cliError, passwordFile, runnerOf, type CliOptions } from "./cli";
 
 const PROMPT = "> ";
 
@@ -12,11 +11,10 @@ const PROMPT = "> ";
  * data once the session is warm (see the warm-up in start()).
  */
 export class CliSession {
-  private child: ChildProcessWithoutNullStreams | undefined;
+  private child: ToolProcess | undefined;
   private buffer = "";
   private queue: Promise<unknown> = Promise.resolve();
   private waiter: ((text: string) => void) | undefined;
-  private secret: SecretFile | undefined;
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
   /** Set when the process ended; the pool then replaces the session. */
@@ -30,24 +28,18 @@ export class CliSession {
   ) {}
 
   async start(): Promise<void> {
-    this.secret = await SecretFile.create(this.credentials.secret);
-    const args = [`--ctid=${this.credentials.login}`, `--pwd-file=${this.secret.path}`, `--account=${this.account}`];
-    const child = spawn(this.options.binary, [...(this.options.binaryArgs ?? []), ...args], { stdio: "pipe" });
+    const child = await runnerOf(this.options).start(
+      (path) => [`--ctid=${this.credentials.login}`, `--pwd-file=${path("pwd")}`, `--account=${this.account}`],
+      [passwordFile(this.credentials.secret)],
+    );
     this.child = child;
-    child.stdout.on("data", (d: Buffer) => {
-      this.buffer += d.toString();
+    child.onOutput((text) => {
+      this.buffer += text;
       this.check();
     });
-    child.stderr.on("data", (d: Buffer) => {
-      this.buffer += d.toString();
-    });
-    child.on("close", () => {
+    void child.exit.then(() => {
       this.dead = true;
-      void this.secret?.remove();
       this.check();
-    });
-    child.on("error", () => {
-      this.dead = true;
     });
 
     try {
@@ -77,27 +69,29 @@ export class CliSession {
     this.closed = true;
     clearTimeout(this.idleTimer);
     if (this.child && !this.dead) {
-      this.child.stdin.write("q\n");
       const child = this.child;
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {
-          child.kill("SIGKILL");
-          resolve();
-        }, 5000);
-        child.once("close", () => {
-          clearTimeout(timer);
-          resolve();
-        });
-      });
+      child.write("q\n");
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        child.exit,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(() => {
+            child.kill();
+            resolve();
+          }, 5000);
+        }),
+      ]);
+      clearTimeout(timer);
+      // The temporary password file goes away with the process.
+      await child.exit;
     }
     this.dead = true;
-    await this.secret?.remove();
   }
 
   private async exec(command: string): Promise<string> {
     if (this.dead || !this.child) throw new AdapterError("unavailable", "cTrader CLI session ended");
     this.buffer = "";
-    this.child.stdin.write(`${command}\n`);
+    this.child.write(`${command}\n`);
     const text = await this.untilPrompt(this.options.commandTimeoutMs, false);
     this.touch();
     // Drop the echo line "[2026-09-27 17:22:39 +02:00] account 123"; keep the answer.

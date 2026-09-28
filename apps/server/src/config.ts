@@ -20,6 +20,8 @@ export interface Config {
   adapters: { runtime: string; broker: string; config: string };
   /** Docker API for the docker runtime adapter, e.g. tcp://socket-proxy:2375. */
   dockerHost?: string;
+  /** `local`: CTRADER_CLI_PATH on this machine; `container`: the CLI of CTRADER_IMAGE via the runtime. */
+  ctraderCli: CtraderCliMode;
   /** cTrader CLI executable for BROKER_ADAPTER=ctrader-cli. */
   ctraderCliPath: string;
   /** Image instances run with (ctrader-cli); the adapter's tested version when unset. */
@@ -48,6 +50,7 @@ export class ConfigError extends Error {
 }
 
 export const RESTART_POLICIES = ["on-failure", "unless-stopped", "no"] as const;
+export type CtraderCliMode = "local" | "container";
 export type RestartPolicy = (typeof RESTART_POLICIES)[number];
 
 const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"];
@@ -97,6 +100,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (!Number.isInteger(accountPollSeconds) || accountPollSeconds < 10 || accountPollSeconds > 3600) {
     problems.push("ACCOUNT_POLL_SECONDS must be an integer between 10 and 3600");
   }
+  const ctraderCli = get("CTRADER_CLI") ?? "local";
+  if (ctraderCli !== "local" && ctraderCli !== "container") problems.push("CTRADER_CLI must be local or container");
   const alertCheckSeconds = Number(get("ALERT_CHECK_SECONDS") ?? 60);
   if (!Number.isInteger(alertCheckSeconds) || alertCheckSeconds < 10 || alertCheckSeconds > 3600) {
     problems.push("ALERT_CHECK_SECONDS must be an integer between 10 and 3600");
@@ -120,6 +125,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     defaultLocale,
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
     algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
+    ctraderCli: ctraderCli as CtraderCliMode,
     ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
     ...(ctraderImage ? { ctraderImage } : {}),
     instanceRestartPolicy: instanceRestartPolicy as RestartPolicy,

@@ -105,6 +105,7 @@ describe("DockerRuntimeAdapter", () => {
         hasImage: () => Promise.resolve(true),
         pull: () => Promise.resolve(),
         create: () => Promise.resolve("unused"),
+        createTool: () => Promise.resolve("unused"),
       },
     });
     await expect(broken.list()).rejects.toMatchObject({ code: "unavailable" });

@@ -10,6 +10,8 @@ Pick one:
 
 Bot instances are not defined here. With `RUNTIME_ADAPTER=docker`, Wickwatch shows and controls every container that carries the label `wickwatch.instance` (plus `wickwatch.account`, `wickwatch.symbol`, `wickwatch.period` …; how trades are attributed to instances: `wickwatch.attribution` and `wickwatch.order-label`, see [`docs/BOT-CONTRACT.md`](../docs/BOT-CONTRACT.md)); define those containers in your own compose file.
 
+For the cTrader CLI adapter (`BROKER_ADAPTER=ctrader-cli`, `RUNTIME_ADAPTER=docker`), the Wickwatch image does not need the CLI: its own queries run in short-lived containers of `CTRADER_IMAGE` (`CTRADER_CLI=container`, the default in the image), through the same socket proxy. They carry the label `wickwatch.tool` and remove themselves.
+
 The container runs as user `node` (UID 1000). Create the data folder before the first start so the database can be written: `mkdir -p data && sudo chown 1000:1000 data`.
 
 `/healthz` answers at the root and under `BASE_PATH`, without auth, for proxy health checks and external monitoring.

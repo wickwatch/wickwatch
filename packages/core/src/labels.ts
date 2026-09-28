@@ -17,6 +17,8 @@ export const LABEL_KEYS = [
   // Set on instances Wickwatch created; only those may be changed or removed through it.
   "managed",
   "config-version",
+  // Helper containers (e.g. a broker CLI); never instances.
+  "tool",
 ] as const;
 export type LabelKey = (typeof LABEL_KEYS)[number];
 export type LabelValues = Partial<Record<LabelKey, string>>;

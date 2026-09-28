@@ -22,7 +22,8 @@ ARG VERSION=dev
 ENV NODE_ENV=production \
     WICKWATCH_VERSION=${VERSION} \
     HOST=0.0.0.0 \
-    PORT=3000
+    PORT=3000 \
+    CTRADER_CLI=container
 WORKDIR /app
 COPY --from=build /out/node_modules ./node_modules
 COPY --from=build /repo/apps/server/dist ./server

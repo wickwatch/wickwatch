@@ -67,6 +67,24 @@ export interface LaunchInput {
   parameters: ParameterValues;
 }
 
+/** A helper program run on demand, e.g. a broker CLI in a throwaway container. */
+export interface ToolSpec {
+  /** Pinned image, never `latest`. */
+  image: string;
+  command: string[];
+  /** Placed before the start; may hold secrets. */
+  files: InstanceFile[];
+}
+
+/** A running tool. stdout and stderr arrive together as text. */
+export interface ToolProcess {
+  write(text: string): void;
+  onOutput(listener: (text: string) => void): void;
+  /** Resolves with the exit code (null if unknown) once the tool has ended and was cleaned up. */
+  readonly exit: Promise<number | null>;
+  kill(): void;
+}
+
 /** Runs bot instances (e.g. Docker containers). */
 export interface RuntimeAdapter {
   readonly id: string;
@@ -82,6 +100,8 @@ export interface RuntimeAdapter {
   restart(ref: string): Promise<void>;
   logs(ref: string, opts?: LogOptions): AsyncIterable<LogLine>;
   hostStatus(): Promise<HostStatus>;
+  /** Runs a helper program next to the instances; missing when the runtime cannot. Tools are not instances. */
+  runTool?(spec: ToolSpec): Promise<ToolProcess>;
 }
 
 /**

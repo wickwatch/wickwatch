@@ -1,14 +1,13 @@
-import { spawn } from "node:child_process";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { AdapterError } from "@wickwatch/core";
+import { localRunner, type CliArguments, type CliFile, type CliRunner } from "./runner";
 
 export interface CliOptions {
   /** Executable, default `ctrader-cli`. */
   binary: string;
   /** Arguments put before every call (tests run a fake CLI through node). */
   binaryArgs?: string[];
+  /** Starts the CLI; default: `binary` as a local program. */
+  runner?: CliRunner;
   /** Per batch call and per shell command. */
   commandTimeoutMs: number;
   /** Login and broker connection of a shell session. */
@@ -24,28 +23,14 @@ export const DEFAULT_CLI_OPTIONS: CliOptions = {
   sessionIdleMs: 10 * 60_000,
 };
 
+export const runnerOf = (options: CliOptions): CliRunner =>
+  options.runner ?? localRunner(options.binary, options.binaryArgs);
+
 /**
  * The password goes to the CLI only through a file (`--pwd-file`), never as an argument,
- * so it is not visible in `ps` or `docker inspect`. The file lives in a private temp directory.
+ * so it is not visible in `ps` or `docker inspect`.
  */
-export class SecretFile {
-  private constructor(
-    readonly path: string,
-    private readonly dir: string,
-  ) {}
-
-  static async create(secret: string): Promise<SecretFile> {
-    const dir = await mkdtemp(join(tmpdir(), "wickwatch-ctrader-"));
-    await chmod(dir, 0o700);
-    const path = join(dir, "pwd");
-    await writeFile(path, secret, { mode: 0o600 });
-    return new SecretFile(path, dir);
-  }
-
-  async remove(): Promise<void> {
-    await rm(this.dir, { recursive: true, force: true });
-  }
-}
+export const passwordFile = (secret: string): CliFile => ({ name: "pwd", content: secret, mode: 0o400 });
 
 export interface BatchResult {
   code: number | null;
@@ -53,27 +38,23 @@ export interface BatchResult {
 }
 
 /** Runs one batch command (accounts, symbols, metadata …) and returns stdout and stderr combined. */
-export function runBatch(options: CliOptions, args: string[]): Promise<BatchResult> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(options.binary, [...(options.binaryArgs ?? []), ...args], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    child.stdout.on("data", (d: Buffer) => (output += d.toString()));
-    child.stderr.on("data", (d: Buffer) => (output += d.toString()));
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
+export async function runBatch(options: CliOptions, args: CliArguments, files: CliFile[] = []): Promise<BatchResult> {
+  const tool = await runnerOf(options).start(args, files);
+  let output = "";
+  tool.onOutput((text) => (output += text));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      tool.kill();
       reject(new AdapterError("timeout", `cTrader CLI did not answer within ${String(options.commandTimeoutMs)} ms`));
     }, options.commandTimeoutMs);
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      reject(new AdapterError("unavailable", `cTrader CLI could not be started: ${error.message}`, { cause: error }));
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({ code, output });
-    });
   });
+  try {
+    const code = await Promise.race([tool.exit, timeout]);
+    return { code, output };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
