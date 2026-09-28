@@ -207,6 +207,7 @@
     }
   },
   "parameterIssue": {
+    "required": "Required",
     "invalid_type": "Wrong type",
     "below_min": "Below minimum",
     "above_max": "Above maximum",
@@ -528,5 +529,27 @@
     "confirmApplyRunning": "Restart the running bot with configuration version {version}? Open positions stay open; whether the bot manages them again after the restart depends on the bot.",
     "elsewhere": "Make sure the same bot does not also run elsewhere on this account (e.g. on another server).",
     "done": "Configuration version {version} applied; status: {status}."
+  },
+  "validation": {
+    "required": "Required.",
+    "characters": "Not allowed here: {chars}",
+    "instanceName": "Lower-case letters a–z, digits and hyphens; starts and ends with a letter or digit, at most 63 characters.",
+    "version": "Letters, digits, dots, hyphens and underscores; starts with a letter or digit.",
+    "username": "Letters, digits and . _ {'@'} - only.",
+    "code": "6 to 8 digits.",
+    "accountNumber": "Digits only.",
+    "minLength": "At least {min} characters.",
+    "mismatch": "Does not match.",
+    "regex": "Not a valid regular expression.",
+    "timeZone": "Unknown time zone, e.g. Europe/Berlin.",
+    "unknownSymbol": "This account does not offer this symbol.",
+    "unknownPeriod": "Unknown timeframe.",
+    "number": "Enter a number.",
+    "integer": "Enter a whole number.",
+    "min": "At least {min}.",
+    "max": "At most {max}.",
+    "rejected": "The server did not accept this value.",
+    "algoFile": "Choose an .algo file.",
+    "chooseAccount": "Choose an account."
   }
 }

@@ -5,7 +5,8 @@ import { computed } from "vue";
 const props = defineProps<{
   param: ParameterSchema;
   modelValue: unknown;
-  issue?: ParameterIssueCode | undefined;
+  /** `required`: empty after the form was sent. */
+  issue?: ParameterIssueCode | "required" | undefined;
   /** Suggestions for `symbol` and `period` parameters. */
   symbolsList?: string | undefined;
   periodsList?: string | undefined;

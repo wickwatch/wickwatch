@@ -129,6 +129,59 @@ describe("InstanceFormView", () => {
     expect(router.currentRoute.value.fullPath).toBe("/instances/alpha-new/config?saved=1");
   });
 
+  it("turns the name into lower case with hyphens and marks what cannot be fixed", async () => {
+    const wrapper = await open(InstanceFormView, "/instances/new");
+    const name = wrapper.find("input.mono");
+    await name.setValue("Probe Demo_1");
+    expect((name.element as HTMLInputElement).value).toBe("probe-demo-1");
+    expect(wrapper.find(".field__error").exists()).toBe(false);
+
+    await name.setValue("probe.dämo");
+    expect(name.attributes("aria-invalid")).toBe("true");
+    expect(wrapper.find(".field__error").text()).toBe("Not allowed here: . ä");
+
+    // A hyphen at the end could still become valid while typing: shown when leaving the field.
+    await name.setValue("probe-");
+    expect(wrapper.find(".field__error").exists()).toBe(false);
+    await name.trigger("blur");
+    expect(wrapper.find(".field__error").text()).toContain("starts and ends with a letter or digit");
+  });
+
+  it("does not send a form with problems and marks every field", async () => {
+    const wrapper = await open(InstanceFormView, "/instances/new");
+    await wrapper.find('input[list="symbols-list"]').setValue("DAX");
+    await wrapper.find("#param-RiskPercent").setValue("5");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(posted()).toEqual([]);
+    expect(wrapper.findAll(".field__error").map((e) => e.text())).toEqual([
+      "Required.",
+      "This account does not offer this symbol.",
+      "Required.",
+    ]);
+    expect(wrapper.find(".param--invalid").text()).toContain("Above maximum");
+  });
+
+  it("puts a field the server rejected onto that field", async () => {
+    response = (url, init) =>
+      init?.method === "POST"
+        ? new Response(JSON.stringify({ error: "invalid_input", message: 'body/name must match pattern "…"' }), {
+            status: 400,
+          })
+        : undefined;
+    const wrapper = await open(InstanceFormView, "/instances/new");
+    await wrapper.find("input.mono").setValue("alpha-new");
+    await wrapper.find('input[list="symbols-list"]').setValue("ger40");
+    await wrapper.find('input[list="periods-list"]').setValue("M5");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    // The broker's spelling is sent.
+    expect(posted()[0]?.body).toMatchObject({ config: { symbol: "GER40" } });
+    expect(wrapper.find("input.mono").attributes("aria-invalid")).toBe("true");
+    expect(wrapper.find(".field__error").text()).toBe("The server did not accept this value.");
+    expect(wrapper.find("[role=alert]").exists()).toBe(false);
+  });
+
   it("marks invalid parameters from the server", async () => {
     response = (url, init) =>
       init?.method === "POST"

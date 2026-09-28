@@ -3,8 +3,10 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type AlgoRow } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import FieldError from "../components/FieldError.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
+import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
 const { t, locale } = useI18n();
 const algos = ref<AlgoRow[]>([]);
@@ -16,6 +18,15 @@ const file = ref<File>();
 const version = ref("");
 const removing = ref<AlgoRow>();
 const fileInput = ref<HTMLInputElement>();
+
+const form = useValidation();
+const fileField = form.field(
+  () => file.value?.name,
+  checks.required,
+  (name) =>
+    name && !String(name).toLowerCase().endsWith(".algo") ? { key: "validation.algoFile", live: true } : undefined,
+);
+const versionField = form.field(() => version.value, checks.version);
 
 /** Newest version first within each algo. */
 const groups = computed(() => {
@@ -49,7 +60,7 @@ let uploaded: AlgoRow | undefined;
 const upload = () =>
   run(
     async () => {
-      if (!file.value) return;
+      if (!form.validate() || !file.value) return;
       uploaded = await api.uploadAlgo(file.value, version.value.trim() || undefined);
       file.value = undefined;
       version.value = "";
@@ -86,7 +97,7 @@ const fileSize = (bytes: number) => {
     <template v-else>
       <section v-if="isAdmin" class="panel card" aria-labelledby="upload-title">
         <h2 id="upload-title">{{ $t("algos.upload") }}</h2>
-        <form class="form" @submit.prevent="upload">
+        <form class="form" novalidate @submit.prevent="upload">
           <div class="grid">
             <label class="field">
               {{ $t("algos.file") }}
@@ -96,17 +107,28 @@ const fileSize = (bytes: number) => {
                 type="file"
                 accept=".algo"
                 required
+                v-bind="fileField.attrs.value"
                 @change="file = ($event.target as HTMLInputElement).files?.[0]"
               />
+              <FieldError :field="fileField" />
             </label>
             <label class="field">
               {{ $t("algos.version") }}
-              <input v-model="version" class="input mono" maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" />
+              <input
+                v-model="version"
+                v-normalize="normalizers.hyphenate"
+                v-bind="versionField.attrs.value"
+                class="input mono"
+                maxlength="100"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <FieldError :field="versionField" />
               <span class="field__hint">{{ $t("algos.versionHint") }}</span>
             </label>
           </div>
           <div>
-            <button type="submit" class="btn btn--primary" :disabled="busy || !file">{{ $t("algos.upload") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("algos.upload") }}</button>
           </div>
         </form>
       </section>

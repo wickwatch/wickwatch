@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { api, errorKey, type TotpSetup } from "../api";
 import AuthCard from "../components/AuthCard.vue";
 import CodeInput from "../components/CodeInput.vue";
+import FieldError from "../components/FieldError.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { loadSession, session } from "../session";
+import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -19,11 +21,26 @@ const totp = ref<TotpSetup>();
 const error = ref<string>();
 const busy = ref(false);
 
-const passwordProblem = computed(() => {
-  if (password.value && password.value.length < MIN_PASSWORD_LENGTH) return "auth.setup.passwordTooShort";
-  if (repeat.value && repeat.value !== password.value) return "auth.setup.passwordMismatch";
-  return undefined;
-});
+const step1 = useValidation();
+const fields = {
+  token: step1.field(() => token.value, checks.required),
+  username: step1.field(() => username.value, checks.required, checks.username),
+  password: step1.field(
+    () => password.value,
+    checks.required,
+    (v) =>
+      String(v).length < MIN_PASSWORD_LENGTH
+        ? { key: "auth.setup.passwordTooShort", params: { min: MIN_PASSWORD_LENGTH } }
+        : undefined,
+  ),
+  repeat: step1.field(
+    () => repeat.value,
+    checks.required,
+    (v) => (v !== password.value ? { key: "auth.setup.passwordMismatch" } : undefined),
+  ),
+};
+const step2 = useValidation();
+const codeField = step2.field(() => code.value, checks.required, checks.code);
 
 async function run(action: () => Promise<void>) {
   busy.value = true;
@@ -40,13 +57,14 @@ async function run(action: () => Promise<void>) {
 /** Step 1: checks the token and gets the QR code for the optional 2FA step. */
 const next = () =>
   run(async () => {
-    if (passwordProblem.value) return;
+    if (!step1.validate()) return;
     totp.value = await api.setupTotp({ token: token.value.trim(), username: username.value });
   });
 
 /** Step 2: with a code 2FA is enabled; without, it is skipped. */
 const finish = (withCode: boolean) =>
   run(async () => {
+    if (withCode && !step2.validate()) return;
     await api.setup({
       token: token.value.trim(),
       username: username.value,
@@ -64,38 +82,73 @@ const finish = (withCode: boolean) =>
       {{ $t("auth.masterKeyMissing") }}
     </p>
 
-    <form v-if="!totp" class="form" @submit.prevent="next">
+    <form v-if="!totp" class="form" novalidate @submit.prevent="next">
       <p class="muted">{{ $t("auth.setup.intro") }}</p>
       <label class="field">
         {{ $t("auth.setup.token") }}
-        <input v-model="token" class="input mono" autocomplete="off" required autofocus />
+        <input
+          v-model="token"
+          v-normalize="normalizers.noSpaces"
+          v-bind="fields.token.attrs.value"
+          class="input mono"
+          autocomplete="off"
+          spellcheck="false"
+          required
+          autofocus
+        />
+        <FieldError :field="fields.token" />
         <span class="field__hint">{{ $t("auth.setup.tokenHint") }}</span>
       </label>
       <label class="field">
         {{ $t("auth.username") }}
-        <input v-model="username" class="input" autocomplete="username" pattern="[A-Za-z0-9._@\-]+" required />
+        <input
+          v-model="username"
+          v-normalize="normalizers.noSpaces"
+          v-bind="fields.username.attrs.value"
+          class="input"
+          autocomplete="username"
+          autocapitalize="off"
+          spellcheck="false"
+          required
+        />
+        <FieldError :field="fields.username" />
       </label>
       <label class="field">
         {{ $t("auth.password") }}
-        <input v-model="password" class="input" type="password" autocomplete="new-password" required />
+        <input
+          v-model="password"
+          v-bind="fields.password.attrs.value"
+          class="input"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
+        <FieldError :field="fields.password" />
         <span class="field__hint">{{ $t("auth.setup.passwordHint", { min: MIN_PASSWORD_LENGTH }) }}</span>
       </label>
       <label class="field">
         {{ $t("auth.setup.repeat") }}
-        <input v-model="repeat" class="input" type="password" autocomplete="new-password" required />
+        <input
+          v-model="repeat"
+          v-bind="fields.repeat.attrs.value"
+          class="input"
+          type="password"
+          autocomplete="new-password"
+          required
+        />
+        <FieldError :field="fields.repeat" />
       </label>
-      <p v-if="passwordProblem" class="tone-warning">{{ $t(passwordProblem, { min: MIN_PASSWORD_LENGTH }) }}</p>
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-      <button type="submit" class="btn btn--primary" :disabled="busy || !!passwordProblem">
+      <button type="submit" class="btn btn--primary" :disabled="busy">
         {{ $t("auth.setup.next") }}
       </button>
     </form>
 
-    <form v-else class="form" @submit.prevent="finish(true)">
+    <form v-else class="form" novalidate @submit.prevent="finish(true)">
       <h2>{{ $t("auth.totp.title") }}</h2>
       <p class="muted">{{ $t("auth.totp.recommended") }}</p>
       <TotpEnroll :totp="totp" />
-      <CodeInput v-model="code" :label="$t('auth.code')" required />
+      <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.setup.finishWithTotp") }}</button>
       <button type="button" class="btn btn--ghost" :disabled="busy" @click="finish(false)">

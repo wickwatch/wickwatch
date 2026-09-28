@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { AttributionMode, ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
+// A plain function without the schema library, unlike the core's main entry.
+import { validateParameters } from "@wickwatch/core/parameters";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -12,9 +14,11 @@ import {
   type ConfigInput,
   type InstanceConfigRow,
 } from "../api";
+import FieldError from "../components/FieldError.vue";
 import ParameterField from "../components/ParameterField.vue";
 import { formatDateTime } from "../format";
 import { system } from "../system";
+import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
 /** Same order as the core's ATTRIBUTION_MODES; the web app imports only types from the core. */
 const MODES: AttributionMode[] = ["auto", "label", "label-pattern", "account-symbol"];
@@ -66,6 +70,42 @@ const algoGroups = computed(() => {
   return [...byName.entries()];
 });
 const usesLabel = computed(() => mode.value === "label" || mode.value === "label-pattern");
+
+const form = useValidation();
+const nameField = form.field(() => name.value, checks.required, checks.instanceName);
+const accountField = form.field(() => accountId.value, checks.required);
+const algoField = form.field(() => algoId.value, checks.required);
+const symbolField = form.field(
+  () => symbol.value,
+  checks.required,
+  checks.oneOf(() => symbols.value, "validation.unknownSymbol"),
+);
+const periodField = form.field(
+  () => period.value,
+  checks.required,
+  checks.oneOf(() => periods.value, "validation.unknownPeriod"),
+);
+const labelField = form.field(
+  () => orderLabel.value,
+  () => (mode.value === "label-pattern" ? checks.required(orderLabel.value) : undefined),
+  () => (mode.value === "label-pattern" ? checks.regex(orderLabel.value) : undefined),
+);
+const sent = ref(false);
+/** Problems the server reported, else the same checks locally; empty values only once the form was sent. */
+const shownIssues = computed(() => {
+  const result = new Map<string, ParameterIssueCode | "required">(issues.value);
+  for (const { parameter, code } of validateParameters(values.value, schema.value).errors) {
+    const value = values.value[parameter];
+    if (result.has(parameter)) continue;
+    if (value === "" || value === undefined) {
+      if (sent.value) result.set(parameter, "required");
+    } else result.set(parameter, code);
+  }
+  return result;
+});
+/** The broker's spelling, e.g. `US100.cash` for `us100.CASH`. */
+const canonical = (value: string, options: string[]) =>
+  options.find((o) => o === value) ?? options.find((o) => o.toLowerCase() === value.toLowerCase()) ?? value;
 
 const defaults = (params: ParameterSchema[]) =>
   Object.fromEntries(params.filter((p) => p.default !== undefined).map((p) => [p.name, p.default]));
@@ -131,7 +171,15 @@ onMounted(async () => {
 });
 
 async function save() {
+  sent.value = true;
+  const fieldsOk = form.validate();
+  if (!fieldsOk || shownIssues.value.size) {
+    if (fieldsOk) document.querySelector<HTMLElement>(`#param-${String([...shownIssues.value.keys()][0])}`)?.focus();
+    return;
+  }
   if (algoId.value === undefined || accountId.value === undefined) return;
+  symbol.value = canonical(symbol.value.trim(), symbols.value);
+  period.value = canonical(period.value.trim(), periods.value);
   busy.value = true;
   error.value = undefined;
   issues.value = new Map();
@@ -153,11 +201,21 @@ async function save() {
       query: { saved: String(saved.config.version) },
     });
   } catch (e) {
+    const onField = form.fromServer(e, {
+      name: nameField,
+      "config/symbol": symbolField,
+      "config/period": periodField,
+      "config/attribution/orderLabel": labelField,
+    });
     if (e instanceof ApiError && e.details.issues) {
       issues.value = new Map(e.details.issues.map((i) => [i.parameter, i.code]));
     }
     const unknown = e instanceof ApiError ? (e.details.unknown ?? []) : [];
-    error.value = unknown.length ? t("instanceForm.unknownParameters", { names: unknown.join(", ") }) : t(errorKey(e));
+    error.value = unknown.length
+      ? t("instanceForm.unknownParameters", { names: unknown.join(", ") })
+      : onField
+        ? undefined
+        : t(errorKey(e));
   } finally {
     busy.value = false;
   }
@@ -193,34 +251,57 @@ const algoLabel = (a: AlgoRow) =>
             {{ $t("instanceForm.name") }}
             <input
               v-model.trim="name"
+              v-normalize="normalizers.slug"
+              v-bind="nameField.attrs.value"
               class="input mono"
               required
               maxlength="63"
-              pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?"
               autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
               :disabled="editing !== undefined"
             />
+            <FieldError :field="nameField" />
             <span class="field__hint">{{ $t("instanceForm.nameHint") }}</span>
           </label>
           <label class="field">
             {{ $t("instanceForm.account") }}
-            <select v-model="accountId" class="input" required :disabled="editing !== undefined">
+            <select
+              v-model="accountId"
+              v-bind="accountField.attrs.value"
+              class="input"
+              required
+              :disabled="editing !== undefined"
+            >
               <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.displayName }} · {{ a.number }}</option>
             </select>
+            <FieldError :field="accountField" />
             <span class="field__hint">{{ editing ? $t("instanceForm.fixedHint") : "" }}</span>
           </label>
           <label class="field">
             {{ $t("instanceForm.algo") }}
-            <select v-model="algoId" class="input" required>
+            <select v-model="algoId" v-bind="algoField.attrs.value" class="input" required>
               <optgroup v-for="[algoName, versions] in algoGroups" :key="algoName" :label="algoName">
                 <option v-for="a in versions" :key="a.id" :value="a.id">{{ algoName }} {{ algoLabel(a) }}</option>
               </optgroup>
             </select>
+            <FieldError :field="algoField" />
             <span v-if="algo?.fullAccess" class="field__hint tone-warning">{{ $t("instanceForm.fullAccess") }}</span>
           </label>
           <label class="field">
             {{ $t("instanceForm.symbol") }}
-            <input v-model.trim="symbol" class="input mono" list="symbols-list" required autocomplete="off" />
+            <input
+              v-model.trim="symbol"
+              v-normalize="normalizers.noSpaces"
+              v-bind="symbolField.attrs.value"
+              class="input mono"
+              list="symbols-list"
+              required
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <FieldError :field="symbolField" />
             <span class="field__hint" :class="{ 'tone-negative': symbolsError }">
               {{
                 symbolsError
@@ -231,7 +312,18 @@ const algoLabel = (a: AlgoRow) =>
           </label>
           <label class="field">
             {{ $t("instanceForm.period") }}
-            <input v-model.trim="period" class="input mono" list="periods-list" required autocomplete="off" />
+            <input
+              v-model.trim="period"
+              v-normalize="normalizers.noSpaces"
+              v-bind="periodField.attrs.value"
+              class="input mono"
+              list="periods-list"
+              required
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <FieldError :field="periodField" />
           </label>
         </div>
         <datalist id="symbols-list">
@@ -257,7 +349,7 @@ const algoLabel = (a: AlgoRow) =>
               :key="p.name"
               v-model="values[p.name]"
               :param="p"
-              :issue="issues.get(p.name)"
+              :issue="shownIssues.get(p.name)"
               symbols-list="symbols-list"
               periods-list="periods-list"
             />
@@ -279,11 +371,15 @@ const algoLabel = (a: AlgoRow) =>
             {{ mode === "label" ? $t("instanceForm.orderLabel") : $t("instanceForm.orderPattern") }}
             <input
               v-model="orderLabel"
+              v-bind="labelField.attrs.value"
               class="input mono"
+              maxlength="200"
               :required="mode === 'label-pattern'"
               :placeholder="mode === 'label' ? name : ''"
               autocomplete="off"
+              spellcheck="false"
             />
+            <FieldError :field="labelField" />
           </label>
         </div>
       </section>

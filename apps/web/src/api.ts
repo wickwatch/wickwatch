@@ -18,8 +18,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
-    /** Parameter problems of a rejected configuration (`invalid_parameters`). */
-    readonly details: { issues?: ParameterIssue[]; unknown?: string[] } = {},
+    /** Parameter problems of a rejected configuration (`invalid_parameters`); `message` names a rejected field. */
+    readonly details: { issues?: ParameterIssue[]; unknown?: string[]; message?: string } = {},
   ) {
     super(`API error ${status}: ${code}`);
   }
@@ -51,6 +51,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(res.status, code, {
       ...(details.issues ? { issues: details.issues } : {}),
       ...(details.unknown ? { unknown: details.unknown } : {}),
+      ...(typeof details.message === "string" ? { message: details.message } : {}),
     });
   }
   return body as T;

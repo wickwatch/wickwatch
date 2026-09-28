@@ -5,7 +5,9 @@ import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { api, ApiError, errorKey } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import FieldError from "../components/FieldError.vue";
 import { isAdmin } from "../session";
+import { checks, useValidation } from "../validation";
 
 const route = useRoute();
 const router = useRouter();
@@ -129,8 +131,25 @@ async function run(action: () => Promise<void>) {
   }
 }
 
+const v = useValidation();
+const whenDaily = (check: (value: unknown) => ReturnType<typeof checks.required>) => (value: unknown) =>
+  isSet(form.dailyLossPct) ? check(value) : undefined;
+const fields = {
+  name: v.field(() => form.name, checks.required),
+  startDate: v.field(() => form.startDate, checks.required),
+  startBalance: v.field(() => form.startBalance, checks.required, checks.number({ min: 0.01 })),
+  profitTarget: v.field(() => form.profitTargetPct, checks.number({ min: 0 })),
+  dailyLoss: v.field(() => form.dailyLossPct, checks.number({ min: 0.1, max: 100 })),
+  resetTime: v.field(() => form.resetTime, whenDaily(checks.required)),
+  timezone: v.field(() => form.timezone, whenDaily(checks.required), whenDaily(checks.timeZone)),
+  maxLoss: v.field(() => form.maxLossPct, checks.number({ min: 0.1, max: 100 })),
+  tradingDays: v.field(() => form.minTradingDays, checks.number({ min: 0, integer: true })),
+  duration: v.field(() => form.durationDays, checks.number({ min: 1, integer: true })),
+};
+
 const save = () =>
   run(async () => {
+    if (!v.validate()) return;
     await api.saveChallenge(number.value, toProfile());
     await router.push("/");
   });
@@ -150,7 +169,7 @@ const remove = () =>
     <p v-if="!isAdmin" class="tone-warning">{{ $t("error.api.forbidden") }}</p>
     <p v-else-if="loading" class="muted">{{ $t("overview.loading") }}</p>
 
-    <form v-else class="form panel" @submit.prevent="save">
+    <form v-else class="form panel" novalidate @submit.prevent="save">
       <label v-if="templates.length" class="field">
         {{ $t("challenge.template") }}
         <select v-model="form.templateId" class="input" @change="applyTemplate">
@@ -168,7 +187,8 @@ const remove = () =>
         <legend>{{ $t("challenge.basics") }}</legend>
         <label class="field">
           {{ $t("challenge.name") }}
-          <input v-model="form.name" class="input" required maxlength="100" />
+          <input v-model="form.name" v-bind="fields.name.attrs.value" class="input" required maxlength="100" />
+          <FieldError :field="fields.name" />
         </label>
         <label class="field">
           {{ $t("challenge.phase") }}
@@ -177,18 +197,21 @@ const remove = () =>
         <div class="grid">
           <label class="field">
             {{ $t("challenge.startDate") }}
-            <input v-model="form.startDate" class="input" type="date" required />
+            <input v-model="form.startDate" v-bind="fields.startDate.attrs.value" class="input" type="date" required />
+            <FieldError :field="fields.startDate" />
           </label>
           <label class="field">
             {{ $t("challenge.startBalance") }}
             <input
               v-model.number="form.startBalance"
+              v-bind="fields.startBalance.attrs.value"
               class="input mono"
               type="number"
               min="0.01"
               step="0.01"
               required
             />
+            <FieldError :field="fields.startBalance" />
           </label>
         </div>
       </fieldset>
@@ -199,11 +222,28 @@ const remove = () =>
         <div class="grid">
           <label class="field">
             {{ $t("challenge.rule.profitTarget") }} (%)
-            <input v-model.number="form.profitTargetPct" class="input mono" type="number" min="0" step="0.1" />
+            <input
+              v-model.number="form.profitTargetPct"
+              v-bind="fields.profitTarget.attrs.value"
+              class="input mono"
+              type="number"
+              min="0"
+              step="0.1"
+            />
+            <FieldError :field="fields.profitTarget" />
           </label>
           <label class="field">
             {{ $t("challenge.rule.dailyLoss") }} (%)
-            <input v-model.number="form.dailyLossPct" class="input mono" type="number" min="0.1" max="100" step="0.1" />
+            <input
+              v-model.number="form.dailyLossPct"
+              v-bind="fields.dailyLoss.attrs.value"
+              class="input mono"
+              type="number"
+              min="0.1"
+              max="100"
+              step="0.1"
+            />
+            <FieldError :field="fields.dailyLoss" />
           </label>
         </div>
         <template v-if="isSet(form.dailyLossPct)">
@@ -216,11 +256,27 @@ const remove = () =>
           <div class="grid">
             <label class="field">
               {{ $t("challenge.resetTime") }}
-              <input v-model="form.resetTime" class="input mono" type="time" required />
+              <input
+                v-model="form.resetTime"
+                v-bind="fields.resetTime.attrs.value"
+                class="input mono"
+                type="time"
+                required
+              />
+              <FieldError :field="fields.resetTime" />
             </label>
             <label class="field">
               {{ $t("challenge.timezone") }}
-              <input v-model="form.timezone" class="input mono" list="time-zones" required />
+              <input
+                v-model.trim="form.timezone"
+                v-bind="fields.timezone.attrs.value"
+                class="input mono"
+                list="time-zones"
+                required
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <FieldError :field="fields.timezone" />
               <datalist id="time-zones">
                 <option v-for="tz in TIME_ZONES" :key="tz" :value="tz" />
               </datalist>
@@ -237,7 +293,16 @@ const remove = () =>
         <div class="grid">
           <label class="field">
             {{ $t("challenge.rule.maxLoss") }} (%)
-            <input v-model.number="form.maxLossPct" class="input mono" type="number" min="0.1" max="100" step="0.1" />
+            <input
+              v-model.number="form.maxLossPct"
+              v-bind="fields.maxLoss.attrs.value"
+              class="input mono"
+              type="number"
+              min="0.1"
+              max="100"
+              step="0.1"
+            />
+            <FieldError :field="fields.maxLoss" />
           </label>
           <label v-if="isSet(form.maxLossPct)" class="field">
             {{ $t("challenge.maxLossType") }}
@@ -250,11 +315,27 @@ const remove = () =>
         <div class="grid">
           <label class="field">
             {{ $t("challenge.rule.tradingDays") }}
-            <input v-model.number="form.minTradingDays" class="input mono" type="number" min="0" step="1" />
+            <input
+              v-model.number="form.minTradingDays"
+              v-bind="fields.tradingDays.attrs.value"
+              class="input mono"
+              type="number"
+              min="0"
+              step="1"
+            />
+            <FieldError :field="fields.tradingDays" />
           </label>
           <label class="field">
             {{ $t("challenge.durationDays") }}
-            <input v-model.number="form.durationDays" class="input mono" type="number" min="1" step="1" />
+            <input
+              v-model.number="form.durationDays"
+              v-bind="fields.duration.attrs.value"
+              class="input mono"
+              type="number"
+              min="1"
+              step="1"
+            />
+            <FieldError :field="fields.duration" />
           </label>
         </div>
       </fieldset>

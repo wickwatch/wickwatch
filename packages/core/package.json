@@ -6,7 +6,8 @@
   "license": "AGPL-3.0-only",
   "exports": {
     ".": "./src/index.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./parameters": "./src/parameters.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

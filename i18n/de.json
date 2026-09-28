@@ -207,6 +207,7 @@
     }
   },
   "parameterIssue": {
+    "required": "Pflichtfeld",
     "invalid_type": "Falscher Typ",
     "below_min": "Unter dem Minimum",
     "above_max": "Über dem Maximum",
@@ -528,5 +529,27 @@
     "confirmApplyRunning": "Den laufenden Bot mit Konfigurationsversion {version} neu starten? Offene Positionen bleiben offen; ob der Bot sie nach dem Neustart weiter verwaltet, hängt vom Bot ab.",
     "elsewhere": "Sicherstellen, dass derselbe Bot nicht zusätzlich woanders auf diesem Konto läuft (z. B. auf einem anderen Server).",
     "done": "Konfigurationsversion {version} übernommen; Status: {status}."
+  },
+  "validation": {
+    "required": "Pflichtfeld.",
+    "characters": "Hier nicht erlaubt: {chars}",
+    "instanceName": "Kleinbuchstaben a–z, Ziffern und Bindestriche; beginnt und endet mit Buchstabe oder Ziffer, höchstens 63 Zeichen.",
+    "version": "Buchstaben, Ziffern, Punkte, Binde- und Unterstriche; beginnt mit Buchstabe oder Ziffer.",
+    "username": "Nur Buchstaben, Ziffern und . _ {'@'} -",
+    "code": "6 bis 8 Ziffern.",
+    "accountNumber": "Nur Ziffern.",
+    "minLength": "Mindestens {min} Zeichen.",
+    "mismatch": "Stimmt nicht überein.",
+    "regex": "Kein gültiger regulärer Ausdruck.",
+    "timeZone": "Unbekannte Zeitzone, z. B. Europe/Berlin.",
+    "unknownSymbol": "Dieses Konto bietet das Symbol nicht an.",
+    "unknownPeriod": "Unbekannter Zeitrahmen.",
+    "number": "Bitte eine Zahl eingeben.",
+    "integer": "Bitte eine ganze Zahl eingeben.",
+    "min": "Mindestens {min}.",
+    "max": "Höchstens {max}.",
+    "rejected": "Der Server hat diesen Wert nicht angenommen.",
+    "algoFile": "Bitte eine .algo-Datei wählen.",
+    "chooseAccount": "Bitte ein Konto wählen."
   }
 }

@@ -2,8 +2,10 @@
 import { ref } from "vue";
 import { api, errorKey, type TotpSetup } from "../api";
 import CodeInput from "../components/CodeInput.vue";
+import FieldError from "../components/FieldError.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { currentUser, loadSession } from "../session";
+import { checks, useValidation } from "../validation";
 
 const totp = ref<TotpSetup>();
 const code = ref("");
@@ -30,19 +32,28 @@ const startEnable = () =>
     totp.value = await api.totpSetup();
   });
 
+const enableForm = useValidation();
+const codeField = enableForm.field(() => code.value, checks.required, checks.code);
+const disableForm = useValidation();
+const passwordField = disableForm.field(() => password.value, checks.required);
+
 const confirmEnable = () =>
   run(async () => {
+    if (!enableForm.validate()) return;
     await api.totpEnable(code.value);
     totp.value = undefined;
     code.value = "";
+    enableForm.reset();
     await loadSession();
     notice.value = "account.totpEnabledNotice";
   });
 
 const disable = () =>
   run(async () => {
+    if (!disableForm.validate()) return;
     await api.totpDisable(password.value);
     password.value = "";
+    disableForm.reset();
     await loadSession();
     notice.value = "account.totpDisabledNotice";
   });
@@ -75,17 +86,25 @@ const disable = () =>
         <button v-if="!totp" type="button" class="btn btn--primary" :disabled="busy" @click="startEnable">
           {{ $t("account.enableTotp") }}
         </button>
-        <form v-else class="form" @submit.prevent="confirmEnable">
+        <form v-else class="form" novalidate @submit.prevent="confirmEnable">
           <TotpEnroll :totp="totp" />
-          <CodeInput v-model="code" :label="$t('auth.code')" required />
+          <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
           <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("account.confirmTotp") }}</button>
         </form>
       </template>
 
-      <form v-else class="form" @submit.prevent="disable">
+      <form v-else class="form" novalidate @submit.prevent="disable">
         <label class="field">
           {{ $t("account.passwordToDisable") }}
-          <input v-model="password" class="input" type="password" autocomplete="current-password" required />
+          <input
+            v-model="password"
+            v-bind="passwordField.attrs.value"
+            class="input"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <FieldError :field="passwordField" />
         </label>
         <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("account.disableTotp") }}</button>
       </form>

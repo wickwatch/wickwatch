@@ -3,7 +3,9 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type AccountRow, type CredentialRow, type OfferedAccount } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import FieldError from "../components/FieldError.vue";
 import { isAdmin } from "../session";
+import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
 const { t } = useI18n();
 const accounts = ref<AccountRow[]>([]);
@@ -77,8 +79,15 @@ const choose = (o: OfferedAccount) => {
   adding.displayName = o.name ?? "";
 };
 const offered = ref<OfferedAccount[]>();
+const addForm = useValidation();
+const loginChoice = addForm.field(() => adding.credentialId || "", checks.required);
+const accountChoice = addForm.field(
+  () => (offered.value ? adding.number : "-"),
+  (v) => (v ? undefined : { key: "validation.chooseAccount" }),
+);
 const fetchOffered = () =>
   run(async () => {
+    if (!addForm.validate()) return;
     offered.value = await api.brokerAccounts(adding.credentialId);
     const first = offered.value.find(selectable);
     adding.number = first?.number ?? "";
@@ -86,6 +95,7 @@ const fetchOffered = () =>
   });
 const addAccount = () =>
   run(async () => {
+    if (!addForm.validate()) return;
     await api.createAccount({
       number: adding.number,
       displayName: adding.displayName.trim() || adding.number,
@@ -93,21 +103,32 @@ const addAccount = () =>
     });
     offered.value = undefined;
     Object.assign(adding, { credentialId: 0, number: "", displayName: "" });
+    addForm.reset();
   }, t("accounts.added"));
 
 // --- logins
 const newLogin = reactive({ label: "", login: "", secret: "" });
+const loginForm = useValidation();
+const labelField = loginForm.field(() => newLogin.label, checks.required);
+const loginField = loginForm.field(() => newLogin.login, checks.required);
+const secretField = loginForm.field(() => newLogin.secret, checks.required);
 const addLogin = () =>
   run(async () => {
-    await api.createCredential({ ...newLogin });
+    if (!loginForm.validate()) return;
+    await api.createCredential({ ...newLogin, label: newLogin.label.trim() });
     Object.assign(newLogin, { label: "", login: "", secret: "" });
+    loginForm.reset();
   }, t("accounts.loginAdded"));
 
 const changingSecret = reactive({ id: 0, secret: "" });
+const secretForm = useValidation();
+const newSecretField = secretForm.field(() => changingSecret.secret, checks.required);
 const saveSecret = () =>
   run(async () => {
+    if (!secretForm.validate()) return;
     await api.updateCredential(changingSecret.id, { secret: changingSecret.secret });
     Object.assign(changingSecret, { id: 0, secret: "" });
+    secretForm.reset();
   }, t("accounts.passwordChanged"));
 </script>
 
@@ -202,15 +223,22 @@ const saveSecret = () =>
         <section class="panel card" aria-labelledby="add-title">
           <h2 id="add-title">{{ $t("accounts.addAccount") }}</h2>
           <p v-if="!credentials.length" class="muted">{{ $t("accounts.needLogin") }}</p>
-          <form v-else class="form" @submit.prevent="offered ? addAccount() : fetchOffered()">
+          <form v-else class="form" novalidate @submit.prevent="offered ? addAccount() : fetchOffered()">
             <label class="field">
               {{ $t("accounts.login") }}
-              <select v-model="adding.credentialId" class="input" required @change="offered = undefined">
+              <select
+                v-model="adding.credentialId"
+                v-bind="loginChoice.attrs.value"
+                class="input"
+                required
+                @change="offered = undefined"
+              >
                 <option :value="0" disabled>{{ $t("accounts.chooseLogin") }}</option>
                 <option v-for="c in credentials" :key="c.id" :value="c.id">
                   {{ $t("accounts.loginOption", { label: c.label, login: c.login }) }}
                 </option>
               </select>
+              <FieldError :field="loginChoice" />
             </label>
             <template v-if="offered">
               <fieldset class="offered">
@@ -218,6 +246,7 @@ const saveSecret = () =>
                 <p v-if="!offered.length" class="muted">{{ $t("accounts.noneOffered") }}</p>
                 <label v-for="o in offered" :key="o.number" class="offered__item" :class="{ muted: !selectable(o) }">
                   <input
+                    v-bind="accountChoice.attrs.value"
                     type="radio"
                     name="offered"
                     :value="o.number"
@@ -234,6 +263,7 @@ const saveSecret = () =>
                   <span v-if="o.added">{{ $t("accounts.alreadyAdded") }}</span>
                   <span v-else-if="o.active === false">{{ $t("accounts.inactive") }}</span>
                 </label>
+                <FieldError :field="accountChoice" />
               </fieldset>
               <label class="field">
                 {{ $t("accounts.name") }}
@@ -241,10 +271,10 @@ const saveSecret = () =>
               </label>
             </template>
             <div class="buttons">
-              <button v-if="!offered" type="submit" class="btn" :disabled="busy || !adding.credentialId">
+              <button v-if="!offered" type="submit" class="btn" :disabled="busy">
                 {{ $t("accounts.fetchOffered") }}
               </button>
-              <button v-else type="submit" class="btn btn--primary" :disabled="busy || !adding.number">
+              <button v-else type="submit" class="btn btn--primary" :disabled="busy">
                 {{ $t("accounts.addAccount") }}
               </button>
             </div>
@@ -270,17 +300,19 @@ const saveSecret = () =>
                   <td class="mono">{{ c.login }}</td>
                   <td class="mono num">{{ c.accounts }}</td>
                   <td class="actions">
-                    <form v-if="changingSecret.id === c.id" class="inline" @submit.prevent="saveSecret">
+                    <form v-if="changingSecret.id === c.id" class="inline" novalidate @submit.prevent="saveSecret">
                       <label class="visually-hidden" :for="`secret-${c.id}`">{{ $t("accounts.newPassword") }}</label>
                       <input
                         :id="`secret-${c.id}`"
                         v-model="changingSecret.secret"
+                        v-bind="newSecretField.attrs.value"
                         class="input"
                         type="password"
                         autocomplete="new-password"
                         :placeholder="$t('accounts.newPassword')"
                         required
                       />
+                      <FieldError :field="newSecretField" />
                       <button type="submit" class="btn btn--primary btn--small" :disabled="busy">
                         {{ $t("action.save") }}
                       </button>
@@ -308,20 +340,46 @@ const saveSecret = () =>
             </table>
           </div>
 
-          <form class="form" @submit.prevent="addLogin">
+          <form class="form" novalidate @submit.prevent="addLogin">
             <h3>{{ $t("accounts.addLogin") }}</h3>
             <div class="grid">
               <label class="field">
                 {{ $t("accounts.label") }}
-                <input v-model="newLogin.label" class="input" maxlength="100" required />
+                <input
+                  v-model="newLogin.label"
+                  v-bind="labelField.attrs.value"
+                  class="input"
+                  maxlength="100"
+                  required
+                />
+                <FieldError :field="labelField" />
               </label>
               <label class="field">
                 {{ $t("accounts.loginName") }}
-                <input v-model="newLogin.login" class="input" maxlength="200" autocomplete="off" required />
+                <input
+                  v-model="newLogin.login"
+                  v-normalize="normalizers.noSpaces"
+                  v-bind="loginField.attrs.value"
+                  class="input"
+                  maxlength="200"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  required
+                />
+                <FieldError :field="loginField" />
               </label>
               <label class="field">
                 {{ $t("auth.password") }}
-                <input v-model="newLogin.secret" class="input" type="password" autocomplete="new-password" required />
+                <input
+                  v-model="newLogin.secret"
+                  v-bind="secretField.attrs.value"
+                  class="input"
+                  type="password"
+                  autocomplete="new-password"
+                  required
+                />
+                <FieldError :field="secretField" />
               </label>
             </div>
             <p class="field__hint">{{ $t("accounts.encrypted") }}</p>

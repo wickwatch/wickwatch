@@ -170,6 +170,16 @@ h2 {
   font-size: var(--ww-size-xs);
 }
 
+.field__error {
+  color: var(--ww-negative);
+  font-size: var(--ww-size-xs);
+  font-weight: 600;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--ww-negative);
+}
+
 .input {
   min-height: var(--ww-touch-target);
   padding: var(--ww-space-2) var(--ww-space-3);

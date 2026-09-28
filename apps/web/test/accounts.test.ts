@@ -62,6 +62,36 @@ describe("AccountsView", () => {
     expect(removeLogin?.attributes("disabled")).toBeDefined();
   });
 
+  it("marks the empty fields of a new login instead of sending it, and clears them after saving", async () => {
+    session.value = {
+      setupRequired: false,
+      masterKeyConfigured: true,
+      user: { username: "a", role: "admin", totpEnabled: false },
+    };
+    const wrapper = await render();
+    const form = wrapper.findAll("form").at(-1);
+    await form?.trigger("submit");
+    await flushPromises();
+    expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
+    expect(form?.findAll(".field__error").map((e) => e.text())).toEqual(["Required.", "Required.", "Required."]);
+
+    const inputs = form?.findAll("input") ?? [];
+    await inputs[0]?.setValue("Spotware demo");
+    await inputs[1]?.setValue(" me@example.com ");
+    await inputs[2]?.setValue("secret");
+    expect((inputs[1]?.element as HTMLInputElement).value).toBe("me@example.com");
+    await form?.trigger("submit");
+    await flushPromises();
+    const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body))).toEqual({
+      label: "Spotware demo",
+      login: "me@example.com",
+      secret: "secret",
+    });
+    // The cleared form shows no "Required." until the next attempt.
+    expect(form?.findAll(".field__error")).toHaveLength(0);
+  });
+
   it("shows viewers the accounts only, without actions or logins", async () => {
     session.value = {
       setupRequired: false,
