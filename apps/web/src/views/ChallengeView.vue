@@ -45,7 +45,10 @@ const form = reactive({
   maxLossType: "static" as "static" | "trailing",
   minTradingDays: undefined as number | undefined,
   durationDays: undefined as number | undefined,
+  guardOn: false,
+  guardPct: 80 as number | undefined,
 });
+const hasLossLimit = computed(() => isSet(form.dailyLossPct) || isSet(form.maxLossPct));
 
 function applyRules(rules: ChallengeRules) {
   form.profitTargetPct = rules.profitTargetPct || undefined;
@@ -98,6 +101,7 @@ function toProfile(): ChallengeProfile {
     startDate: form.startDate,
     startBalance: form.startBalance ?? 0,
     rules,
+    ...(form.guardOn && hasLossLimit.value && isSet(form.guardPct) ? { guard: { usagePct: form.guardPct } } : {}),
   };
 }
 
@@ -112,6 +116,8 @@ onMounted(async () => {
     form.startDate = profile.startDate;
     form.startBalance = profile.startBalance;
     applyRules(profile.rules);
+    form.guardOn = profile.guard !== undefined;
+    form.guardPct = profile.guard?.usagePct ?? 80;
   } catch (e) {
     if (!(e instanceof ApiError && e.status === 404)) error.value = errorKey(e);
   } finally {
@@ -145,6 +151,11 @@ const fields = {
   maxLoss: v.field(() => form.maxLossPct, checks.number({ min: 0.1, max: 100 })),
   tradingDays: v.field(() => form.minTradingDays, checks.number({ min: 0, integer: true })),
   duration: v.field(() => form.durationDays, checks.number({ min: 1, integer: true })),
+  guardPct: v.field(
+    () => form.guardPct,
+    (value) => (form.guardOn ? checks.required(value) : undefined),
+    (value) => (form.guardOn ? checks.number({ min: 10, max: 100, integer: true })(value) : undefined),
+  ),
 };
 
 const save = () =>
@@ -340,6 +351,31 @@ const remove = () =>
         </div>
       </fieldset>
 
+      <fieldset>
+        <legend>{{ $t("challenge.guard.title") }}</legend>
+        <p v-if="!hasLossLimit" class="field__hint">{{ $t("challenge.guard.needsLimit") }}</p>
+        <template v-else>
+          <label class="check">
+            <input v-model="form.guardOn" type="checkbox" />
+            {{ $t("challenge.guard.enable") }}
+          </label>
+          <label v-if="form.guardOn" class="field">
+            {{ $t("challenge.guard.usage") }}
+            <input
+              v-model.number="form.guardPct"
+              v-bind="fields.guardPct.attrs.value"
+              class="input mono"
+              type="number"
+              min="10"
+              max="100"
+              step="1"
+            />
+            <FieldError :field="fields.guardPct" />
+          </label>
+          <p class="field__hint">{{ $t("challenge.guard.hint") }}</p>
+        </template>
+      </fieldset>
+
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <div class="actions">
         <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
@@ -432,5 +468,16 @@ p[role="alert"] {
   .form {
     padding: var(--ww-space-4);
   }
+}
+
+.check {
+  display: flex;
+  gap: var(--ww-space-2);
+  align-items: center;
+  font-size: var(--ww-size-sm);
+}
+
+.check input {
+  accent-color: var(--ww-accent);
 }
 </style>

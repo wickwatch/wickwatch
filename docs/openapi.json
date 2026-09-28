@@ -1705,6 +1705,12 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "challenge_guard"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "attribution_ambiguous"
                                 ]
                               },
@@ -5527,6 +5533,19 @@
                           "nullable": true
                         }
                       }
+                    },
+                    "guard": {
+                      "type": "object",
+                      "required": [
+                        "usagePct"
+                      ],
+                      "properties": {
+                        "usagePct": {
+                          "type": "integer",
+                          "minimum": 10,
+                          "maximum": 100
+                        }
+                      }
                     }
                   }
                 }
@@ -5727,6 +5746,19 @@
                         "nullable": true
                       }
                     }
+                  },
+                  "guard": {
+                    "type": "object",
+                    "required": [
+                      "usagePct"
+                    ],
+                    "properties": {
+                      "usagePct": {
+                        "type": "integer",
+                        "minimum": 10,
+                        "maximum": 100
+                      }
+                    }
                   }
                 }
               }
@@ -5893,6 +5925,19 @@
                           "minimum": 1,
                           "maximum": 3650,
                           "nullable": true
+                        }
+                      }
+                    },
+                    "guard": {
+                      "type": "object",
+                      "required": [
+                        "usagePct"
+                      ],
+                      "properties": {
+                        "usagePct": {
+                          "type": "integer",
+                          "minimum": 10,
+                          "maximum": 100
                         }
                       }
                     }

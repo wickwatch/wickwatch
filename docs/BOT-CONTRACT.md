@@ -29,5 +29,5 @@ Notes:
    WW-SETUP {"label":"alpha-ger40-a","positionId":"12345","signal":"long","features":{"atr":38.2,"session":"eu"}}
    ```
    `features` is free-form key/value data; Wickwatch stores it per trade for later analysis (phase 3). Without these lines, setup analysis is not available for the bot.
-5. **Daily equity stop inside the bot.** The dashboard only monitors (polling); the hard protection against breaching daily loss limits must live in the bot. For third-party bots, check whether they have such a setting.
+5. **Daily equity stop inside the bot, one that survives a restart.** The hard protection against breaching daily loss limits must live in the bot, which sees every tick. Take the day-start value from the account history (balance minus today's realised result), not from the equity when the bot starts: bots restart (new configuration, crash, host restart), and a stop that starts counting again at every start lets the day's loss grow past the limit. For bots where you cannot check this (third-party bots), switch on the optional **protection** in the account's challenge profile: Wickwatch then runs the emergency stop when a loss limit is used up to a share you choose, checked every `ACCOUNT_POLL_SECONDS`, once per trading day. It is a second line of defence, not a replacement.
 6. **No secrets in logs.**

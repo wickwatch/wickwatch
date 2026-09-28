@@ -21,7 +21,7 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `CTRADER_CLI` | `local` (`container` in the image) | How Wickwatch runs the cTrader CLI for its own queries (accounts, balances, positions, algo metadata). `local`: `CTRADER_CLI_PATH` on the same machine. `container`: the CLI of `CTRADER_IMAGE` in a throwaway container per call or shell session, through `RUNTIME_ADAPTER=docker`; the Wickwatch image does not contain the proprietary CLI. |
 | `CTRADER_CLI_PATH` | `ctrader-cli` | cTrader CLI executable for `CTRADER_CLI=local`. It must be installed where the server runs. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files. Available: `demo`. |
-| `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. |
+| `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. Also the interval of the optional loss guard of challenge profiles. |
 | `ALGOS_DIR` | `data/algos` | Where uploaded algo files are stored, one folder per name and version (`<name>/<version>/<name>.algo`). Keep it on a persistent volume. |
 | `CHALLENGE_TEMPLATES_DIR` | `templates/challenges` | Directory with challenge templates (`*.json`, see its README). |
 | `WEB_DIST_DIR` | next to the server | Directory of the built web app. Only needed when running the server outside the image. |

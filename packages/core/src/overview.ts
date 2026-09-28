@@ -27,6 +27,8 @@ export interface AccountSnapshot {
   data?: { stats: AccountStats; positions: Position[]; dealsToday: Deal[] };
   error?: AdapterErrorCode;
   challenge?: ChallengeEvaluation;
+  /** The loss guard stopped the account in the current trading day. */
+  guardTripped?: { at: string; rule: string };
 }
 
 export interface OverviewInput {
@@ -161,6 +163,10 @@ function alerts(
         subject: account.number,
         params: { reason: account.error },
       });
+    }
+    if (account.guardTripped) {
+      const params = { rule: account.guardTripped.rule, since: account.guardTripped.at };
+      result.push({ level: "error", code: "challenge_guard", subject: account.number, params });
     }
     const challenge = account.challenge;
     if (!challenge) continue;

@@ -10,6 +10,7 @@ import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
 import { LogTracker } from "./services/log-tracker";
+import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
 import { loadOverview } from "./services/overview";
@@ -64,6 +65,14 @@ try {
     log: app.log,
     intervalMs: config.alertCheckSeconds * 1000,
   });
+  const lossGuard = new LossGuardService({
+    db,
+    adapters,
+    accounts,
+    labelPrefix: config.labelPrefix,
+    log: app.log,
+    intervalMs: config.accountPollSeconds * 1000,
+  });
   const maintenance = new Maintenance({
     db,
     log: app.log,
@@ -74,6 +83,7 @@ try {
     poller.stop();
     notifier.stop();
     maintenance.stop();
+    lossGuard.stop();
   });
 
   if (await needsSetup(db)) {
@@ -95,6 +105,7 @@ try {
   poller.start();
   notifier.start();
   maintenance.start();
+  lossGuard.start();
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(error.message);

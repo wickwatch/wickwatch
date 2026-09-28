@@ -18,4 +18,4 @@ One JSON file per firm and phase. Values must come from the firm's **official ru
 | `tradingDayDefinition` | Informational; Wickwatch counts days with a closed trade |
 | `source`, `asOf` | Link to the official rules and the date they were checked |
 
-Firms differ in exactly these points (reset time and zone, balance vs. equity, static vs. trailing), so check every field. Wickwatch only watches and warns; the hard daily stop belongs into the bot (`docs/BOT-CONTRACT.md`).
+Firms differ in exactly these points (reset time and zone, balance vs. equity, static vs. trailing), so check every field. Wickwatch watches and warns; the hard daily stop belongs into the bot (`docs/BOT-CONTRACT.md`). The optional protection of a profile (not part of templates) lets Wickwatch stop the account itself.

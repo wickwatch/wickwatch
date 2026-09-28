@@ -146,6 +146,20 @@ export interface NotifiedAlertsTable {
   raised_at: string;
 }
 
+/** The loss guard's action for an account and trading day. */
+export interface GuardTripsTable {
+  account_id: number;
+  /** Trading day of the challenge profile, YYYY-MM-DD. */
+  day: string;
+  /** `dailyLoss` or `maxLoss`. */
+  rule: string;
+  /** Share of the limit used when it acted, 0..1+. */
+  usage: number;
+  /** 1 when the emergency stop went through; 0 is retried on the next check. */
+  ok: number;
+  at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -159,4 +173,5 @@ export interface Database {
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;
   notified_alerts: NotifiedAlertsTable;
+  guard_trips: GuardTripsTable;
 }

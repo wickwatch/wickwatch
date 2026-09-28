@@ -22,7 +22,7 @@ export interface PollerOptions {
 /**
  * Samples balance and equity of every account (default every 60 s) and marks trading days from
  * the deals (every 5 min). Keeps per trading day: start, minimum and maximum equity.
- * The dashboard only watches; hard limits belong into the bot (docs/BOT-CONTRACT.md).
+ * Hard limits belong into the bot (docs/BOT-CONTRACT.md); the optional loss guard (loss-guard.ts) acts on these samples.
  */
 export class AccountPoller {
   private timers: ReturnType<typeof setInterval>[] = [];

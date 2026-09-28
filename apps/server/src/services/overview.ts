@@ -16,6 +16,7 @@ import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
 import type { LogTracker } from "./log-tracker";
+import { guardTripToday } from "./loss-guard";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -59,10 +60,13 @@ async function snapshot(
   const from = profile
     ? new Date(Math.min(utcDayStart.getTime(), tradingDayStart(now, resetTime, timeZone).getTime()))
     : utcDayStart;
+  // Shown even when the broker cannot be asked right now.
+  const guardTripped = profile ? await guardTripToday(db, entry.id, profile.rules, now) : undefined;
   const base = {
     number: entry.number,
     displayName: entry.displayName,
     ...(entry.credentialLabel ? { credentialLabel: entry.credentialLabel } : {}),
+    ...(guardTripped ? { guardTripped } : {}),
   };
   try {
     const c = await entry.credentials();

@@ -101,7 +101,7 @@
     "startDate": "Startdatum",
     "startBalance": "Startbalance",
     "rules": "Regeln",
-    "rulesHint": "Feld leer lassen, wenn die Regel nicht gilt. Werte mit den offiziellen Regeln der Firma abgleichen; Wickwatch überwacht nur – der harte Stopp gehört in den Bot.",
+    "rulesHint": "Leere Felder bedeuten: Regel gilt nicht. Werte mit den offiziellen Regeln des Anbieters abgleichen. Wickwatch überwacht; eingreifen tut es nur mit dem Schutz unten.",
     "reference": "Tagesverlust wird gemessen ab",
     "references": {
       "balance-or-equity-at-day-start": "dem höheren Wert aus Balance und Equity zu Tagesbeginn",
@@ -122,7 +122,14 @@
     },
     "durationDays": "Laufzeit (Tage)",
     "delete": "Profil entfernen",
-    "deleteConfirm": "Challenge-Profil von Konto {account} entfernen? Erfasste Handelstage bleiben erhalten."
+    "deleteConfirm": "Challenge-Profil von Konto {account} entfernen? Erfasste Handelstage bleiben erhalten.",
+    "guard": {
+      "title": "Schutz",
+      "enable": "Konto automatisch stoppen (Not-Stopp), wenn ein Verlustlimit ausgeschöpft ist zu",
+      "usage": "Anteil des Tages- oder Gesamtverlustlimits (%)",
+      "hint": "Für Bots ohne verlässlichen eigenen Tagesstopp. Wickwatch prüft alle ACCOUNT_POLL_SECONDS (standardmäßig 60 s) und greift einmal pro Handelstag ein: Es stoppt die Instanzen des Kontos, storniert alle Orders und schließt alle Positionen, auch manuelle. Die Instanzen bleiben gestoppt, bis du sie startest. Eine zweite Verteidigungslinie – sie ersetzt keinen Stopp im Bot.",
+      "needsLimit": "Braucht ein Tages- oder Gesamtverlustlimit."
+    }
   },
   "instance": {
     "positions": "Offene Positionen",
@@ -281,7 +288,8 @@
     "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",
     "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht",
     "attribution_ambiguous": "Konto {subject}: Trades auf {symbol} nicht zuordenbar – {instances} teilen sich das Symbol, eine nutzt account-symbol",
-    "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}"
+    "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}",
+    "challenge_guard": "Konto {subject} wurde um {since} automatisch gestoppt: {rule} hat die Schutzgrenze erreicht"
   },
   "emergencyStop": {
     "title": "Notstopp",

@@ -78,6 +78,7 @@ export const AlertCode = Type.Union([
   Type.Literal("challenge_breached"),
   Type.Literal("challenge_limit"),
   Type.Literal("challenge_passed"),
+  Type.Literal("challenge_guard"),
   Type.Literal("attribution_ambiguous"),
   Type.Literal("attribution_invalid"),
 ]);

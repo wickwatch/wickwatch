@@ -101,7 +101,7 @@
     "startDate": "Start date",
     "startBalance": "Start balance",
     "rules": "Rules",
-    "rulesHint": "Leave a field empty if the rule does not apply. Check the values against the firm's official rules; Wickwatch only watches – the hard stop belongs into the bot.",
+    "rulesHint": "Leave a field empty if the rule does not apply. Check the values against the firm's official rules. Wickwatch watches; it acts only with the protection below switched on.",
     "reference": "Daily loss is measured from",
     "references": {
       "balance-or-equity-at-day-start": "the higher of balance and equity at the day start",
@@ -122,7 +122,14 @@
     },
     "durationDays": "Duration (days)",
     "delete": "Remove profile",
-    "deleteConfirm": "Remove the challenge profile of account {account}? Recorded trading days are kept."
+    "deleteConfirm": "Remove the challenge profile of account {account}? Recorded trading days are kept.",
+    "guard": {
+      "title": "Protection",
+      "enable": "Stop the account automatically (emergency stop) when a loss limit is used up to",
+      "usage": "Share of the daily or max loss limit (%)",
+      "hint": "For bots without a reliable daily stop of their own. Wickwatch checks every ACCOUNT_POLL_SECONDS (default 60 s) and acts once per trading day: it stops the account's instances, cancels all orders and closes all positions, manual ones too. Instances stay stopped until you start them. A second line of defence – it does not replace a stop inside the bot.",
+      "needsLimit": "Needs a daily or max loss limit."
+    }
   },
   "instance": {
     "positions": "Open positions",
@@ -281,7 +288,8 @@
     "challenge_limit": "Account {subject}: {used} % of the {rule} limit used",
     "challenge_passed": "Account {subject}: challenge goals reached",
     "attribution_ambiguous": "Account {subject}: trades on {symbol} cannot be attributed – {instances} share the symbol and one uses account-symbol",
-    "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}"
+    "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}",
+    "challenge_guard": "Account {subject} was stopped automatically at {since}: {rule} reached the protection limit"
   },
   "emergencyStop": {
     "title": "Emergency stop",
