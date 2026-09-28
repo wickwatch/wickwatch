@@ -80,4 +80,30 @@ describe("buildOverview", () => {
       { level: "warning", code: "instance_stopped", subject: "gamma", params: {} },
     ]);
   });
+
+  it("marks running instances that lost their broker connection and raises a warning", () => {
+    const since = "2026-09-25T11:58:00.000Z";
+    const result = buildOverview({
+      time,
+      labelPrefix: "ww",
+      instances: [instance("alpha", "111", "running"), instance("gamma", "111", "stopped")],
+      lastLogs: new Map(),
+      connectionLost: new Map([
+        ["ww-alpha", since],
+        ["ww-gamma", since],
+      ]),
+      accounts: [],
+    });
+    expect(result.instances.map((i) => [i.name, i.connectionLostSince])).toEqual([
+      ["alpha", since],
+      ["gamma", undefined],
+    ]);
+    expect(result.alerts).toContainEqual({
+      level: "warning",
+      code: "instance_disconnected",
+      subject: "alpha",
+      params: { since },
+    });
+    expect(result.alerts.filter((a) => a.subject === "gamma").map((a) => a.code)).toEqual(["instance_stopped"]);
+  });
 });

@@ -1561,11 +1561,32 @@
                                   }
                                 ]
                               },
+                              "event": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "connection_lost"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "connection_restored"
+                                    ]
+                                  }
+                                ]
+                              },
                               "setup": {
                                 "type": "object",
                                 "additionalProperties": {}
                               }
                             }
+                          },
+                          "connectionLostSince": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
                           }
                         }
                       }
@@ -1615,6 +1636,12 @@
                                 "type": "string",
                                 "enum": [
                                   "instance_stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_disconnected"
                                 ]
                               },
                               {
@@ -1955,11 +1982,32 @@
                                     }
                                   ]
                                 },
+                                "event": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "connection_lost"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "connection_restored"
+                                      ]
+                                    }
+                                  ]
+                                },
                                 "setup": {
                                   "type": "object",
                                   "additionalProperties": {}
                                 }
                               }
+                            },
+                            "connectionLostSince": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "Z$"
                             }
                           }
                         },

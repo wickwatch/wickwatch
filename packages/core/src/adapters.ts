@@ -9,6 +9,7 @@ import type {
   Id,
   IsoTime,
   Labels,
+  LogEvent,
   LogLine,
   OptimizationRange,
   ParameterSchema,
@@ -104,6 +105,8 @@ export interface BrokerAdapter {
   launch?(input: LaunchInput): Promise<Launch>;
   /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */
   periods?(): string[];
+  /** Recognises platform events in a line an instance logged, e.g. a lost broker connection. */
+  logEvent?(text: string): LogEvent | undefined;
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
 }

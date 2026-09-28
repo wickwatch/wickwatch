@@ -4,6 +4,7 @@ import { CtraderCliBroker } from "@wickwatch/adapter-ctrader-cli";
 import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
 import { ConfigError, type Config } from "./config";
+import { withLogEvents } from "./services/connection";
 
 export interface Adapters {
   runtime: RuntimeAdapter;
@@ -52,5 +53,6 @@ export function createAdapters(config: Config): Adapters {
     config: pick("CONFIG_ADAPTER", configAdapters, config.adapters.config),
   };
   if (!adapters.runtime || !adapters.broker || !adapters.config) throw new ConfigError(problems);
-  return { runtime: adapters.runtime, broker: adapters.broker, config: adapters.config };
+  const logEvent = adapters.broker.logEvent?.bind(adapters.broker);
+  return { runtime: withLogEvents(adapters.runtime, logEvent), broker: adapters.broker, config: adapters.config };
 }

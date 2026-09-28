@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Alert } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
+import { formatDateTime } from "../format";
 
 defineProps<{ alerts: Alert[] }>();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const message = (alert: Alert) =>
   t(`alert.${alert.code}`, {
@@ -11,6 +12,9 @@ const message = (alert: Alert) =>
     subject: alert.subject,
     ...(alert.code === "account_error" ? { reason: t(`error.adapter.${String(alert.params["reason"])}`) } : {}),
     ...(alert.params["rule"] !== undefined ? { rule: t(`challenge.rule.${String(alert.params["rule"])}`) } : {}),
+    ...(alert.params["since"] !== undefined
+      ? { since: formatDateTime(locale.value, String(alert.params["since"])) }
+      : {}),
   });
 </script>
 

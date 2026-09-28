@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describeBrokerAdapter } from "@wickwatch/core/testing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cliError, CtraderCliBroker, DEFAULT_CTRADER_IMAGE, extractJson, toRunArguments } from "../src";
+import { cliError, CtraderCliBroker, DEFAULT_CTRADER_IMAGE, extractJson, toLogEvent, toRunArguments } from "../src";
 
 const FAKE = join(__dirname, "fake-cli.mjs");
 const c = { login: "user@example.com", secret: "correct horse" };
@@ -211,5 +211,17 @@ describe("helpers", () => {
     expect(cliError("Error: Symbol not found: X").code).toBe("not_found");
     expect(cliError("Missing --ctid in non-interactive mode.").code).toBe("invalid_input");
     expect(cliError("Connecting as a...\nInvalid credentials.").code).toBe("auth_failed");
+  });
+
+  it("recognises connection events in the run output, but not in the cBot's own lines", () => {
+    // Recorded with ctrader-console 5.9.11 while the container was cut off from the network.
+    expect(toLogEvent("28/09/2026 16:34:50.272 | The connection has been lost. Reconnecting...")).toBe(
+      "connection_lost",
+    );
+    expect(toLogEvent("28/09/2026 16:35:18.318 | The connection has been restored.")).toBe("connection_restored");
+    expect(toLogEvent("28/09/2026 16:33:33.537 | The connection has been established.")).toBe("connection_restored");
+    expect(toLogEvent("28/09/2026 16:34:51.374 | Info | The connection has been lost")).toBeUndefined();
+    expect(toLogEvent("28/09/2026 16:33:36.356 | Info | WW-PROBE positions=0 pending=0")).toBeUndefined();
+    expect(new CtraderCliBroker().logEvent("The connection has been lost. Reconnecting...")).toBe("connection_lost");
   });
 });

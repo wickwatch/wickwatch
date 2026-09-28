@@ -25,10 +25,15 @@ export type RuntimeInstance = Type.Static<typeof RuntimeInstance>;
 export const LogLevel = Type.Union([Type.Literal("info"), Type.Literal("warn"), Type.Literal("error")]);
 export type LogLevel = Type.Static<typeof LogLevel>;
 
+/** Platform events a broker adapter recognises in an instance's log. */
+export const LogEvent = Type.Union([Type.Literal("connection_lost"), Type.Literal("connection_restored")]);
+export type LogEvent = Type.Static<typeof LogEvent>;
+
 export const LogLine = Type.Object({
   time: IsoTime,
   text: Type.String(),
   level: Type.Optional(LogLevel),
+  event: Type.Optional(LogEvent),
   /** Parsed `WW-SETUP` payload, see docs/BOT-CONTRACT.md. */
   setup: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
 });

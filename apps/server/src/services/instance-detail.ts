@@ -11,6 +11,7 @@ import type { FastifyBaseLogger } from "fastify";
 import { findAccount, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
+import type { ConnectionTracker } from "./connection";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -20,6 +21,7 @@ export async function loadInstanceDetail(
   directory: AccountDirectory,
   db: Db,
   labelPrefix: string,
+  connections: ConnectionTracker,
   ref: string,
   days: number,
   log: FastifyBaseLogger,
@@ -33,11 +35,13 @@ export async function loadInstanceDetail(
   const number = readLabels(labelPrefix, instance.labels).account;
   const entry = number ? await findAccount(directory, number) : undefined;
 
-  const [lastLog, account, overrides] = await Promise.all([
+  const [lastLog, connectionLost, account, overrides] = await Promise.all([
     lastLine(adapters, ref),
+    connections.lost([instance]),
     entry ? brokerData(adapters, entry, from, now, log) : Promise.resolve(undefined),
     loadOverrides(db),
   ]);
+  const connectionLostSince = connectionLost.get(ref);
   return buildInstanceDetail({
     time: now,
     from,
@@ -46,6 +50,7 @@ export async function loadInstanceDetail(
     allInstances,
     overrides,
     ...(lastLog ? { lastLog } : {}),
+    ...(connectionLostSince ? { connectionLostSince } : {}),
     ...(account ? { account } : {}),
   });
 }

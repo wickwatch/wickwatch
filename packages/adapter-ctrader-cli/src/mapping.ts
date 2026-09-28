@@ -4,6 +4,7 @@ import {
   type AlgoMetadata,
   type BrokerAccount,
   type Deal,
+  type LogEvent,
   type ParameterSchema,
   type ParameterValues,
   type PendingOrder,
@@ -241,4 +242,17 @@ export function toRunArguments(parameters: ParameterValues): string[] {
     if (/\p{Cc}/u.test(text)) throw new AdapterError("invalid_input", `Invalid value for ${name}`);
     return `--${name}=${text}`;
   });
+}
+
+// Platform lines of `run` start with the time or with the message, never with a level like the
+// cBot's own Print output ("<time> | Info | …"), so a bot cannot fake them by accident.
+const PLATFORM_LINE = String.raw`^(?:\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d+ \| )?`;
+const CONNECTION_LOST = new RegExp(`${PLATFORM_LINE}The connection has been lost\\b`);
+const CONNECTION_UP = new RegExp(`${PLATFORM_LINE}The connection has been (?:established|restored)\\b`);
+
+/** "The connection has been lost. Reconnecting..." / "… restored." as logged by `run` (5.9). */
+export function toLogEvent(text: string): LogEvent | undefined {
+  if (CONNECTION_LOST.test(text)) return "connection_lost";
+  if (CONNECTION_UP.test(text)) return "connection_restored";
+  return undefined;
 }

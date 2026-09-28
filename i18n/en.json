@@ -15,7 +15,8 @@
     "restarting": "Restarting",
     "error": "Error",
     "stale": "Data outdated",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "connectionLost": "Connection lost"
   },
   "action": {
     "start": "Start",
@@ -132,6 +133,7 @@
     "back": "← Back to overview",
     "runningFor": "running for {duration}",
     "restarts": "{count} restart | {count} restarts",
+    "connectionLost": "The instance is running but lost its connection to the broker at {since}. It keeps trying to reconnect; prices and orders are not up to date until then.",
     "range": "Time range",
     "days": "{days} days",
     "noPositions": "No open positions.",
@@ -264,6 +266,7 @@
     },
     "instance_error": "{subject}: error, {restarts} restarts",
     "instance_stopped": "{subject} is stopped",
+    "instance_disconnected": "{subject}: connection to the broker lost since {since}",
     "account_error": "Account {subject} not reachable: {reason}",
     "challenge_breached": "Account {subject}: challenge rule breached – {rule}",
     "challenge_limit": "Account {subject}: {used} % of the {rule} limit used",

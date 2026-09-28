@@ -29,6 +29,8 @@ export const InstanceSummary = Type.Object({
   /** Realised P&L since the start of the day plus open P&L, in the account currency. */
   dayPnl: Type.Number(),
   lastLog: Type.Optional(LogLine),
+  /** The instance runs but logged that its broker connection is lost, at this time. */
+  connectionLostSince: Type.Optional(IsoTime),
 });
 export type InstanceSummary = Type.Static<typeof InstanceSummary>;
 
@@ -54,6 +56,7 @@ export type AccountSummary = Type.Static<typeof AccountSummary>;
 export const AlertCode = Type.Union([
   Type.Literal("instance_error"),
   Type.Literal("instance_stopped"),
+  Type.Literal("instance_disconnected"),
   Type.Literal("account_error"),
   Type.Literal("challenge_breached"),
   Type.Literal("challenge_limit"),

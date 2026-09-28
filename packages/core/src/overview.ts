@@ -8,6 +8,7 @@ import type {
   ChallengeEvaluation,
   Deal,
   InstanceSummary,
+  IsoTime,
   LogLine,
   Overview,
   Position,
@@ -33,6 +34,8 @@ export interface OverviewInput {
   labelPrefix: string;
   instances: RuntimeInstance[];
   lastLogs: ReadonlyMap<string, LogLine>;
+  /** When an instance logged that its broker connection is lost, by runtime ref. */
+  connectionLost?: ReadonlyMap<string, IsoTime>;
   accounts: AccountSnapshot[];
   /** Manual attribution per position, see attribution.ts. */
   overrides?: AttributionOverrides;
@@ -50,6 +53,7 @@ export function summarizeInstance(
   broker: { positions: Position[]; dealsToday: Deal[] } | undefined,
   lastLog: LogLine | undefined,
   attributor: Attributor,
+  connectionLostSince?: IsoTime,
 ): InstanceSummary {
   const labels = readLabels(labelPrefix, instance.labels);
   const name = labels.instance ?? instance.ref;
@@ -68,6 +72,8 @@ export function summarizeInstance(
     ...(labels.period ? { period: labels.period } : {}),
     ...(instance.startedAt ? { startedAt: instance.startedAt } : {}),
     ...(lastLog ? { lastLog } : {}),
+    // A stopped instance has no connection to lose.
+    ...(connectionLostSince && instance.status === "running" ? { connectionLostSince } : {}),
   };
 }
 
@@ -79,7 +85,14 @@ export function buildOverview(input: OverviewInput): Overview {
   const instances = input.instances.map((instance) => {
     const account = readLabels(input.labelPrefix, instance.labels).account;
     const data = account ? byNumber.get(account)?.data : undefined;
-    return summarizeInstance(instance, input.labelPrefix, data, input.lastLogs.get(instance.ref), attributor);
+    return summarizeInstance(
+      instance,
+      input.labelPrefix,
+      data,
+      input.lastLogs.get(instance.ref),
+      attributor,
+      input.connectionLost?.get(instance.ref),
+    );
   });
 
   const accounts = input.accounts.map((account): AccountSummary => {
@@ -159,6 +172,9 @@ function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[], attri
       result.push({ level: "error", code: "instance_error", subject: i.name, params });
     } else if (i.status === "stopped") {
       result.push({ level: "warning", code: "instance_stopped", subject: i.name, params: {} });
+    } else if (i.connectionLostSince) {
+      const params = { since: i.connectionLostSince };
+      result.push({ level: "warning", code: "instance_disconnected", subject: i.name, params });
     }
   }
   return result;

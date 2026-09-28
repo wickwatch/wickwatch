@@ -2,7 +2,8 @@
 import type { AccountState, InstanceStatus } from "@wickwatch/core";
 import { computed } from "vue";
 
-const props = defineProps<{ instance?: InstanceStatus; account?: AccountState }>();
+/** `connectionLost`: the instance runs but has no broker connection, which matters more than "running". */
+const props = defineProps<{ instance?: InstanceStatus; account?: AccountState; connectionLost?: boolean }>();
 
 const TONES: Record<string, string> = {
   running: "tone-positive",
@@ -12,9 +13,14 @@ const TONES: Record<string, string> = {
   attention: "tone-warning",
   unknown: "tone-muted",
   idle: "tone-muted",
+  connectionLost: "tone-warning",
 };
 
-const status = computed(() => props.instance ?? props.account ?? "unknown");
+const status = computed(() =>
+  props.instance === "running" && props.connectionLost
+    ? "connectionLost"
+    : (props.instance ?? props.account ?? "unknown"),
+);
 const tone = computed(() => TONES[status.value] ?? "tone-muted");
 </script>
 

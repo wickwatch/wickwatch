@@ -111,6 +111,23 @@ describe("OverviewView", () => {
     wrapper.unmount();
   });
 
+  it("shows a lost broker connection instead of running, with the time in the alert", async () => {
+    const since = "2026-09-25T11:58:00.000Z";
+    const lost: Overview = {
+      ...overview,
+      instances: overview.instances.map((i) => ({ ...i, connectionLostSince: since })),
+      alerts: [{ level: "warning", code: "instance_disconnected", subject: "alpha", params: { since } }],
+    };
+    const answer = fetchMock.getMockImplementation() as (input: URL) => Promise<Response>;
+    fetchMock.mockImplementation((input: URL) => (input.pathname.endsWith("/overview") ? json(lost) : answer(input)));
+    const wrapper = await render();
+    const text = wrapper.text();
+    expect(wrapper.find("tbody .pill").text()).toBe("Connection lost");
+    expect(text).toContain("alpha: connection to the broker lost since");
+    expect(text).not.toContain(since);
+    wrapper.unmount();
+  });
+
   it("hides actions and the emergency stop from viewers", async () => {
     session.value = {
       setupRequired: false,

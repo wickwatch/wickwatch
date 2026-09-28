@@ -11,6 +11,7 @@ import {
   type IsoTime,
   type Launch,
   type LaunchInput,
+  type LogEvent,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
@@ -20,6 +21,7 @@ import {
   toAlgoMetadata,
   toBrokerAccounts,
   toDeals,
+  toLogEvent,
   toPendingOrders,
   toPositions,
   toRunArguments,
@@ -90,6 +92,10 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   periods(): string[] {
     return PERIODS;
+  }
+
+  logEvent(text: string): LogEvent | undefined {
+    return toLogEvent(text);
   }
 
   /**

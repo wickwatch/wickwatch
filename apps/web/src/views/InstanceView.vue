@@ -11,13 +11,13 @@ import PnlChart from "../components/PnlChart.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TradeTables from "../components/TradeTables.vue";
 import { usePolling } from "../composables/usePolling";
-import { durationParts } from "../format";
+import { durationParts, formatDateTime } from "../format";
 import { isAdmin } from "../session";
 
 const RANGES = [7, 30, 90] as const;
 
 const route = useRoute();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const instanceRef = computed(() => String(route.params["ref"]));
 const days = ref<(typeof RANGES)[number]>(30);
 
@@ -123,7 +123,7 @@ async function closePosition() {
         <div class="head__title">
           <div class="head__name">
             <h1 class="mono">{{ data.instance.name }}</h1>
-            <StatusBadge :instance="data.instance.status" />
+            <StatusBadge :instance="data.instance.status" :connection-lost="!!data.instance.connectionLostSince" />
           </div>
           <p class="muted">
             {{ meta }}
@@ -154,6 +154,9 @@ async function closePosition() {
 
       <p class="notice" :class="notice ? `tone-${notice.tone}` : ''" role="status" aria-live="polite">
         {{ notice?.text }}
+      </p>
+      <p v-if="data.instance.connectionLostSince" class="tone-warning" role="alert">
+        {{ $t("instance.connectionLost", { since: formatDateTime(locale, data.instance.connectionLostSince) }) }}
       </p>
       <p v-if="data.brokerError" class="tone-negative" role="alert">
         {{ $t("instance.brokerError", { reason: $t(`error.adapter.${data.brokerError}`) }) }}

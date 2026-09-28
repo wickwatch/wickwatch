@@ -15,7 +15,8 @@
     "restarting": "Startet neu",
     "error": "Fehler",
     "stale": "Daten veraltet",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "connectionLost": "Verbindung verloren"
   },
   "action": {
     "start": "Start",
@@ -132,6 +133,7 @@
     "back": "← Zur Übersicht",
     "runningFor": "läuft seit {duration}",
     "restarts": "{count} Neustart | {count} Neustarts",
+    "connectionLost": "Die Instanz läuft, hat aber um {since} die Verbindung zum Broker verloren. Sie versucht, sich neu zu verbinden; bis dahin sind Kurse und Orders nicht aktuell.",
     "range": "Zeitraum",
     "days": "{days} Tage",
     "noPositions": "Keine offenen Positionen.",
@@ -264,6 +266,7 @@
     },
     "instance_error": "{subject}: Fehler, {restarts} Neustarts",
     "instance_stopped": "{subject} ist gestoppt",
+    "instance_disconnected": "{subject}: Verbindung zum Broker seit {since} unterbrochen",
     "account_error": "Konto {subject} nicht erreichbar: {reason}",
     "challenge_breached": "Konto {subject}: Challenge-Regel verletzt – {rule}",
     "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",

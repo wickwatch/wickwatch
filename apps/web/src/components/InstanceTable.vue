@@ -61,7 +61,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           </td>
           <td class="wide mono">{{ instance.symbol ?? $t("format.none") }}</td>
           <td class="wide mono">{{ instance.period ?? $t("format.none") }}</td>
-          <td><StatusBadge :instance="instance.status" /></td>
+          <td><StatusBadge :instance="instance.status" :connection-lost="!!instance.connectionLostSince" /></td>
           <td class="wide mono muted">{{ uptime(instance, now) }}</td>
           <td class="wide mono num">{{ instance.openPositions }}</td>
           <td class="num"><SignedValue :value="instance.dayPnl" /></td>
