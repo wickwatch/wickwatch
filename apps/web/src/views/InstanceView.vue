@@ -158,6 +158,18 @@ async function closePosition() {
       <p v-if="data.instance.connectionLostSince" class="tone-warning" role="alert">
         {{ $t("instance.connectionLost", { since: formatDateTime(locale, data.instance.connectionLostSince) }) }}
       </p>
+      <div v-if="data.instance.crashes" class="tone-negative crashes" role="alert">
+        <p>
+          {{
+            $t("instance.crashes", {
+              count: data.instance.crashes.count,
+              last: formatDateTime(locale, data.instance.crashes.lastAt),
+            })
+          }}
+        </p>
+        <!-- Bot output stays untranslated. -->
+        <p class="mono crashes__line">{{ data.instance.crashes.lastText }}</p>
+      </div>
       <p v-if="data.brokerError" class="tone-negative" role="alert">
         {{ $t("instance.brokerError", { reason: $t(`error.adapter.${data.brokerError}`) }) }}
       </p>
@@ -356,6 +368,21 @@ h1 {
 
 p[role="alert"] {
   margin: 0;
+}
+
+.crashes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-1);
+}
+
+.crashes p {
+  margin: 0;
+}
+
+.crashes__line {
+  overflow-wrap: anywhere;
+  font-size: var(--ww-size-sm);
 }
 
 .columns {

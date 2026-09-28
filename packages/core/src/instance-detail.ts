@@ -2,7 +2,15 @@ import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
 import { positionItem, summarizeInstance } from "./overview";
-import type { Deal, InstanceDetail, IsoTime, LogLine, PendingOrder, Position, RuntimeInstance } from "./schemas";
+import type {
+  Deal,
+  InstanceDetail,
+  InstanceLogState,
+  LogLine,
+  PendingOrder,
+  Position,
+  RuntimeInstance,
+} from "./schemas";
 import { toIsoTime } from "./schemas";
 import { dealStats } from "./stats";
 
@@ -17,8 +25,8 @@ export interface InstanceDetailInput {
   allInstances?: RuntimeInstance[];
   overrides?: AttributionOverrides;
   lastLog?: LogLine;
-  /** When the instance logged that its broker connection is lost. */
-  connectionLostSince?: IsoTime;
+  /** What the instance's log says (lost connection, crashes). */
+  logState?: InstanceLogState;
   account?: {
     number: string;
     displayName: string;
@@ -44,7 +52,7 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
       : undefined,
     input.lastLog,
     attributor,
-    input.connectionLostSince,
+    input.logState,
   );
   const accountNumber = readLabels(input.labelPrefix, instance.labels).account;
   const mine = <T>(items: T[] | undefined, item: (x: T) => TradeItem) =>

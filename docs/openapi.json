@@ -1574,6 +1574,12 @@
                                     "enum": [
                                       "connection_restored"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "algo_crashed"
+                                    ]
                                   }
                                 ]
                               },
@@ -1587,6 +1593,28 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "crashes": {
+                            "type": "object",
+                            "required": [
+                              "count",
+                              "lastAt",
+                              "lastText"
+                            ],
+                            "properties": {
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "lastAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "Z$"
+                              },
+                              "lastText": {
+                                "type": "string"
+                              }
+                            }
                           }
                         }
                       }
@@ -1642,6 +1670,12 @@
                                 "type": "string",
                                 "enum": [
                                   "instance_disconnected"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_crashed"
                                 ]
                               },
                               {
@@ -1995,6 +2029,12 @@
                                       "enum": [
                                         "connection_restored"
                                       ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "algo_crashed"
+                                      ]
                                     }
                                   ]
                                 },
@@ -2008,6 +2048,28 @@
                               "type": "string",
                               "format": "date-time",
                               "pattern": "Z$"
+                            },
+                            "crashes": {
+                              "type": "object",
+                              "required": [
+                                "count",
+                                "lastAt",
+                                "lastText"
+                              ],
+                              "properties": {
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": 1
+                                },
+                                "lastAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "Z$"
+                                },
+                                "lastText": {
+                                  "type": "string"
+                                }
+                              }
                             }
                           }
                         },

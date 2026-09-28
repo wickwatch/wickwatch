@@ -15,7 +15,7 @@ import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
-import type { ConnectionTracker } from "./connection";
+import type { LogTracker } from "./log-tracker";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -26,7 +26,7 @@ export async function loadOverview(
   directory: AccountDirectory,
   db: Db,
   labelPrefix: string,
-  connections: ConnectionTracker,
+  logTracker: LogTracker,
   log: FastifyBaseLogger,
   now = new Date(),
 ): Promise<Overview> {
@@ -38,12 +38,12 @@ export async function loadOverview(
     readProfiles(db),
     loadOverrides(db),
   ]);
-  const [lastLogs, connectionLost, accounts] = await Promise.all([
+  const [lastLogs, logStates, accounts] = await Promise.all([
     lastLogLines(adapters.runtime, instances),
-    connections.lost(instances),
+    logTracker.states(instances),
     Promise.all(entries.map((entry) => snapshot(adapters, db, entry, profiles.get(entry.id), utcDayStart, now, log))),
   ]);
-  return buildOverview({ time: now, labelPrefix, instances, lastLogs, connectionLost, accounts, overrides });
+  return buildOverview({ time: now, labelPrefix, instances, lastLogs, logStates, accounts, overrides });
 }
 
 async function snapshot(

@@ -3,7 +3,7 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import type { ConnectionTracker } from "../services/connection";
+import type { LogTracker } from "../services/log-tracker";
 import { loadOverview } from "../services/overview";
 
 export const overviewRoutes: FastifyPluginAsyncTypebox<{
@@ -11,8 +11,8 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
   accounts: AccountDirectory;
   db: Db;
   labelPrefix: string;
-  connections: ConnectionTracker;
-}> = async (app, { adapters, accounts, db, labelPrefix, connections }) => {
+  logTracker: LogTracker;
+}> = async (app, { adapters, accounts, db, labelPrefix, logTracker }) => {
   app.get(
     "/overview",
     {
@@ -22,7 +22,7 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
         response: { 200: Overview },
       },
     },
-    async (request) => loadOverview(adapters, accounts, db, labelPrefix, connections, request.log),
+    async (request) => loadOverview(adapters, accounts, db, labelPrefix, logTracker, request.log),
   );
 
   app.get(

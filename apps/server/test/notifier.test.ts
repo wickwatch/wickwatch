@@ -143,5 +143,16 @@ describe("alertText", () => {
     expect(
       alertText({ level: "error", code: "challenge_breached", subject: "1", params: { rule: "dailyLoss" } }, "de"),
     ).toBe("Fehler: Konto 1: Challenge-Regel verletzt – Tagesverlust");
+    expect(
+      alertText(
+        {
+          level: "error",
+          code: "instance_crashed",
+          subject: "alpha",
+          params: { count: 3, last: "2026-09-28T16:29:01.899Z", detail: "x" },
+        },
+        "en",
+      ),
+    ).toBe("Error: alpha: the bot threw an error 3 times since its start, last at 9/28/26, 4:29 PM UTC");
   });
 });

@@ -8,7 +8,7 @@ import type {
   ChallengeEvaluation,
   Deal,
   InstanceSummary,
-  IsoTime,
+  InstanceLogState,
   LogLine,
   Overview,
   Position,
@@ -34,8 +34,8 @@ export interface OverviewInput {
   labelPrefix: string;
   instances: RuntimeInstance[];
   lastLogs: ReadonlyMap<string, LogLine>;
-  /** When an instance logged that its broker connection is lost, by runtime ref. */
-  connectionLost?: ReadonlyMap<string, IsoTime>;
+  /** What each instance's log says (lost connection, crashes), by runtime ref. */
+  logStates?: ReadonlyMap<string, InstanceLogState>;
   accounts: AccountSnapshot[];
   /** Manual attribution per position, see attribution.ts. */
   overrides?: AttributionOverrides;
@@ -53,7 +53,7 @@ export function summarizeInstance(
   broker: { positions: Position[]; dealsToday: Deal[] } | undefined,
   lastLog: LogLine | undefined,
   attributor: Attributor,
-  connectionLostSince?: IsoTime,
+  logState: InstanceLogState = {},
 ): InstanceSummary {
   const labels = readLabels(labelPrefix, instance.labels);
   const name = labels.instance ?? instance.ref;
@@ -73,7 +73,10 @@ export function summarizeInstance(
     ...(instance.startedAt ? { startedAt: instance.startedAt } : {}),
     ...(lastLog ? { lastLog } : {}),
     // A stopped instance has no connection to lose.
-    ...(connectionLostSince && instance.status === "running" ? { connectionLostSince } : {}),
+    ...(logState.connectionLostSince && instance.status === "running"
+      ? { connectionLostSince: logState.connectionLostSince }
+      : {}),
+    ...(logState.crashes ? { crashes: logState.crashes } : {}),
   };
 }
 
@@ -91,7 +94,7 @@ export function buildOverview(input: OverviewInput): Overview {
       data,
       input.lastLogs.get(instance.ref),
       attributor,
-      input.connectionLost?.get(instance.ref),
+      input.logStates?.get(instance.ref),
     );
   });
 
@@ -120,7 +123,12 @@ export function buildOverview(input: OverviewInput): Overview {
     };
   });
 
-  return { time: toIsoTime(input.time), accounts, instances, alerts: alerts(instances, input.accounts, attributor) };
+  return {
+    time: toIsoTime(input.time),
+    accounts,
+    instances,
+    alerts: alerts(instances, input.accounts, attributor, input.time),
+  };
 }
 
 function accountState(account: AccountSnapshot, total: number, running: number): AccountSummary["state"] {
@@ -130,7 +138,15 @@ function accountState(account: AccountSnapshot, total: number, running: number):
   return running === 0 ? "stopped" : "attention";
 }
 
-function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[], attributor: Attributor): Alert[] {
+/** A crash stays an alert for this long after the latest one, so a bot that keeps failing stays visible. */
+export const CRASH_ALERT_MS = 60 * 60 * 1000;
+
+function alerts(
+  instances: InstanceSummary[],
+  accounts: AccountSnapshot[],
+  attributor: Attributor,
+  time: Date,
+): Alert[] {
   const result: Alert[] = [];
   for (const problem of attributor.problems) {
     const params = { instances: problem.instances.join(", "), ...(problem.symbol ? { symbol: problem.symbol } : {}) };
@@ -175,6 +191,10 @@ function alerts(instances: InstanceSummary[], accounts: AccountSnapshot[], attri
     } else if (i.connectionLostSince) {
       const params = { since: i.connectionLostSince };
       result.push({ level: "warning", code: "instance_disconnected", subject: i.name, params });
+    }
+    if (i.status === "running" && i.crashes && time.getTime() - Date.parse(i.crashes.lastAt) < CRASH_ALERT_MS) {
+      const params = { count: i.crashes.count, last: i.crashes.lastAt, detail: i.crashes.lastText };
+      result.push({ level: "error", code: "instance_crashed", subject: i.name, params });
     }
   }
   return result;

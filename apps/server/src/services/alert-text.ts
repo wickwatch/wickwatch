@@ -28,13 +28,14 @@ function formatTime(locale: Locale, iso: string): string {
 /** The alert as one line of text, with its level in words: colour never carries meaning alone. */
 export function alertText(alert: Alert, locale: Locale, resolved = false): string {
   const t = (key: string) => lookup(locale, key) ?? lookup("en", key) ?? key;
-  const { reason, rule, since } = alert.params;
+  const { reason, rule, since, last } = alert.params;
   const params = {
     ...alert.params,
     subject: alert.subject,
     ...(reason !== undefined ? { reason: t(`error.adapter.${String(reason)}`) } : {}),
     ...(rule !== undefined ? { rule: t(`challenge.rule.${String(rule)}`) } : {}),
     ...(since !== undefined ? { since: formatTime(locale, String(since)) } : {}),
+    ...(last !== undefined ? { last: formatTime(locale, String(last)) } : {}),
   };
   const message = fill(t(`alert.${alert.code}`), params);
   return resolved ? fill(t("alert.resolved"), { message }) : `${t(`alert.level.${alert.level}`)}: ${message}`;

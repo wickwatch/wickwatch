@@ -249,10 +249,16 @@ export function toRunArguments(parameters: ParameterValues): string[] {
 const PLATFORM_LINE = String.raw`^(?:\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\.\d+ \| )?`;
 const CONNECTION_LOST = new RegExp(`${PLATFORM_LINE}The connection has been lost\\b`);
 const CONNECTION_UP = new RegExp(`${PLATFORM_LINE}The connection has been (?:established|restored)\\b`);
+// Logged by the platform with level Error; Print output of a cBot is always Info.
+const ALGO_CRASHED = new RegExp(`${PLATFORM_LINE}Error \\| Crashed in \\S+ event with `);
 
-/** "The connection has been lost. Reconnecting..." / "… restored." as logged by `run` (5.9). */
+/**
+ * "The connection has been lost. Reconnecting..." / "… restored." and "Error | Crashed in
+ * Timer.TimerTick event with InvalidOperationException: …" (the cBot keeps running) as logged by `run` (5.9).
+ */
 export function toLogEvent(text: string): LogEvent | undefined {
   if (CONNECTION_LOST.test(text)) return "connection_lost";
   if (CONNECTION_UP.test(text)) return "connection_restored";
+  if (ALGO_CRASHED.test(text)) return "algo_crashed";
   return undefined;
 }

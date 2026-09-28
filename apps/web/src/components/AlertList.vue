@@ -15,6 +15,7 @@ const message = (alert: Alert) =>
     ...(alert.params["since"] !== undefined
       ? { since: formatDateTime(locale.value, String(alert.params["since"])) }
       : {}),
+    ...(alert.params["last"] !== undefined ? { last: formatDateTime(locale.value, String(alert.params["last"])) } : {}),
   });
 </script>
 

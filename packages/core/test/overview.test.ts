@@ -88,9 +88,9 @@ describe("buildOverview", () => {
       labelPrefix: "ww",
       instances: [instance("alpha", "111", "running"), instance("gamma", "111", "stopped")],
       lastLogs: new Map(),
-      connectionLost: new Map([
-        ["ww-alpha", since],
-        ["ww-gamma", since],
+      logStates: new Map([
+        ["ww-alpha", { connectionLostSince: since }],
+        ["ww-gamma", { connectionLostSince: since }],
       ]),
       accounts: [],
     });
@@ -105,5 +105,29 @@ describe("buildOverview", () => {
       params: { since },
     });
     expect(result.alerts.filter((a) => a.subject === "gamma").map((a) => a.code)).toEqual(["instance_stopped"]);
+  });
+
+  it("raises an error for a running bot that threw within the last hour", () => {
+    const crashes = (lastAt: string) => ({ count: 3, lastAt, lastText: "Error | Crashed in OnBar event with X: boom" });
+    const result = buildOverview({
+      time,
+      labelPrefix: "ww",
+      instances: [instance("alpha", "111", "running"), instance("delta", "111", "running")],
+      lastLogs: new Map(),
+      logStates: new Map([
+        ["ww-alpha", { crashes: crashes("2026-09-25T11:30:00.000Z") }],
+        ["ww-delta", { crashes: crashes("2026-09-25T10:30:00.000Z") }],
+      ]),
+      accounts: [],
+    });
+    expect(result.instances.map((i) => i.crashes?.count)).toEqual([3, 3]);
+    expect(result.alerts).toEqual([
+      {
+        level: "error",
+        code: "instance_crashed",
+        subject: "alpha",
+        params: { count: 3, last: "2026-09-25T11:30:00.000Z", detail: "Error | Crashed in OnBar event with X: boom" },
+      },
+    ]);
   });
 });

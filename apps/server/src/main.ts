@@ -9,7 +9,7 @@ import { ConfigError, loadConfig } from "./config";
 import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
-import { ConnectionTracker } from "./services/connection";
+import { LogTracker } from "./services/log-tracker";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
 import { loadOverview } from "./services/overview";
@@ -29,8 +29,8 @@ try {
   const db = createDatabase(config.database);
   const adapters = createAdapters(config);
   const setup = new SetupState();
-  const connections = new ConnectionTracker(adapters.runtime);
-  const app = await buildApp({ config, db, adapters, version: VERSION, setup, connections });
+  const logTracker = new LogTracker(adapters.runtime);
+  const app = await buildApp({ config, db, adapters, version: VERSION, setup, logTracker });
 
   for (const result of await migrateToLatest(db)) {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
@@ -57,7 +57,7 @@ try {
   });
   const notifier = new AlertNotifier({
     db,
-    load: () => loadOverview(adapters, accounts, db, config.labelPrefix, connections, app.log),
+    load: () => loadOverview(adapters, accounts, db, config.labelPrefix, logTracker, app.log),
     ...(config.alertWebhookUrl ? { webhookUrl: config.alertWebhookUrl } : {}),
     ...(config.heartbeatUrl ? { heartbeatUrl: config.heartbeatUrl } : {}),
     locale: config.defaultLocale,

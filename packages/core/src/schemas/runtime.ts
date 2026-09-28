@@ -26,7 +26,12 @@ export const LogLevel = Type.Union([Type.Literal("info"), Type.Literal("warn"), 
 export type LogLevel = Type.Static<typeof LogLevel>;
 
 /** Platform events a broker adapter recognises in an instance's log. */
-export const LogEvent = Type.Union([Type.Literal("connection_lost"), Type.Literal("connection_restored")]);
+export const LogEvent = Type.Union([
+  Type.Literal("connection_lost"),
+  Type.Literal("connection_restored"),
+  /** The algo threw an error but keeps running (e.g. an exception in an event handler). */
+  Type.Literal("algo_crashed"),
+]);
 export type LogEvent = Type.Static<typeof LogEvent>;
 
 export const LogLine = Type.Object({

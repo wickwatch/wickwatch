@@ -4,7 +4,7 @@ import { CtraderCliBroker, DEFAULT_CTRADER_IMAGE, toolRunner } from "@wickwatch/
 import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
 import { ConfigError, type Config } from "./config";
-import { withLogEvents } from "./services/connection";
+import { withLogEvents } from "./services/log-tracker";
 
 export interface Adapters {
   runtime: RuntimeAdapter;

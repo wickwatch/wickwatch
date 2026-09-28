@@ -7,7 +7,7 @@ import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { audit } from "../services/audit";
-import type { ConnectionTracker } from "../services/connection";
+import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
 
 const Action = Type.Union([Type.Literal("start"), Type.Literal("stop"), Type.Literal("restart")]);
@@ -19,12 +19,12 @@ export interface InstanceRouteOptions {
   accounts: AccountDirectory;
   db: Db;
   labelPrefix: string;
-  connections: ConnectionTracker;
+  logTracker: LogTracker;
 }
 
 export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, labelPrefix, connections },
+  { adapters, accounts, db, labelPrefix, logTracker },
 ) => {
   app.get(
     "/instances/:ref",
@@ -43,7 +43,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         accounts,
         db,
         labelPrefix,
-        connections,
+        logTracker,
         request.params.ref,
         request.query.days ?? 30,
         request.log,

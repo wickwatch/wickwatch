@@ -22,7 +22,7 @@ import { managedInstanceRoutes } from "./routes/managed-instances";
 import { overviewRoutes } from "./routes/overview";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
-import { ConnectionTracker } from "./services/connection";
+import { LogTracker } from "./services/log-tracker";
 import { createSymbolCache } from "./services/symbols";
 
 export interface AppDeps {
@@ -34,8 +34,8 @@ export interface AppDeps {
   setup?: SetupState;
   /** Overrides pino options, e.g. `false` in tests. */
   logger?: boolean;
-  /** Shared with the alert notifier, so both see the same connection state. */
-  connections?: ConnectionTracker;
+  /** Shared with the alert notifier, so both see the same log state. */
+  logTracker?: LogTracker;
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -47,7 +47,7 @@ export async function buildApp({
   version,
   setup = new SetupState(),
   logger,
-  connections = new ConnectionTracker(adapters.runtime),
+  logTracker = new LogTracker(adapters.runtime),
 }: AppDeps) {
   const { trustProxy } = config;
   const app = Fastify({
@@ -78,8 +78,8 @@ export async function buildApp({
   const api = `${basePath}/api/v1`;
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
-  await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, connections, prefix: api });
-  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, connections, prefix: api });
+  await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, logTracker, prefix: api });
+  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, logTracker, prefix: api });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);

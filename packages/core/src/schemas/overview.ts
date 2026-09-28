@@ -16,6 +16,20 @@ export const AccountState = Type.Union([
 ]);
 export type AccountState = Type.Static<typeof AccountState>;
 
+export const AlgoCrashes = Type.Object({
+  count: Type.Integer({ minimum: 1 }),
+  /** Time and log line of the latest one. */
+  lastAt: IsoTime,
+  lastText: Type.String(),
+});
+export type AlgoCrashes = Type.Static<typeof AlgoCrashes>;
+
+/** What an instance's log says beyond its runtime status; collected by the server. */
+export interface InstanceLogState {
+  connectionLostSince?: IsoTime;
+  crashes?: AlgoCrashes;
+}
+
 export const InstanceSummary = Type.Object({
   ref: Type.String(),
   name: Type.String(),
@@ -31,6 +45,8 @@ export const InstanceSummary = Type.Object({
   lastLog: Type.Optional(LogLine),
   /** The instance runs but logged that its broker connection is lost, at this time. */
   connectionLostSince: Type.Optional(IsoTime),
+  /** Errors the algo threw since the instance started, while it kept running. */
+  crashes: Type.Optional(AlgoCrashes),
 });
 export type InstanceSummary = Type.Static<typeof InstanceSummary>;
 
@@ -57,6 +73,7 @@ export const AlertCode = Type.Union([
   Type.Literal("instance_error"),
   Type.Literal("instance_stopped"),
   Type.Literal("instance_disconnected"),
+  Type.Literal("instance_crashed"),
   Type.Literal("account_error"),
   Type.Literal("challenge_breached"),
   Type.Literal("challenge_limit"),

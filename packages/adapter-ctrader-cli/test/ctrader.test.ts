@@ -230,6 +230,14 @@ describe("helpers", () => {
     expect(toLogEvent("28/09/2026 16:33:33.537 | The connection has been established.")).toBe("connection_restored");
     expect(toLogEvent("28/09/2026 16:34:51.374 | Info | The connection has been lost")).toBeUndefined();
     expect(toLogEvent("28/09/2026 16:33:36.356 | Info | WW-PROBE positions=0 pending=0")).toBeUndefined();
+    expect(
+      toLogEvent(
+        "28/09/2026 16:29:01.899 | Error | Crashed in Timer.TimerTick event with InvalidOperationException: WW-PROBE deliberate crash",
+      ),
+    ).toBe("algo_crashed");
+    expect(
+      toLogEvent("28/09/2026 16:29:01.899 | Info | Crashed in OnBar event with X: printed by the bot"),
+    ).toBeUndefined();
     expect(new CtraderCliBroker().logEvent("The connection has been lost. Reconnecting...")).toBe("connection_lost");
   });
 });
