@@ -11,12 +11,14 @@ const props = defineProps<{
   orders?: PendingOrder[];
   deals?: Deal[];
   canClose?: boolean;
+  /** Offer "cancel order" on pending orders. */
+  canCancel?: boolean;
   /** Offer "not from this bot" (or "restore" when `excluded`). */
   canAttribute?: boolean;
   excluded?: boolean;
   busy?: ReadonlySet<string>;
 }>();
-defineEmits<{ close: [position: Position]; attribution: [positionId: string] }>();
+defineEmits<{ close: [position: Position]; cancel: [order: PendingOrder]; attribution: [positionId: string] }>();
 const { locale } = useI18n();
 
 const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
@@ -89,6 +91,9 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <th scope="col" class="num">{{ $t("trade.price") }}</th>
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
+          <th v-if="canCancel" scope="col">
+            <span class="visually-hidden">{{ $t("table.actions") }}</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -99,6 +104,16 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="mono num">{{ price(o.price) }}</td>
           <td class="mono num">{{ price(o.sl) }}</td>
           <td class="mono num">{{ price(o.tp) }}</td>
+          <td v-if="canCancel" class="num">
+            <button
+              type="button"
+              class="btn btn--danger btn--small"
+              :disabled="busy?.has(o.id)"
+              @click="$emit('cancel', o)"
+            >
+              {{ $t("action.cancelOrder") }}
+            </button>
+          </td>
         </tr>
       </tbody>
     </table>

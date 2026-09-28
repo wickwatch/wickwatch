@@ -45,7 +45,7 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
   - `update` builds the replacement under a temporary name, then swaps it in; a running instance is started again. `update` and `remove` refuse containers without `<prefix>.managed=true`, so compose-defined containers are never touched.
   - Socket proxy needs `CONTAINERS=1`, `IMAGES=1` and `POST=1`.
   - Integration test against a real daemon: `WICKWATCH_DOCKER_TEST=1 pnpm --filter @wickwatch/adapter-docker test`.
-- **ctrader-cli** broker ([`packages/adapter-ctrader-cli`](../packages/adapter-ctrader-cli), tested with CLI 5.9; no trading actions yet):
+- **ctrader-cli** broker ([`packages/adapter-ctrader-cli`](../packages/adapter-ctrader-cli), tested with CLI 5.9):
   - `launch()`: `run <algo> --ctid --pwd-file --account --symbol --period --exit-on-stop [--full-access] --Name=Value…` in `CTRADER_IMAGE`; algo and password file are copied to `/mnt/wickwatch/` in the container. Parameter names must be plain identifiers and values free of control characters.
   - Batch commands (`accounts`, `symbols`, `metadata`) with `--pwd-file`; the password is written to a private temp file, never passed as an argument.
   - Where the CLI runs is a `CliRunner`: `localRunner` (installed CLI, temp directory for files) or `toolRunner` (`CTRADER_CLI=container`: the official image through `RuntimeAdapter.runTool`, files copied to `/mnt/wickwatch/`). Tested through docker-socket-proxy: `metadata` ≈ 1 s, a new shell session ≈ 2 s, commands in a warm session ≈ 20 ms.
@@ -53,7 +53,7 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
   - Closed accounts are still listed by batch `accounts` but fail with a misleading "not available on this cTrader build"; they are reported as `active: false`.
   - `deals --from/--to` take whole UTC days with an exclusive end; the adapter asks one day more and filters.
   - `logEvent()`: "The connection has been lost. Reconnecting..." → `connection_lost`; "… established." / "… restored." → `connection_restored`. "<time> | Error | Crashed in <handler> event with <exception>: …" → `algo_crashed` (the cBot keeps running). Only platform lines count, not the cBot's own `Print` output (`<time> | Info | …`). `run` notices a lost connection only after about 60 s, then keeps reconnecting without exiting.
-  - Closing positions, cancelling orders and the emergency stop answer `unsupported` until verified on a demo account.
+  - Trading actions in the account's shell session: `position close <id> yes`, `order cancel <id> yes`; the emergency stop runs `order cancel all yes`, then `position close all yes`. The CLI's answer is not documented, so each action counts only when a fresh `positions`/`orders` listing no longer shows it; ids must be digits (they go into a command line). `orders` fields (recorded 2026-09-28): `id, symbolName, tradeSide, orderType, volume, volumeLots, targetPrice, limitPrice, stopLoss, takeProfit, expiration, label, comment`.
   - Integration test against the real CLI (read-only): `WICKWATCH_CTRADER_TEST=1 CTRADER_CTID=… CTRADER_PWD_FILE=… CTRADER_ACCOUNT=… pnpm --filter @wickwatch/adapter-ctrader-cli test`.
 - **cbotset** config; `.optset` export in phase 2 (reverse-engineer format from a file exported by cTrader Desktop).
 

@@ -27,10 +27,11 @@
     "delete": "Löschen",
     "newInstance": "Neue Instanz",
     "emergencyStop": "Notstopp",
-    "closePosition": "Schließen",
+    "closePosition": "Position schließen",
     "save": "Speichern",
     "saveAndStart": "Speichern & starten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "cancelOrder": "Order stornieren"
   },
   "account": {
     "balance": "Balance",
@@ -146,7 +147,11 @@
     "positionClosed": "Position {id} geschlossen.",
     "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}",
     "configLink": "Konfiguration (Version {version})",
-    "externallyManaged": "Außerhalb von Wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels."
+    "externallyManaged": "Außerhalb von Wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels.",
+    "cancelTitle": "Order stornieren",
+    "cancelConfirm": "Order {id} ({type} {side} {symbol} zu {price}) stornieren?",
+    "orderCancelled": "Order {id} storniert.",
+    "cancelFailed": "Stornieren von Order {id} fehlgeschlagen: {reason}"
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"

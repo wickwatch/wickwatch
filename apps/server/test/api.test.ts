@@ -127,6 +127,25 @@ describe("emergency stop", () => {
   });
 });
 
+describe("cancelling an order", () => {
+  it("needs the order id as confirmation, cancels it at the broker and audits it", async () => {
+    const orders = async () =>
+      (await get("/api/v1/instances/beta-nas100-a")).json<{ pendingOrders: { id: string }[] }>().pendingOrders;
+    const [order] = await orders();
+    expect(order).toBeDefined();
+    const url = `/api/v1/accounts/1111111/orders/${order!.id}/cancel`;
+
+    expect((await post(url, { confirm: "yes" })).json()).toEqual({ error: "confirmation_required" });
+    const res = await post(url, { confirm: order!.id });
+    expect(res.statusCode).toBe(204);
+    expect((await orders()).some((o) => o.id === order!.id)).toBe(false);
+    const [row] = await auditRows();
+    expect(row).toMatchObject({ action: "order.cancel", target: `1111111/${order!.id}` });
+
+    expect((await post(url, { confirm: order!.id })).statusCode).toBe(404);
+  });
+});
+
 describe("credentials and accounts", () => {
   it("stores secrets encrypted and never returns them", async () => {
     const created = await post("/api/v1/credentials", {

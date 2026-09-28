@@ -167,6 +167,55 @@ out(
   `Using account: #${account} Demo Broker USD 10138.66 demo\n\nConnecting to Demo Broker...\nConnected as ${flag("ctid")} on #${account}.\n\n│ Commands:\n│  1) accounts\n> `,
 );
 
+// Stateful per session, so cancelling and closing can be checked. FAKE_CTRADER_STUCK keeps them open.
+let positions = [
+  {
+    positionId: 31,
+    symbolName: "US100.cash",
+    tradeSide: "Buy",
+    volumeLots: 0.5,
+    entryPrice: 29400,
+    stopLoss: 29300,
+    takeProfit: null,
+    netProfit: -48.2,
+    label: "123456789",
+    openTime: "2026-09-25T08:00:00.000Z",
+  },
+];
+// Field names as recorded from ctrader-console 5.9 on 2026-09-28 (a Buy Stop on EURUSD).
+let orders = [
+  {
+    id: 41,
+    symbolName: "US100.cash",
+    tradeSide: "Sell",
+    orderType: "Limit",
+    volume: 50,
+    volumeLots: 0.5,
+    targetPrice: 29800,
+    limitPrice: null,
+    slippagePips: null,
+    currentPrice: null,
+    stopLoss: 29900,
+    stopLossPips: null,
+    takeProfit: 29600,
+    takeProfitPips: null,
+    expiration: null,
+    label: "",
+    comment: "",
+  },
+];
+const stuck = Boolean(process.env.FAKE_CTRADER_STUCK);
+/** `order cancel <id|all> yes`, `position close <id|all> yes`. */
+function remove(kind, list, idKey, target) {
+  if (target !== "all" && !list.some((i) => String(i[idKey]) === target)) {
+    out(`Error: ${kind} not found: ${target}\n`);
+    return list;
+  }
+  out(`${kind === "Order" ? "Cancelled" : "Closed"} ${target === "all" ? String(list.length) : "1"}.\n`);
+  if (stuck) return list;
+  return target === "all" ? [] : list.filter((i) => String(i[idKey]) !== target);
+}
+
 let warm = false;
 createInterface({ input: process.stdin }).on("line", (line) => {
   const [cmd, ...rest] = line.trim().split(/\s+/);
@@ -189,39 +238,12 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       accountName: "Challenge A",
     });
   else if (cmd === "accounts") json({ accounts: active });
-  else if (cmd === "positions")
-    json({
-      positions: [
-        {
-          positionId: 31,
-          symbolName: "US100.cash",
-          tradeSide: "Buy",
-          volumeLots: 0.5,
-          entryPrice: 29400,
-          stopLoss: 29300,
-          takeProfit: null,
-          netProfit: -48.2,
-          label: "123456789",
-          openTime: "2026-09-25T08:00:00.000Z",
-        },
-      ],
-    });
-  else if (cmd === "orders")
-    json({
-      orders: [
-        {
-          id: 41,
-          symbolName: "US100.cash",
-          tradeSide: "Sell",
-          orderType: "Limit",
-          volumeLots: 0.5,
-          targetPrice: 29800,
-          stopLoss: 29900,
-          takeProfit: 29600,
-          label: "",
-        },
-      ],
-    });
+  else if (cmd === "positions") json({ positions });
+  else if (cmd === "orders") json({ orders });
+  else if (cmd === "order" && rest[0] === "cancel" && rest.at(-1) === "yes")
+    orders = remove("Order", orders, "id", rest[1]);
+  else if (cmd === "position" && rest[0] === "close" && rest.at(-1) === "yes")
+    positions = remove("Position", positions, "positionId", rest[1]);
   else if (cmd === "deals")
     json(
       empty

@@ -155,7 +155,7 @@ export function toPositions(data: unknown): Position[] {
 
 const ORDER_TYPES: Record<string, PendingOrder["type"]> = { limit: "limit", stop: "stop", stoplimit: "stopLimit" };
 
-/** Pending orders, assumed to use the completed-order field names – verify on a trading day. */
+/** `orders` (5.9): id, symbolName, tradeSide, orderType, volume, volumeLots, targetPrice, limitPrice, stopLoss, takeProfit, expiration, label, comment. */
 export function toPendingOrders(data: unknown): PendingOrder[] {
   return list(data, "orders").map((o) => {
     const id = str(o["id"]) ?? str(o["orderId"]);

@@ -27,10 +27,11 @@
     "delete": "Delete",
     "newInstance": "New instance",
     "emergencyStop": "Emergency stop",
-    "closePosition": "Close",
+    "closePosition": "Close position",
     "save": "Save",
     "saveAndStart": "Save & start",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "cancelOrder": "Cancel order"
   },
   "account": {
     "balance": "Balance",
@@ -146,7 +147,11 @@
     "positionClosed": "Position {id} closed.",
     "closeFailed": "Closing position {id} failed: {reason}",
     "configLink": "Configuration (version {version})",
-    "externallyManaged": "Defined outside Wickwatch (e.g. in a compose file); only its labels are known."
+    "externallyManaged": "Defined outside Wickwatch (e.g. in a compose file); only its labels are known.",
+    "cancelTitle": "Cancel order",
+    "cancelConfirm": "Cancel order {id} ({type} {side} {symbol} at {price})?",
+    "orderCancelled": "Order {id} cancelled.",
+    "cancelFailed": "Cancelling order {id} failed: {reason}"
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"

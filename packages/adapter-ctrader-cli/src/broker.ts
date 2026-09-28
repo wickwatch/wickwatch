@@ -8,6 +8,7 @@ import {
   type Credentials,
   type Deal,
   type EmergencyStopResult,
+  type Id,
   type IsoTime,
   type Launch,
   type LaunchInput,
@@ -46,8 +47,8 @@ const ACCOUNTS_CACHE_MS = 60_000;
 const dateOnly = (time: number) => new Date(time).toISOString().slice(0, 10);
 
 /**
- * Broker adapter for the cTrader CLI (tested with 5.9). Read-only for now: closing positions,
- * cancelling orders and the emergency stop answer `unsupported` until they are verified on a demo account.
+ * Broker adapter for the cTrader CLI (tested with 5.9): accounts, balances, positions, orders and
+ * deals, closing positions, cancelling orders and the emergency stop per account.
  */
 /** Output of `ctrader-cli periods` (5.9), time-based frames first; tokens are case-insensitive. */
 const PERIODS = [
@@ -86,7 +87,7 @@ export class CtraderCliBroker implements BrokerAdapter {
       optimize: false,
       partialClose: false,
       pendingOrders: true,
-      emergencyStop: false,
+      emergencyStop: true,
       parameterExport: [],
     };
   }
@@ -181,16 +182,42 @@ export class CtraderCliBroker implements BrokerAdapter {
       .sort((a, b) => a.time.localeCompare(b.time));
   }
 
-  closePosition(): Promise<void> {
-    return Promise.reject(new AdapterError("unsupported", "Closing positions via the cTrader CLI is not enabled yet"));
+  // What the CLI answers to these commands is not documented, so each one counts only when the
+  // position or order is gone from a fresh listing afterwards.
+
+  /** `position close <id> yes` in the account's shell session. */
+  async closePosition(c: Credentials, account: string, positionId: Id): Promise<void> {
+    await this.pool.run(c, account, `position close ${shellId(positionId)} yes`);
+    if ((await this.positions(c, account)).some((p) => p.id === positionId)) {
+      throw new AdapterError("unavailable", `Position ${positionId} is still open`);
+    }
   }
 
-  cancelOrder(): Promise<void> {
-    return Promise.reject(new AdapterError("unsupported", "Cancelling orders via the cTrader CLI is not enabled yet"));
+  /** `order cancel <id> yes` in the account's shell session. */
+  async cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void> {
+    await this.pool.run(c, account, `order cancel ${shellId(orderId)} yes`);
+    if ((await this.pendingOrders(c, account)).some((o) => o.id === orderId)) {
+      throw new AdapterError("unavailable", `Order ${orderId} is still pending`);
+    }
   }
 
-  emergencyStop(): Promise<EmergencyStopResult> {
-    return Promise.reject(new AdapterError("unsupported", "The emergency stop via the cTrader CLI is not enabled yet"));
+  /**
+   * Cancels every pending order of the account first, so none fills while the positions are
+   * closed, then closes every position. Stopping the instances is done by the core before.
+   */
+  async emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult> {
+    const orders = await this.pendingOrders(c, account);
+    if (orders.length) await this.pool.run(c, account, "order cancel all yes");
+    const positions = await this.positions(c, account);
+    if (positions.length) await this.pool.run(c, account, "position close all yes");
+    const [openPositions, pendingOrders] = [await this.positions(c, account), await this.pendingOrders(c, account)];
+    if (openPositions.length || pendingOrders.length) {
+      throw new AdapterError(
+        "unavailable",
+        `Still open after the emergency stop: ${String(openPositions.length)} positions, ${String(pendingOrders.length)} orders`,
+      );
+    }
+    return { closed: positions.length, cancelled: orders.length };
   }
 
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
@@ -217,4 +244,10 @@ export class CtraderCliBroker implements BrokerAdapter {
     if (code !== 0) throw cliError(output);
     return output;
   }
+}
+
+/** Position and order ids go into a shell command line: digits only; anything else cannot exist. */
+function shellId(id: Id): string {
+  if (!/^\d{1,20}$/.test(id)) throw new AdapterError("not_found", `No position or order ${id}`);
+  return id;
 }

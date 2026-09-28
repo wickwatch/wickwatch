@@ -284,6 +284,39 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
   );
 
+  app.post(
+    "/accounts/:number/orders/:orderId/cancel",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["accounts"],
+        summary: "Cancel one pending order at the broker",
+        description: "Destructive. `confirm` must repeat the order id.",
+        params: Type.Object({ number: Type.String({ minLength: 1 }), orderId: Type.String({ minLength: 1 }) }),
+        body: Type.Object({ confirm: Type.String() }),
+        response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody, 502: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, orderId } = request.params;
+      if (request.body.confirm !== orderId) return reply.code(400).send({ error: "confirmation_required" });
+      const account = await findAccount(accounts, number);
+      if (!account) return reply.code(404).send({ error: "not_found" });
+
+      const userId = request.user?.id;
+      const target = `${number}/${orderId}`;
+      try {
+        await adapters.broker.cancelOrder(await account.credentials(), number, orderId);
+        await audit(db, { action: "order.cancel", target, details: { ok: true }, userId });
+      } catch (error) {
+        const code = isAdapterError(error) ? error.code : "internal";
+        await audit(db, { action: "order.cancel", target, details: { ok: false, error: code }, userId });
+        throw error;
+      }
+      return reply.code(204).send(null);
+    },
+  );
+
   const PositionParams = Type.Object({
     number: Type.String({ minLength: 1 }),
     positionId: Type.String({ minLength: 1 }),

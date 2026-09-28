@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Position } from "@wickwatch/core";
+import type { PendingOrder, Position } from "@wickwatch/core";
 import { computed, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -11,7 +11,7 @@ import PnlChart from "../components/PnlChart.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TradeTables from "../components/TradeTables.vue";
 import { usePolling } from "../composables/usePolling";
-import { durationParts, formatDateTime } from "../format";
+import { durationParts, formatDateTime, formatPrice } from "../format";
 import { isAdmin } from "../session";
 
 const RANGES = [7, 30, 90] as const;
@@ -41,6 +41,7 @@ watch(
 const busy = reactive(new Set<string>());
 const notice = ref<{ tone: "positive" | "negative"; text: string }>();
 const closing = ref<Position>();
+const cancelling = ref<PendingOrder>();
 
 const meta = computed(() => {
   const d = data.value;
@@ -89,6 +90,23 @@ async function toggleAttribution(positionId: string, restore: boolean) {
     notice.value = { tone: "negative", text: t(errorKey(e)) };
   } finally {
     busy.delete(positionId);
+    await refresh();
+  }
+}
+
+async function cancelOrder() {
+  const order = cancelling.value;
+  const account = data.value?.account?.number;
+  cancelling.value = undefined;
+  if (!order || !account) return;
+  busy.add(order.id);
+  try {
+    await api.cancelOrder(account, order.id);
+    notice.value = { tone: "positive", text: t("instance.orderCancelled", { id: order.id }) };
+  } catch (e) {
+    notice.value = { tone: "negative", text: t("instance.cancelFailed", { id: order.id, reason: t(errorKey(e)) }) };
+  } finally {
+    busy.delete(order.id);
     await refresh();
   }
 }
@@ -220,7 +238,14 @@ async function closePosition() {
           <section class="panel card" aria-labelledby="orders-title">
             <h2 id="orders-title">{{ $t("instance.pendingOrders") }}</h2>
             <p v-if="!data.pendingOrders.length" class="muted">{{ $t("instance.noOrders") }}</p>
-            <TradeTables v-else kind="orders" :orders="data.pendingOrders" />
+            <TradeTables
+              v-else
+              kind="orders"
+              :orders="data.pendingOrders"
+              :can-cancel="isAdmin"
+              :busy="busy"
+              @cancel="cancelling = $event"
+            />
           </section>
 
           <section class="panel card" aria-labelledby="history-title">
@@ -306,6 +331,24 @@ async function closePosition() {
       :confirm-label="$t('action.closePosition')"
       @confirm="closePosition"
       @cancel="closing = undefined"
+    />
+    <ConfirmDialog
+      :open="cancelling !== undefined"
+      :title="$t('instance.cancelTitle')"
+      :message="
+        cancelling
+          ? $t('instance.cancelConfirm', {
+              id: cancelling.id,
+              type: $t(`trade.orderType.${cancelling.type}`),
+              side: $t(`trade.${cancelling.side}`),
+              symbol: cancelling.symbol,
+              price: formatPrice(locale, cancelling.price),
+            })
+          : ''
+      "
+      :confirm-label="$t('action.cancelOrder')"
+      @confirm="cancelOrder"
+      @cancel="cancelling = undefined"
     />
   </div>
 </template>

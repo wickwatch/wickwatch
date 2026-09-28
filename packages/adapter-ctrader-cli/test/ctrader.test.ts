@@ -43,6 +43,8 @@ describeBrokerAdapter("ctrader-cli (fake CLI)", {
   account: "1111111",
   invalidCredentials: { login: "user@example.com", secret: "wrong" },
   algoPath: "/algos/bot.algo",
+  // Safe: the fake CLI trades nothing.
+  destructive: true,
 });
 
 describe("CtraderCliBroker", () => {
@@ -132,9 +134,44 @@ describe("CtraderCliBroker", () => {
     await expect(broker.stats({ ...c, secret: "wrong" }, "1111111")).rejects.toMatchObject({ code: "auth_failed" });
   });
 
-  it("is read-only for now", async () => {
-    expect(broker.capabilities()).toMatchObject({ emergencyStop: false, pendingOrders: true });
-    await expect(broker.closePosition()).rejects.toMatchObject({ code: "unsupported" });
+  it("reads pending orders in the recorded format", async () => {
+    expect(await broker.pendingOrders(c, "1111111")).toEqual([
+      { id: "41", symbol: "US100.cash", type: "limit", side: "sell", volume: 0.5, price: 29800, sl: 29900, tp: 29600 },
+    ]);
+  });
+
+  it("cancels an order and closes a position in the account's shell, and checks they are gone", async () => {
+    await broker.cancelOrder(c, "1111111", "41");
+    await broker.closePosition(c, "1111111", "31");
+    expect(await broker.pendingOrders(c, "1111111")).toEqual([]);
+    expect(await broker.positions(c, "1111111")).toEqual([]);
+    // One session for all of it.
+    expect(calls().filter((a) => !["accounts", "symbols", "metadata"].includes(a[0] ?? ""))).toHaveLength(1);
+  });
+
+  it("reports unknown ids and ids that could inject shell commands as not found", async () => {
+    await expect(broker.cancelOrder(c, "1111111", "99")).rejects.toMatchObject({ code: "not_found" });
+    await expect(broker.closePosition(c, "1111111", "31 yes\nposition close all")).rejects.toMatchObject({
+      code: "not_found",
+    });
+    expect(await broker.positions(c, "1111111")).toHaveLength(1);
+  });
+
+  it("cancels orders before closing positions in the emergency stop", async () => {
+    expect(broker.capabilities()).toMatchObject({ emergencyStop: true, pendingOrders: true });
+    expect(await broker.emergencyStop(c, "1111111")).toEqual({ closed: 1, cancelled: 1 });
+  });
+
+  it("does not report success when the broker kept the order or position", async () => {
+    process.env["FAKE_CTRADER_STUCK"] = "1";
+    try {
+      const stuck = create();
+      await expect(stuck.cancelOrder(c, "1111111", "41")).rejects.toThrow(/still pending/);
+      await expect(stuck.emergencyStop(c, "1111111")).rejects.toThrow(/1 positions, 1 orders/);
+      await stuck.dispose();
+    } finally {
+      delete process.env["FAKE_CTRADER_STUCK"];
+    }
   });
 
   it("launches `run` in the pinned image with password and algo as files, never as arguments", async () => {

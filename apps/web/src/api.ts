@@ -209,6 +209,10 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,
     }),
+  cancelOrder: (account: string, orderId: string) =>
+    post<undefined>(`accounts/${encodeURIComponent(account)}/orders/${encodeURIComponent(orderId)}/cancel`, {
+      confirm: orderId,
+    }),
   algos: () => request<AlgoRow[]>("algos"),
   uploadAlgo: (file: File, version?: string) =>
     request<AlgoRow>(

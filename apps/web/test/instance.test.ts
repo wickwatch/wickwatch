@@ -130,6 +130,46 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("cancels a pending order after confirmation", async () => {
+    const order = {
+      id: "320393475",
+      symbol: "GER40",
+      type: "stop" as const,
+      side: "buy" as const,
+      volume: 1,
+      price: 19600,
+    };
+    const calls: { url: string; body?: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL, init?: RequestInit) => {
+        calls.push({ url: input.pathname, ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}) });
+        if (input.pathname.includes("/managed-instances/")) {
+          return Promise.resolve(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }));
+        }
+        if (init?.method === "POST") return Promise.resolve(new Response(null, { status: 204 }));
+        return Promise.resolve(new Response(JSON.stringify({ ...detail, pendingOrders: [order] }), { status: 200 }));
+      }),
+    );
+    const wrapper = await render();
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Cancel order")
+      ?.trigger("click");
+    expect(wrapper.text()).toContain("Cancel order 320393475 (Stop Buy GER40 at 19,600)?");
+    const dialogButtons = wrapper.findAll("dialog")[1]?.findAll("button") ?? [];
+    // Button, dialog title and confirmation say the same.
+    expect(dialogButtons.map((b) => b.text())).toEqual(["Cancel", "Cancel order"]);
+    await dialogButtons[1]?.trigger("click");
+    await flushPromises();
+    expect(calls.find((c) => c.url.endsWith("/cancel"))).toEqual({
+      url: expect.stringMatching(/accounts\/1111111\/orders\/320393475\/cancel$/) as unknown,
+      body: { confirm: "320393475" },
+    });
+    expect(wrapper.find(".notice").text()).toBe("Order 320393475 cancelled.");
+    wrapper.unmount();
+  });
+
   it("hides actions and closing positions from viewers", async () => {
     session.value = {
       setupRequired: false,
