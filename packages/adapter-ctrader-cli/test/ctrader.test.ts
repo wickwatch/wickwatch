@@ -191,6 +191,14 @@ describe("CtraderCliBroker", () => {
     expect(toRunArguments({ Note: "" })).toEqual(["--Note="]);
   });
 
+  it("formats values the way the CLI parses them", () => {
+    // Verified with ctrader-console 5.9.11: invalid values (e.g. "2,5" or "1" for a bool) silently fall
+    // back to the default, and the startup table still shows the given value. So the format must be right.
+    expect(
+      toRunArguments({ Risk: 0.25, Tiny: 0.0000001, Huge: 1e21, Flag: true, Mode: "Gamma", Time: "09:05" }),
+    ).toEqual(["--Risk=0.25", "--Tiny=1e-7", "--Huge=1e+21", "--Flag=true", "--Mode=Gamma", "--Time=09:05"]);
+  });
+
   it("starts a new session after the old one died", async () => {
     await broker.stats(c, "1111111");
     await broker.dispose();
