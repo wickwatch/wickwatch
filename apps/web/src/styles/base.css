@@ -18,7 +18,8 @@ a {
   color: var(--ww-link);
 }
 
-a:hover {
+/* Links styled as buttons keep the button's colours on hover. */
+a:not(.btn):hover {
   color: var(--ww-accent-hover);
 }
 
