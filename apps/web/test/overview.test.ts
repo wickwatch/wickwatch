@@ -74,6 +74,7 @@ beforeEach(() => {
       emergencyStop: true,
       parameterExport: [],
     },
+    parameterFormats: [],
   };
   fetchMock = vi.fn((input: URL) => {
     const path = input.pathname;

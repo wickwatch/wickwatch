@@ -8,6 +8,7 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
+import { system } from "../system";
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -22,6 +23,8 @@ const pending = ref<{ start: boolean }>();
 const algos = ref<AlgoRow[]>([]);
 const error = ref<string>();
 const deleting = ref(false);
+/** Parameter files come in the config adapter's first format, e.g. .cbotset. */
+const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
 const saved = computed(() => (typeof route.query["saved"] === "string" ? route.query["saved"] : undefined));
 
 async function load() {
@@ -311,10 +314,18 @@ async function remove() {
               <span class="muted meta">
                 {{ [formatDateTime(locale, h.createdAt), h.createdBy].filter(Boolean).join(" · ") }}
               </span>
+              <a
+                v-if="isAdmin && format"
+                :href="api.parameterFileUrl(data.name, h.version)"
+                class="btn btn--ghost btn--small history__download"
+                download
+              >
+                {{ $t("instanceConfig.download", { format }) }}
+              </a>
               <RouterLink
                 v-if="isAdmin && i > 0"
                 :to="{ name: 'instance-edit', params: { ref: data.name }, query: { version: String(h.version) } }"
-                class="btn btn--ghost btn--small restore"
+                class="btn btn--ghost btn--small"
               >
                 {{ $t("instanceConfig.restore") }}
               </RouterLink>
@@ -484,7 +495,7 @@ tbody th {
   font-size: var(--ww-size-xs);
 }
 
-.restore {
+.history__download {
   margin-left: auto;
 }
 

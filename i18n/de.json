@@ -215,7 +215,8 @@
       "config_unchanged": "Gegenüber der aktuellen Version hat sich nichts geändert.",
       "account_in_use": "Auf diesem Konto sind Instanzen eingerichtet; zuerst diese löschen.",
       "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen.",
-      "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten."
+      "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten.",
+      "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses Wickwatch lesen kann."
     }
   },
   "parameterIssue": {
@@ -508,7 +509,14 @@
     "algoMissing": "Die Algo-Version {algo} dieser Konfiguration gibt es nicht mehr; bitte eine andere wählen.",
     "restoreComment": "Wiederhergestellt aus Version {version}",
     "unknownParameters": "Diese Parameter kennt der Algo nicht: {names}",
-    "pickColor": "Farbe wählen"
+    "pickColor": "Farbe wählen",
+    "loadFile": "Parameter aus Datei laden",
+    "loadFileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Werte, die das Algo kennt, ersetzen die im Formular; gespeichert wird erst mit „Speichern“.",
+    "fileLoaded": "{count} Werte aus {file} übernommen.",
+    "fileRejected": "Nicht übernommen, sie verletzen die Regeln des Algos: {names}",
+    "fileUnknown": "Dieser Algo-Version unbekannt, ignoriert: {names}",
+    "fileMissing": "Nicht in der Datei, unverändert: {names}",
+    "andMore": "{names} und {count} weitere"
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -521,7 +529,8 @@
     "created": "Angelegt",
     "restore": "Wiederherstellen…",
     "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts.",
-    "deleteContainer": "Sein Container wird gestoppt und entfernt."
+    "deleteContainer": "Sein Container wird gestoppt und entfernt.",
+    "download": "Als .{format} herunterladen"
   },
   "deploy": {
     "title": "Laufzeit",

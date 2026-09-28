@@ -17,6 +17,7 @@ export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters:
       adapters: { runtime: adapters.runtime.id, broker: adapters.broker.id, config: adapters.config.id },
       capabilities: adapters.broker.capabilities(),
       ...(adapters.broker.periods ? { periods: adapters.broker.periods() } : {}),
+      parameterFormats: adapters.config.formats(),
     }),
   );
 };

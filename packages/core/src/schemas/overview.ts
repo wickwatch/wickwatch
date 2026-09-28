@@ -119,5 +119,7 @@ export const SystemInfo = Type.Object({
   capabilities: Capabilities,
   /** Timeframes offered by the broker adapter, if it knows them. */
   periods: Type.Optional(Type.Array(Type.String())),
+  /** File extensions of parameter files for upload and download, e.g. `cbotset`. */
+  parameterFormats: Type.Array(Type.String()),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

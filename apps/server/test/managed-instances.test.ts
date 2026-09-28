@@ -223,3 +223,55 @@ describe("managed instances", () => {
     expect((await inject("GET", "/system")).json<{ periods: string[] }>().periods).toContain("M5");
   });
 });
+
+describe("parameter files", () => {
+  beforeEach(async () => {
+    await t.app.close();
+    t = await startApp({ ALGOS_DIR: mkdtempSync(join(tmpdir(), "ww-algos-")), CONFIG_ADAPTER: "cbotset" });
+    admin = await loginAs(t, "admin");
+    alphaId = await uploadAlgo("alpha.algo", "alpha-v1");
+  });
+
+  const readFile = (content: string, cookie = admin) =>
+    t.app.inject({
+      method: "POST",
+      url: `/api/v1/algos/${String(alphaId)}/parameter-file`,
+      headers: { cookie, "content-type": "application/octet-stream" },
+      payload: Buffer.from(content),
+    });
+
+  it("reads a .cbotset for an algo without storing anything", async () => {
+    const file = `\uFEFF${JSON.stringify({
+      Chart: { Symbol: "GER40", Period: "m15" },
+      Parameters: { RiskPercent: "0.8", EntryMode: 1, Unknown: 1 },
+    })}`;
+    const res = await readFile(file);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      values: { RiskPercent: 0.8, EntryMode: "Pullback" },
+      symbol: "GER40",
+      period: "m15",
+      issues: [],
+      unknown: ["Unknown"],
+    });
+    expect((await readFile("not json")).json()).toEqual({ error: "parameter_file_invalid" });
+    const viewer = await loginAs(t, "viewer");
+    expect((await readFile(file, viewer)).statusCode).toBe(403);
+  });
+
+  it("downloads a configuration version as .cbotset, enums as numbers, for admins only", async () => {
+    expect((await create("alpha-file")).statusCode).toBe(201);
+    const res = await inject("GET", "/managed-instances/alpha-file/parameter-file?version=1");
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-disposition"]).toBe('attachment; filename="alpha-file-v1.cbotset"');
+    const file = JSON.parse(res.body.replace(/^\uFEFF/, "")) as { Chart: unknown; Parameters: Record<string, unknown> };
+    expect(file.Chart).toEqual({ Symbol: "GER40", Period: "M5" });
+    expect(file.Parameters).toMatchObject({ RiskPercent: 0.5, EntryMode: 1 });
+
+    expect((await inject("GET", "/managed-instances/alpha-file/parameter-file?version=9")).statusCode).toBe(404);
+    const viewer = await loginAs(t, "viewer");
+    expect((await inject("GET", "/managed-instances/alpha-file/parameter-file", undefined, viewer)).statusCode).toBe(
+      403,
+    );
+  });
+});

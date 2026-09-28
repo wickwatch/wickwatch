@@ -277,6 +277,57 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   );
 
   app.get(
+    "/managed-instances/:name/parameter-file",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "A configuration version as a parameter file (e.g. .cbotset), to open it in the platform",
+        description:
+          "Admins only: parameter sets may hold licence keys. `version` defaults to the current one. The body is the file.",
+        params: NameParams,
+        querystring: Type.Object({ version: Type.Optional(Type.Integer({ minimum: 1 })) }),
+        response: { 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const [instance] = await load(request.params.name);
+      if (!instance) return reply.code(404).send({ error: "not_found" });
+      const version = request.query.version ?? instance.config.version;
+      const row = await configs()
+        .where("instance_configs.instance_id", "=", instance.id)
+        .where("instance_configs.version", "=", version)
+        .executeTakeFirst();
+      if (!row) return reply.code(404).send({ error: "not_found" });
+      // Enums are stored as numbers in platform files, so the algo's schema is needed.
+      const algo =
+        row.algo_id === null
+          ? undefined
+          : await db.selectFrom("algos").select("metadata").where("id", "=", row.algo_id).executeTakeFirst();
+      if (!algo) return reply.code(409).send({ error: "algo_not_found" });
+      const config = toConfig(row);
+      const bytes = adapters.config.serialize(config.parameters, schemaOf(algo.metadata), {
+        symbol: config.symbol,
+        period: config.period,
+      });
+      const extension = adapters.config.formats()[0] ?? "txt";
+      await audit(db, {
+        action: "instance.parameter_file",
+        target: instance.name,
+        details: { version },
+        userId: request.user?.id,
+      });
+      return (
+        reply
+          .header("content-type", "application/octet-stream")
+          .header("content-disposition", `attachment; filename="${instance.name}-v${String(version)}.${extension}"`)
+          // No response schema for 200 on purpose: the file goes out as it is, not serialised as JSON.
+          .send(Buffer.from(bytes) as never)
+      );
+    },
+  );
+
+  app.get(
     "/managed-instances/:name",
     {
       schema: {

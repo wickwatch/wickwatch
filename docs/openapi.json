@@ -1009,7 +1009,8 @@
                     "defaultLocale",
                     "labelPrefix",
                     "adapters",
-                    "capabilities"
+                    "capabilities",
+                    "parameterFormats"
                   ],
                   "properties": {
                     "version": {
@@ -1075,6 +1076,12 @@
                       }
                     },
                     "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "parameterFormats": {
                       "type": "array",
                       "items": {
                         "type": "string"
@@ -6577,6 +6584,205 @@
         }
       }
     },
+    "/api/v1/algos/{id}/parameter-file": {
+      "post": {
+        "summary": "Read a parameter file (e.g. .cbotset) for this algo (body: the file, application/octet-stream)",
+        "tags": [
+          "algos"
+        ],
+        "description": "Stores nothing. Values come converted to the algo's parameter types; `issues`, `unknown` and `missing` tell what did not fit.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "values",
+                    "issues",
+                    "unknown",
+                    "missing"
+                  ],
+                  "properties": {
+                    "values": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "period": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "parameter",
+                          "code"
+                        ],
+                        "properties": {
+                          "parameter": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_type"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "below_min"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "above_max"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_option"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_format"
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "unknown": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "missing": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/algos/{id}": {
       "delete": {
         "summary": "Delete an algo version and its file (not while an instance uses it)",
@@ -7238,6 +7444,126 @@
               }
             }
           },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/{name}/parameter-file": {
+      "get": {
+        "summary": "A configuration version as a parameter file (e.g. .cbotset), to open it in the platform",
+        "tags": [
+          "instances"
+        ],
+        "description": "Admins only: parameter sets may hold licence keys. `version` defaults to the current one. The body is the file.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "in": "query",
+            "name": "version",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
           "401": {
             "description": "Default Response",
             "content": {

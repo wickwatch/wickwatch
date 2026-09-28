@@ -215,7 +215,8 @@
       "config_unchanged": "Nothing changed compared to the current version.",
       "account_in_use": "Instances are set up on this account; delete them first.",
       "algo_in_use": "An instance uses this algo version; switch it to another version first.",
-      "launch_unsupported": "This broker adapter cannot start bots."
+      "launch_unsupported": "This broker adapter cannot start bots.",
+      "parameter_file_invalid": "This is not a parameter file this Wickwatch can read."
     }
   },
   "parameterIssue": {
@@ -508,7 +509,14 @@
     "algoMissing": "The algo version {algo} of this configuration no longer exists; choose another one.",
     "restoreComment": "Restored from version {version}",
     "unknownParameters": "The algo does not know these parameters: {names}",
-    "pickColor": "Pick a colour"
+    "pickColor": "Pick a colour",
+    "loadFile": "Load parameters from file",
+    "loadFileHint": "A {formats} file, e.g. exported from the platform. Values the algo knows replace the form's; nothing is saved until you save.",
+    "fileLoaded": "{count} values from {file} applied.",
+    "fileRejected": "Not applied, they break the algo's rules: {names}",
+    "fileUnknown": "Not known to this algo version, ignored: {names}",
+    "fileMissing": "Not in the file, left as they were: {names}",
+    "andMore": "{names} and {count} more"
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -521,7 +529,8 @@
     "created": "Created",
     "restore": "Restore…",
     "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker.",
-    "deleteContainer": "Its container is stopped and removed."
+    "deleteContainer": "Its container is stopped and removed.",
+    "download": "Download .{format}"
   },
   "deploy": {
     "title": "Runtime",

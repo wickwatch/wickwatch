@@ -4,6 +4,7 @@ import type { AccountRow, AlgoRow, ManagedInstanceDetail } from "../src/api";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
+import { system } from "../src/system";
 import InstanceConfigView from "../src/views/InstanceConfigView.vue";
 import InstanceFormView from "../src/views/InstanceFormView.vue";
 
@@ -90,7 +91,10 @@ afterEach(() => {
 const posted = () =>
   fetchMock.mock.calls
     .filter((c) => (c[1] as RequestInit | undefined)?.method === "POST")
-    .map((c) => ({ url: (c[0] as URL).pathname, body: JSON.parse(String((c[1] as RequestInit).body)) as unknown }));
+    .map((c) => {
+      const body = (c[1] as RequestInit).body;
+      return { url: (c[0] as URL).pathname, body: typeof body === "string" ? (JSON.parse(body) as unknown) : body };
+    });
 
 async function open(component: typeof InstanceFormView, path: string) {
   await router.push(path);
@@ -180,6 +184,58 @@ describe("InstanceFormView", () => {
     expect(wrapper.find("input.mono").attributes("aria-invalid")).toBe("true");
     expect(wrapper.find(".field__error").text()).toBe("The server did not accept this value.");
     expect(wrapper.find("[role=alert]").exists()).toBe(false);
+  });
+
+  it("loads parameters from a file into the form and tells what it did not take", async () => {
+    system.value = {
+      version: "test",
+      defaultLocale: "en",
+      labelPrefix: "wickwatch",
+      adapters: { runtime: "demo", broker: "demo", config: "cbotset" },
+      capabilities: {
+        backtest: false,
+        optimize: false,
+        partialClose: false,
+        pendingOrders: true,
+        emergencyStop: true,
+        parameterExport: [],
+      },
+      parameterFormats: ["cbotset"],
+    };
+    response = (url, init) =>
+      init?.method === "POST" && url.pathname.endsWith("/parameter-file")
+        ? new Response(
+            JSON.stringify({
+              values: { RiskPercent: 1.2 },
+              symbol: "nas100",
+              period: "m15",
+              issues: [{ parameter: "EntryMode", code: "invalid_option" }],
+              unknown: ["LicenseKey"],
+              missing: [],
+            }),
+            { status: 200 },
+          )
+        : undefined;
+    try {
+      const wrapper = await open(InstanceFormView, "/instances/new");
+      const input = wrapper.find('input[type="file"][accept=".cbotset"]');
+      Object.defineProperty(input.element, "files", { value: [new File(["{}"], "us30_m30.cbotset")] });
+      await input.trigger("change");
+      await flushPromises();
+      expect((wrapper.find("#param-RiskPercent").element as HTMLInputElement).value).toBe("1.2");
+      // The broker's spelling of the symbol.
+      expect((wrapper.find('input[list="symbols-list"]').element as HTMLInputElement).value).toBe("NAS100");
+      expect(wrapper.find(".file-load [role=status]").text()).toContain("1 values from us30_m30.cbotset applied.");
+      expect(wrapper.find(".file-load [role=status]").text()).toContain(
+        "Not applied, they break the algo's rules: EntryMode",
+      );
+      expect(wrapper.find(".file-load [role=status]").text()).toContain("ignored: LicenseKey");
+      expect(posted()).toEqual([
+        expect.objectContaining({ url: expect.stringMatching(/algos\/2\/parameter-file$/) as unknown }),
+      ]);
+    } finally {
+      system.value = undefined;
+    }
   });
 
   it("marks invalid parameters from the server", async () => {

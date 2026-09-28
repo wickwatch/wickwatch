@@ -1,5 +1,6 @@
 import type {
   AttributionMode,
+  ParameterFile,
   ParameterIssue,
   ParameterSchema,
   ParameterValues,
@@ -220,6 +221,16 @@ export const api = {
       { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
     ),
   deleteAlgo: (id: number) => send<undefined>("DELETE", `algos/${String(id)}`),
+  /** Reads a parameter file for an algo; the server stores nothing. */
+  parseParameterFile: (algoId: number, file: File) =>
+    request<ParameterFile>(`algos/${String(algoId)}/parameter-file`, {
+      method: "POST",
+      body: file,
+      headers: { "content-type": "application/octet-stream" },
+    }),
+  /** Download link for a configuration version as a parameter file (admins). */
+  parameterFileUrl: (name: string, version: number) =>
+    url(`managed-instances/${encodeURIComponent(name)}/parameter-file?version=${String(version)}`).toString(),
   managedInstances: () => request<ManagedInstanceRow[]>("managed-instances"),
   managedInstance: (name: string) => request<ManagedInstanceDetail>(`managed-instances/${encodeURIComponent(name)}`),
   createManagedInstance: (body: { name: string; accountId: number; config: ConfigInput }) =>

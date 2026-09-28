@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { AlgoMetadata, isAdapterError, ParameterSchema } from "@wickwatch/core";
+import { AlgoMetadata, isAdapterError, ParameterFile, ParameterSchema } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import Value from "typebox/value";
@@ -80,6 +80,41 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
     { schema: { tags: ["algos"], summary: "Uploaded algo versions", response: { 200: Type.Array(Algo) } } },
     async () =>
       (await db.selectFrom("algos").selectAll().orderBy("name").orderBy("uploaded_at", "desc").execute()).map(toAlgo),
+  );
+
+  app.post(
+    "/algos/:id/parameter-file",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["algos"],
+        summary: "Read a parameter file (e.g. .cbotset) for this algo (body: the file, application/octet-stream)",
+        description:
+          "Stores nothing. Values come converted to the algo's parameter types; `issues`, `unknown` and `missing` tell what did not fit.",
+        params: Type.Object({ id: Type.Integer() }),
+        response: { 200: ParameterFile, 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length === 0) return reply.code(400).send({ error: "parameter_file_invalid" });
+      const algo = await db
+        .selectFrom("algos")
+        .select("metadata")
+        .where("id", "=", request.params.id)
+        .executeTakeFirst();
+      if (!algo) return reply.code(404).send({ error: "not_found" });
+      const metadata: unknown = JSON.parse(algo.metadata);
+      const schema = Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
+      try {
+        return adapters.config.parse(new Uint8Array(body), schema);
+      } catch (error) {
+        if (isAdapterError(error) && error.code === "invalid_input") {
+          return await reply.code(400).send({ error: "parameter_file_invalid" });
+        }
+        throw error;
+      }
+    },
   );
 
   app.post(
