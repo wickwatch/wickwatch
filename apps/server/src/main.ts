@@ -10,6 +10,7 @@ import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
 import { ConnectionTracker } from "./services/connection";
+import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
 import { loadOverview } from "./services/overview";
 import { AccountPoller } from "./services/poller";
@@ -63,9 +64,16 @@ try {
     log: app.log,
     intervalMs: config.alertCheckSeconds * 1000,
   });
+  const maintenance = new Maintenance({
+    db,
+    log: app.log,
+    auditRetentionDays: config.auditRetentionDays,
+    ...(config.backup.intervalHours > 0 ? { backup: config.backup } : {}),
+  });
   app.addHook("onClose", () => {
     poller.stop();
     notifier.stop();
+    maintenance.stop();
   });
 
   if (await needsSetup(db)) {
@@ -86,6 +94,7 @@ try {
   await app.listen({ host: config.host, port: config.port });
   poller.start();
   notifier.start();
+  maintenance.start();
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(error.message);

@@ -28,7 +28,25 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `ALERT_WEBHOOK_URL` | – | Receives a JSON `POST` whenever an alert appears or goes away, see [Notifications](#notifications). May contain a token; it is never logged. |
 | `HEARTBEAT_URL` | – | Called with `GET` after every successful alert check, e.g. a Healthchecks.io ping URL. When the calls stop, that service reports the whole server as down. |
 | `ALERT_CHECK_SECONDS` | `60` | How often alerts are checked for the two URLs above (10–3600). |
+| `BACKUP_INTERVAL_HOURS` | `24` | How often the database is backed up (`VACUUM INTO`, consistent while running); `0` turns backups off. A start writes one right away when the last is older. |
+| `BACKUP_KEEP` | `7` | How many backups are kept; older ones are deleted. |
+| `BACKUP_DIR` | `backups` next to the database | Where backups go, e.g. `/app/data/backups` in the image. Files are `wickwatch-<UTC time>.db`, readable only by the owner. |
+| `AUDIT_RETENTION_DAYS` | `365` | Audit entries older than this are deleted (checked hourly); `0` keeps them forever. Expired sessions are deleted hourly as well. |
 | `WICKWATCH_VERSION` | from the build | Version shown in the UI and `/healthz`; set by the image build. |
+
+## Backups and restore
+
+The backups hold the whole database: users, accounts, encrypted credentials, challenge profiles, instances with their configuration versions, audit log. They do **not** hold:
+
+- `MASTER_KEY`: without it the stored credentials and TOTP secrets cannot be decrypted. Keep it separately (see `SECURITY.md`).
+- Uploaded algo files in `ALGOS_DIR` (`data/algos`).
+- Bot containers and their logs.
+
+Backups are only as safe as the disk they are on: copy `data/` (backups and algos) off the server, e.g. with restic or rsync.
+
+To restore: stop Wickwatch, replace `wickwatch.db` with a backup file (and remove `wickwatch.db-wal` / `-shm` if present), start it with the same `MASTER_KEY`. Newer migrations are applied at start.
+
+Logs: bot containers created by Wickwatch rotate their logs (json-file, 5 × 10 MB); the compose examples in `deploy/` do the same for Wickwatch itself.
 
 ## Notifications
 

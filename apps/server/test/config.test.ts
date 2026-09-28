@@ -29,6 +29,8 @@ describe("loadConfig", () => {
       algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
       alertCheckSeconds: 60,
+      backup: { dir: "/srv/wickwatch/data/backups", intervalHours: 24, keep: 7 },
+      auditRetentionDays: 365,
       ctraderCli: "local",
       ctraderCliPath: "ctrader-cli",
       instanceRestartPolicy: "on-failure",

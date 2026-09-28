@@ -1,4 +1,4 @@
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { DEFAULT_LABEL_PREFIX } from "@wickwatch/core";
 
 export const LOCALES = ["en", "de"] as const;
@@ -36,6 +36,10 @@ export interface Config {
   accountPollSeconds: number;
   /** How often alerts are checked for ALERT_WEBHOOK_URL and HEARTBEAT_URL. */
   alertCheckSeconds: number;
+  /** Database backups; `intervalHours` 0 turns them off. */
+  backup: { dir: string; intervalHours: number; keep: number };
+  /** Audit entries older than this are deleted; 0 keeps them forever. */
+  auditRetentionDays: number;
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
@@ -100,6 +104,16 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (!Number.isInteger(accountPollSeconds) || accountPollSeconds < 10 || accountPollSeconds > 3600) {
     problems.push("ACCOUNT_POLL_SECONDS must be an integer between 10 and 3600");
   }
+  const integer = (name: string, fallback: number, min: number, max: number) => {
+    const value = Number(get(name) ?? fallback);
+    if (!Number.isInteger(value) || value < min || value > max) {
+      problems.push(`${name} must be an integer between ${String(min)} and ${String(max)}`);
+    }
+    return value;
+  };
+  const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
+  const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
+  const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
   const ctraderCli = get("CTRADER_CLI") ?? "local";
   if (ctraderCli !== "local" && ctraderCli !== "container") problems.push("CTRADER_CLI must be local or container");
   const alertCheckSeconds = Number(get("ALERT_CHECK_SECONDS") ?? 60);
@@ -131,6 +145,13 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     instanceRestartPolicy: instanceRestartPolicy as RestartPolicy,
     accountPollSeconds,
     alertCheckSeconds,
+    backup: {
+      // Next to the database by default, e.g. data/backups.
+      dir: resolve(cwd, get("BACKUP_DIR") ?? resolve(dirname(database.filename), "backups")),
+      intervalHours: database.filename === ":memory:" ? 0 : backupIntervalHours,
+      keep: backupKeep,
+    },
+    auditRetentionDays,
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",
       broker: get("BROKER_ADAPTER") ?? "demo",
