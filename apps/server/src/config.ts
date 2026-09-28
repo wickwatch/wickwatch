@@ -32,6 +32,8 @@ export interface Config {
   algosDir: string;
   /** How often balance and equity of every account are sampled. */
   accountPollSeconds: number;
+  /** How often alerts are checked for ALERT_WEBHOOK_URL and HEARTBEAT_URL. */
+  alertCheckSeconds: number;
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
@@ -95,6 +97,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (!Number.isInteger(accountPollSeconds) || accountPollSeconds < 10 || accountPollSeconds > 3600) {
     problems.push("ACCOUNT_POLL_SECONDS must be an integer between 10 and 3600");
   }
+  const alertCheckSeconds = Number(get("ALERT_CHECK_SECONDS") ?? 60);
+  if (!Number.isInteger(alertCheckSeconds) || alertCheckSeconds < 10 || alertCheckSeconds > 3600) {
+    problems.push("ALERT_CHECK_SECONDS must be an integer between 10 and 3600");
+  }
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
   }
@@ -118,6 +124,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(ctraderImage ? { ctraderImage } : {}),
     instanceRestartPolicy: instanceRestartPolicy as RestartPolicy,
     accountPollSeconds,
+    alertCheckSeconds,
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",
       broker: get("BROKER_ADAPTER") ?? "demo",

@@ -134,6 +134,18 @@ export interface InstanceConfigsTable {
   created_at: string;
 }
 
+/** An alert sent to ALERT_WEBHOOK_URL that has not been resolved yet. */
+export interface NotifiedAlertsTable {
+  /** `<code>:<subject>` */
+  key: string;
+  level: string;
+  code: string;
+  subject: string;
+  /** JSON of the alert params. */
+  params: string;
+  raised_at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -146,4 +158,5 @@ export interface Database {
   algos: AlgosTable;
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;
+  notified_alerts: NotifiedAlertsTable;
 }

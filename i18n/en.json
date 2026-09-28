@@ -264,6 +264,7 @@
       "warning": "Warning",
       "info": "Info"
     },
+    "resolved": "Resolved: {message}",
     "instance_error": "{subject}: error, {restarts} restarts",
     "instance_stopped": "{subject} is stopped",
     "instance_disconnected": "{subject}: connection to the broker lost since {since}",

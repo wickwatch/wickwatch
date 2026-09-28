@@ -28,6 +28,7 @@ describe("loadConfig", () => {
       challengeTemplatesDir: "/srv/wickwatch/templates/challenges",
       algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
+      alertCheckSeconds: 60,
       ctraderCliPath: "ctrader-cli",
       instanceRestartPolicy: "on-failure",
     });
@@ -88,8 +89,9 @@ describe("loadConfig", () => {
         DEFAULT_LOCALE: "fr",
         HEARTBEAT_URL: "ftp://example.com",
         LOG_LEVEL: "loud",
+        ALERT_CHECK_SECONDS: "5",
       }),
-    ).toHaveLength(8);
+    ).toHaveLength(9);
   });
 
   it("explains that Postgres is not supported yet", () => {

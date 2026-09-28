@@ -34,11 +34,21 @@ export interface AppDeps {
   setup?: SetupState;
   /** Overrides pino options, e.g. `false` in tests. */
   logger?: boolean;
+  /** Shared with the alert notifier, so both see the same connection state. */
+  connections?: ConnectionTracker;
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
 
-export async function buildApp({ config, db, adapters, version, setup = new SetupState(), logger }: AppDeps) {
+export async function buildApp({
+  config,
+  db,
+  adapters,
+  version,
+  setup = new SetupState(),
+  logger,
+  connections = new ConnectionTracker(adapters.runtime),
+}: AppDeps) {
   const { trustProxy } = config;
   const app = Fastify({
     // A hop count is supported at runtime but missing from Fastify's types.
@@ -55,7 +65,6 @@ export async function buildApp({ config, db, adapters, version, setup = new Setu
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
-  const connections = new ConnectionTracker(adapters.runtime);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });

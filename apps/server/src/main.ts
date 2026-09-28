@@ -9,6 +9,9 @@ import { ConfigError, loadConfig } from "./config";
 import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
+import { ConnectionTracker } from "./services/connection";
+import { AlertNotifier } from "./services/notifier";
+import { loadOverview } from "./services/overview";
 import { AccountPoller } from "./services/poller";
 import { VERSION } from "./version";
 
@@ -25,7 +28,8 @@ try {
   const db = createDatabase(config.database);
   const adapters = createAdapters(config);
   const setup = new SetupState();
-  const app = await buildApp({ config, db, adapters, version: VERSION, setup });
+  const connections = new ConnectionTracker(adapters.runtime);
+  const app = await buildApp({ config, db, adapters, version: VERSION, setup, connections });
 
   for (const result of await migrateToLatest(db)) {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
@@ -42,15 +46,26 @@ try {
   }
 
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
+  const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const poller = new AccountPoller({
     db,
     adapters,
-    accounts: dbAccountDirectory(db, cipher, adapters.broker.id),
+    accounts,
     log: app.log,
     statsIntervalMs: config.accountPollSeconds * 1000,
   });
+  const notifier = new AlertNotifier({
+    db,
+    load: () => loadOverview(adapters, accounts, db, config.labelPrefix, connections, app.log),
+    ...(config.alertWebhookUrl ? { webhookUrl: config.alertWebhookUrl } : {}),
+    ...(config.heartbeatUrl ? { heartbeatUrl: config.heartbeatUrl } : {}),
+    locale: config.defaultLocale,
+    log: app.log,
+    intervalMs: config.alertCheckSeconds * 1000,
+  });
   app.addHook("onClose", () => {
     poller.stop();
+    notifier.stop();
   });
 
   if (await needsSetup(db)) {
@@ -70,6 +85,7 @@ try {
 
   await app.listen({ host: config.host, port: config.port });
   poller.start();
+  notifier.start();
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(error.message);

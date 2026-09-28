@@ -17,6 +17,7 @@ describe("database", () => {
       "Success",
       "Success",
       "Success",
+      "Success",
     ]);
     expect(await migrateToLatest(db)).toEqual([]);
 
@@ -31,6 +32,7 @@ describe("database", () => {
       "daily_stats",
       "instance_configs",
       "instances",
+      "notified_alerts",
       "sessions",
       "users",
     ]);
