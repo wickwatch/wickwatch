@@ -32,6 +32,7 @@ beforeEach(() => {
   broker = new CtraderCliBroker({
     runner: toolRunner(fakeRunTool, IMAGE),
     commandTimeoutMs: 5000,
+    priceRetryMs: 10,
     connectTimeoutMs: 5000,
   });
 });

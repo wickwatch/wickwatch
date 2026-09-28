@@ -24,6 +24,7 @@ import {
   toBrokerAccounts,
   toDeals,
   toLogEvent,
+  positionsWithoutPrices,
   toPendingOrders,
   toPositions,
   toRunArguments,
@@ -32,6 +33,8 @@ import {
 import { SessionPool } from "./session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Listings of positions without prices before giving up (see positionsWithoutPrices). */
+const PRICE_ATTEMPTS = 6;
 
 /** Official image of the CLI; pinned, the version the adapter was tested with. */
 export const DEFAULT_CTRADER_IMAGE = "ghcr.io/spotware/ctrader-console:5.9.11";
@@ -159,8 +162,16 @@ export class CtraderCliBroker implements BrokerAdapter {
     return toAccountStats(extractJson(await this.pool.run(c, account, `account ${account}`)), new Date());
   }
 
+  /** Asks again for a moment when the session has no prices for the positions yet. */
   async positions(c: Credentials, account: string): Promise<Position[]> {
-    return toPositions(extractJson(await this.pool.run(c, account, "positions")));
+    for (let attempt = 1; ; attempt++) {
+      const data = extractJson(await this.pool.run(c, account, "positions"));
+      if (!positionsWithoutPrices(data)) return toPositions(data);
+      if (attempt >= PRICE_ATTEMPTS) {
+        throw new AdapterError("unavailable", "The broker has not sent prices for the open positions yet");
+      }
+      await new Promise((resolve) => setTimeout(resolve, this.options.priceRetryMs));
+    }
   }
 
   async pendingOrders(c: Credentials, account: string): Promise<PendingOrder[]> {

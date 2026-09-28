@@ -15,6 +15,7 @@ const create = () =>
     binary: process.execPath,
     binaryArgs: [FAKE],
     commandTimeoutMs: 5000,
+    priceRetryMs: 10,
     connectTimeoutMs: 5000,
   });
 
@@ -132,6 +133,30 @@ describe("CtraderCliBroker", () => {
     await expect(broker.stats(c, "5555555")).rejects.toMatchObject({ code: "unavailable" });
     await expect(broker.stats(c, "5555555")).rejects.toThrow(/not active/);
     await expect(broker.stats({ ...c, secret: "wrong" }, "1111111")).rejects.toMatchObject({ code: "auth_failed" });
+  });
+
+  it("waits for prices when a fresh session lists positions without them", async () => {
+    expect(await broker.positions(c, "1111111")).toEqual([
+      {
+        id: "31",
+        symbol: "US100.cash",
+        side: "buy",
+        volume: 0.5,
+        entry: 29400,
+        pnl: -48.2,
+        sl: 29300,
+        label: "123456789",
+        openedAt: "2026-09-25T08:00:00.000Z",
+      },
+    ]);
+    process.env["FAKE_CTRADER_NO_PRICES"] = "1";
+    try {
+      const unpriced = create();
+      await expect(unpriced.positions(c, "1111111")).rejects.toThrow(/not sent prices/);
+      await unpriced.dispose();
+    } finally {
+      delete process.env["FAKE_CTRADER_NO_PRICES"];
+    }
   });
 
   it("reads pending orders in the recorded format", async () => {

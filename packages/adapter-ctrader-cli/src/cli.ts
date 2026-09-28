@@ -14,6 +14,8 @@ export interface CliOptions {
   connectTimeoutMs: number;
   /** A shell session without commands for this long is closed. */
   sessionIdleMs: number;
+  /** Wait before asking again for positions that have no prices yet. */
+  priceRetryMs: number;
 }
 
 export const DEFAULT_CLI_OPTIONS: CliOptions = {
@@ -21,6 +23,7 @@ export const DEFAULT_CLI_OPTIONS: CliOptions = {
   commandTimeoutMs: 60_000,
   connectTimeoutMs: 60_000,
   sessionIdleMs: 10 * 60_000,
+  priceRetryMs: 500,
 };
 
 export const runnerOf = (options: CliOptions): CliRunner =>

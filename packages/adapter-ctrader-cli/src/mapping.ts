@@ -125,6 +125,18 @@ export function toDeals(data: unknown): Deal[] {
  * Open positions. Field names are assumed to follow the completed-order format
  * (`symbolName, tradeSide, volumeLots, stopLoss, takeProfit, openTime, label`) – verify on a trading day.
  */
+/**
+ * A fresh shell session lists open positions before it has prices for them: `currentPrice`,
+ * `netProfit` and `grossProfit` are null for a moment (seen with 5.9).
+ */
+export function positionsWithoutPrices(data: unknown): boolean {
+  return list(data, "positions").some((p) => p["netProfit"] === null && p["grossProfit"] === null);
+}
+
+/**
+ * `positions` (5.9): id, symbolName, tradeSide, volume, volumeLots, entryPrice, currentPrice, pips,
+ * grossProfit, netProfit, swap, commission, stopLoss, takeProfit, openTime, label, comment.
+ */
 export function toPositions(data: unknown): Position[] {
   return list(data, "positions").map((p) => {
     const id = str(p["positionId"]) ?? str(p["id"]);

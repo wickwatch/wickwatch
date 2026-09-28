@@ -168,20 +168,33 @@ out(
 );
 
 // Stateful per session, so cancelling and closing can be checked. FAKE_CTRADER_STUCK keeps them open.
+// Field names as recorded from ctrader-console 5.9 on 2026-09-28 (a Sell on ETHUSD).
 let positions = [
   {
-    positionId: 31,
+    id: 31,
     symbolName: "US100.cash",
     tradeSide: "Buy",
+    volume: 0.5,
     volumeLots: 0.5,
     entryPrice: 29400,
-    stopLoss: 29300,
-    takeProfit: null,
+    currentPrice: 29303.6,
+    pips: -96.4,
+    grossProfit: -48.2,
     netProfit: -48.2,
-    label: "123456789",
+    swap: 0,
+    commission: 0,
+    stopLoss: 29300,
+    stopLossPips: null,
+    takeProfit: null,
+    takeProfitPips: null,
     openTime: "2026-09-25T08:00:00.000Z",
+    label: "123456789",
+    comment: "",
   },
 ];
+// Like the real CLI, the first listing of a session has no prices; FAKE_CTRADER_NO_PRICES keeps it so.
+let priced = false;
+const unpriced = (p) => ({ ...p, currentPrice: null, pips: null, grossProfit: null, netProfit: null });
 // Field names as recorded from ctrader-console 5.9 on 2026-09-28 (a Buy Stop on EURUSD).
 let orders = [
   {
@@ -238,12 +251,14 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       accountName: "Challenge A",
     });
   else if (cmd === "accounts") json({ accounts: active });
-  else if (cmd === "positions") json({ positions });
-  else if (cmd === "orders") json({ orders });
+  else if (cmd === "positions") {
+    json({ positions: priced && !process.env.FAKE_CTRADER_NO_PRICES ? positions : positions.map(unpriced) });
+    priced = true;
+  } else if (cmd === "orders") json({ orders });
   else if (cmd === "order" && rest[0] === "cancel" && rest.at(-1) === "yes")
     orders = remove("Order", orders, "id", rest[1]);
   else if (cmd === "position" && rest[0] === "close" && rest.at(-1) === "yes")
-    positions = remove("Position", positions, "positionId", rest[1]);
+    positions = remove("Position", positions, "id", rest[1]);
   else if (cmd === "deals")
     json(
       empty
