@@ -123,7 +123,8 @@ export interface DemoInstanceSeed {
   restartCount: number;
   volume: number;
   positions: Array<{ side: Side; hoursAgo: number; slDistance: number; tpDistance: number }>;
-  orders: Array<{ type: OrderType; side: Side; distance: number }>;
+  /** `expiresInHours`: the order runs out that many hours after the current full hour. */
+  orders: Array<{ type: OrderType; side: Side; distance: number; expiresInHours?: number }>;
 }
 
 export const INSTANCES: DemoInstanceSeed[] = [
@@ -151,7 +152,7 @@ export const INSTANCES: DemoInstanceSeed[] = [
     restartCount: 0,
     volume: 0.5,
     positions: [],
-    orders: [{ type: "limit", side: "sell", distance: 60 }],
+    orders: [{ type: "limit", side: "sell", distance: 60, expiresInHours: 6 }],
   },
   {
     name: "alpha-us30-b",

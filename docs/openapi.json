@@ -2311,6 +2311,11 @@
                           },
                           "label": {
                             "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
                           }
                         }
                       }

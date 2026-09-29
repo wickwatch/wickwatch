@@ -22,6 +22,8 @@ defineEmits<{ close: [position: Position]; cancel: [order: PendingOrder]; attrib
 const { locale } = useI18n();
 
 const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
+/** The expiry column only when an order has one. */
+const expiring = computed(() => props.orders?.some((o) => o.expiresAt) ?? false);
 const COLLAPSED_ROWS = 10;
 const showAll = ref(false);
 /** Newest first in the table; the chart shows the same deals oldest first. */
@@ -91,6 +93,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <th scope="col" class="num">{{ $t("trade.price") }}</th>
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
+          <th v-if="expiring" scope="col">{{ $t("trade.expires") }}</th>
           <th v-if="canCancel" scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
@@ -104,6 +107,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="mono num">{{ price(o.price) }}</td>
           <td class="mono num">{{ price(o.sl) }}</td>
           <td class="mono num">{{ price(o.tp) }}</td>
+          <td v-if="expiring" class="mono">{{ o.expiresAt ? formatDateTime(locale, o.expiresAt) : "–" }}</td>
           <td v-if="canCancel" class="num">
             <button
               type="button"

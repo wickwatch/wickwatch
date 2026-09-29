@@ -372,6 +372,7 @@
     "price": "Preis",
     "sl": "SL",
     "tp": "TP",
+    "expires": "Läuft ab",
     "pnl": "P&L",
     "costs": "Kosten",
     "type": "Typ",

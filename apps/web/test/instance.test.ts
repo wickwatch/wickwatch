@@ -1,6 +1,7 @@
 import type { InstanceDetail } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../src/format";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
@@ -161,6 +162,7 @@ describe("InstanceView", () => {
       side: "buy" as const,
       volume: 1,
       price: 19600,
+      expiresAt: "2026-09-26T21:00:00.000Z",
     };
     const calls: { url: string; body?: unknown }[] = [];
     vi.stubGlobal(
@@ -175,6 +177,9 @@ describe("InstanceView", () => {
       }),
     );
     const wrapper = await render();
+    // The expiry column appears because the order has one.
+    expect(wrapper.text()).toContain("Expires");
+    expect(wrapper.text()).toContain(formatDateTime("en", "2026-09-26T21:00:00.000Z"));
     await wrapper
       .findAll("button")
       .find((b) => b.text() === "Cancel order")

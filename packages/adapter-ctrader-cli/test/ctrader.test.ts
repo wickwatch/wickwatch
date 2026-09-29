@@ -86,7 +86,17 @@ describe("CtraderCliBroker", () => {
       },
     ]);
     expect(await broker.pendingOrders(c, "1111111")).toEqual([
-      { id: "41", symbol: "US100.cash", type: "limit", side: "sell", volume: 0.5, price: 29800, sl: 29900, tp: 29600 },
+      {
+        id: "41",
+        symbol: "US100.cash",
+        type: "limit",
+        side: "sell",
+        volume: 0.5,
+        price: 29800,
+        sl: 29900,
+        tp: 29600,
+        expiresAt: "2026-10-02T21:00:00.000Z",
+      },
     ]);
     const shells = calls().filter((a) => !["accounts", "symbols", "metadata"].includes(a[0] ?? ""));
     expect(shells).toHaveLength(1);
@@ -178,7 +188,17 @@ describe("CtraderCliBroker", () => {
 
   it("reads pending orders in the recorded format", async () => {
     expect(await broker.pendingOrders(c, "1111111")).toEqual([
-      { id: "41", symbol: "US100.cash", type: "limit", side: "sell", volume: 0.5, price: 29800, sl: 29900, tp: 29600 },
+      {
+        id: "41",
+        symbol: "US100.cash",
+        type: "limit",
+        side: "sell",
+        volume: 0.5,
+        price: 29800,
+        sl: 29900,
+        tp: 29600,
+        expiresAt: "2026-10-02T21:00:00.000Z",
+      },
     ]);
   });
 

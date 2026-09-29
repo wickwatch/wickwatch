@@ -52,6 +52,8 @@ export const PendingOrder = Type.Object({
   sl: Type.Optional(Type.Number()),
   tp: Type.Optional(Type.Number()),
   label: Type.Optional(Type.String()),
+  /** When the broker cancels the order by itself; unset when it stays until cancelled. */
+  expiresAt: Type.Optional(IsoTime),
 });
 export type PendingOrder = Type.Static<typeof PendingOrder>;
 

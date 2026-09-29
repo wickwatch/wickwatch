@@ -213,7 +213,7 @@ let orders = [
     stopLossPips: null,
     takeProfit: 29600,
     takeProfitPips: null,
-    expiration: null,
+    expiration: "2026-10-02T21:00:00.000Z",
     label: "",
     comment: "",
   },

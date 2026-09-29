@@ -198,6 +198,11 @@ export class DemoBrokerAdapter implements BrokerAdapter {
             volume: instance.volume,
             price: round(this.world.price(instance.symbol, now) + direction * seed.distance, 2),
             label: instance.name,
+            ...(seed.expiresInHours === undefined
+              ? {}
+              : {
+                  expiresAt: toIsoTime(new Date((Math.floor(now.getTime() / HOUR_MS) + seed.expiresInHours) * HOUR_MS)),
+                }),
           },
         ];
       }),

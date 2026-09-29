@@ -19,6 +19,10 @@ type Json = Record<string, unknown>;
 
 const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : undefined);
+const isoTime = (v: unknown) => {
+  const t = typeof v === "string" ? Date.parse(v) : NaN;
+  return Number.isNaN(t) ? undefined : new Date(t).toISOString();
+};
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
 const side = (v: unknown) => {
   const s = str(v)?.toLowerCase();
@@ -189,6 +193,7 @@ export function toPendingOrders(data: unknown): PendingOrder[] {
       ...optional("sl", num(o["stopLoss"])),
       ...optional("tp", num(o["takeProfit"])),
       ...(label ? { label } : {}),
+      ...optional("expiresAt", isoTime(o["expiration"])),
     };
   });
 }
