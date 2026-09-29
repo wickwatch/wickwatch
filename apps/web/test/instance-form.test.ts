@@ -226,10 +226,12 @@ describe("InstanceFormView", () => {
       // The broker's spelling of the symbol.
       expect((wrapper.find('input[list="symbols-list"]').element as HTMLInputElement).value).toBe("NAS100");
       expect(wrapper.find(".file-load [role=status]").text()).toContain("1 values from us30_m30.cbotset applied.");
-      expect(wrapper.find(".file-load [role=status]").text()).toContain(
-        "Not applied, they break the algo's rules: EntryMode",
-      );
-      expect(wrapper.find(".file-load [role=status]").text()).toContain("ignored: LicenseKey");
+      const lines = wrapper.findAll(".file-load [role=status] p");
+      expect(lines[0]?.classes()).toContain("tone-positive");
+      // Rejected values are a warning, in full and with the reason, not part of the green success line.
+      expect(lines[1]?.text()).toBe("Not applied, they break the algo's rules: EntryMode (Not an allowed option)");
+      expect(lines[1]?.classes()).toContain("tone-warning");
+      expect(lines[2]?.text()).toContain("ignored: LicenseKey");
       expect(posted()).toEqual([
         expect.objectContaining({ url: expect.stringMatching(/algos\/2\/parameter-file$/) as unknown }),
       ]);

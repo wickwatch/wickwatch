@@ -104,10 +104,11 @@ const shownIssues = computed(() => {
   return result;
 });
 const formats = computed(() => system.value?.parameterFormats ?? []);
-const fileNotice = ref<{ tone: "positive" | "negative"; lines: string[] }>();
+type Tone = "positive" | "negative" | "warning" | "muted";
+const fileNotice = ref<{ tone: Tone; text: string }[]>();
 const LISTED = 8;
+const label = (n: string) => schema.value.find((p) => p.name === n)?.label ?? n;
 function names(list: string[]): string {
-  const label = (n: string) => schema.value.find((p) => p.name === n)?.label ?? n;
   const shown = list.slice(0, LISTED).map(label).join(", ");
   return list.length > LISTED ? t("instanceForm.andMore", { names: shown, count: list.length - LISTED }) : shown;
 }
@@ -124,18 +125,23 @@ async function loadFile(event: Event) {
     values.value = { ...values.value, ...parsed.values };
     if (parsed.symbol) symbol.value = canonical(parsed.symbol, symbols.value);
     if (parsed.period) period.value = canonical(parsed.period, periods.value);
-    const rejected = parsed.issues.map((i) => i.parameter);
-    fileNotice.value = {
-      tone: "positive",
-      lines: [
-        t("instanceForm.fileLoaded", { count: Object.keys(parsed.values).length, file: file.name }),
-        ...(rejected.length ? [t("instanceForm.fileRejected", { names: names(rejected) })] : []),
-        ...(parsed.unknown.length ? [t("instanceForm.fileUnknown", { names: names(parsed.unknown) })] : []),
-        ...(parsed.missing.length ? [t("instanceForm.fileMissing", { names: names(parsed.missing) })] : []),
-      ],
-    };
+    // Rejected values are listed in full with the reason: they are the ones to fix by hand.
+    const rejected = parsed.issues.map((i) => `${label(i.parameter)} (${t(`parameterIssue.${i.code}`)})`).join(", ");
+    fileNotice.value = [
+      {
+        tone: "positive",
+        text: t("instanceForm.fileLoaded", { count: Object.keys(parsed.values).length, file: file.name }),
+      },
+      ...(rejected ? [{ tone: "warning" as const, text: t("instanceForm.fileRejected", { names: rejected }) }] : []),
+      ...(parsed.unknown.length
+        ? [{ tone: "warning" as const, text: t("instanceForm.fileUnknown", { names: names(parsed.unknown) }) }]
+        : []),
+      ...(parsed.missing.length
+        ? [{ tone: "muted" as const, text: t("instanceForm.fileMissing", { names: names(parsed.missing) }) }]
+        : []),
+    ];
   } catch (e) {
-    fileNotice.value = { tone: "negative", lines: [t(errorKey(e))] };
+    fileNotice.value = [{ tone: "negative", text: t(errorKey(e)) }];
   }
 }
 
@@ -386,8 +392,10 @@ const algoLabel = (a: AlgoRow) =>
           <span class="field__hint">{{
             $t("instanceForm.loadFileHint", { formats: formats.map((f) => `.${f}`).join(", ") })
           }}</span>
-          <div v-if="fileNotice" :class="`tone-${fileNotice.tone}`" role="status">
-            <p v-for="line in fileNotice.lines" :key="line" class="file-load__line">{{ line }}</p>
+          <div v-if="fileNotice" role="status">
+            <p v-for="line in fileNotice" :key="line.text" class="file-load__line" :class="`tone-${line.tone}`">
+              {{ line.text }}
+            </p>
           </div>
         </div>
         <p v-if="!schema.length" class="muted">{{ $t("instanceForm.noParameters") }}</p>
