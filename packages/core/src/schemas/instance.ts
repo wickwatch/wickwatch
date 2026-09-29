@@ -39,5 +39,7 @@ export const InstanceDetail = Type.Object({
   excludedDeals: Type.Array(Deal),
   stats: DealStats,
   range: Type.Object({ from: IsoTime, to: IsoTime }),
+  /** When this instance's first trade Wickwatch knows closed, also before the range; unset while unknown. */
+  firstTradeAt: Type.Optional(IsoTime),
 });
 export type InstanceDetail = Type.Static<typeof InstanceDetail>;

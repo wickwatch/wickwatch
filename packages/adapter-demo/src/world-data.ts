@@ -23,6 +23,8 @@ export interface DemoAccount {
   currency: string;
   live: boolean;
   startBalance: number;
+  /** No deals before this; some accounts have more history than the longest range, some less. */
+  openedDaysAgo: number;
   prop?: string;
   /** What a user would enter in the UI for a real account. */
   displayName: string;
@@ -36,6 +38,7 @@ export const ACCOUNTS: DemoAccount[] = [
     currency: "USD",
     live: false,
     startBalance: 100_000,
+    openedDaysAgo: 400,
     prop: "demo-prop-a",
     displayName: "Demo Prop A Challenge",
     credentialLabel: "Demo login A",
@@ -46,6 +49,7 @@ export const ACCOUNTS: DemoAccount[] = [
     currency: "USD",
     live: false,
     startBalance: 50_000,
+    openedDaysAgo: 120,
     prop: "demo-prop-b",
     displayName: "Demo Prop B Challenge",
     credentialLabel: "Demo login B",
@@ -56,6 +60,7 @@ export const ACCOUNTS: DemoAccount[] = [
     currency: "EUR",
     live: false,
     startBalance: 10_000,
+    openedDaysAgo: 60,
     displayName: "Own account",
     credentialLabel: "Demo login A",
   },

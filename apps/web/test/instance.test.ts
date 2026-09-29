@@ -130,6 +130,29 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("offers all trades only when the instance traded before the longest range", async () => {
+    const rangeButtons = (w: Awaited<ReturnType<typeof render>>) => w.findAll(".range button").map((b) => b.text());
+    const plain = await render();
+    expect(rangeButtons(plain)).toEqual(["7 days", "30 days", "90 days"]);
+    plain.unmount();
+
+    const fetch = vi.fn((input: URL) =>
+      Promise.resolve(
+        input.pathname.includes("/managed-instances/")
+          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+          : new Response(JSON.stringify({ ...detail, firstTradeAt: "2025-11-03T10:00:00.000Z" }), { status: 200 }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const wrapper = await render();
+    expect(rangeButtons(wrapper)).toEqual(["7 days", "30 days", "90 days", "All"]);
+    await wrapper.findAll(".range button")[3]?.trigger("click");
+    await flushPromises();
+    expect(String(fetch.mock.calls.at(-1)?.[0])).toMatch(/instances\/alpha\?all=true$/);
+    expect(wrapper.find('.range button[aria-pressed="true"]').text()).toBe("All");
+    wrapper.unmount();
+  });
+
   it("cancels a pending order after confirmation", async () => {
     const order = {
       id: "320393475",

@@ -22,6 +22,7 @@ import { managedInstanceRoutes } from "./routes/managed-instances";
 import { overviewRoutes } from "./routes/overview";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
+import { createDealHistory } from "./services/deal-history";
 import { LogTracker } from "./services/log-tracker";
 import { createSymbolCache } from "./services/symbols";
 
@@ -65,6 +66,7 @@ export async function buildApp({
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
+  const history = createDealHistory(adapters.broker, app.log);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -79,7 +81,7 @@ export async function buildApp({
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
   await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, logTracker, prefix: api });
-  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, logTracker, prefix: api });
+  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, logTracker, history, prefix: api });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);

@@ -12,13 +12,15 @@ import type {
   RuntimeInstance,
 } from "./schemas";
 import { toIsoTime } from "./schemas";
-import { dealStats } from "./stats";
+import { dealResult, dealStats } from "./stats";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface InstanceDetailInput {
   time: Date;
   from: Date;
+  /** The range starts at the instance's first trade instead of `from` (the "all" range). */
+  fromFirstTrade?: boolean;
   labelPrefix: string;
   instance: RuntimeInstance;
   /** All instances, so trades can be attributed (e.g. "only instance on this account and symbol"). */
@@ -33,6 +35,8 @@ export interface InstanceDetailInput {
     currency?: string;
     /** Broker data of the whole account; attributed to the instance here (see attribution.ts). */
     data?: { positions: Position[]; pendingOrders: PendingOrder[]; deals: Deal[] };
+    /** Older deals of the account, oldest first, if loaded; only used to find the instance's first trade. */
+    history?: Deal[];
     error?: AdapterErrorCode;
   };
 }
@@ -69,7 +73,11 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
   const asItem = (d: Deal): TradeItem => d;
   const orderItem = (o: PendingOrder): TradeItem => ({ label: o.label, symbol: o.symbol });
   const byTime = (a: Deal, b: Deal) => a.time.localeCompare(b.time);
-  const deals = mine(data?.deals, asItem).sort(byTime);
+  const own = mine(data?.deals, asItem).sort(byTime);
+  // The first deal that changed the P&L; deals before it (e.g. openings without costs) add nothing.
+  const first = [...mine(account?.history, asItem), ...own].find((d) => dealResult(d) !== 0)?.time;
+  const from = input.fromFirstTrade && first ? new Date(first) : input.from;
+  const deals = input.fromFirstTrade && first ? own.filter((d) => d.time >= first) : own;
 
   return {
     time: toIsoTime(time),
@@ -90,6 +98,7 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
     excludedDeals: excluded(data?.deals, asItem).sort(byTime),
     deals,
     stats: dealStats(deals),
-    range: { from: toIsoTime(input.from), to: toIsoTime(time) },
+    range: { from: toIsoTime(from), to: toIsoTime(time) },
+    ...(first ? { firstTradeAt: toIsoTime(new Date(first)) } : {}),
   };
 }

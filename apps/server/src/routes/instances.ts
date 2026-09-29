@@ -7,6 +7,7 @@ import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { audit } from "../services/audit";
+import type { DealHistory } from "../services/deal-history";
 import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
 
@@ -20,11 +21,12 @@ export interface InstanceRouteOptions {
   db: Db;
   labelPrefix: string;
   logTracker: LogTracker;
+  history: DealHistory;
 }
 
 export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, labelPrefix, logTracker },
+  { adapters, accounts, db, labelPrefix, logTracker, history },
 ) => {
   app.get(
     "/instances/:ref",
@@ -33,7 +35,12 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         tags: ["instances"],
         summary: "Instance detail: status, positions, orders, deals and key figures of the range",
         params: Type.Object({ ref: Ref }),
-        querystring: Type.Object({ days: Type.Optional(Type.Integer({ minimum: 1, maximum: 366, default: 30 })) }),
+        querystring: Type.Object({
+          days: Type.Optional(Type.Integer({ minimum: 1, maximum: 366, default: 30 })),
+          all: Type.Optional(
+            Type.Boolean({ description: "Everything since the instance's first trade; `days` is then ignored." }),
+          ),
+        }),
         response: { 200: InstanceDetail, 404: ErrorBody, 503: ErrorBody },
       },
     },
@@ -44,8 +51,9 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         db,
         labelPrefix,
         logTracker,
+        history,
         request.params.ref,
-        request.query.days ?? 30,
+        request.query.all ? "all" : (request.query.days ?? 30),
         request.log,
       ),
   );

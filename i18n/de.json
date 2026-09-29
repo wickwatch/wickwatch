@@ -145,6 +145,7 @@
     "crashes": "Der Bot hat seit dem Start {count}-mal einen Fehler geworfen, zuletzt um {last}. Er läuft weiter, aber der fehlerhafte Teil tut womöglich nicht, was er soll – bitte das Log prüfen.",
     "range": "Zeitraum",
     "days": "{days} Tage",
+    "allTime": "Alle",
     "noPositions": "Keine offenen Positionen.",
     "noOrders": "Keine Pending Orders.",
     "labels": "Labels",

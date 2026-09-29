@@ -1,7 +1,7 @@
 import type { InstanceDetail, LogLine } from "@wickwatch/core";
 import { Value } from "typebox/value";
 import { InstanceDetail as InstanceDetailSchema } from "@wickwatch/core";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
@@ -14,6 +14,7 @@ afterEach(async () => {
   await t.app.close();
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
 const get = (url: string, cookie = admin) => t.app.inject({ url, headers: { cookie } });
 
 describe("instance detail", () => {
@@ -28,6 +29,24 @@ describe("instance detail", () => {
     expect(detail.deals.every((d) => d.label === "alpha-ger40-a")).toBe(true);
     expect(detail.stats.trades).toBe(detail.deals.filter((d) => d.pnl !== 0).length);
     expect(Date.parse(detail.range.to) - Date.parse(detail.range.from)).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("knows the first deal before the range and shows everything since then on request", async () => {
+    // The demo account has 400 days of deals; the older history loads in the background.
+    await get("/api/v1/instances/alpha-ger40-a?days=7");
+    await vi.waitFor(async () => {
+      expect((await get("/api/v1/instances/alpha-ger40-a?days=7")).json<InstanceDetail>().firstTradeAt).toBeDefined();
+    });
+    const week = (await get("/api/v1/instances/alpha-ger40-a?days=7")).json<InstanceDetail>();
+    const first = Date.parse(week.firstTradeAt ?? "");
+    expect(Date.now() - first).toBeGreaterThan(300 * DAY_MS);
+
+    const all = (await get("/api/v1/instances/alpha-ger40-a?all=true")).json<InstanceDetail>();
+    expect(Value.Errors(InstanceDetailSchema, all)).toEqual([]);
+    expect(all.range.from).toBe(week.firstTradeAt);
+    expect(all.deals[0]?.time).toBe(week.firstTradeAt);
+    expect(all.deals.length).toBeGreaterThan(week.deals.length);
+    expect(new Set(all.deals.map((d) => d.id)).size).toBe(all.deals.length);
   });
 
   it("answers 404 for unknown instances and validates the range", async () => {

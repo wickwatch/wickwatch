@@ -15,11 +15,14 @@ import { durationParts, formatDateTime, formatPrice } from "../format";
 import { isAdmin } from "../session";
 
 const RANGES = [7, 30, 90] as const;
+const LONGEST = 90;
+type Range = (typeof RANGES)[number] | "all";
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const route = useRoute();
 const { t, locale } = useI18n();
 const instanceRef = computed(() => String(route.params["ref"]));
-const days = ref<(typeof RANGES)[number]>(30);
+const days = ref<Range>(30);
 
 const { data, error, now, refresh } = usePolling(() => api.instance(instanceRef.value, days.value), 30_000);
 watch([instanceRef, days], () => void refresh());
@@ -37,6 +40,13 @@ watch(
   },
   { immediate: true },
 );
+
+/** "All" only when the instance traded before the longest range. */
+const ranges = computed<Range[]>(() => {
+  const d = data.value;
+  const older = d?.firstTradeAt && Date.parse(d.time) - Date.parse(d.firstTradeAt) > LONGEST * DAY_MS;
+  return older || days.value === "all" ? [...RANGES, "all"] : [...RANGES];
+});
 
 const busy = reactive(new Set<string>());
 const notice = ref<{ tone: "positive" | "negative"; text: string }>();
@@ -194,14 +204,14 @@ async function closePosition() {
 
       <div class="range" role="group" :aria-label="$t('instance.range')">
         <button
-          v-for="r in RANGES"
+          v-for="r in ranges"
           :key="r"
           type="button"
           class="btn btn--ghost btn--small"
           :aria-pressed="days === r"
           @click="days = r"
         >
-          {{ $t("instance.days", { days: r }) }}
+          {{ r === "all" ? $t("instance.allTime") : $t("instance.days", { days: r }) }}
         </button>
       </div>
 

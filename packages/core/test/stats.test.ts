@@ -131,4 +131,52 @@ describe("buildInstanceDetail", () => {
     expect(detail.excludedDeals.map((d) => d.positionId)).toEqual(["manual-pos"]);
     expect(detail.stats.trades).toBe(1);
   });
+
+  it("finds the instance's first deal in the older history and can start the range there", () => {
+    const input = {
+      time: new Date("2026-09-25T12:00:00.000Z"),
+      from: new Date("2026-06-27T12:00:00.000Z"),
+      labelPrefix: "ww",
+      instance: alpha,
+      account: {
+        number: "111",
+        displayName: "Main",
+        data: { positions: [], pendingOrders: [], deals: [deal(30)] },
+        // Another bot's older deal does not count, nor an opening without costs.
+        history: [
+          deal(0, { commission: 0, time: "2025-10-01T10:00:00.000Z" }),
+          deal(5, { time: "2025-11-03T10:00:00.000Z" }),
+          deal(9, { label: "beta", time: "2025-01-01T00:00:00.000Z" }),
+        ],
+      },
+    };
+    const allInstances = [
+      alpha,
+      { ...alpha, ref: "ww-beta", labels: buildLabels("ww", { instance: "beta", account: "111", symbol: "US30" }) },
+    ];
+    const detail = buildInstanceDetail({ ...input, allInstances });
+    expect(detail.firstTradeAt).toBe("2025-11-03T10:00:00.000Z");
+    // The history only tells where the instance started; the range keeps its deals.
+    expect(detail.deals).toHaveLength(1);
+    expect(detail.range.from).toBe("2026-06-27T12:00:00.000Z");
+
+    const all = buildInstanceDetail({
+      ...input,
+      allInstances,
+      fromFirstTrade: true,
+      account: { ...input.account, data: { ...input.account.data, deals: [...input.account.history, deal(30)] } },
+    });
+    expect(all.range.from).toBe("2025-11-03T10:00:00.000Z");
+    expect(all.deals).toHaveLength(2);
+  });
+
+  it("leaves the first deal out while nothing is known", () => {
+    const detail = buildInstanceDetail({
+      time: new Date("2026-09-25T12:00:00.000Z"),
+      from: new Date("2026-08-26T12:00:00.000Z"),
+      labelPrefix: "ww",
+      instance: alpha,
+    });
+    expect(detail).not.toHaveProperty("firstTradeAt");
+  });
 });

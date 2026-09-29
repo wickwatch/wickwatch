@@ -1876,6 +1876,15 @@
           },
           {
             "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "all",
+            "required": false,
+            "description": "Everything since the instance's first trade; `days` is then ignored."
+          },
+          {
+            "schema": {
               "type": "string",
               "minLength": 1,
               "maxLength": 200
@@ -2578,6 +2587,11 @@
                           "pattern": "Z$"
                         }
                       }
+                    },
+                    "firstTradeAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
                     }
                   }
                 }

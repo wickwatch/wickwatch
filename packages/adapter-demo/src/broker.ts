@@ -209,11 +209,13 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     const seed = this.world.seed;
     const deals: Deal[] = [];
     const instances = INSTANCES.filter((i) => i.account === account.number);
-    for (let slot = Math.floor(from / HOUR_MS); slot * HOUR_MS <= to; slot++) {
+    const opened = Math.floor(this.world.now().getTime() / DAY_MS) * DAY_MS - account.openedDaysAgo * DAY_MS;
+    const start = Math.max(from, opened);
+    for (let slot = Math.floor(start / HOUR_MS); slot * HOUR_MS <= to; slot++) {
       for (const instance of instances) {
         if (random(seed, instance.name, "deal", slot) >= 0.06) continue;
         const time = slot * HOUR_MS + Math.floor(random(seed, instance.name, "time", slot) * HOUR_MS);
-        if (time < from || time > to) continue;
+        if (time < start || time > to) continue;
         const pnl = (random(seed, instance.name, "pnl", slot) - 0.42) * account.startBalance * 0.006;
         deals.push({
           id: numericId(seed, instance.name, "deal", slot),

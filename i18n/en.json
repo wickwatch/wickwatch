@@ -145,6 +145,7 @@
     "crashes": "The bot threw an error {count} times since its start, last at {last}. It keeps running, but the part that failed may not do its job – check the log.",
     "range": "Time range",
     "days": "{days} days",
+    "allTime": "All",
     "noPositions": "No open positions.",
     "noOrders": "No pending orders.",
     "labels": "Labels",
