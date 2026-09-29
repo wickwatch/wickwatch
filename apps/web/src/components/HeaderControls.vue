@@ -1,56 +1,59 @@
 <script setup lang="ts">
+import flagDe from "@assets/flags/de.svg";
+import flagEn from "@assets/flags/gb-us.svg";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { LOCALES, setLocale } from "../i18n";
-import { THEME_MODES, themeMode } from "../theme";
+import { LOCALES, setLocale, type Locale } from "../i18n";
+import type { IconName } from "../icons";
+import { THEME_MODES, themeMode, type ThemeMode } from "../theme";
+import AppIcon from "./AppIcon.vue";
+import MenuButton, { type MenuItem } from "./MenuButton.vue";
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
+
+const FLAGS: Record<Locale, string> = { en: flagEn, de: flagDe };
+const THEME_ICONS: Record<ThemeMode, IconName> = { system: "monitor", light: "sun", dark: "moon" };
+
+// Language names stay in their own language ("Deutsch", "English"), whatever the active locale.
+const languages = computed<MenuItem[]>(() =>
+  LOCALES.map((l) => ({ id: l, label: t(`language.${l}`), image: FLAGS[l], checked: locale.value === l, lang: l })),
+);
+const themes = computed<MenuItem[]>(() =>
+  THEME_MODES.map((m) => ({ id: m, label: t(`theme.${m}`), icon: THEME_ICONS[m], checked: themeMode.value === m })),
+);
+const current = computed(() => locale.value as Locale);
 </script>
 
 <template>
   <div class="controls">
-    <div class="segmented" role="group" :aria-label="$t('language.label')">
-      <button
-        v-for="l in LOCALES"
-        :key="l"
-        type="button"
-        class="btn btn--ghost btn--small"
-        :aria-pressed="locale === l"
-        :lang="l"
-        :title="$t(`language.${l}`)"
-        @click="setLocale(l)"
-      >
-        {{ l.toUpperCase() }}
-      </button>
-    </div>
-    <label class="theme">
-      <span class="visually-hidden">{{ $t("theme.label") }}</span>
-      <select v-model="themeMode" class="btn btn--small">
-        <option v-for="mode in THEME_MODES" :key="mode" :value="mode">{{ $t(`theme.${mode}`) }}</option>
-      </select>
-    </label>
+    <MenuButton
+      :label="$t('language.current', { language: $t(`language.${current}`) })"
+      :items="languages"
+      @select="setLocale($event as Locale)"
+    >
+      <img :src="FLAGS[current]" alt="" class="flag" />
+    </MenuButton>
+    <MenuButton
+      :label="$t('theme.current', { theme: $t(`theme.${themeMode}`) })"
+      :items="themes"
+      @select="themeMode = $event as ThemeMode"
+    >
+      <AppIcon :name="THEME_ICONS[themeMode]" />
+    </MenuButton>
   </div>
 </template>
 
 <style scoped>
 .controls {
   display: flex;
-  gap: var(--ww-space-2);
+  gap: var(--ww-space-1);
   align-items: center;
 }
 
-.segmented {
-  display: flex;
-  border: 1px solid var(--ww-border);
-  border-radius: var(--ww-radius-md);
-  overflow: hidden;
-}
-
-.segmented .btn {
-  border: 0;
-  border-radius: 0;
-}
-
-.theme select {
-  appearance: auto;
+.flag {
+  width: 22px;
+  height: 16.5px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--ww-border-strong);
 }
 </style>

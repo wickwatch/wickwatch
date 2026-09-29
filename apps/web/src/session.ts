@@ -15,3 +15,13 @@ export function clearUser(): void {
   const { user: _removed, ...rest } = session.value;
   session.value = rest;
 }
+
+/** Up to two letters for the avatar: "Martin M." → "MM", "martin.mohr" → "MM", "admin" → "A". */
+export function initials(username: string): string {
+  const parts = username.split(/[\s._-]+/u).filter(Boolean);
+  return parts
+    .slice(0, 2)
+    .map((p) => [...p][0] ?? "")
+    .join("")
+    .toLocaleUpperCase();
+}

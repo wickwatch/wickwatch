@@ -1,12 +1,27 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { api } from "../api";
-import { clearUser, currentUser } from "../session";
+import { clearUser, currentUser, initials } from "../session";
+import AppIcon from "./AppIcon.vue";
 import AppLogo from "./AppLogo.vue";
 import HeaderControls from "./HeaderControls.vue";
 import HostStatus from "./HostStatus.vue";
+import MenuButton, { type MenuItem } from "./MenuButton.vue";
 
 const router = useRouter();
+const { t } = useI18n();
+const userInitials = computed(() => (currentUser.value ? initials(currentUser.value.username) : ""));
+const userItems = computed<MenuItem[]>(() => [
+  { id: "profile", label: t("profile.title"), icon: "user" },
+  { id: "logout", label: t("auth.logout"), icon: "logout", separated: true },
+]);
+
+function onUserMenu(id: string) {
+  if (id === "profile") void router.push({ name: "profile" });
+  else if (id === "logout") void logout();
+}
 
 async function logout() {
   try {
@@ -32,12 +47,27 @@ async function logout() {
     </div>
     <div class="header__end">
       <HostStatus v-if="currentUser" class="header__host" />
-      <HeaderControls />
-      <div v-if="currentUser" class="user">
-        <RouterLink to="/account" class="user__name" :title="$t('account.title')">{{
-          currentUser.username
-        }}</RouterLink>
-        <button type="button" class="btn btn--small" @click="logout">{{ $t("auth.logout") }}</button>
+      <div class="header__controls">
+        <HeaderControls />
+        <MenuButton
+          v-if="currentUser"
+          :label="$t('header.userMenu')"
+          :items="userItems"
+          :icon-trigger="false"
+          class="user-menu"
+          @select="onUserMenu"
+        >
+          <span class="user">
+            <span class="user__avatar" aria-hidden="true">{{ userInitials }}</span>
+            <span class="user__text">
+              <span class="user__name">{{ currentUser.username }}</span>
+              <span class="user__role">{{ $t(`profile.roles.${currentUser.role}`) }}</span>
+            </span>
+            <span class="visually-hidden">{{ $t("header.userMenu") }}</span>
+            <AppIcon name="chevronDown" :size="16" class="user__chevron" />
+          </span>
+          <template #heading>{{ $t("header.signedInAs", { user: currentUser.username }) }}</template>
+        </MenuButton>
       </div>
     </div>
   </header>
@@ -84,15 +114,65 @@ async function logout() {
   font-weight: 600;
 }
 
+.header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ww-space-1);
+}
+
+.user-menu {
+  margin-left: var(--ww-space-2);
+}
+
 .user {
   display: flex;
   align-items: center;
-  gap: var(--ww-space-2);
+  gap: var(--ww-space-3);
+  min-height: var(--ww-touch-target);
+  padding: var(--ww-space-1) var(--ww-space-3) var(--ww-space-1) var(--ww-space-1);
+  border: 1px solid transparent;
+  border-radius: var(--ww-radius-lg);
+  background: var(--ww-surface-raised);
+  color: var(--ww-text);
+}
+
+.user-menu:hover .user,
+.user-menu [aria-expanded="true"] .user {
+  border-color: var(--ww-border-strong);
+}
+
+.user__chevron {
+  color: var(--ww-text-muted);
+}
+
+.user__avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ww-radius-full);
+  background: var(--ww-accent);
+  color: var(--ww-on-accent);
+  font-size: var(--ww-size-sm);
+  font-weight: 700;
+}
+
+.user__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
 }
 
 .user__name {
-  color: var(--ww-text-muted);
   font-size: var(--ww-size-sm);
+  font-weight: 600;
+}
+
+.user__role {
+  color: var(--ww-text-muted);
+  font-size: var(--ww-size-xs);
 }
 
 @media (max-width: 1100px) {
@@ -106,7 +186,12 @@ async function logout() {
     padding: var(--ww-space-3) var(--ww-space-4);
   }
 
-  .user__name {
+  .user {
+    padding: var(--ww-space-1);
+  }
+
+  .user__text,
+  .user__chevron {
     display: none;
   }
 

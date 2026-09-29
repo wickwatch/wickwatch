@@ -179,10 +179,7 @@ describe("OverviewView", () => {
 
   it("reports a failed instance action with the translated reason", async () => {
     const wrapper = await render();
-    await wrapper
-      .findAll("button")
-      .find((b) => b.text() === "Stop")!
-      .trigger("click");
+    await wrapper.find('button[aria-label="Stop"]').trigger("click");
     await flushPromises();
     expect(wrapper.find('[role="status"]').text()).toBe("Stop alpha failed: Service not reachable – try again later.");
     wrapper.unmount();

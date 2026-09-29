@@ -48,8 +48,10 @@
       "stopped": "Bot stopped",
       "idle": "No instances",
       "error": "Not reachable"
-    },
-    "title": "Account",
+    }
+  },
+  "profile": {
+    "title": "Profile",
     "role": "Role",
     "roles": {
       "admin": "Admin",
@@ -168,7 +170,7 @@
     "dark": "Dark",
     "light": "Light",
     "system": "System",
-    "label": "Theme"
+    "current": "Theme: {theme}"
   },
   "error": {
     "adapter": {
@@ -230,7 +232,9 @@
   },
   "header": {
     "mainNav": "Main navigation",
-    "serverStatus": "Server status"
+    "serverStatus": "Server status",
+    "userMenu": "User menu",
+    "signedInAs": "Signed in as {user}"
   },
   "host": {
     "cpu": "CPU {value}",
@@ -240,9 +244,9 @@
     "ntpNotSynced": "NTP not synced"
   },
   "language": {
-    "label": "Language",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "current": "Language: {language}"
   },
   "overview": {
     "title": "Overview",
@@ -331,7 +335,7 @@
       "passwordTooShort": "The password needs at least {min} characters.",
       "passwordMismatch": "The passwords do not match.",
       "finishWithTotp": "Enable 2FA and finish",
-      "skipTotp": "Skip for now – set up later under Account"
+      "skipTotp": "Skip for now – set up later under Profile"
     },
     "totp": {
       "title": "Two-factor authentication",

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30" role="img" aria-label="United Kingdom">
+  <title>United Kingdom</title>
+  <defs><clipPath id="gb-counter"><path d="M20.0,15.0 h20.0 v15.0 z v15.0 h-20.0 z h-20.0 v-15.0 z v-15.0 h20.0 z"/></clipPath></defs>
+  <g>
+    <rect width="40" height="30" fill="#012169"/>
+    <path d="M0,0 L40,30 M40,0 L0,30" stroke="#FFFFFF" stroke-width="6"/>
+    <path d="M0,0 L40,30 M40,0 L0,30" clip-path="url(#gb-counter)" stroke="#C8102E" stroke-width="4"/>
+    <path d="M20.0,0 v30 M0,15.0 h40" stroke="#FFFFFF" stroke-width="10"/>
+    <path d="M20.0,0 v30 M0,15.0 h40" stroke="#C8102E" stroke-width="6"/>
+  </g>
+</svg>

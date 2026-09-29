@@ -1,6 +1,6 @@
 # Wickwatch brand & style guide
 
-Short on purpose: enough to keep the dashboard, docs and repo consistent. Design tokens live in [`design/tokens.json`](design/tokens.json) and are generated into [`design/tokens.css`](design/tokens.css). Always use the tokens, never hard-coded colour values. Logo files and logo rules: [`assets/logo/README.md`](assets/logo/README.md).
+Short on purpose: enough to keep the dashboard, docs and repo consistent. Design tokens live in [`design/tokens.json`](design/tokens.json) and are generated into [`design/tokens.css`](design/tokens.css). Always use the tokens, never hard-coded colour values; the only exceptions are the logo and the language flags in [`assets/flags`](assets/flags). Logo files and logo rules: [`assets/logo/README.md`](assets/logo/README.md).
 
 ## Name
 A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick. Write it as **Wickwatch** in text, **wickwatch** only in the wordmark, package and repo names.
@@ -50,6 +50,18 @@ Sizes: 12, 13, 14 (default), 16, 18, 20, 28, 36 px (`--ww-size-*`). Numbers in t
 - Touch targets at least 44 px (`--ww-touch-target`), important for the mobile view and the emergency stop.
 - Destructive actions (emergency stop, close position, delete) use the negative colour and always ask for confirmation.
 - Visible focus ring in `--ww-focus` on every interactive element.
+
+## Buttons and icons
+Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, rendered by `AppIcon`); no icon font, no library. Buttons with an icon use `IconButton`.
+- **Icon only**, with the label as tooltip and accessible name: actions repeated in every row (tables, history) and the compact header controls.
+- **Icon and text**: the primary actions of a page (edit, save, start) and anything destructive (delete, emergency stop, close position, cancel order), so a tap is never a guess.
+- An icon-only button keeps the 44 px touch target on touch screens.
+- Choices from a short list (language, theme) and secondary actions ("more") open a menu (`MenuButton`); the chosen entry shows a check mark.
+
+## Consistency
+- The same kind of action behaves the same everywhere. Adding something (account, login, algo, challenge profile) is a button that opens a modal.
+- If a shared component exists (icon button, menu, modal, parameter list, trade tables, status badge), use it; no local look-alikes.
+- Deviate only for a good reason, and say why in a code comment where the deviation lives.
 
 ## Voice
 - Factual and short. Say what happened and what the user can do: "Login failed – check the password for account 1111111."

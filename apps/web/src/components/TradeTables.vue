@@ -3,6 +3,7 @@ import type { Deal, PendingOrder, Position } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatDateTime, formatNumber, formatPrice } from "../format";
+import IconButton from "./IconButton.vue";
 import SignedValue from "./SignedValue.vue";
 
 const props = defineProps<{
@@ -60,24 +61,25 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="num"><SignedValue :value="p.pnl" /></td>
           <td v-if="canClose || canAttribute" class="num">
             <div class="actions">
-              <button
+              <IconButton
                 v-if="canAttribute"
-                type="button"
-                class="btn btn--ghost btn--small"
+                :icon="excluded ? 'restore' : 'exclude'"
+                :label="excluded ? $t('attribution.restore') : $t('attribution.exclude')"
+                variant="ghost"
+                small
                 :disabled="busy?.has(p.id)"
                 @click="$emit('attribution', p.id)"
-              >
-                {{ excluded ? $t("attribution.restore") : $t("attribution.exclude") }}
-              </button>
-              <button
+              />
+              <IconButton
                 v-if="canClose && !excluded"
-                type="button"
-                class="btn btn--danger btn--small"
+                icon="close"
+                :label="$t('action.closePosition')"
+                show-label
+                variant="danger"
+                small
                 :disabled="busy?.has(p.id)"
                 @click="$emit('close', p)"
-              >
-                {{ $t("action.closePosition") }}
-              </button>
+              />
             </div>
           </td>
         </tr>
@@ -109,14 +111,15 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="mono num">{{ price(o.tp) }}</td>
           <td v-if="expiring" class="mono">{{ o.expiresAt ? formatDateTime(locale, o.expiresAt) : "–" }}</td>
           <td v-if="canCancel" class="num">
-            <button
-              type="button"
-              class="btn btn--danger btn--small"
+            <IconButton
+              icon="close"
+              :label="$t('action.cancelOrder')"
+              show-label
+              variant="danger"
+              small
               :disabled="busy?.has(o.id)"
               @click="$emit('cancel', o)"
-            >
-              {{ $t("action.cancelOrder") }}
-            </button>
+            />
           </td>
         </tr>
       </tbody>
@@ -145,14 +148,14 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
           <td class="num"><SignedValue :value="d.pnl" /></td>
           <td class="num"><SignedValue :value="costs(d)" /></td>
           <td v-if="canAttribute" class="num">
-            <button
-              type="button"
-              class="btn btn--ghost btn--small"
+            <IconButton
+              :icon="excluded ? 'restore' : 'exclude'"
+              :label="excluded ? $t('attribution.restore') : $t('attribution.exclude')"
+              variant="ghost"
+              small
               :disabled="busy?.has(d.positionId)"
               @click="$emit('attribution', d.positionId)"
-            >
-              {{ excluded ? $t("attribution.restore") : $t("attribution.exclude") }}
-            </button>
+            />
           </td>
         </tr>
       </tbody>

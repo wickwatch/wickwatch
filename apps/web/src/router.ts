@@ -4,13 +4,13 @@ import { clearUser, loadSession, session } from "./session";
 import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
 import AlgosView from "./views/AlgosView.vue";
-import AccountView from "./views/AccountView.vue";
 import ChallengeView from "./views/ChallengeView.vue";
 import InstanceConfigView from "./views/InstanceConfigView.vue";
 import InstanceFormView from "./views/InstanceFormView.vue";
 import InstanceView from "./views/InstanceView.vue";
 import LoginView from "./views/LoginView.vue";
 import OverviewView from "./views/OverviewView.vue";
+import ProfileView from "./views/ProfileView.vue";
 import SetupView from "./views/SetupView.vue";
 
 // History base from <base href>, so deep links work under any BASE_PATH.
@@ -18,7 +18,8 @@ export const router = createRouter({
   history: createWebHistory(new URL(document.baseURI).pathname),
   routes: [
     { path: "/", name: "overview", component: OverviewView },
-    { path: "/account", name: "account", component: AccountView },
+    { path: "/profile", name: "profile", component: ProfileView },
+    { path: "/account", redirect: "/profile" },
     { path: "/accounts", name: "accounts", component: AccountsView },
     { path: "/algos", name: "algos", component: AlgosView },
     { path: "/instances/new", name: "instance-new", component: InstanceFormView },

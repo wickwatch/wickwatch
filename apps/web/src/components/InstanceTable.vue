@@ -3,6 +3,7 @@ import type { InstanceSummary } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
 import type { InstanceAction } from "../api";
 import { durationParts } from "../format";
+import IconButton from "./IconButton.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
@@ -70,32 +71,30 @@ const uptime = (instance: InstanceSummary, now: number) => {
           </td>
           <td v-if="canAct">
             <div class="actions">
-              <button
+              <IconButton
                 v-if="instance.status === 'running' || instance.status === 'restarting'"
-                type="button"
-                class="btn btn--small"
+                icon="stop"
+                :label="$t('action.stop')"
+                small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'stop')"
-              >
-                {{ $t("action.stop") }}
-              </button>
-              <button
+              />
+              <IconButton
                 v-else
-                type="button"
-                class="btn btn--small"
+                icon="play"
+                :label="$t('action.start')"
+                small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'start')"
-              >
-                {{ $t("action.start") }}
-              </button>
-              <button
-                type="button"
-                class="btn btn--small wide"
+              />
+              <IconButton
+                class="wide"
+                icon="restart"
+                :label="$t('action.restart')"
+                small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'restart')"
-              >
-                {{ $t("action.restart") }}
-              </button>
+              />
             </div>
           </td>
         </tr>

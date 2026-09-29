@@ -48,8 +48,10 @@
       "stopped": "Bot gestoppt",
       "idle": "Keine Instanzen",
       "error": "Nicht erreichbar"
-    },
-    "title": "Konto",
+    }
+  },
+  "profile": {
+    "title": "Profil",
     "role": "Rolle",
     "roles": {
       "admin": "Admin",
@@ -168,7 +170,7 @@
     "dark": "Dunkel",
     "light": "Hell",
     "system": "System",
-    "label": "Darstellung"
+    "current": "Darstellung: {theme}"
   },
   "error": {
     "adapter": {
@@ -230,7 +232,9 @@
   },
   "header": {
     "mainNav": "Hauptnavigation",
-    "serverStatus": "Server-Status"
+    "serverStatus": "Server-Status",
+    "userMenu": "Benutzermenü",
+    "signedInAs": "Angemeldet als {user}"
   },
   "host": {
     "cpu": "CPU {value}",
@@ -240,9 +244,9 @@
     "ntpNotSynced": "NTP nicht synchron"
   },
   "language": {
-    "label": "Sprache",
     "en": "English",
-    "de": "Deutsch"
+    "de": "Deutsch",
+    "current": "Sprache: {language}"
   },
   "overview": {
     "title": "Übersicht",
@@ -331,7 +335,7 @@
       "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen.",
       "passwordMismatch": "Die Passwörter stimmen nicht überein.",
       "finishWithTotp": "2FA aktivieren und abschließen",
-      "skipTotp": "Überspringen – später unter Konto einrichten"
+      "skipTotp": "Überspringen – später unter Profil einrichten"
     },
     "totp": {
       "title": "Zwei-Faktor-Authentisierung",

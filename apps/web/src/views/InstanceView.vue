@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import IconButton from "../components/IconButton.vue";
 import KpiTiles from "../components/KpiTiles.vue";
 import LogPanel from "../components/LogPanel.vue";
 import PnlChart from "../components/PnlChart.vue";
@@ -162,21 +163,29 @@ async function closePosition() {
           </p>
         </div>
         <div v-if="isAdmin" class="head__actions">
-          <button
+          <IconButton
             v-if="data.instance.status === 'running' || data.instance.status === 'restarting'"
-            type="button"
-            class="btn"
+            icon="stop"
+            :label="$t('action.stop')"
+            show-label
             :disabled="busy.has('instance')"
             @click="act('stop')"
-          >
-            {{ $t("action.stop") }}
-          </button>
-          <button v-else type="button" class="btn" :disabled="busy.has('instance')" @click="act('start')">
-            {{ $t("action.start") }}
-          </button>
-          <button type="button" class="btn" :disabled="busy.has('instance')" @click="act('restart')">
-            {{ $t("action.restart") }}
-          </button>
+          />
+          <IconButton
+            v-else
+            icon="play"
+            :label="$t('action.start')"
+            show-label
+            :disabled="busy.has('instance')"
+            @click="act('start')"
+          />
+          <IconButton
+            icon="restart"
+            :label="$t('action.restart')"
+            show-label
+            :disabled="busy.has('instance')"
+            @click="act('restart')"
+          />
         </div>
       </section>
 

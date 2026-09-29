@@ -111,9 +111,36 @@ h2 {
   font-size: var(--ww-size-xs);
 }
 
+/* Square, icon only; the label is the tooltip and accessible name (IconButton). */
+.btn--icon {
+  width: var(--ww-touch-target);
+  padding: 0;
+}
+
+/* Ghost icons (header, table rows) show a frame only on hover. */
+.btn--icon.btn--ghost {
+  border-color: transparent;
+}
+
+.btn--icon.btn--ghost:hover:not(:disabled),
+.btn--icon.btn--ghost[aria-expanded="true"] {
+  border-color: var(--ww-border);
+  background: var(--ww-surface-raised);
+  color: var(--ww-text);
+}
+
+.btn--icon.btn--small {
+  width: 36px;
+  padding: 0;
+}
+
 @media (pointer: coarse) {
   .btn--small {
     min-height: var(--ww-touch-target);
+  }
+
+  .btn--icon.btn--small {
+    width: var(--ww-touch-target);
   }
 }
 

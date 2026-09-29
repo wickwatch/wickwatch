@@ -45,7 +45,7 @@ const confirmEnable = () =>
     code.value = "";
     enableForm.reset();
     await loadSession();
-    notice.value = "account.totpEnabledNotice";
+    notice.value = "profile.totpEnabledNotice";
   });
 
 const disable = () =>
@@ -55,13 +55,13 @@ const disable = () =>
     password.value = "";
     disableForm.reset();
     await loadSession();
-    notice.value = "account.totpDisabledNotice";
+    notice.value = "profile.totpDisabledNotice";
   });
 </script>
 
 <template>
   <div class="account">
-    <h1>{{ $t("account.title") }}</h1>
+    <h1>{{ $t("profile.title") }}</h1>
     <section v-if="currentUser" class="panel card" aria-labelledby="totp-title">
       <dl class="facts">
         <div>
@@ -69,33 +69,33 @@ const disable = () =>
           <dd class="mono">{{ currentUser.username }}</dd>
         </div>
         <div>
-          <dt>{{ $t("account.role") }}</dt>
-          <dd>{{ $t(`account.roles.${currentUser.role}`) }}</dd>
+          <dt>{{ $t("profile.role") }}</dt>
+          <dd>{{ $t(`profile.roles.${currentUser.role}`) }}</dd>
         </div>
       </dl>
 
       <h2 id="totp-title">{{ $t("auth.totp.title") }}</h2>
       <p>
         <span class="pill" :class="currentUser.totpEnabled ? 'tone-positive' : 'tone-warning'">
-          {{ currentUser.totpEnabled ? $t("account.totpOn") : $t("account.totpOff") }}
+          {{ currentUser.totpEnabled ? $t("profile.totpOn") : $t("profile.totpOff") }}
         </span>
       </p>
 
       <template v-if="!currentUser.totpEnabled">
         <p class="muted">{{ $t("auth.totp.recommended") }}</p>
         <button v-if="!totp" type="button" class="btn btn--primary" :disabled="busy" @click="startEnable">
-          {{ $t("account.enableTotp") }}
+          {{ $t("profile.enableTotp") }}
         </button>
         <form v-else class="form" novalidate @submit.prevent="confirmEnable">
           <TotpEnroll :totp="totp" />
           <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
-          <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("account.confirmTotp") }}</button>
+          <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("profile.confirmTotp") }}</button>
         </form>
       </template>
 
       <form v-else class="form" novalidate @submit.prevent="disable">
         <label class="field">
-          {{ $t("account.passwordToDisable") }}
+          {{ $t("profile.passwordToDisable") }}
           <input
             v-model="password"
             v-bind="passwordField.attrs.value"
@@ -106,7 +106,7 @@ const disable = () =>
           />
           <FieldError :field="passwordField" />
         </label>
-        <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("account.disableTotp") }}</button>
+        <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("profile.disableTotp") }}</button>
       </form>
 
       <p class="status" role="status" aria-live="polite">{{ notice ? $t(notice) : "" }}</p>
