@@ -2,6 +2,7 @@
 import type { Deal } from "@wickwatch/core";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { CURVES, chartCurve, smoothPath, steppedPath } from "../chart-path";
 import { formatDateTime, formatNumber, formatSigned } from "../format";
 
 const props = defineProps<{ deals: Deal[]; from: string; to: string; currency?: string | undefined }>();
@@ -57,16 +58,18 @@ const scale = computed(() => {
   return { x, y, yTicks, xTicks, x0, x1 };
 });
 
-/** Step line: the realised P&L only changes when a deal closes. */
+/**
+ * The realised P&L only changes when a deal closes: the step line shows exactly that, the smooth
+ * one reads more easily over many trades.
+ */
 const linePath = computed(() => {
   const { x, y, x0, x1 } = scale.value;
-  let d = `M${x(x0)},${y(0)}`;
-  let last = 0;
-  for (const p of points.value) {
-    d += ` H${x(p.time)} V${y(p.value)}`;
-    last = p.value;
-  }
-  return `${d} H${x(x1)} V${y(last)}`;
+  const line = [
+    { x: x(x0), y: y(0) },
+    ...points.value.map((p) => ({ x: x(p.time), y: y(p.value) })),
+    { x: x(x1), y: y(points.value.at(-1)?.value ?? 0) },
+  ];
+  return chartCurve.value === "smooth" ? smoothPath(line) : steppedPath(line);
 });
 const areaPath = computed(() => {
   const { x, y, x0 } = scale.value;
@@ -108,6 +111,18 @@ const summary = computed(() => {
   <div ref="container" class="chart">
     <p v-if="!points.length" class="muted chart__empty">{{ $t("chart.noTrades") }}</p>
     <template v-else>
+      <div class="curve" role="group" :aria-label="$t('chart.curve')">
+        <button
+          v-for="c in CURVES"
+          :key="c"
+          type="button"
+          class="btn btn--ghost btn--small"
+          :aria-pressed="chartCurve === c"
+          @click="chartCurve = c"
+        >
+          {{ $t(`chart.curves.${c}`) }}
+        </button>
+      </div>
       <svg
         :width="width"
         :height="HEIGHT"
@@ -193,6 +208,13 @@ const summary = computed(() => {
   margin: 0;
   padding: var(--ww-space-8) 0;
   text-align: center;
+}
+
+.curve {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ww-space-1);
+  margin-bottom: var(--ww-space-2);
 }
 
 svg {

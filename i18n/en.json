@@ -345,7 +345,12 @@
     "pnlHint": "Cumulative result of the closed trades in the time range, including commission and swap.",
     "noTrades": "No closed trades in this time range.",
     "deal": "Trade",
-    "pnlSummary": "Realised P&L {value} after {trades} trades. Use the arrow keys to go through the trades."
+    "pnlSummary": "Realised P&L {value} after {trades} trades. Use the arrow keys to go through the trades.",
+    "curve": "Line",
+    "curves": {
+      "smooth": "Smooth",
+      "stepped": "Stepped"
+    }
   },
   "kpi": {
     "trades": "Trades",

@@ -345,7 +345,12 @@
     "pnlHint": "Kumuliertes Ergebnis der geschlossenen Trades im Zeitraum, inklusive Kommission und Swap.",
     "noTrades": "Keine geschlossenen Trades in diesem Zeitraum.",
     "deal": "Trade",
-    "pnlSummary": "Realisierter P&L {value} nach {trades} Trades. Mit den Pfeiltasten durch die Trades gehen."
+    "pnlSummary": "Realisierter P&L {value} nach {trades} Trades. Mit den Pfeiltasten durch die Trades gehen.",
+    "curve": "Linie",
+    "curves": {
+      "smooth": "Geglättet",
+      "stepped": "Stufen"
+    }
   },
   "kpi": {
     "trades": "Trades",
