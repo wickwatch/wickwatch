@@ -1,9 +1,8 @@
+import { dealResult, round2 } from "./money";
+import { dealR } from "./risk";
 import type { Deal, DealStats } from "./schemas";
 
-/** Result of a deal in the account currency, including commission and swap. */
-export const dealResult = (deal: Deal) => deal.pnl + (deal.commission ?? 0) + (deal.swap ?? 0);
-
-export const round2 = (value: number) => Math.round(value * 100) / 100;
+export { dealResult, round2 } from "./money";
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
 /**
@@ -12,6 +11,7 @@ const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
  */
 export function dealStats(deals: Deal[]): DealStats {
   const results = deals.filter((d) => d.pnl !== 0).map(dealResult);
+  const rs = deals.map(dealR).filter((r): r is number => r !== undefined);
   const wins = results.filter((r) => r > 0);
   const losses = results.filter((r) => r < 0);
   const grossProfit = sum(wins);
@@ -28,5 +28,6 @@ export function dealStats(deals: Deal[]): DealStats {
     ...(grossLoss > 0 ? { profitFactor: Math.round((grossProfit / grossLoss) * 100) / 100 } : {}),
     ...(wins.length > 0 ? { averageWin: round2(grossProfit / wins.length) } : {}),
     ...(losses.length > 0 ? { averageLoss: round2(-grossLoss / losses.length) } : {}),
+    ...(rs.length > 0 ? { averageR: round2(sum(rs) / rs.length), totalR: round2(sum(rs)), rTrades: rs.length } : {}),
   };
 }

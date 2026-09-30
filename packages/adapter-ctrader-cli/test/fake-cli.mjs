@@ -41,6 +41,32 @@ const active = [
   },
   { traderLogin: 2222222, brokerName: "Demo Broker", environment: "live", accountName: null, accountStatus: "Active" },
 ];
+const historyOrders = [
+  {
+    id: 31,
+    symbolName: "US100.cash",
+    tradeSide: "Buy",
+    orderType: "Limit",
+    status: "Filled",
+    executionPrice: 29214.23,
+    stopLoss: 29164.23,
+    takeProfit: 29293.43,
+    positionId: 21,
+    openTime: "2026-09-23T09:00:00.000Z",
+  },
+  {
+    id: 32,
+    symbolName: "US100.cash",
+    tradeSide: "Sell",
+    orderType: "StopLossTakeProfit",
+    status: "Filled",
+    targetPrice: 29293.43,
+    stopLoss: null,
+    positionId: 21,
+    openTime: "2026-09-23T13:40:39.000Z",
+  },
+];
+
 const deals = [
   {
     orderId: 11,
@@ -266,7 +292,14 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         ? { from: rest[0], to: rest[1], deals: [], count: 0 }
         : { from: rest[0], to: rest[1], deals, count: deals.length },
     );
-  else if (cmd === "orders-history") json({ requested: 1, returned: 0, available: 0, lookbackDays: 30, orders: [] });
+  else if (cmd === "orders-history")
+    json(
+      // Warm-up with a count, then a date range: the order that opened position 21 (with its stop) and the one
+      // that closed it (stop/take-profit, to be ignored).
+      rest.length === 2 && !empty
+        ? { from: rest[0], to: rest[1], orders: historyOrders }
+        : { requested: 1, returned: 0, available: 0, lookbackDays: 30, orders: [] },
+    );
   else if (cmd === "symbol") out(`Error: Symbol not found: ${rest[0]}\n`);
   else out(`Error: Unknown command: ${cmd}\n`);
   out("\n> ");

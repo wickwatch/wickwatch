@@ -3241,6 +3241,21 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "entryPrice": {
+                            "type": "number"
+                          },
+                          "initialStopLoss": {
+                            "type": "number"
+                          },
+                          "risk": {
+                            "type": "number"
+                          },
+                          "riskPct": {
+                            "type": "number"
+                          },
+                          "r": {
+                            "type": "number"
                           }
                         }
                       }
@@ -3376,6 +3391,12 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "entryPrice": {
+                            "type": "number"
+                          },
+                          "initialStopLoss": {
+                            "type": "number"
                           }
                         }
                       }
@@ -3417,6 +3438,16 @@
                         },
                         "averageLoss": {
                           "type": "number"
+                        },
+                        "averageR": {
+                          "type": "number"
+                        },
+                        "totalR": {
+                          "type": "number"
+                        },
+                        "rTrades": {
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "grossProfit": {
                           "type": "number"

@@ -3,7 +3,11 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatSigned } from "../format";
 
-const props = defineProps<{ value: number | undefined }>();
+/** `digits` and `unit` for values that are not money, e.g. R: 1 digit, unit "R" gives "+2.1R". */
+const props = withDefaults(defineProps<{ value: number | undefined; digits?: number; unit?: string }>(), {
+  digits: 2,
+  unit: "",
+});
 const { locale } = useI18n();
 
 const tone = computed(() =>
@@ -12,5 +16,7 @@ const tone = computed(() =>
 </script>
 
 <template>
-  <span class="mono" :class="tone">{{ value === undefined ? $t("format.none") : formatSigned(locale, value) }}</span>
+  <span class="mono" :class="tone">{{
+    value === undefined ? $t("format.none") : `${formatSigned(locale, value, digits)}${unit}`
+  }}</span>
 </template>

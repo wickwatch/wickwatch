@@ -165,6 +165,34 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("shows risk and R of trades whose initial stop is known", async () => {
+    const withRisk: InstanceDetail = {
+      ...detail,
+      deals: [{ ...detail.deals[0]!, risk: 31, riskPct: 0.31, r: 1.54 }],
+      stats: { ...detail.stats, trades: 2, averageR: 1.54, totalR: 1.54, rTrades: 1 },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) =>
+        Promise.resolve(
+          input.pathname.includes("/managed-instances/")
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : new Response(JSON.stringify(withRisk), { status: 200 }),
+        ),
+      ),
+    );
+    const wrapper = await render();
+    const history = wrapper.find("section[aria-labelledby=history-title]");
+    expect(history.findAll("th").map((h) => h.text())).toContain("R");
+    const cells = history.findAll("tbody td").map((c) => c.text());
+    expect(cells).toContain("0.3%");
+    expect(cells).toContain("+1.5R");
+    // Only one of two trades has an R: the tiles say so.
+    expect(wrapper.find(".kpis").text()).toContain("+1.54R");
+    expect(wrapper.find(".kpis").text()).toContain("from 1 of 2 trades");
+    wrapper.unmount();
+  });
+
   it("offers all trades only when the instance traded before the longest range", async () => {
     const rangeButtons = (w: Awaited<ReturnType<typeof render>>) => w.findAll(".range button").map((b) => b.text());
     const plain = await render();

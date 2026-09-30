@@ -71,15 +71,25 @@ async function brokerData(
   const base = { number: entry.number, displayName: entry.displayName, currency: entry.currency };
   try {
     const c = await entry.credentials();
-    const [positions, pendingOrders, recent, older] = await Promise.all([
+    const [positions, pendingOrders, recent, older, balance] = await Promise.all([
       broker.positions(c, entry.number),
       broker.capabilities().pendingOrders ? broker.pendingOrders(c, entry.number) : Promise.resolve([]),
       broker.deals(c, entry.number, from.toISOString(), now.toISOString()),
       // Only "all" waits for the older history; the other ranges take it once it is there.
       all ? history.load(entry).catch(() => undefined) : Promise.resolve(history.peek(entry)),
+      // Only for the risk in % of the balance; without it the page still shows everything else.
+      broker.stats(c, entry.number).then(
+        (stats) => stats.balance,
+        () => undefined,
+      ),
     ]);
     const deals = all && older ? [...older, ...recent] : recent;
-    return { ...base, data: { positions, pendingOrders, deals }, ...(older ? { history: older } : {}) };
+    return {
+      ...base,
+      data: { positions, pendingOrders, deals },
+      ...(older ? { history: older } : {}),
+      ...(balance !== undefined ? { balance } : {}),
+    };
   } catch (error) {
     if (!isAdapterError(error)) log.error({ err: error, account: entry.number }, "Broker query failed");
     return { ...base, error: isAdapterError(error) ? error.code : "unavailable" };

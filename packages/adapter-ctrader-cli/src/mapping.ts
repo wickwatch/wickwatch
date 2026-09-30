@@ -85,7 +85,10 @@ export function toAccountStats(data: unknown, time: Date): AccountStats {
   };
 }
 
-/** Closing deals: `orderId, positionId, symbolName, side, filledVolumeLots, executionPrice, grossProfit, commission, swap, label, time`. */
+/**
+ * Closing deals: `orderId, positionId, symbolName, side, filledVolumeLots, executionPrice, entryPrice, grossProfit,
+ * commission, swap, label, time`. `side` is the position's direction.
+ */
 export function toDeals(data: unknown): Deal[] {
   return list(data, "deals").map((d) => {
     const id = str(d["orderId"]);
@@ -121,8 +124,27 @@ export function toDeals(data: unknown): Deal[] {
       ...optional("swap", num(d["swap"])),
       ...(label ? { label } : {}),
       time: new Date(time).toISOString(),
+      ...optional("entryPrice", num(d["entryPrice"])),
     };
   });
+}
+
+/**
+ * Initial stop loss per position from `orders-history`: the filled order that opened it (not the stop/take-profit
+ * order that closed it) carries the stop the position was opened with. Checked on recorded data: losing trades
+ * closed at that stop. Positions whose opening order had no stop (set later) are missing.
+ */
+export function toInitialStops(data: unknown): Map<string, number> {
+  const stops = new Map<string, number>();
+  const orders = list(data, "orders")
+    .filter((o) => str(o["status"]) === "Filled" && str(o["orderType"]) !== "StopLossTakeProfit")
+    .sort((a, b) => (str(a["openTime"]) ?? "").localeCompare(str(b["openTime"]) ?? ""));
+  for (const o of orders) {
+    const positionId = str(o["positionId"]);
+    const stop = num(o["stopLoss"]);
+    if (positionId && stop !== undefined && !stops.has(positionId)) stops.set(positionId, stop);
+  }
+  return stops;
 }
 
 /**

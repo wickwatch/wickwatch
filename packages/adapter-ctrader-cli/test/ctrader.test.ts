@@ -102,7 +102,7 @@ describe("CtraderCliBroker", () => {
     expect(shells).toHaveLength(1);
   });
 
-  it("warms the session up, so the first deals query is not empty; asks one day more and filters", async () => {
+  it("warms the session up, so the first deals query is not empty; asks one day more, filters, adds the stop", async () => {
     const deals = await broker.deals(c, "1111111", "2026-09-23T00:00:00.000Z", "2026-09-25T08:59:59.000Z");
     expect(deals).toEqual([
       {
@@ -117,6 +117,9 @@ describe("CtraderCliBroker", () => {
         swap: 0,
         label: "123456789",
         time: "2026-09-23T13:40:39.746Z",
+        entryPrice: 29214.23,
+        // From the order that opened the position, not the stop/take-profit order that closed it.
+        initialStopLoss: 29164.23,
       },
     ]);
   });

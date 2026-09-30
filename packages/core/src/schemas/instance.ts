@@ -15,12 +15,28 @@ export const DealStats = Type.Object({
   profitFactor: Type.Optional(Type.Number({ minimum: 0 })),
   averageWin: Type.Optional(Type.Number()),
   averageLoss: Type.Optional(Type.Number()),
+  /** R over the trades whose risk is known (see risk.ts); `rTrades` counts them. */
+  averageR: Type.Optional(Type.Number()),
+  totalR: Type.Optional(Type.Number()),
+  rTrades: Type.Optional(Type.Integer({ minimum: 0 })),
   grossProfit: Type.Number(),
   grossLoss: Type.Number(),
   /** Including commission and swap. */
   net: Type.Number(),
 });
 export type DealStats = Type.Static<typeof DealStats>;
+
+/**
+ * A closing deal with what it risked, when its initial stop loss is known: `risk` in the account currency, `riskPct`
+ * of the balance before the trade, `r` the result in multiples of the risk.
+ */
+export const TradeDeal = Type.Object({
+  ...Deal.properties,
+  risk: Type.Optional(Type.Number()),
+  riskPct: Type.Optional(Type.Number()),
+  r: Type.Optional(Type.Number()),
+});
+export type TradeDeal = Type.Static<typeof TradeDeal>;
 
 export const InstanceDetail = Type.Object({
   time: IsoTime,
@@ -33,7 +49,7 @@ export const InstanceDetail = Type.Object({
   positions: Type.Array(Position),
   pendingOrders: Type.Array(PendingOrder),
   /** Deals of this instance in the range, oldest first. */
-  deals: Type.Array(Deal),
+  deals: Type.Array(TradeDeal),
   /** Positions and deals the rules would attribute here, but removed by hand (e.g. manual trades). */
   excludedPositions: Type.Array(Position),
   excludedDeals: Type.Array(Deal),

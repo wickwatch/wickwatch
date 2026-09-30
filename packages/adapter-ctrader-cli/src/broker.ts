@@ -24,6 +24,7 @@ import {
   toAlgoMetadata,
   toBrokerAccounts,
   toDeals,
+  toInitialStops,
   checkParameterNames,
   redactStartupTable,
   toLogEvent,
@@ -35,6 +36,8 @@ import {
 import { SessionPool } from "./session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Positions closed in a range may have been opened before it; their opening orders are looked up this far back. */
+const STOP_LOOKBACK_MS = 14 * DAY_MS;
 /** Listings of positions without prices before giving up (see positionsWithoutPrices). */
 const PRICE_ATTEMPTS = 6;
 
@@ -202,12 +205,27 @@ export class CtraderCliBroker implements BrokerAdapter {
     if (Number.isNaN(start) || Number.isNaN(end) || end < start)
       throw new AdapterError("invalid_input", "Invalid deal range");
     const answer = await this.pool.run(c, account, `deals ${dateOnly(start)} ${dateOnly(end + DAY_MS)}`);
-    return toDeals(extractJson(answer))
+    const deals = toDeals(extractJson(answer))
       .filter((d) => {
         const t = Date.parse(d.time);
         return t >= start && t <= end;
       })
       .sort((a, b) => a.time.localeCompare(b.time));
+    const stops = await this.initialStops(c, account, start - STOP_LOOKBACK_MS, end + DAY_MS);
+    return deals.map((d) => {
+      const stop = stops.get(d.positionId);
+      return stop === undefined ? d : { ...d, initialStopLoss: stop };
+    });
+  }
+
+  /** Stops the positions were opened with; without them the deals still count, only their risk and R are unknown. */
+  private async initialStops(c: Credentials, account: string, from: number, to: number) {
+    try {
+      const answer = await this.pool.run(c, account, `orders-history ${dateOnly(from)} ${dateOnly(to)}`);
+      return toInitialStops(extractJson(answer));
+    } catch {
+      return new Map<string, number>();
+    }
   }
 
   // What the CLI answers to these commands is not documented, so each one counts only when the

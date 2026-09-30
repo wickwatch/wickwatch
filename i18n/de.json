@@ -371,7 +371,10 @@
     "profitFactor": "Profit-Faktor",
     "averageWin": "Ø Gewinn",
     "averageLoss": "Ø Verlust",
-    "net": "Netto"
+    "net": "Netto",
+    "averageR": "Ø R",
+    "totalR": "Summe R",
+    "rTrades": "aus {count} von {total} Trades"
   },
   "trade": {
     "opened": "Eröffnet",
@@ -395,7 +398,9 @@
     },
     "showAll": "Alle {count} Trades anzeigen",
     "showLess": "Weniger anzeigen",
-    "noInstance": "Ohne Instanz"
+    "noInstance": "Ohne Instanz",
+    "risk": "Risiko",
+    "r": "R"
   },
   "log": {
     "filter": "Log filtern",

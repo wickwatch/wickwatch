@@ -371,7 +371,10 @@
     "profitFactor": "Profit factor",
     "averageWin": "Avg. win",
     "averageLoss": "Avg. loss",
-    "net": "Net"
+    "net": "Net",
+    "averageR": "Avg R",
+    "totalR": "Total R",
+    "rTrades": "from {count} of {total} trades"
   },
   "trade": {
     "opened": "Opened",
@@ -395,7 +398,9 @@
     },
     "showAll": "Show all {count} trades",
     "showLess": "Show fewer",
-    "noInstance": "No instance"
+    "noInstance": "No instance",
+    "risk": "Risk",
+    "r": "R"
   },
   "log": {
     "filter": "Filter log",

@@ -69,6 +69,10 @@ export const Deal = Type.Object({
   swap: Type.Optional(Type.Number()),
   label: Type.Optional(Type.String()),
   time: IsoTime,
+  /** Price the position was opened at. */
+  entryPrice: Type.Optional(Type.Number()),
+  /** Stop loss the position was opened with, not a later (moved or trailed) one; the base for its risk and R. */
+  initialStopLoss: Type.Optional(Type.Number()),
 });
 export type Deal = Type.Static<typeof Deal>;
 

@@ -1,6 +1,7 @@
 import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
+import { withRisk } from "./risk";
 import { positionItem, summarizeInstance } from "./overview";
 import type {
   Deal,
@@ -35,6 +36,8 @@ export interface InstanceDetailInput {
     currency?: string;
     /** Broker data of the whole account; attributed to the instance here (see attribution.ts). */
     data?: { positions: Position[]; pendingOrders: PendingOrder[]; deals: Deal[] };
+    /** Current balance, for each trade's risk in % of the balance before it. */
+    balance?: number;
     /** Older deals of the account, oldest first, if loaded; only used to find the instance's first trade. */
     history?: Deal[];
     error?: AdapterErrorCode;
@@ -96,7 +99,7 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
     pendingOrders: mine(data?.pendingOrders, orderItem),
     excludedPositions: excluded(data?.positions, positionItem),
     excludedDeals: excluded(data?.deals, asItem).sort(byTime),
-    deals,
+    deals: withRisk(deals, data?.deals ?? [], account?.balance),
     stats: dealStats(deals),
     range: { from: toIsoTime(from), to: toIsoTime(time) },
     ...(first ? { firstTradeAt: toIsoTime(new Date(first)) } : {}),

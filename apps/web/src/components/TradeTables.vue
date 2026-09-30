@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { AccountOrder, AccountPosition, Deal, InstanceSummary } from "@wickwatch/core";
+import type { AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { formatDateTime, formatNumber, formatPrice } from "../format";
+import { formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
 import IconButton from "./IconButton.vue";
 import InstanceName from "./InstanceName.vue";
 import SignedValue from "./SignedValue.vue";
@@ -11,7 +11,7 @@ const props = defineProps<{
   kind: "positions" | "orders" | "deals";
   positions?: AccountPosition[];
   orders?: AccountOrder[];
-  deals?: Deal[];
+  deals?: TradeDeal[];
   canClose?: boolean;
   /** Offer "cancel order" on pending orders. */
   canCancel?: boolean;
@@ -33,7 +33,9 @@ const showAll = ref(false);
 /** Newest first in the table; the chart shows the same deals oldest first. */
 const allDeals = computed(() => [...(props.deals ?? [])].reverse());
 const dealRows = computed(() => (showAll.value ? allDeals.value : allDeals.value.slice(0, COLLAPSED_ROWS)));
-const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
+const costs = (d: TradeDeal) => (d.commission ?? 0) + (d.swap ?? 0);
+/** Risk and R columns only when at least one trade knows its initial stop. */
+const withRisk = computed(() => props.deals?.some((d) => d.risk !== undefined) ?? false);
 const refOf = (name: string | undefined) => props.instances?.find((i) => i.name === name)?.ref;
 </script>
 
@@ -140,6 +142,8 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <th scope="col" class="num">{{ $t("trade.price") }}</th>
           <th scope="col" class="num">{{ $t("trade.pnl") }}</th>
           <th scope="col" class="num">{{ $t("trade.costs") }}</th>
+          <th v-if="withRisk" scope="col" class="num">{{ $t("trade.risk") }}</th>
+          <th v-if="withRisk" scope="col" class="num">{{ $t("trade.r") }}</th>
           <th v-if="canAttribute" scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
@@ -153,6 +157,13 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <td class="mono num">{{ price(d.price) }}</td>
           <td class="num"><SignedValue :value="d.pnl" /></td>
           <td class="num"><SignedValue :value="costs(d)" /></td>
+          <td v-if="withRisk" class="mono num">
+            <span v-if="d.risk !== undefined" :data-tooltip="formatNumber(locale, d.risk)">{{
+              d.riskPct === undefined ? formatNumber(locale, d.risk) : formatPercentValue(locale, d.riskPct)
+            }}</span>
+            <template v-else>{{ $t("format.none") }}</template>
+          </td>
+          <td v-if="withRisk" class="num"><SignedValue :value="d.r" :digits="1" unit="R" /></td>
           <td v-if="canAttribute" class="num">
             <IconButton
               :icon="excluded ? 'restore' : 'exclude'"

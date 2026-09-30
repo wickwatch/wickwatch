@@ -224,19 +224,28 @@ export class DemoBrokerAdapter implements BrokerAdapter {
         if (random(seed, instance.name, "deal", slot) >= 0.06) continue;
         const time = slot * HOUR_MS + Math.floor(random(seed, instance.name, "time", slot) * HOUR_MS);
         if (time < start || time > to) continue;
-        const pnl = (random(seed, instance.name, "pnl", slot) - 0.42) * account.startBalance * 0.006;
+        const pnl = round((random(seed, instance.name, "pnl", slot) - 0.42) * account.startBalance * 0.006, 2);
+        const side = random(seed, instance.name, "side", slot) < 0.5 ? "buy" : "sell";
+        const price = this.world.price(instance.symbol, new Date(time));
+        // Entry and initial stop that fit the result: 0.25 % of the start balance at risk, so R runs from -1 to +1.4.
+        const perUnit = instance.volume * this.world.symbol(instance.symbol).contractSize;
+        const direction = side === "buy" ? 1 : -1;
+        const entryPrice = round(price - (pnl / perUnit) * direction, 2);
+        const initialStopLoss = round(entryPrice - ((account.startBalance * 0.0025) / perUnit) * direction, 2);
         deals.push({
           id: numericId(seed, instance.name, "deal", slot),
           positionId: numericId(seed, instance.name, "closed-position", slot),
           symbol: instance.symbol,
-          side: random(seed, instance.name, "side", slot) < 0.5 ? "buy" : "sell",
+          side,
           volume: instance.volume,
-          price: this.world.price(instance.symbol, new Date(time)),
-          pnl: round(pnl, 2),
+          price,
+          pnl,
           commission: round(-3 * instance.volume, 2),
           swap: 0,
           label: instance.name,
           time: toIsoTime(new Date(time)),
+          entryPrice,
+          initialStopLoss,
         });
       }
     }

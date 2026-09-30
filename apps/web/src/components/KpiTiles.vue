@@ -34,6 +34,23 @@ const { locale } = useI18n();
       <dt>{{ $t("kpi.net") }}</dt>
       <dd><SignedValue :value="stats.net" /></dd>
     </div>
+    <!-- Only trades with a known initial stop have an R; the tile says how many that are. -->
+    <template v-if="stats.rTrades">
+      <div class="kpi panel">
+        <dt>{{ $t("kpi.averageR") }}</dt>
+        <dd><SignedValue :value="stats.averageR" :digits="2" unit="R" /></dd>
+        <p v-if="stats.rTrades < stats.trades" class="kpi__note">
+          {{ $t("kpi.rTrades", { count: stats.rTrades, total: stats.trades }) }}
+        </p>
+      </div>
+      <div class="kpi panel">
+        <dt>{{ $t("kpi.totalR") }}</dt>
+        <dd><SignedValue :value="stats.totalR" :digits="1" unit="R" /></dd>
+        <p v-if="stats.rTrades < stats.trades" class="kpi__note">
+          {{ $t("kpi.rTrades", { count: stats.rTrades, total: stats.trades }) }}
+        </p>
+      </div>
+    </template>
   </dl>
 </template>
 
@@ -48,6 +65,12 @@ const { locale } = useI18n();
 .kpi {
   padding: var(--ww-space-3) var(--ww-space-4);
   border-radius: var(--ww-radius-lg);
+}
+
+.kpi__note {
+  margin: var(--ww-space-1) 0 0;
+  color: var(--ww-text-muted);
+  font-size: var(--ww-size-xs);
 }
 
 dt {
