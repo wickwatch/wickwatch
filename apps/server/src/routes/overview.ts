@@ -4,7 +4,7 @@ import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { clockOffset } from "../services/clock-check";
+import { clockCheckState, clockOffset } from "../services/clock-check";
 import type { LogTracker } from "../services/log-tracker";
 import { ErrorBody } from "../plugins/errors";
 import { loadAccountDetail, loadOverview } from "../services/overview";
@@ -64,10 +64,13 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
     async () => {
       const host = await adapters.runtime.hostStatus();
       // Runtimes that cannot see the host's time sync get the measured clock offset instead (services/clock-check.ts).
-      const offset = host.ntpSynced === undefined ? clockOffset() : undefined;
-      return offset === undefined
-        ? host
-        : { ...host, ntpSynced: Math.abs(offset) <= CLOCK_TOLERANCE_MS, clockOffsetMs: offset };
+      if (host.ntpSynced !== undefined) return host;
+      const offset = clockOffset();
+      if (offset === undefined) {
+        const state = clockCheckState();
+        return state ? { ...host, clockCheck: state } : host;
+      }
+      return { ...host, ntpSynced: Math.abs(offset) <= CLOCK_TOLERANCE_MS, clockOffsetMs: offset };
     },
   );
 };

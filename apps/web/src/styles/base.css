@@ -108,11 +108,11 @@ h2 {
   bottom: auto;
 }
 
-/* Long texts (descriptions) wrap instead of running off the screen. */
+/* Long texts (descriptions) wrap instead of running off the screen; a line break in the text starts a new line. */
 [data-tooltip-wrap]::after {
   width: max-content;
   max-width: min(360px, 80vw);
-  white-space: normal;
+  white-space: pre-line;
 }
 
 [data-tooltip]:hover::after,

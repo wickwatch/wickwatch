@@ -2844,6 +2844,12 @@
                     },
                     "clockOffsetMs": {
                       "type": "number"
+                    },
+                    "clockCheck": {
+                      "type": "string",
+                      "enum": [
+                        "unavailable"
+                      ]
                     }
                   }
                 }

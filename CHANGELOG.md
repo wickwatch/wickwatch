@@ -44,7 +44,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Stored algo metadata is read again at start when the reader learned more (`algoMetadataVersion`), so no re-upload is needed.
 - A saved version the container does not use yet is also shown on the instance overview tab. The challenge on an account card folds away. Loading states show the radar spinner.
 - `pnpm start` and `pnpm dev:server` let `.env` win over variables exported in the shell.
-- Clock check with the Docker runtime: the server clock is compared hourly with `CLOCK_CHECK_URL` (default Cloudflare's trace); the header shows "Clock OK" or how far it is off, and more than 2 s raises an alert (`host_clock`, also as a notification).
+- Clock check with the Docker runtime: the server clock is compared hourly with `CLOCK_CHECK_URL` (default Cloudflare's trace); the header shows a clock icon with a tooltip (green up to 1 s, yellow up to 2 s, red beyond, each with its own shape; a question mark when the check had no usable answer lately, nothing when it is off), and more than 2 s raises an alert (`host_clock`, also as a notification).
 - Daily summary to the alert webhook at `DAILY_SUMMARY_TIME` in `DAILY_SUMMARY_TIMEZONE`: per account balance, equity, today's P&L, positions, instances and the challenge rules, and the number of open alerts; sent once a day, also after a restart.
 - Audit log page for admins (user menu): time, user or "Wickwatch" for its own actions, action, target (linked to instance and account pages), result and details; filters by action, action group and target, older entries page by page (`GET /api/v1/audit`).
 

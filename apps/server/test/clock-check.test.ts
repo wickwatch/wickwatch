@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ClockCheck, clockOffset, referenceTime, resetClockReading } from "../src/services/clock-check";
+import {
+  ClockCheck,
+  clockCheckState,
+  clockOffset,
+  referenceTime,
+  resetClockReading,
+} from "../src/services/clock-check";
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as never;
 afterEach(() => {
@@ -51,5 +57,15 @@ describe("clock check", () => {
     });
     expect(await slow.check()).toBeUndefined();
     expect(clockOffset()).toBeUndefined();
+  });
+
+  it("says when a running check had no usable answer lately, nothing when it is off", async () => {
+    expect(clockCheckState()).toBeUndefined();
+    const check = new ClockCheck({ url: new URL("https://time.example/"), log, fetch: answer("nothing") });
+    check.start();
+    await check.check();
+    expect(clockCheckState()).toBe("unavailable");
+    check.stop();
+    expect(clockCheckState()).toBeUndefined();
   });
 });

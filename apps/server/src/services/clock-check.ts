@@ -14,6 +14,13 @@ export interface ClockReading {
 }
 
 let latest: ClockReading | undefined;
+/** Set once a check runs; before that (or with CLOCK_CHECK_URL=off) the clock is not checked at all. */
+let running = false;
+
+/** "unavailable" when a check runs but had no usable answer lately; undefined when none runs or all is well. */
+export function clockCheckState(now = Date.now()): "unavailable" | undefined {
+  return running && clockOffset(now) === undefined ? "unavailable" : undefined;
+}
 
 /** The last measured offset, if recent; undefined when the check is off or has not succeeded lately. */
 export function clockOffset(now = Date.now()): number | undefined {
@@ -60,6 +67,7 @@ export class ClockCheck {
   }
 
   start(): void {
+    running = true;
     void this.check();
     this.timer = setInterval(() => void this.check(), this.options.intervalMs ?? HOUR_MS);
   }
@@ -67,6 +75,7 @@ export class ClockCheck {
   stop(): void {
     clearInterval(this.timer);
     this.timer = undefined;
+    running = false;
   }
 
   async check(): Promise<ClockReading | undefined> {
@@ -95,4 +104,5 @@ export class ClockCheck {
 /** For tests: forget the last reading. */
 export function resetClockReading(): void {
   latest = undefined;
+  running = false;
 }

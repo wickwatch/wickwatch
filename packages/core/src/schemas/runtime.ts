@@ -59,5 +59,7 @@ export const HostStatus = Type.Object({
   ntpSynced: Type.Optional(Type.Boolean()),
   /** Measured offset of the server clock from an external time source in ms, positive when it runs ahead. */
   clockOffsetMs: Type.Optional(Type.Number()),
+  /** Set when the server measures the clock but had no usable answer lately; missing when it does not measure. */
+  clockCheck: Type.Optional(Type.Literal("unavailable")),
 });
 export type HostStatus = Type.Static<typeof HostStatus>;

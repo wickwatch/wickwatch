@@ -255,11 +255,18 @@
     "cpu": "CPU {value}",
     "ram": "RAM {used} / {total}",
     "disk": "Disk {value}",
-    "ntpSynced": "NTP synchron",
-    "ntpNotSynced": "NTP nicht synchron",
-    "clockOk": "Uhr genau",
-    "clockOff": "Uhr {offset} daneben",
-    "clockTooltip": "Server-Uhr im Vergleich mit einer externen Zeitquelle (CLOCK_CHECK_URL): {offset}"
+    "clock": {
+      "ahead": "geht {offset} vor",
+      "behind": "geht {offset} nach",
+      "ok": "Server-Uhrzeit stimmt ({drift}).",
+      "warning": "Server-Uhrzeit weicht leicht ab ({drift}): noch unkritisch, im Blick behalten.",
+      "error": "Server-Uhrzeit ist falsch ({drift}): Zeitsynchronisation (NTP) des Servers prüfen.",
+      "ntpOk": "Server-Uhrzeit wird synchron gehalten (NTP).",
+      "ntpOff": "Server-Uhrzeit wird nicht synchron gehalten (NTP): Zeiteinstellungen des Servers prüfen.",
+      "why": "Bots, Handelstage und der Tagesreset von Challenges hängen an ihr.",
+      "source": "Stündlich mit einer Internet-Zeitquelle verglichen (CLOCK_CHECK_URL).",
+      "unavailable": "Server-Uhrzeit konnte zuletzt nicht geprüft werden: keine brauchbare Antwort von CLOCK_CHECK_URL."
+    }
   },
   "language": {
     "en": "English",

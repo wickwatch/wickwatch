@@ -255,11 +255,18 @@
     "cpu": "CPU {value}",
     "ram": "RAM {used} / {total}",
     "disk": "Disk {value}",
-    "ntpSynced": "NTP synced",
-    "ntpNotSynced": "NTP not synced",
-    "clockOk": "Clock OK",
-    "clockOff": "Clock off {offset}",
-    "clockTooltip": "Server clock compared with an external time source (CLOCK_CHECK_URL): {offset}"
+    "clock": {
+      "ahead": "{offset} ahead",
+      "behind": "{offset} behind",
+      "ok": "Server time is right ({drift}).",
+      "warning": "Server time is slightly off ({drift}): not critical yet, keep an eye on it.",
+      "error": "Server time is wrong ({drift}): check the server's time sync (NTP).",
+      "ntpOk": "Server time is kept in sync (NTP).",
+      "ntpOff": "Server time is not kept in sync (NTP): check the server's time settings.",
+      "why": "Bots, trading days and the daily reset of challenges depend on it.",
+      "source": "Compared hourly with an internet time source (CLOCK_CHECK_URL).",
+      "unavailable": "Server time could not be checked lately: no usable answer from CLOCK_CHECK_URL."
+    }
   },
   "language": {
     "en": "English",
