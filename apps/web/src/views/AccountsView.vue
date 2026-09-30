@@ -153,7 +153,7 @@ const saveSecret = () =>
                 <th scope="col">{{ $t("accounts.currency") }}</th>
                 <th scope="col">{{ $t("accounts.login") }}</th>
                 <th scope="col">{{ $t("challenge.label") }}</th>
-                <th v-if="isAdmin" scope="col">{{ $t("table.actions") }}</th>
+                <th v-if="isAdmin" scope="col" class="num">{{ $t("table.actions") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -291,7 +291,7 @@ const saveSecret = () =>
                   <th scope="col">{{ $t("accounts.label") }}</th>
                   <th scope="col">{{ $t("accounts.loginName") }}</th>
                   <th scope="col" class="num">{{ $t("accounts.usedBy") }}</th>
-                  <th scope="col">{{ $t("table.actions") }}</th>
+                  <th scope="col" class="num">{{ $t("table.actions") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,11 +324,28 @@ const saveSecret = () =>
                       <button type="button" class="btn btn--small" :disabled="busy" @click="changingSecret.id = c.id">
                         {{ $t("accounts.changePassword") }}
                       </button>
+                      <!-- The reason sits on a wrapper: a disabled button gets no focus and would fade its tooltip. -->
+                      <span
+                        v-if="c.accounts > 0"
+                        class="disabled-tip"
+                        tabindex="0"
+                        :data-tooltip="$t('accounts.loginInUse')"
+                      >
+                        <button
+                          type="button"
+                          class="btn btn--danger btn--small"
+                          disabled
+                          :aria-describedby="`in-use-${c.id}`"
+                        >
+                          {{ $t("accounts.remove") }}
+                        </button>
+                        <span :id="`in-use-${c.id}`" class="visually-hidden">{{ $t("accounts.loginInUse") }}</span>
+                      </span>
                       <button
+                        v-else
                         type="button"
                         class="btn btn--danger btn--small"
-                        :disabled="busy || c.accounts > 0"
-                        :title="c.accounts > 0 ? $t('accounts.loginInUse') : undefined"
+                        :disabled="busy"
                         @click="removing = { kind: 'credential', row: c }"
                       >
                         {{ $t("accounts.remove") }}
@@ -489,6 +506,16 @@ tbody th {
   flex-wrap: wrap;
   gap: var(--ww-space-2);
   align-items: center;
+}
+
+td.actions,
+td .inline {
+  justify-content: flex-end;
+}
+
+.disabled-tip {
+  display: inline-flex;
+  border-radius: var(--ww-radius-md);
 }
 
 .grid {

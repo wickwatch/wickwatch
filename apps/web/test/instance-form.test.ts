@@ -5,8 +5,8 @@ import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
 import { system } from "../src/system";
-import InstanceConfigView from "../src/views/InstanceConfigView.vue";
 import InstanceFormView from "../src/views/InstanceFormView.vue";
+import InstanceView from "../src/views/InstanceView.vue";
 
 const algo = (id: number, version: string, extra: AlgoRow["parameters"] = []): AlgoRow => ({
   id,
@@ -70,6 +70,10 @@ beforeEach(() => {
     const custom = response(input, init);
     if (custom) return Promise.resolve(custom);
     const path = input.pathname.replace(/^.*\/api\/v1\//, "");
+    // No container: the runtime does not know the instance.
+    if (path.startsWith("instances/")) {
+      return Promise.resolve(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }));
+    }
     const body =
       path === "algos"
         ? algos
@@ -96,7 +100,7 @@ const posted = () =>
       return { url: (c[0] as URL).pathname, body: typeof body === "string" ? (JSON.parse(body) as unknown) : body };
     });
 
-async function open(component: typeof InstanceFormView, path: string) {
+async function open(component: typeof InstanceFormView | typeof InstanceView, path: string) {
   await router.push(path);
   const wrapper = mount(component, { global: { plugins: [i18n, router] } });
   await flushPromises();
@@ -279,9 +283,9 @@ describe("InstanceFormView", () => {
   });
 });
 
-describe("InstanceConfigView", () => {
+describe("InstanceView configuration tab", () => {
   it("shows the current configuration and what changed per version", async () => {
-    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config?saved=2");
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config?saved=2");
     expect(wrapper.find("[role=status]").text()).toBe("Version 2 saved.");
     expect(wrapper.text()).toContain("Risk %");
     const items = wrapper.findAll(".history__item");
@@ -291,8 +295,18 @@ describe("InstanceConfigView", () => {
     expect(items[1]?.find("a").attributes("href")).toContain("/instances/alpha-ger40/edit?version=1");
   });
 
+  it("shows a configuration without a container, with edit but no start", async () => {
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40");
+    expect(wrapper.find(".head .pill").text()).toBe("No container");
+    expect(wrapper.find(".head").text()).toContain("Prop A · 1111111 · GER40 · M5");
+    expect(wrapper.text()).toContain("No container yet, so there are no trades and no log.");
+    const head = wrapper.find(".head__actions");
+    expect(head.find("a").attributes("href")).toContain("/instances/alpha-ger40/edit");
+    expect(head.text()).not.toContain("Start");
+  });
+
   it("creates and starts the container only after confirmation", async () => {
-    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
     expect(wrapper.text()).toContain("No container yet.");
     await wrapper
       .findAll("button")
@@ -320,9 +334,11 @@ describe("InstanceConfigView", () => {
             { status: 200 },
           )
         : undefined;
-    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
-    expect(wrapper.text()).toContain("runs configuration version 1");
-    expect(wrapper.text()).toContain("Version 2 is saved but not applied yet.");
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+    expect(wrapper.find(".head").text()).toContain("Configuration v1");
+    expect(wrapper.find(".banner").text()).toContain("Version 2 is saved, the container still uses version 1.");
+    // Start and stop live in the page head only.
+    expect(wrapper.find(".banner").text()).not.toContain("Stop");
     await wrapper
       .findAll("button")
       .find((b) => b.text() === "Apply version 2 (restart)")
@@ -335,8 +351,12 @@ describe("InstanceConfigView", () => {
   });
 
   it("deletes only after confirmation, with the name as confirmation", async () => {
-    const wrapper = await open(InstanceConfigView, "/instances/alpha-ger40/config");
-    await wrapper.find(".btn--danger").trigger("click");
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+    await wrapper.find('.head [aria-haspopup="menu"]').trigger("click");
+    await wrapper
+      .findAll('[role="menuitem"]')
+      .find((b) => b.text() === "Delete")
+      ?.trigger("click");
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
     await wrapper.findAllComponents({ name: "ConfirmDialog" })[1]?.vm.$emit("confirm");
     await flushPromises();

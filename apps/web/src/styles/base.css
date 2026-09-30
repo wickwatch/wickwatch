@@ -54,6 +54,44 @@ h2 {
   white-space: nowrap;
 }
 
+/*
+ * Tooltip from `data-tooltip`, above the element and flush with its right edge (actions sit at the right of rows and
+ * the header). Shown at once on hover and keyboard focus, unlike the delayed native `title`; the element keeps its
+ * own accessible name (aria-label or text), so the tooltip is visual only.
+ */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 20;
+  padding: 4px 8px;
+  border: 1px solid var(--ww-border-strong);
+  border-radius: var(--ww-radius-md);
+  background: var(--ww-surface-raised);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ww-bg) 60%, transparent);
+  color: var(--ww-text);
+  font-family: var(--ww-font-body);
+  font-size: var(--ww-size-xs);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  content: attr(data-tooltip);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 .panel {
   background: var(--ww-surface);
   border: 1px solid var(--ww-border);

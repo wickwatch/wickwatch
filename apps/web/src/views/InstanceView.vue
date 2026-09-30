@@ -1,65 +1,81 @@
 <script setup lang="ts">
-import type { PendingOrder, Position } from "@wickwatch/core";
-import { computed, reactive, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute } from "vue-router";
-import { api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
+import { useRoute, useRouter } from "vue-router";
+import { ApiError, api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
+import AppIcon from "../components/AppIcon.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
-import KpiTiles from "../components/KpiTiles.vue";
-import LogPanel from "../components/LogPanel.vue";
-import PnlChart from "../components/PnlChart.vue";
+import InstanceConfigTab from "../components/InstanceConfigTab.vue";
+import InstanceOverviewTab, { type Range } from "../components/InstanceOverviewTab.vue";
+import MenuButton, { type MenuItem } from "../components/MenuButton.vue";
 import StatusBadge from "../components/StatusBadge.vue";
-import TradeTables from "../components/TradeTables.vue";
 import { usePolling } from "../composables/usePolling";
-import { durationParts, formatDateTime, formatPrice } from "../format";
+import { durationParts, formatDateTime } from "../format";
 import { isAdmin } from "../session";
+import { system } from "../system";
 
-const RANGES = [7, 30, 90] as const;
-const LONGEST = 90;
-type Range = (typeof RANGES)[number] | "all";
-const DAY_MS = 24 * 60 * 60 * 1000;
-
+/**
+ * One instance: the page head with status and actions, then the tabs "Overview" (route `instance`) and
+ * "Configuration" (route `instance-config`). Both routes use this component, so switching tabs keeps the loaded data.
+ */
 const route = useRoute();
+const router = useRouter();
 const { t, locale } = useI18n();
 const instanceRef = computed(() => String(route.params["ref"]));
+const tab = computed(() => (route.name === "instance-config" ? "config" : "overview"));
 const days = ref<Range>(30);
 
 const { data, error, now, refresh } = usePolling(() => api.instance(instanceRef.value, days.value), 30_000);
 watch([instanceRef, days], () => void refresh());
+/** The runtime does not know the instance, e.g. a configuration without a container yet. */
+const noContainer = computed(() => error.value instanceof ApiError && error.value.status === 404);
 
 /** Set when Wickwatch manages this instance's configuration. */
 const managed = ref<ManagedInstanceDetail>();
+const managedLoaded = ref(false);
+async function loadManaged() {
+  const name = instanceRef.value;
+  try {
+    const m = await api.managedInstance(name);
+    if (name === instanceRef.value) managed.value = m;
+  } catch {
+    if (name === instanceRef.value) managed.value = undefined;
+  } finally {
+    managedLoaded.value = true;
+  }
+}
 watch(
   instanceRef,
-  (ref) => {
+  () => {
     managed.value = undefined;
-    api.managedInstance(ref).then(
-      (m) => (managed.value = m),
-      () => undefined,
-    );
+    managedLoaded.value = false;
+    void loadManaged();
   },
   { immediate: true },
 );
+async function reload() {
+  await Promise.all([loadManaged(), refresh()]);
+}
 
-/** "All" only when the instance traded before the longest range. */
-const ranges = computed<Range[]>(() => {
-  const d = data.value;
-  const older = d?.firstTradeAt && Date.parse(d.time) - Date.parse(d.firstTradeAt) > LONGEST * DAY_MS;
-  return older || days.value === "all" ? [...RANGES, "all"] : [...RANGES];
+const name = computed(() => data.value?.instance.name ?? managed.value?.name ?? instanceRef.value);
+const status = computed(() => data.value?.instance.status ?? managed.value?.deployment?.status);
+/** Configuration version the container was created with, if Wickwatch created it. */
+const runningVersion = computed(() => {
+  const d = managed.value?.deployment;
+  return d?.managed ? d.configVersion : undefined;
 });
-
-const busy = reactive(new Set<string>());
-const notice = ref<{ tone: "positive" | "negative"; text: string }>();
-const closing = ref<Position>();
-const cancelling = ref<PendingOrder>();
 
 const meta = computed(() => {
   const d = data.value;
-  if (!d) return "";
-  const i = d.instance;
-  const account = d.account ? `${d.account.displayName} · ${d.account.number}` : i.account;
-  return [account, i.symbol, i.period, i.image].filter(Boolean).join(" · ");
+  const m = managed.value;
+  if (d) {
+    const i = d.instance;
+    const account = d.account ? `${d.account.displayName} · ${d.account.number}` : i.account;
+    return [account, i.symbol, i.period, i.image].filter(Boolean).join(" · ");
+  }
+  if (m) return [`${m.account.displayName} · ${m.account.number}`, m.config.symbol, m.config.period].join(" · ");
+  return "";
 });
 
 const uptime = computed(() => {
@@ -69,73 +85,57 @@ const uptime = computed(() => {
   return t("instance.runningFor", { duration: t(key, params) });
 });
 
+const busy = ref(false);
+const notice = ref<string>();
+
 async function act(action: InstanceAction) {
-  busy.add("instance");
+  busy.value = true;
   notice.value = undefined;
   try {
     await api.instanceAction(instanceRef.value, action);
   } catch (e) {
-    const name = data.value?.instance.name ?? instanceRef.value;
-    notice.value = {
-      tone: "negative",
-      text: t("notice.actionFailed", { action: t(`action.${action}`), name, reason: t(errorKey(e)) }),
-    };
+    notice.value = t("notice.actionFailed", {
+      action: t(`action.${action}`),
+      name: name.value,
+      reason: t(errorKey(e)),
+    });
   } finally {
-    busy.delete("instance");
-    await refresh();
+    busy.value = false;
+    await reload();
   }
 }
 
-/** Removes a position (and its deals) from this instance, or restores it. */
-async function toggleAttribution(positionId: string, restore: boolean) {
-  const account = data.value?.account?.number;
-  if (!account) return;
-  busy.add(positionId);
-  notice.value = undefined;
-  try {
-    if (restore) await api.clearAttribution(account, positionId);
-    else await api.setAttribution(account, positionId, null);
-    const key = restore ? "attribution.restored" : "attribution.excluded";
-    notice.value = { tone: "positive", text: t(key, { id: positionId }) };
-  } catch (e) {
-    notice.value = { tone: "negative", text: t(errorKey(e)) };
-  } finally {
-    busy.delete(positionId);
-    await refresh();
+/** Parameter files come in the config adapter's first format, e.g. .cbotset. */
+const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
+const moreItems = computed<MenuItem[]>(() => [
+  { id: "duplicate", label: t("action.duplicate"), icon: "duplicate" },
+  ...(format.value
+    ? [{ id: "download", label: t("instanceConfig.download", { format: format.value }), icon: "download" as const }]
+    : []),
+  { id: "delete", label: t("action.delete"), icon: "trash", danger: true, separated: true },
+]);
+
+const deleting = ref(false);
+function onMore(id: string) {
+  const m = managed.value;
+  if (!m) return;
+  if (id === "duplicate") void router.push({ name: "instance-new", query: { from: m.name } });
+  else if (id === "delete") deleting.value = true;
+  else if (id === "download") {
+    const link = document.createElement("a");
+    link.href = api.parameterFileUrl(m.name, m.config.version);
+    link.download = "";
+    link.click();
   }
 }
 
-async function cancelOrder() {
-  const order = cancelling.value;
-  const account = data.value?.account?.number;
-  cancelling.value = undefined;
-  if (!order || !account) return;
-  busy.add(order.id);
+async function remove() {
+  deleting.value = false;
   try {
-    await api.cancelOrder(account, order.id);
-    notice.value = { tone: "positive", text: t("instance.orderCancelled", { id: order.id }) };
+    await api.deleteManagedInstance(instanceRef.value);
+    await router.push({ name: "overview" });
   } catch (e) {
-    notice.value = { tone: "negative", text: t("instance.cancelFailed", { id: order.id, reason: t(errorKey(e)) }) };
-  } finally {
-    busy.delete(order.id);
-    await refresh();
-  }
-}
-
-async function closePosition() {
-  const position = closing.value;
-  const account = data.value?.account?.number;
-  closing.value = undefined;
-  if (!position || !account) return;
-  busy.add(position.id);
-  try {
-    await api.closePosition(account, position.id);
-    notice.value = { tone: "positive", text: t("instance.positionClosed", { id: position.id }) };
-  } catch (e) {
-    notice.value = { tone: "negative", text: t("instance.closeFailed", { id: position.id, reason: t(errorKey(e)) }) };
-  } finally {
-    busy.delete(position.id);
-    await refresh();
+    notice.value = t(errorKey(e));
   }
 }
 </script>
@@ -144,58 +144,79 @@ async function closePosition() {
   <div class="detail">
     <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
 
-    <p v-if="error && !data" class="tone-negative" role="alert">{{ $t(errorKey(error)) }}</p>
-    <p v-else-if="!data" class="muted">{{ $t("overview.loading") }}</p>
+    <p v-if="error && !data && !noContainer" class="tone-negative" role="alert">{{ $t(errorKey(error)) }}</p>
+    <p v-else-if="noContainer && managedLoaded && !managed" class="tone-negative" role="alert">
+      {{ $t(errorKey(error)) }}
+    </p>
+    <p v-else-if="!data && !managed" class="muted">{{ $t("overview.loading") }}</p>
 
-    <template v-if="data">
+    <template v-if="data || managed">
       <section class="head">
         <div class="head__title">
           <div class="head__name">
-            <h1 class="mono">{{ data.instance.name }}</h1>
-            <StatusBadge :instance="data.instance.status" :connection-lost="!!data.instance.connectionLostSince" />
+            <h1 class="mono">{{ name }}</h1>
+            <StatusBadge
+              :instance="status"
+              :connection-lost="!!data?.instance.connectionLostSince"
+              :not-created="!data && !!managed && !managed.deployment"
+            />
           </div>
           <p class="muted">
             {{ meta }}
+            <template v-if="runningVersion">
+              · {{ $t("instance.configVersion", { version: runningVersion }) }}</template
+            >
             <template v-if="uptime"> · {{ uptime }}</template>
-            <template v-if="data.instance.restartCount">
+            <template v-if="data?.instance.restartCount">
               · {{ $t("instance.restarts", { count: data.instance.restartCount }) }}
             </template>
           </p>
         </div>
         <div v-if="isAdmin" class="head__actions">
-          <IconButton
-            v-if="data.instance.status === 'running' || data.instance.status === 'restarting'"
-            icon="stop"
-            :label="$t('action.stop')"
-            show-label
-            :disabled="busy.has('instance')"
-            @click="act('stop')"
-          />
-          <IconButton
-            v-else
-            icon="play"
-            :label="$t('action.start')"
-            show-label
-            :disabled="busy.has('instance')"
-            @click="act('start')"
-          />
-          <IconButton
-            icon="restart"
-            :label="$t('action.restart')"
-            show-label
-            :disabled="busy.has('instance')"
-            @click="act('restart')"
-          />
+          <template v-if="status">
+            <IconButton
+              v-if="status === 'running' || status === 'restarting'"
+              icon="stop"
+              :label="$t('action.stop')"
+              show-label
+              :disabled="busy"
+              @click="act('stop')"
+            />
+            <IconButton
+              v-else
+              icon="play"
+              :label="$t('action.start')"
+              show-label
+              :disabled="busy"
+              @click="act('start')"
+            />
+            <IconButton
+              icon="restart"
+              :label="$t('action.restart')"
+              show-label
+              :disabled="busy"
+              @click="act('restart')"
+            />
+          </template>
+          <template v-if="managed">
+            <IconButton
+              icon="edit"
+              :label="$t('action.edit')"
+              show-label
+              :to="{ name: 'instance-edit', params: { ref: managed.name } }"
+            />
+            <MenuButton :label="$t('instance.more')" :items="moreItems" @select="onMore">
+              <AppIcon name="more" />
+            </MenuButton>
+          </template>
         </div>
       </section>
 
-      <p class="notice" :class="notice ? `tone-${notice.tone}` : ''" role="status" aria-live="polite">
-        {{ notice?.text }}
-      </p>
-      <p v-if="data.instance.connectionLostSince" class="tone-warning" role="alert">
+      <p v-if="notice" class="tone-negative notice" role="alert">{{ notice }}</p>
+      <p v-if="data?.instance.connectionLostSince" class="tone-warning" role="alert">
         {{ $t("instance.connectionLost", { since: formatDateTime(locale, data.instance.connectionLostSince) }) }}
       </p>
-      <div v-if="data.instance.crashes" class="tone-negative crashes" role="alert">
+      <div v-if="data?.instance.crashes" class="tone-negative crashes" role="alert">
         <p>
           {{
             $t("instance.crashes", {
@@ -207,167 +228,36 @@ async function closePosition() {
         <!-- Bot output stays untranslated. -->
         <p class="mono crashes__line">{{ data.instance.crashes.lastText }}</p>
       </div>
-      <p v-if="data.brokerError" class="tone-negative" role="alert">
-        {{ $t("instance.brokerError", { reason: $t(`error.adapter.${data.brokerError}`) }) }}
-      </p>
 
-      <div class="range" role="group" :aria-label="$t('instance.range')">
-        <button
-          v-for="r in ranges"
-          :key="r"
-          type="button"
-          class="btn btn--ghost btn--small"
-          :aria-pressed="days === r"
-          @click="days = r"
-        >
-          {{ r === "all" ? $t("instance.allTime") : $t("instance.days", { days: r }) }}
-        </button>
-      </div>
+      <nav class="tabs" :aria-label="$t('instance.sections')">
+        <RouterLink :to="{ name: 'instance', params: { ref: instanceRef } }" class="tabs__link">
+          {{ $t("instance.overviewTab") }}
+        </RouterLink>
+        <RouterLink :to="{ name: 'instance-config', params: { ref: instanceRef } }" class="tabs__link">
+          {{ $t("instance.config") }}
+        </RouterLink>
+      </nav>
 
-      <KpiTiles :stats="data.stats" />
-
-      <div class="columns">
-        <div class="column">
-          <section class="panel card" aria-labelledby="pnl-title">
-            <h2 id="pnl-title">{{ $t("chart.pnlTitle") }}</h2>
-            <p class="muted card__hint">{{ $t("chart.pnlHint") }}</p>
-            <PnlChart
-              :deals="data.deals"
-              :from="data.range.from"
-              :to="data.range.to"
-              :currency="data.account?.currency"
-            />
-          </section>
-
-          <section class="panel card" aria-labelledby="positions-title">
-            <h2 id="positions-title">{{ $t("instance.positions") }}</h2>
-            <p v-if="!data.positions.length" class="muted">{{ $t("instance.noPositions") }}</p>
-            <TradeTables
-              v-else
-              kind="positions"
-              :positions="data.positions"
-              :can-close="isAdmin"
-              :can-attribute="isAdmin"
-              :busy="busy"
-              @close="closing = $event"
-              @attribution="toggleAttribution($event, false)"
-            />
-          </section>
-
-          <section class="panel card" aria-labelledby="orders-title">
-            <h2 id="orders-title">{{ $t("instance.pendingOrders") }}</h2>
-            <p v-if="!data.pendingOrders.length" class="muted">{{ $t("instance.noOrders") }}</p>
-            <TradeTables
-              v-else
-              kind="orders"
-              :orders="data.pendingOrders"
-              :can-cancel="isAdmin"
-              :busy="busy"
-              @cancel="cancelling = $event"
-            />
-          </section>
-
-          <section class="panel card" aria-labelledby="history-title">
-            <h2 id="history-title">{{ $t("instance.history") }}</h2>
-            <p v-if="!data.deals.length" class="muted">{{ $t("chart.noTrades") }}</p>
-            <TradeTables
-              v-else
-              kind="deals"
-              :deals="data.deals"
-              :can-attribute="isAdmin"
-              :busy="busy"
-              @attribution="toggleAttribution($event, false)"
-            />
-          </section>
-
-          <section
-            v-if="data.excludedPositions.length || data.excludedDeals.length"
-            class="panel card"
-            aria-labelledby="excluded-title"
-          >
-            <details>
-              <summary>
-                <h2 id="excluded-title" class="inline-heading">
-                  {{
-                    $t("attribution.excludedTitle", {
-                      count: data.excludedPositions.length + data.excludedDeals.length,
-                    })
-                  }}
-                </h2>
-              </summary>
-              <p class="muted card__hint">{{ $t("attribution.excludedHint") }}</p>
-              <TradeTables
-                v-if="data.excludedPositions.length"
-                kind="positions"
-                :positions="data.excludedPositions"
-                :can-attribute="isAdmin"
-                excluded
-                :busy="busy"
-                @attribution="toggleAttribution($event, true)"
-              />
-              <TradeTables
-                v-if="data.excludedDeals.length"
-                kind="deals"
-                :deals="data.excludedDeals"
-                :can-attribute="isAdmin"
-                excluded
-                :busy="busy"
-                @attribution="toggleAttribution($event, true)"
-              />
-            </details>
-          </section>
-        </div>
-
-        <div class="column">
-          <section class="panel card" aria-labelledby="log-title">
-            <h2 id="log-title">{{ $t("instance.liveLog") }}</h2>
-            <LogPanel :instance-ref="instanceRef" />
-          </section>
-
-          <section class="panel card" aria-labelledby="labels-title">
-            <h2 id="labels-title">{{ $t("instance.labels") }}</h2>
-            <p class="muted card__hint">
-              <RouterLink v-if="managed" :to="{ name: 'instance-config', params: { ref: managed.name } }">
-                {{ $t("instance.configLink", { version: managed.config.version }) }}
-              </RouterLink>
-              <template v-else>{{ $t("instance.externallyManaged") }}</template>
-            </p>
-            <dl class="labels mono">
-              <template v-for="(value, key) in data.instance.labels" :key="key">
-                <dt>{{ key }}</dt>
-                <dd>{{ value }}</dd>
-              </template>
-            </dl>
-          </section>
-        </div>
-      </div>
+      <template v-if="tab === 'overview'">
+        <InstanceOverviewTab v-if="data" v-model:days="days" :data="data" @refresh="refresh" />
+        <p v-else-if="noContainer" class="muted">
+          {{ $t("instance.notCreated") }}
+        </p>
+      </template>
+      <InstanceConfigTab v-else :managed="managed" :labels="data?.instance.labels" @changed="reload" />
     </template>
 
     <ConfirmDialog
-      :open="closing !== undefined"
-      :title="$t('instance.closeTitle')"
-      :message="closing ? $t('instance.closeConfirm', { id: closing.id, symbol: closing.symbol }) : ''"
-      :confirm-label="$t('action.closePosition')"
-      @confirm="closePosition"
-      @cancel="closing = undefined"
-    />
-    <ConfirmDialog
-      :open="cancelling !== undefined"
-      :title="$t('instance.cancelTitle')"
+      :open="deleting"
+      :title="$t('action.delete')"
       :message="
-        cancelling
-          ? $t('instance.cancelConfirm', {
-              id: cancelling.id,
-              type: $t(`trade.orderType.${cancelling.type}`),
-              side: $t(`trade.${cancelling.side}`),
-              symbol: cancelling.symbol,
-              price: formatPrice(locale, cancelling.price),
-            })
-          : ''
+        managed?.deployment?.managed
+          ? `${$t('instanceConfig.deleteConfirm', { name })} ${$t('instanceConfig.deleteContainer')}`
+          : $t('instanceConfig.deleteConfirm', { name })
       "
-      :confirm-label="$t('action.cancelOrder')"
-      @confirm="cancelOrder"
-      @cancel="cancelling = undefined"
+      :confirm-label="$t('action.delete')"
+      @confirm="remove"
+      @cancel="deleting = false"
     />
   </div>
 </template>
@@ -412,23 +302,19 @@ h1 {
   font-size: var(--ww-size-sm);
 }
 
-.head__actions,
-.range {
+.head__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ww-space-2);
+  align-items: center;
 }
 
 .notice {
-  margin: 0;
   font-weight: 600;
 }
 
-.notice:empty {
-  display: none;
-}
-
-p[role="alert"] {
+p[role="alert"],
+.detail > p {
   margin: 0;
 }
 
@@ -447,74 +333,43 @@ p[role="alert"] {
   font-size: var(--ww-size-sm);
 }
 
-.columns {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: var(--ww-space-5);
-  align-items: start;
-}
-
-.column {
+.tabs {
   display: flex;
-  flex-direction: column;
   gap: var(--ww-space-5);
-  min-width: 0;
+  border-bottom: 1px solid var(--ww-border);
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-3);
-  min-width: 0;
-  padding: var(--ww-space-5);
-}
-
-.card p {
-  margin: 0;
-}
-
-.card__hint {
-  font-size: var(--ww-size-xs);
-}
-
-.inline-heading {
-  display: inline;
-}
-
-details summary {
-  cursor: pointer;
-}
-
-details[open] summary {
-  margin-bottom: var(--ww-space-3);
-}
-
-.labels {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: var(--ww-space-1) var(--ww-space-4);
-  margin: 0;
-  font-size: var(--ww-size-xs);
-}
-
-.labels dt {
+.tabs__link {
+  margin-bottom: -1px;
+  padding: var(--ww-space-2) 0;
+  border-bottom: 2px solid transparent;
   color: var(--ww-text-muted);
+  font-weight: 500;
+  text-decoration: none;
 }
 
-.labels dd {
-  margin: 0;
-  word-break: break-all;
+.tabs__link:hover {
+  color: var(--ww-text);
 }
 
-@media (max-width: 1100px) {
-  .columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* The active tab is marked by weight and text colour as well as the line, not by colour alone. */
+.tabs__link[aria-current="page"] {
+  border-bottom-color: var(--ww-accent);
+  color: var(--ww-text);
+  font-weight: 700;
 }
 
 @media (max-width: 640px) {
   .detail {
     padding: var(--ww-space-4);
+  }
+}
+
+@media (pointer: coarse) {
+  .tabs__link {
+    display: flex;
+    align-items: center;
+    min-height: var(--ww-touch-target);
   }
 }
 </style>

@@ -69,7 +69,13 @@ class FakeEventSource {
   emit(type: string, data?: object) {
     this.listeners.get(type)?.(new MessageEvent(type, { data: JSON.stringify(data ?? {}) }));
   }
-  close() {}
+  closed = false;
+  readyState = 1;
+  close() {
+    this.closed = true;
+    this.readyState = 2;
+  }
+  static readonly CLOSED = 2;
 }
 
 beforeEach(async () => {
@@ -131,6 +137,32 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("shows a stopped container's log without reconnecting", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) =>
+        Promise.resolve(
+          input.pathname.includes("/managed-instances/")
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : new Response(JSON.stringify({ ...detail, instance: { ...detail.instance, status: "stopped" } }), {
+                status: 200,
+              }),
+        ),
+      ),
+    );
+    const wrapper = await render();
+    const source = FakeEventSource.last;
+    source?.emit("open");
+    source?.emit("log", { time: "2026-09-25T11:00:00.000Z", text: "Bot stopped" });
+    // The stream ends after the last lines of a stopped container.
+    source?.emit("error");
+    await flushPromises();
+    expect(source?.closed).toBe(true);
+    expect(wrapper.find(".log__state").text()).toBe("Container stopped");
+    expect(wrapper.find(".log__lines").text()).toContain("Bot stopped");
+    wrapper.unmount();
+  });
+
   it("offers all trades only when the instance traded before the longest range", async () => {
     const rangeButtons = (w: Awaited<ReturnType<typeof render>>) => w.findAll(".range button").map((b) => b.text());
     const plain = await render();
@@ -180,10 +212,10 @@ describe("InstanceView", () => {
     // The expiry column appears because the order has one.
     expect(wrapper.text()).toContain("Expires");
     expect(wrapper.text()).toContain(formatDateTime("en", "2026-09-26T21:00:00.000Z"));
-    await wrapper
-      .findAll("button")
-      .find((b) => b.text() === "Cancel order")
-      ?.trigger("click");
+    // The row button shows the short verb; its accessible name is the full action.
+    const cancel = wrapper.findAll("button").find((b) => b.attributes("aria-label") === "Cancel order");
+    expect(cancel?.text()).toBe("Cancel");
+    await cancel?.trigger("click");
     expect(wrapper.text()).toContain("Cancel order 320393475 (Stop Buy GER40 at 19,600)?");
     const dialogButtons = wrapper.findAll("dialog")[1]?.findAll("button") ?? [];
     // Button, dialog title and confirmation say the same.
@@ -195,6 +227,19 @@ describe("InstanceView", () => {
       body: { confirm: "320393475" },
     });
     expect(wrapper.find(".notice").text()).toBe("Order 320393475 cancelled.");
+    wrapper.unmount();
+  });
+
+  it("shows the labels of an instance defined outside Wickwatch in the configuration tab", async () => {
+    await router.push({ name: "instance-config", params: { ref: "alpha" } });
+    const wrapper = await render();
+    expect(wrapper.find('.tabs [aria-current="page"]').text()).toBe("Configuration");
+    expect(wrapper.text()).toContain("Defined outside Wickwatch");
+    expect(wrapper.find(".labels").text()).toContain("wickwatch.instance");
+    expect(wrapper.find(".chart").exists()).toBe(false);
+    // Nothing to edit: the configuration lives outside Wickwatch.
+    expect(wrapper.find('.head [aria-haspopup="menu"]').exists()).toBe(false);
+    expect(wrapper.find(".head").text()).toContain("Stop");
     wrapper.unmount();
   });
 

@@ -2,95 +2,83 @@
 import type { ParameterSchema } from "@wickwatch/core";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { api, errorKey, type AlgoRow, type InstanceConfigRow, type ManagedInstanceDetail } from "../api";
-import ConfirmDialog from "../components/ConfirmDialog.vue";
-import StatusBadge from "../components/StatusBadge.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
+import AppBanner from "./AppBanner.vue";
+import ConfirmDialog from "./ConfirmDialog.vue";
 
+/**
+ * The "Configuration" tab of an instance. `managed` is set when Wickwatch keeps the configuration; otherwise only the
+ * runtime's `labels` are known.
+ */
+const props = defineProps<{
+  managed?: ManagedInstanceDetail | undefined;
+  labels?: Record<string, string> | undefined;
+}>();
+const emit = defineEmits<{ changed: [] }>();
 const { t, locale } = useI18n();
 const route = useRoute();
-const router = useRouter();
-const name = computed(() => String(route.params["ref"]));
 
-const data = ref<ManagedInstanceDetail>();
 const busy = ref(false);
 const notice = ref<string>();
+const error = ref<string>();
 /** Deploy action waiting for confirmation. */
 const pending = ref<{ start: boolean }>();
 const algos = ref<AlgoRow[]>([]);
-const error = ref<string>();
-const deleting = ref(false);
 /** Parameter files come in the config adapter's first format, e.g. .cbotset. */
 const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
 const saved = computed(() => (typeof route.query["saved"] === "string" ? route.query["saved"] : undefined));
 
-async function load() {
-  [data.value, algos.value] = await Promise.all([api.managedInstance(name.value), api.algos()]);
-}
-
 onMounted(async () => {
   try {
-    await load();
+    algos.value = await api.algos();
   } catch (e) {
     error.value = t(errorKey(e));
   }
 });
 
-const deployment = computed(() => data.value?.deployment);
-/** The container runs an older configuration than the current one. */
-const outdated = computed(
-  () => deployment.value?.managed === true && deployment.value.configVersion !== data.value?.config.version,
-);
+const deployment = computed(() => props.managed?.deployment);
+const version = computed(() => props.managed?.config.version ?? 0);
+/** The container runs another configuration than the saved one. */
+const outdated = computed(() => deployment.value?.managed === true && deployment.value.configVersion !== version.value);
 const running = computed(() => deployment.value?.status === "running" || deployment.value?.status === "restarting");
 
 const confirmTitle = computed(() => {
-  const version = data.value?.config.version ?? 0;
   if (!deployment.value) return pending.value?.start ? t("deploy.createAndStart") : t("deploy.create");
-  if (running.value) return t("deploy.applyRestart", { version });
-  return pending.value?.start ? t("deploy.applyAndStart", { version }) : t("deploy.apply", { version });
+  if (running.value) return t("deploy.applyRestart", { version: version.value });
+  return pending.value?.start
+    ? t("deploy.applyAndStart", { version: version.value })
+    : t("deploy.apply", { version: version.value });
 });
 const confirmMessage = computed(() => {
-  const version = data.value?.config.version ?? 0;
+  const v = { version: version.value };
   const what = !deployment.value
-    ? t(pending.value?.start ? "deploy.confirmCreateStart" : "deploy.confirmCreate", { version })
+    ? t(pending.value?.start ? "deploy.confirmCreateStart" : "deploy.confirmCreate", v)
     : running.value
-      ? t("deploy.confirmApplyRunning", { version })
-      : t(pending.value?.start ? "deploy.confirmApplyStart" : "deploy.confirmApply", { version });
+      ? t("deploy.confirmApplyRunning", v)
+      : t(pending.value?.start ? "deploy.confirmApplyStart" : "deploy.confirmApply", v);
   return `${what} ${pending.value?.start || running.value ? t("deploy.elsewhere") : ""}`.trim();
 });
 
 async function deploy() {
+  const name = props.managed?.name;
   const start = pending.value?.start ?? false;
   pending.value = undefined;
+  if (!name) return;
   busy.value = true;
   error.value = undefined;
   notice.value = undefined;
   try {
-    const result = await api.deployInstance(name.value, start);
+    const result = await api.deployInstance(name, start);
     notice.value = t("deploy.done", { version: result.configVersion, status: t(`status.${result.status}`) });
-    await load();
   } catch (e) {
     error.value = t(errorKey(e));
   } finally {
     busy.value = false;
-  }
-}
-
-/** Start or stop the container as it is; only a new configuration needs a deploy. */
-async function runAction(action: "start" | "stop") {
-  busy.value = true;
-  error.value = undefined;
-  notice.value = undefined;
-  try {
-    await api.instanceAction(name.value, action);
-    await load();
-  } catch (e) {
-    error.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
+    emit("changed");
   }
 }
 
@@ -106,7 +94,7 @@ interface Row {
 }
 /** Parameters of the current configuration in schema order, then values the schema does not know. */
 const rows = computed<Row[]>(() => {
-  const config = data.value?.config;
+  const config = props.managed?.config;
   if (!config) return [];
   const schema = schemaOf(config);
   const known = schema.map((p) => ({
@@ -126,7 +114,7 @@ const attributionText = (c: InstanceConfigRow) =>
 
 /** What changed from the previous version, as "field: old → new". */
 function changes(index: number): string[] {
-  const history = data.value?.history ?? [];
+  const history = props.managed?.history ?? [];
   const current = history[index];
   const previous = history[index + 1];
   if (!current) return [];
@@ -147,131 +135,65 @@ function changes(index: number): string[] {
   for (const k of keys) diff(k, show(previous.parameters[k]), show(current.parameters[k]));
   return out;
 }
-
-async function remove() {
-  deleting.value = false;
-  try {
-    await api.deleteManagedInstance(name.value);
-    await router.push({ name: "overview" });
-  } catch (e) {
-    error.value = t(errorKey(e));
-  }
-}
 </script>
 
 <template>
-  <div class="page">
-    <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
+  <div class="tab">
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
-    <p v-else-if="!data" class="muted">{{ $t("overview.loading") }}</p>
+    <p v-if="saved && !notice" class="tone-positive status" role="status">
+      {{ $t("instanceConfig.saved", { version: saved }) }}
+    </p>
+    <p v-if="notice" class="tone-positive status" role="status">{{ notice }}</p>
 
-    <template v-if="data">
-      <div class="head">
-        <div>
-          <h1 class="mono">{{ data.name }}</h1>
-          <p class="muted">
-            {{ data.account.displayName }} · {{ data.account.number }} ·
-            {{ $t("instanceConfig.version", { version: data.config.version }) }}
-          </p>
-        </div>
-        <div v-if="isAdmin" class="actions">
-          <RouterLink :to="{ name: 'instance-edit', params: { ref: data.name } }" class="btn btn--primary">
-            {{ $t("action.edit") }}
-          </RouterLink>
-          <RouterLink :to="{ name: 'instance-new', query: { from: data.name } }" class="btn">
-            {{ $t("action.duplicate") }}
-          </RouterLink>
-          <button type="button" class="btn btn--danger" @click="deleting = true">{{ $t("action.delete") }}</button>
-        </div>
-      </div>
-      <p v-if="saved && !notice" class="tone-positive status" role="status">
-        {{ $t("instanceConfig.saved", { version: saved }) }}
-      </p>
-      <p v-if="notice" class="tone-positive status" role="status">{{ notice }}</p>
-
-      <section class="panel card" aria-labelledby="runtime-title">
-        <h2 id="runtime-title">{{ $t("deploy.title") }}</h2>
-        <template v-if="!deployment">
-          <p class="muted">{{ $t("deploy.none") }}</p>
-          <div v-if="isAdmin" class="actions">
-            <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: true }">
-              {{ $t("deploy.createAndStart") }}
-            </button>
-            <button type="button" class="btn" :disabled="busy" @click="pending = { start: false }">
-              {{ $t("deploy.create") }}
-            </button>
-          </div>
+    <template v-if="managed">
+      <!-- Only when the container and the saved configuration differ; start and stop live in the page head. -->
+      <AppBanner v-if="!deployment" tone="neutral">
+        <span>{{ $t("deploy.none") }}</span>
+        <template v-if="isAdmin" #actions>
+          <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: true }">
+            {{ $t("deploy.createAndStart") }}
+          </button>
+          <button type="button" class="btn" :disabled="busy" @click="pending = { start: false }">
+            {{ $t("deploy.create") }}
+          </button>
         </template>
-        <p v-else-if="!deployment.managed" class="tone-warning">{{ $t("deploy.foreign") }}</p>
-        <template v-else>
-          <p class="runtime">
-            <StatusBadge :instance="deployment.status" />
-            <span>{{
-              deployment.configVersion
-                ? $t("deploy.runsVersion", { version: deployment.configVersion })
-                : $t("deploy.unknownVersion")
-            }}</span>
-            <RouterLink :to="{ name: 'instance', params: { ref: data.name } }">{{ $t("deploy.details") }}</RouterLink>
-          </p>
-          <p v-if="outdated" class="tone-warning">
-            {{ $t("deploy.outdated", { version: data.config.version }) }}
-          </p>
-          <div v-if="isAdmin" class="actions">
-            <button
-              v-if="outdated"
-              type="button"
-              class="btn btn--primary"
-              :disabled="busy"
-              @click="pending = { start: false }"
-            >
-              {{
-                running
-                  ? $t("deploy.applyRestart", { version: data.config.version })
-                  : $t("deploy.apply", { version: data.config.version })
-              }}
-            </button>
-            <button
-              v-if="!running && outdated"
-              type="button"
-              class="btn"
-              :disabled="busy"
-              @click="pending = { start: true }"
-            >
-              {{ $t("deploy.applyAndStart", { version: data.config.version }) }}
-            </button>
-            <button
-              v-else-if="!running"
-              type="button"
-              class="btn btn--primary"
-              :disabled="busy"
-              @click="runAction('start')"
-            >
-              {{ $t("action.start") }}
-            </button>
-            <button v-else type="button" class="btn" :disabled="busy" @click="runAction('stop')">
-              {{ $t("action.stop") }}
-            </button>
-          </div>
+      </AppBanner>
+      <AppBanner v-else-if="!deployment.managed" tone="warning" :title="$t('alert.level.warning')">
+        <span>{{ $t("deploy.foreign") }}</span>
+      </AppBanner>
+      <AppBanner v-else-if="outdated" tone="warning" :title="$t('alert.level.warning')">
+        <span>{{
+          deployment.configVersion
+            ? $t("deploy.outdated", { version, running: deployment.configVersion })
+            : $t("deploy.outdatedUnknown", { version })
+        }}</span>
+        <span class="muted">{{ $t("instanceConfig.notDeployed") }}</span>
+        <template v-if="isAdmin" #actions>
+          <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: false }">
+            {{ running ? $t("deploy.applyRestart", { version }) : $t("deploy.apply", { version }) }}
+          </button>
+          <button v-if="!running" type="button" class="btn" :disabled="busy" @click="pending = { start: true }">
+            {{ $t("deploy.applyAndStart", { version }) }}
+          </button>
         </template>
-        <p class="muted field__hint">{{ $t("instanceConfig.notDeployed") }}</p>
-      </section>
+      </AppBanner>
 
       <section class="panel card" aria-labelledby="current-title">
         <h2 id="current-title">{{ $t("instanceConfig.current") }}</h2>
         <dl class="facts">
           <dt>{{ $t("instanceForm.algo") }}</dt>
           <dd class="mono">
-            {{ data.config.algo.name }} {{ data.config.algo.version }}
-            <span v-if="data.config.algo.id === null" class="pill tone-warning">{{
+            {{ managed.config.algo.name }} {{ managed.config.algo.version }}
+            <span v-if="managed.config.algo.id === null" class="pill tone-warning">{{
               $t("instanceConfig.algoGone")
             }}</span>
           </dd>
           <dt>{{ $t("instanceForm.symbol") }}</dt>
-          <dd class="mono">{{ data.config.symbol }}</dd>
+          <dd class="mono">{{ managed.config.symbol }}</dd>
           <dt>{{ $t("instanceForm.period") }}</dt>
-          <dd class="mono">{{ data.config.period }}</dd>
+          <dd class="mono">{{ managed.config.period }}</dd>
           <dt>{{ $t("instanceForm.attribution") }}</dt>
-          <dd>{{ attributionText(data.config) }}</dd>
+          <dd>{{ attributionText(managed.config) }}</dd>
         </dl>
         <div class="table-wrap">
           <table class="table">
@@ -304,10 +226,10 @@ async function remove() {
         </div>
       </section>
 
-      <section class="panel card" aria-labelledby="history-title">
-        <h2 id="history-title">{{ $t("instance.versions") }}</h2>
+      <section class="panel card" aria-labelledby="versions-title">
+        <h2 id="versions-title">{{ $t("instance.versions") }}</h2>
         <ol class="history">
-          <li v-for="(h, i) in data.history" :key="h.version" class="history__item">
+          <li v-for="(h, i) in managed.history" :key="h.version" class="history__item">
             <div class="history__head">
               <span class="mono version">{{ $t("instanceConfig.version", { version: h.version }) }}</span>
               <span v-if="i === 0" class="pill tone-positive">{{ $t("instanceConfig.currentBadge") }}</span>
@@ -316,7 +238,7 @@ async function remove() {
               </span>
               <a
                 v-if="isAdmin && format"
-                :href="api.parameterFileUrl(data.name, h.version)"
+                :href="api.parameterFileUrl(managed.name, h.version)"
                 class="btn btn--ghost btn--small history__download"
                 download
               >
@@ -324,7 +246,7 @@ async function remove() {
               </a>
               <RouterLink
                 v-if="isAdmin && i > 0"
-                :to="{ name: 'instance-edit', params: { ref: data.name }, query: { version: String(h.version) } }"
+                :to="{ name: 'instance-edit', params: { ref: managed.name }, query: { version: String(h.version) } }"
                 class="btn btn--ghost btn--small"
               >
                 {{ $t("instanceConfig.restore") }}
@@ -339,6 +261,19 @@ async function remove() {
       </section>
     </template>
 
+    <section v-if="labels" class="panel card" aria-labelledby="labels-title">
+      <h2 id="labels-title">{{ $t("instance.labels") }}</h2>
+      <p class="muted card__hint">
+        {{ managed ? $t("instance.managedLabels") : $t("instance.externallyManaged") }}
+      </p>
+      <dl class="labels mono">
+        <template v-for="(value, key) in labels" :key="key">
+          <dt>{{ key }}</dt>
+          <dd>{{ value }}</dd>
+        </template>
+      </dl>
+    </section>
+
     <ConfirmDialog
       :open="pending !== undefined"
       :title="confirmTitle"
@@ -347,62 +282,23 @@ async function remove() {
       @confirm="deploy"
       @cancel="pending = undefined"
     />
-    <ConfirmDialog
-      :open="deleting"
-      :title="$t('action.delete')"
-      :message="
-        deployment?.managed
-          ? `${$t('instanceConfig.deleteConfirm', { name })} ${$t('instanceConfig.deleteContainer')}`
-          : $t('instanceConfig.deleteConfirm', { name })
-      "
-      :confirm-label="$t('action.delete')"
-      @confirm="remove"
-      @cancel="deleting = false"
-    />
   </div>
 </template>
 
 <style scoped>
-.page {
+.tab {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-5);
   min-width: 0;
-  padding: var(--ww-space-8) var(--ww-space-10);
 }
 
-h1,
 p {
   margin: 0;
 }
 
-.back {
-  font-size: var(--ww-size-sm);
-}
-
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-4);
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-2);
-}
-
 .status {
   font-weight: 600;
-}
-
-.runtime {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: center;
 }
 
 .card {
@@ -411,6 +307,10 @@ p {
   gap: var(--ww-space-4);
   min-width: 0;
   padding: var(--ww-space-5);
+}
+
+.card__hint {
+  font-size: var(--ww-size-xs);
 }
 
 .facts {
@@ -510,9 +410,20 @@ tbody th {
   font-size: var(--ww-size-xs);
 }
 
-@media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
-  }
+.labels {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--ww-space-1) var(--ww-space-4);
+  margin: 0;
+  font-size: var(--ww-size-xs);
+}
+
+.labels dt {
+  color: var(--ww-text-muted);
+}
+
+.labels dd {
+  margin: 0;
+  word-break: break-all;
 }
 </style>

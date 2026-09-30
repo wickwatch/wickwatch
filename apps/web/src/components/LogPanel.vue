@@ -5,12 +5,13 @@ import { useI18n } from "vue-i18n";
 import { api } from "../api";
 import { formatDateTime } from "../format";
 
-const props = defineProps<{ instanceRef: string }>();
+/** `running`: the container runs. A stopped container sends its last lines and then ends the stream. */
+const props = defineProps<{ instanceRef: string; running: boolean }>();
 const { locale } = useI18n();
 
 const MAX_LINES = 500;
 type Filter = "all" | "problems" | "setups";
-type State = "connecting" | "live" | "reconnecting";
+type State = "connecting" | "live" | "reconnecting" | "stopped";
 
 const lines = ref<LogLine[]>([]);
 const filter = ref<Filter>("all");
@@ -30,6 +31,8 @@ function connect(ref: string) {
     state.value = "live";
   });
   source.addEventListener("error", () => {
+    // Without a running container the end of the stream is expected: keep the lines, do not retry every few seconds.
+    if (!props.running) source?.close();
     state.value = "reconnecting";
   });
   source.addEventListener("log", (event) => {
@@ -39,6 +42,15 @@ function connect(ref: string) {
 }
 
 watch(() => props.instanceRef, connect, { immediate: true });
+// Started again: follow the new output.
+watch(
+  () => props.running,
+  (running) => {
+    if (running && source?.readyState === EventSource.CLOSED) connect(props.instanceRef);
+  },
+);
+/** The container state wins over the connection state: a stopped container has no live log. */
+const shown = computed<State>(() => (props.running ? state.value : "stopped"));
 onUnmounted(() => source?.close());
 
 const visible = computed(() =>
@@ -80,8 +92,12 @@ watch(
         <input v-model="follow" type="checkbox" />
         {{ $t("log.follow") }}
       </label>
-      <span class="log__state" :class="state === 'live' ? 'tone-positive' : 'tone-warning'" role="status">
-        {{ $t(`log.state.${state}`) }}
+      <span
+        class="log__state"
+        :class="shown === 'live' ? 'tone-positive' : shown === 'stopped' ? 'tone-muted' : 'tone-warning'"
+        role="status"
+      >
+        {{ $t(`log.state.${shown}`) }}
       </span>
     </div>
     <div ref="box" class="log__lines mono" tabindex="0" :aria-label="$t('instance.liveLog')">

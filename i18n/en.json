@@ -16,7 +16,8 @@
     "error": "Error",
     "stale": "Data outdated",
     "unknown": "Unknown",
-    "connectionLost": "Connection lost"
+    "connectionLost": "Connection lost",
+    "notCreated": "No container"
   },
   "action": {
     "start": "Start",
@@ -28,10 +29,12 @@
     "newInstance": "New instance",
     "emergencyStop": "Emergency stop",
     "closePosition": "Close position",
+    "closeShort": "Close",
     "save": "Save",
     "saveAndStart": "Save & start",
     "cancel": "Cancel",
-    "cancelOrder": "Cancel order"
+    "cancelOrder": "Cancel order",
+    "cancelOrderShort": "Cancel"
   },
   "account": {
     "balance": "Balance",
@@ -156,12 +159,17 @@
     "closeConfirm": "Close position {id} ({symbol}) at market price now?",
     "positionClosed": "Position {id} closed.",
     "closeFailed": "Closing position {id} failed: {reason}",
-    "configLink": "Configuration (version {version})",
     "externallyManaged": "Defined outside Wickwatch (e.g. in a compose file); only its labels are known.",
     "cancelTitle": "Cancel order",
     "cancelConfirm": "Cancel order {id} ({type} {side} {symbol} at {price})?",
     "orderCancelled": "Order {id} cancelled.",
-    "cancelFailed": "Cancelling order {id} failed: {reason}"
+    "cancelFailed": "Cancelling order {id} failed: {reason}",
+    "sections": "Instance sections",
+    "overviewTab": "Overview",
+    "more": "More actions",
+    "configVersion": "Configuration v{version}",
+    "notCreated": "No container yet, so there are no trades and no log. Create it under Configuration.",
+    "managedLabels": "Set by Wickwatch from the configuration."
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"
@@ -276,7 +284,8 @@
     "positions": "Pos.",
     "dayPnl": "Today's P&L",
     "lastLog": "Last log line",
-    "actions": "Actions"
+    "actions": "Actions",
+    "actionOn": "{action}: {name}"
   },
   "alert": {
     "level": {
@@ -400,7 +409,8 @@
     "state": {
       "connecting": "Connecting …",
       "live": "Live",
-      "reconnecting": "Reconnecting …"
+      "reconnecting": "Reconnecting …",
+      "stopped": "Container stopped"
     },
     "level": {
       "warn": "WARN",
@@ -534,7 +544,7 @@
     "saved": "Version {version} saved.",
     "current": "Current configuration",
     "currentBadge": "Current",
-    "notDeployed": "Saved versions take effect only when they are applied here.",
+    "notDeployed": "A saved version takes effect only once it is applied.",
     "algoGone": "Algo version deleted",
     "value": "Value",
     "created": "Created",
@@ -544,15 +554,11 @@
     "download": "Download .{format}"
   },
   "deploy": {
-    "title": "Runtime",
     "none": "No container yet.",
     "create": "Create container",
     "createAndStart": "Create and start",
     "foreign": "A container with this name exists but was not created by Wickwatch (e.g. from a compose file); Wickwatch leaves it alone.",
-    "runsVersion": "runs configuration version {version}",
-    "unknownVersion": "configuration version unknown",
-    "details": "Positions and log →",
-    "outdated": "Version {version} is saved but not applied yet.",
+    "outdated": "Version {version} is saved, the container still uses version {running}.",
     "apply": "Apply version {version}",
     "applyRestart": "Apply version {version} (restart)",
     "applyAndStart": "Apply version {version} and start",
@@ -562,7 +568,8 @@
     "confirmApplyStart": "Replace the container with configuration version {version} and start the bot? It will trade on this account.",
     "confirmApplyRunning": "Restart the running bot with configuration version {version}? Open positions stay open; whether the bot manages them again after the restart depends on the bot.",
     "elsewhere": "Make sure the same bot does not also run elsewhere on this account (e.g. on another server).",
-    "done": "Configuration version {version} applied; status: {status}."
+    "done": "Configuration version {version} applied; status: {status}.",
+    "outdatedUnknown": "Version {version} is saved; which version the container uses is unknown."
   },
   "validation": {
     "required": "Required.",

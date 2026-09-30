@@ -60,6 +60,10 @@ describe("AccountsView", () => {
     // A login in use cannot be removed.
     const removeLogin = wrapper.findAll("#logins-title ~ .table-wrap button").find((b) => b.text() === "Remove");
     expect(removeLogin?.attributes("disabled")).toBeDefined();
+    // The reason shows as tooltip and is read out with the button.
+    const reason = wrapper.find(`#${removeLogin?.attributes("aria-describedby") ?? ""}`).text();
+    expect(reason).toMatch(/^Used by accounts/);
+    expect(removeLogin?.element.parentElement?.dataset["tooltip"]).toBe(reason);
   });
 
   it("marks the empty fields of a new login instead of sending it, and clears them after saving", async () => {

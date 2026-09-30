@@ -74,7 +74,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
                 v-if="canClose && !excluded"
                 icon="close"
                 :label="$t('action.closePosition')"
-                show-label
+                :text="$t('action.closeShort')"
                 variant="danger"
                 small
                 :disabled="busy?.has(p.id)"
@@ -114,7 +114,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
             <IconButton
               icon="close"
               :label="$t('action.cancelOrder')"
-              show-label
+              :text="$t('action.cancelOrderShort')"
               variant="danger"
               small
               :disabled="busy?.has(o.id)"

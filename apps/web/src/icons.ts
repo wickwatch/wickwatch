@@ -32,6 +32,23 @@ export const ICONS = {
   exclude: [{ tag: "circle", cx: 12, cy: 12, r: 8.5 }, path("M6 6l12 12")],
   /** Undo an exclusion. */
   restore: [path("M9 14.5L4 9.5l5-5"), path("M4 9.5h10a5.5 5.5 0 0 1 0 11h-3")],
+  /** "More actions" menu. */
+  more: [
+    { tag: "circle", cx: 5.5, cy: 12, r: 1 },
+    { tag: "circle", cx: 12, cy: 12, r: 1 },
+    { tag: "circle", cx: 18.5, cy: 12, r: 1 },
+  ],
+  edit: [path("M4.5 19.5l1-4L16 5a2.1 2.1 0 0 1 3 3L8.5 18.5z"), path("M14 7l3 3")],
+  duplicate: [
+    { tag: "rect", x: 8.5, y: 8.5, width: 11, height: 11, rx: 2 },
+    path("M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"),
+  ],
+  download: [path("M12 4.5v11"), path("M7.5 11l4.5 4.5 4.5-4.5"), path("M5 19.5h14")],
+  trash: [
+    path("M4.5 7h15"),
+    path("M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7"),
+    path("M6.5 7l.8 11.6a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"),
+  ],
 } satisfies Record<string, Shape[]>;
 
 export type IconName = keyof typeof ICONS;

@@ -5,7 +5,6 @@ import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
 import AlgosView from "./views/AlgosView.vue";
 import ChallengeView from "./views/ChallengeView.vue";
-import InstanceConfigView from "./views/InstanceConfigView.vue";
 import InstanceFormView from "./views/InstanceFormView.vue";
 import InstanceView from "./views/InstanceView.vue";
 import LoginView from "./views/LoginView.vue";
@@ -24,7 +23,8 @@ export const router = createRouter({
     { path: "/algos", name: "algos", component: AlgosView },
     { path: "/instances/new", name: "instance-new", component: InstanceFormView },
     { path: "/instances/:ref", name: "instance", component: InstanceView },
-    { path: "/instances/:ref/config", name: "instance-config", component: InstanceConfigView },
+    // Tabs of the instance page; the same component, so switching keeps its state.
+    { path: "/instances/:ref/config", name: "instance-config", component: InstanceView },
     { path: "/instances/:ref/edit", name: "instance-edit", component: InstanceFormView },
     { path: "/accounts/:number/challenge", name: "challenge", component: ChallengeView },
     { path: "/login", name: "login", component: LoginView, meta: { public: true } },

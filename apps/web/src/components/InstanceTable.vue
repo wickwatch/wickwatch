@@ -39,7 +39,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <th scope="col" class="wide num">{{ $t("table.positions") }}</th>
           <th scope="col" class="num">{{ $t("table.dayPnl") }}</th>
           <th scope="col" class="wide">{{ $t("table.lastLog") }}</th>
-          <th v-if="canAct" scope="col">{{ $t("table.actions") }}</th>
+          <th v-if="canAct" scope="col" class="num">{{ $t("table.actions") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -74,7 +74,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
               <IconButton
                 v-if="instance.status === 'running' || instance.status === 'restarting'"
                 icon="stop"
-                :label="$t('action.stop')"
+                :label="$t('table.actionOn', { action: $t('action.stop'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'stop')"
@@ -82,7 +82,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
               <IconButton
                 v-else
                 icon="play"
-                :label="$t('action.start')"
+                :label="$t('table.actionOn', { action: $t('action.start'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'start')"
@@ -90,7 +90,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
               <IconButton
                 class="wide"
                 icon="restart"
-                :label="$t('action.restart')"
+                :label="$t('table.actionOn', { action: $t('action.restart'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
                 @click="$emit('action', instance, 'restart')"
@@ -165,6 +165,7 @@ tbody th {
 
 .actions {
   display: flex;
+  justify-content: flex-end;
   gap: 6px;
 }
 

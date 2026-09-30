@@ -14,6 +14,8 @@ export interface MenuItem {
   lang?: string;
   /** Draw a divider above this item. */
   separated?: boolean;
+  /** Destructive, e.g. delete; shown in the negative colour next to its icon and text. */
+  danger?: boolean;
 }
 
 /**
@@ -31,6 +33,8 @@ const props = withDefaults(
 const emit = defineEmits<{ select: [id: string] }>();
 
 const open = ref(false);
+/** The side the menu is anchored to; flips when the preferred side would push it off screen (wrapped buttons on phones). */
+const side = ref(props.align);
 const root = ref<HTMLElement>();
 const trigger = ref<HTMLButtonElement>();
 const menu = ref<HTMLElement>();
@@ -46,8 +50,13 @@ function focusEntry(index: number) {
 }
 
 async function show(at: "chosen" | "first" | "last") {
+  side.value = props.align;
   open.value = true;
   await nextTick();
+  const box = menu.value?.getBoundingClientRect();
+  if (box && (box.left < 0 || box.right > document.documentElement.clientWidth)) {
+    side.value = props.align === "end" ? "start" : "end";
+  }
   const chosen = props.items.findIndex((i) => i.checked);
   focusEntry(at === "last" ? -1 : at === "chosen" && chosen >= 0 ? chosen : 0);
 }
@@ -113,7 +122,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside));
       :id="menuId"
       ref="menu"
       class="menu panel"
-      :class="`menu--${align}`"
+      :class="`menu--${side}`"
       role="menu"
       :aria-label="label"
       @keydown="onMenuKey"
@@ -124,6 +133,7 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside));
         <button
           type="button"
           class="menu__item"
+          :class="{ 'menu__item--danger': item.danger }"
           :role="choice ? 'menuitemradio' : 'menuitem'"
           :aria-checked="choice ? !!item.checked : undefined"
           :lang="item.lang"
@@ -198,12 +208,17 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", onOutside));
   background: var(--ww-surface-raised);
 }
 
+.menu__item--danger {
+  color: var(--ww-negative);
+}
+
 .menu__item[aria-checked="true"] {
   font-weight: 600;
 }
 
 .menu__label {
   flex: 1;
+  white-space: nowrap;
 }
 
 .menu__heading {

@@ -2,9 +2,11 @@
 import type { Alert } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
 import { formatDateTime } from "../format";
+import AppBanner from "./AppBanner.vue";
 
 defineProps<{ alerts: Alert[] }>();
 const { t, locale } = useI18n();
+const TONES = { error: "negative", warning: "warning", info: "positive" } as const;
 
 const message = (alert: Alert) =>
   t(`alert.${alert.code}`, {
@@ -21,12 +23,16 @@ const message = (alert: Alert) =>
 
 <template>
   <section v-if="alerts.length" class="alerts" :aria-label="$t('overview.alerts')">
-    <div v-for="alert in alerts" :key="`${alert.code}:${alert.subject}`" class="alert" :class="`alert--${alert.level}`">
-      <span class="alert__level">{{ $t(`alert.level.${alert.level}`) }}</span>
+    <AppBanner
+      v-for="alert in alerts"
+      :key="`${alert.code}:${alert.subject}`"
+      :tone="TONES[alert.level]"
+      :title="$t(`alert.level.${alert.level}`)"
+    >
       <span>{{ message(alert) }}</span>
       <!-- Bot output stays untranslated. -->
       <span v-if="alert.params['detail']" class="alert__detail mono">{{ alert.params["detail"] }}</span>
-    </div>
+    </AppBanner>
   </section>
 </template>
 
@@ -35,47 +41,6 @@ const message = (alert: Alert) =>
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-2);
-}
-
-.alert {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: baseline;
-  padding: var(--ww-space-3) var(--ww-space-4);
-  border: 1px solid;
-  border-radius: var(--ww-radius-lg);
-}
-
-.alert--error {
-  border-color: color-mix(in srgb, var(--ww-negative) 35%, transparent);
-  background: var(--ww-negative-bg);
-}
-
-.alert--warning {
-  border-color: color-mix(in srgb, var(--ww-warning) 35%, transparent);
-  background: var(--ww-warning-bg);
-}
-
-.alert--info {
-  border-color: color-mix(in srgb, var(--ww-positive) 35%, transparent);
-  background: var(--ww-positive-bg);
-}
-
-.alert--info .alert__level {
-  color: var(--ww-positive);
-}
-
-.alert__level {
-  font-weight: 700;
-}
-
-.alert--error .alert__level {
-  color: var(--ww-negative);
-}
-
-.alert--warning .alert__level {
-  color: var(--ww-warning);
 }
 
 .alert__detail {

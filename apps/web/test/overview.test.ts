@@ -179,7 +179,10 @@ describe("OverviewView", () => {
 
   it("reports a failed instance action with the translated reason", async () => {
     const wrapper = await render();
-    await wrapper.find('button[aria-label="Stop"]').trigger("click");
+    // The row action names its instance, for screen readers and in the tooltip.
+    const stop = wrapper.find('button[aria-label="Stop: alpha"]');
+    expect(stop.attributes("data-tooltip")).toBe("Stop: alpha");
+    await stop.trigger("click");
     await flushPromises();
     expect(wrapper.find('[role="status"]').text()).toBe("Stop alpha failed: Service not reachable – try again later.");
     wrapper.unmount();

@@ -16,7 +16,8 @@
     "error": "Fehler",
     "stale": "Daten veraltet",
     "unknown": "Unbekannt",
-    "connectionLost": "Verbindung verloren"
+    "connectionLost": "Verbindung verloren",
+    "notCreated": "Kein Container"
   },
   "action": {
     "start": "Start",
@@ -28,10 +29,12 @@
     "newInstance": "Neue Instanz",
     "emergencyStop": "Notstopp",
     "closePosition": "Position schließen",
+    "closeShort": "Schließen",
     "save": "Speichern",
     "saveAndStart": "Speichern & starten",
     "cancel": "Abbrechen",
-    "cancelOrder": "Order stornieren"
+    "cancelOrder": "Order stornieren",
+    "cancelOrderShort": "Stornieren"
   },
   "account": {
     "balance": "Balance",
@@ -156,12 +159,17 @@
     "closeConfirm": "Position {id} ({symbol}) jetzt zum Marktpreis schließen?",
     "positionClosed": "Position {id} geschlossen.",
     "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}",
-    "configLink": "Konfiguration (Version {version})",
     "externallyManaged": "Außerhalb von Wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels.",
     "cancelTitle": "Order stornieren",
     "cancelConfirm": "Order {id} ({type} {side} {symbol} zu {price}) stornieren?",
     "orderCancelled": "Order {id} storniert.",
-    "cancelFailed": "Stornieren von Order {id} fehlgeschlagen: {reason}"
+    "cancelFailed": "Stornieren von Order {id} fehlgeschlagen: {reason}",
+    "sections": "Bereiche der Instanz",
+    "overviewTab": "Überblick",
+    "more": "Weitere Aktionen",
+    "configVersion": "Konfiguration v{version}",
+    "notCreated": "Noch kein Container, daher keine Trades und kein Log. Anlegen unter Konfiguration.",
+    "managedLabels": "Von Wickwatch aus der Konfiguration gesetzt."
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"
@@ -276,7 +284,8 @@
     "positions": "Pos.",
     "dayPnl": "Tages-P&L",
     "lastLog": "Letzte Log-Zeile",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "actionOn": "{action}: {name}"
   },
   "alert": {
     "level": {
@@ -400,7 +409,8 @@
     "state": {
       "connecting": "Verbinde …",
       "live": "Live",
-      "reconnecting": "Verbinde neu …"
+      "reconnecting": "Verbinde neu …",
+      "stopped": "Container gestoppt"
     },
     "level": {
       "warn": "WARN",
@@ -534,7 +544,7 @@
     "saved": "Version {version} gespeichert.",
     "current": "Aktuelle Konfiguration",
     "currentBadge": "Aktuell",
-    "notDeployed": "Gespeicherte Versionen wirken erst, wenn sie hier übernommen werden.",
+    "notDeployed": "Eine gespeicherte Version wirkt erst, wenn sie übernommen wird.",
     "algoGone": "Algo-Version gelöscht",
     "value": "Wert",
     "created": "Angelegt",
@@ -544,15 +554,11 @@
     "download": "Als .{format} herunterladen"
   },
   "deploy": {
-    "title": "Laufzeit",
     "none": "Noch kein Container.",
     "create": "Container anlegen",
     "createAndStart": "Anlegen und starten",
     "foreign": "Ein Container mit diesem Namen existiert, wurde aber nicht von Wickwatch angelegt (z. B. aus einer Compose-Datei); Wickwatch lässt ihn in Ruhe.",
-    "runsVersion": "läuft mit Konfigurationsversion {version}",
-    "unknownVersion": "Konfigurationsversion unbekannt",
-    "details": "Positionen und Log →",
-    "outdated": "Version {version} ist gespeichert, aber noch nicht übernommen.",
+    "outdated": "Version {version} ist gespeichert, der Container nutzt noch Version {running}.",
     "apply": "Version {version} übernehmen",
     "applyRestart": "Version {version} übernehmen (Neustart)",
     "applyAndStart": "Version {version} übernehmen und starten",
@@ -562,7 +568,8 @@
     "confirmApplyStart": "Container durch Konfigurationsversion {version} ersetzen und den Bot starten? Er handelt dann auf diesem Konto.",
     "confirmApplyRunning": "Den laufenden Bot mit Konfigurationsversion {version} neu starten? Offene Positionen bleiben offen; ob der Bot sie nach dem Neustart weiter verwaltet, hängt vom Bot ab.",
     "elsewhere": "Sicherstellen, dass derselbe Bot nicht zusätzlich woanders auf diesem Konto läuft (z. B. auf einem anderen Server).",
-    "done": "Konfigurationsversion {version} übernommen; Status: {status}."
+    "done": "Konfigurationsversion {version} übernommen; Status: {status}.",
+    "outdatedUnknown": "Version {version} ist gespeichert; welche Version der Container nutzt, ist unbekannt."
   },
   "validation": {
     "required": "Pflichtfeld.",
