@@ -17,7 +17,7 @@ const GIVE_UP_WITHIN_MS = 10 * 60_000;
 /** How far back the log is read to tell a self-stop from a stop from outside. */
 const LOG_TAIL = 15;
 
-/** Marks a managed instance as meant to run or not; no-op for instances Wickwatch does not manage. */
+/** Marks a managed instance as meant to run or not; no-op for instances wickwatch does not manage. */
 export async function setShouldRun(db: Db, names: string | string[], shouldRun: boolean): Promise<void> {
   const list = Array.isArray(names) ? names : [names];
   if (!list.length) return;
@@ -44,17 +44,17 @@ export async function stopAccount(
 /**
  * Keeps managed instances running that are meant to run, like a supervisor. Docker's `on-failure` restarts a bot that
  * crashed, but not one that ended cleanly: after a host or Docker restart the bots received SIGTERM, exited with 0 and
- * stay down. Docker does not tell such a restart from a `docker stop` outside Wickwatch, so both count as an
- * interruption: stopping goes through Wickwatch (stop, emergency stop, loss guard), which clears "should run" first.
+ * stay down. Docker does not tell such a restart from a `docker stop` outside wickwatch, so both count as an
+ * interruption: stopping goes through wickwatch (stop, emergency stop, loss guard), which clears "should run" first.
  *
  * Per check, for each managed instance:
  * - running: at the first check after the server started, it is taken over as meant to run (instances that ran
- *   before this was recorded, or were started while Wickwatch was down). Later checks leave "should run" alone for
+ *   before this was recorded, or were started while wickwatch was down). Later checks leave "should run" alone for
  *   running instances: a stop clears it before the container is down, and taking it over then would start the
  *   instance right up again (seen with the loss guard);
  * - ended cleanly and its log says it stopped itself (broker adapter event `algo_stopped`): no longer meant to run;
  * - ended cleanly otherwise, while meant to run: started again, audited; if it ends again within ten minutes of an
- *   automatic start, Wickwatch gives up and records that instead of looping.
+ *   automatic start, wickwatch gives up and records that instead of looping.
  * An instance in the runtime's "error" state (a real crash, e.g. an exit code other than a stop signal's) is left to
  * the restart policy.
  */

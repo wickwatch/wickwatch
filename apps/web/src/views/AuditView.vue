@@ -7,7 +7,7 @@ import AppSpinner from "../components/AppSpinner.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
 
-/** The audit log for admins: who did what, and what Wickwatch did by itself (loss guard, autostart). */
+/** The audit log for admins: who did what, and what wickwatch did by itself (loss guard, autostart). */
 const { t, te, locale } = useI18n();
 
 const entries = ref<AuditRecord[]>([]);
@@ -63,7 +63,7 @@ async function load(append = false) {
   }
 }
 
-/** Actions Wickwatch takes by itself; other entries without a user are e.g. failed logins (the name tried is the target). */
+/** Actions wickwatch takes by itself; other entries without a user are e.g. failed logins (the name tried is the target). */
 const SYSTEM_ACTIONS = new Set(["account.loss_guard", "instance.autostart", "instance.autostart_gave_up"]);
 
 /** Result of an action that can fail (`ok` in its details), in words, not colour alone. */

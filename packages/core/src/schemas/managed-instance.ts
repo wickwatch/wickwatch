@@ -41,7 +41,7 @@ export type InstanceConfig = Type.Static<typeof InstanceConfig>;
 /** The runtime instance of the same name, if there is one. */
 export const Deployment = Type.Object({
   status: InstanceStatus,
-  /** Created by Wickwatch; false for a container of the same name defined elsewhere. */
+  /** Created by wickwatch; false for a container of the same name defined elsewhere. */
   managed: Type.Boolean(),
   /** Configuration version the instance runs with (from its labels). */
   configVersion: Type.Optional(Type.Integer()),

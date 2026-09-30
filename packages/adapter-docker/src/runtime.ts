@@ -178,7 +178,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     }
   }
 
-  /** Load, memory and disk of the machine Wickwatch runs on; NTP state is not visible from here. */
+  /** Load, memory and disk of the machine wickwatch runs on; NTP state is not visible from here. */
   async hostStatus(): Promise<HostStatus> {
     const memTotal = totalmem();
     const fs = await statfsNearest(this.diskPath);
@@ -199,7 +199,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   async runTool(spec: ToolSpec): Promise<ToolProcess> {
     checkPinned(spec.image);
     await this.ensureImage(spec.image);
-    // Tools of an earlier run (e.g. shell sessions when Wickwatch was killed) are ended once.
+    // Tools of an earlier run (e.g. shell sessions when wickwatch was killed) are ended once.
     this.orphansRemoved ??= this.removeOrphans();
     await this.orphansRemoved;
 
@@ -292,11 +292,11 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     }
   }
 
-  /** Only containers Wickwatch created may be replaced or removed. */
+  /** Only containers wickwatch created may be replaced or removed. */
   private async owned(ref: string): Promise<{ handle: ContainerHandle; details: ContainerDetails }> {
     const found = await this.managed(ref);
     if (found.details.Config.Labels?.[this.managedLabel] !== "true") {
-      throw new AdapterError("invalid_input", `Container ${ref} is not managed by Wickwatch`);
+      throw new AdapterError("invalid_input", `Container ${ref} is not managed by wickwatch`);
     }
     return found;
   }
@@ -305,7 +305,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     const handle = this.client.container(ref);
     const details = await call(() => handle.inspect());
     if (details.Config.Labels?.[this.instanceLabel] === undefined) {
-      throw new AdapterError("not_found", `Container ${ref} is not a Wickwatch instance`);
+      throw new AdapterError("not_found", `Container ${ref} is not a wickwatch instance`);
     }
     return { handle, details };
   }

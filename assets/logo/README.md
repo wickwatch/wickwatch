@@ -1,7 +1,7 @@
-# Wickwatch – Logo
+# wickwatch – Logo
 
 ## About the name
-A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick.
+A *wick* is the thin line above and below a candlestick that shows how far price moved. *wickwatch* keeps watch over your trading bots, down to every wick.
 
 ## Files
 

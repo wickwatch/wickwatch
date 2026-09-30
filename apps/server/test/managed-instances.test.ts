@@ -91,7 +91,7 @@ describe("managed instances", () => {
   it("rejects bad names, taken names, unknown symbols and periods", async () => {
     expect((await create("Alpha GER40")).statusCode).toBe(400);
     expect((await create("-alpha")).statusCode).toBe(400);
-    // Taken by a runtime instance that Wickwatch does not manage.
+    // Taken by a runtime instance that wickwatch does not manage.
     expect((await create("alpha-ger40-a")).json()).toEqual({ error: "instance_exists" });
     expect((await create("x1")).statusCode).toBe(201);
     expect((await create("x1")).json()).toEqual({ error: "instance_exists" });

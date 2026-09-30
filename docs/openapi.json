@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Wickwatch API",
+    "title": "wickwatch API",
     "version": "0.1.0",
-    "description": "REST API of Wickwatch.\n\n**Authentication:** log in with `POST /api/v1/auth/login` (password and TOTP code); the server sets the\n`ww_session` cookie (HttpOnly, SameSite=Strict). All other endpoints except `/healthz` and\n`/api/v1/auth/*` need it. Viewers may call GET endpoints only; state changes need the `admin` role.\nState-changing requests with an `Origin` header from another site are rejected.\n\n**Errors** are JSON `{ \"error\": \"<code>\" }`. Codes of the broker/runtime adapters: `auth_failed`,\n`not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. Others: `unauthenticated`,\n`forbidden`, `forbidden_origin`, `rate_limited`, `internal` and endpoint-specific codes.\n\n**Time** values are ISO 8601 in UTC; money is in the account currency.",
+    "description": "REST API of wickwatch.\n\n**Authentication:** log in with `POST /api/v1/auth/login` (password and TOTP code); the server sets the\n`ww_session` cookie (HttpOnly, SameSite=Strict). All other endpoints except `/healthz` and\n`/api/v1/auth/*` need it. Viewers may call GET endpoints only; state changes need the `admin` role.\nState-changing requests with an `Origin` header from another site are rejected.\n\n**Errors** are JSON `{ \"error\": \"<code>\" }`. Codes of the broker/runtime adapters: `auth_failed`,\n`not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. Others: `unauthenticated`,\n`forbidden`, `forbidden_origin`, `rate_limited`, `internal` and endpoint-specific codes.\n\n**Time** values are ISO 8601 in UTC; money is in the account currency.",
     "license": {
       "name": "AGPL-3.0-only",
       "url": "https://www.gnu.org/licenses/agpl-3.0.html"
@@ -5334,7 +5334,7 @@
         }
       },
       "delete": {
-        "summary": "Remove an account from Wickwatch (nothing changes at the broker)",
+        "summary": "Remove an account from wickwatch (nothing changes at the broker)",
         "tags": [
           "accounts"
         ],
@@ -8250,7 +8250,7 @@
     },
     "/api/v1/managed-instances": {
       "get": {
-        "summary": "Instances set up in Wickwatch, with their current configuration",
+        "summary": "Instances set up in wickwatch, with their current configuration",
         "tags": [
           "instances"
         ],

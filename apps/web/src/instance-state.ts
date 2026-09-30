@@ -1,6 +1,6 @@
 import type { ManagedInstanceDetail } from "./api";
 
-/** The container Wickwatch created runs another configuration than the saved one. */
+/** The container wickwatch created runs another configuration than the saved one. */
 export const isOutdated = (managed: ManagedInstanceDetail | undefined): boolean =>
   managed?.deployment?.managed === true && managed.deployment.configVersion !== managed.config.version;
 

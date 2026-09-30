@@ -14,7 +14,7 @@ export const LABEL_KEYS = [
   // How trades are attributed to the instance, see attribution.ts.
   "attribution",
   "order-label",
-  // Set on instances Wickwatch created; only those may be changed or removed through it.
+  // Set on instances wickwatch created; only those may be changed or removed through it.
   "managed",
   "config-version",
   // Helper containers (e.g. a broker CLI); never instances.
@@ -56,7 +56,7 @@ export interface ManagedLabelInput {
   orderLabel?: string | undefined;
 }
 
-/** Labels of an instance Wickwatch creates; `config-version` tells which configuration it runs. */
+/** Labels of an instance wickwatch creates; `config-version` tells which configuration it runs. */
 export function managedLabels(prefix: string, input: ManagedLabelInput): Labels {
   return buildLabels(prefix, {
     instance: input.name,

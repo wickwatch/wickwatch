@@ -61,7 +61,7 @@ export function createAdapters(config: Config): Adapters {
       const settings = config.adapterSettings["ctrader-cli"];
       const image = settings.image ?? DEFAULT_CTRADER_IMAGE;
       if (settings.cli === "local") return new CtraderCliBroker({ binary: settings.cliPath, image });
-      // In the Wickwatch image: the CLI of the official image, in a throwaway container per call or session.
+      // In the wickwatch image: the CLI of the official image, in a throwaway container per call or session.
       const runTool = selectedRuntime?.runTool?.bind(selectedRuntime);
       if (!runTool) problems.push("CTRADER_CLI=container needs a runtime that runs tools, e.g. RUNTIME_ADAPTER=docker");
       return new CtraderCliBroker({ image, ...(runTool ? { runner: toolRunner(runTool, image) } : {}) });

@@ -219,7 +219,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     {
       schema: {
         tags: ["instances"],
-        summary: "Instances set up in Wickwatch, with their current configuration",
+        summary: "Instances set up in wickwatch, with their current configuration",
         description: "Parameter values only for admins, as with the parameter file: they may hold licence keys.",
         response: { 200: Type.Array(ManagedInstance) },
       },

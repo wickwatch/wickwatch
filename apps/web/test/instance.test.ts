@@ -97,7 +97,7 @@ beforeEach(async () => {
     "fetch",
     vi.fn((input: URL) =>
       Promise.resolve(
-        // Not managed by Wickwatch, like a container from a compose file.
+        // Not managed by wickwatch, like a container from a compose file.
         input.pathname.includes("/managed-instances/")
           ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
           : new Response(JSON.stringify(detail), { status: 200 }),
@@ -123,7 +123,7 @@ describe("InstanceView", () => {
     const text = wrapper.text();
     expect(text).toContain("alpha");
     expect(text).toContain("Prop A · 1111111 · GER40 · M5 · bot:1");
-    // The account Wickwatch knows links to its page.
+    // The account wickwatch knows links to its page.
     expect(wrapper.find('.head a[href$="/accounts/1111111"]').text()).toBe("Prop A · 1111111");
     expect(text).toContain("100%");
     expect(text).toContain("+429.50");
@@ -262,14 +262,14 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
-  it("shows the labels of an instance defined outside Wickwatch in the configuration tab", async () => {
+  it("shows the labels of an instance defined outside wickwatch in the configuration tab", async () => {
     await router.push({ name: "instance-config", params: { ref: "alpha" } });
     const wrapper = await render();
     expect(wrapper.find('.tabs [aria-current="page"]').text()).toBe("Configuration");
-    expect(wrapper.text()).toContain("Defined outside Wickwatch");
+    expect(wrapper.text()).toContain("Defined outside wickwatch");
     expect(wrapper.find(".labels").text()).toContain("wickwatch.instance");
     expect(wrapper.find(".chart").exists()).toBe(false);
-    // Nothing to edit: the configuration lives outside Wickwatch.
+    // Nothing to edit: the configuration lives outside wickwatch.
     expect(wrapper.find('.head [aria-haspopup="menu"]').exists()).toBe(false);
     expect(wrapper.find(".head").text()).toContain("Stop");
     wrapper.unmount();

@@ -3,7 +3,7 @@
 Start with `README.md`, `docs/ROADMAP.md`, `docs/ADAPTERS.md` and `CONTRIBUTING.md`.
 
 ## What this is
-Wickwatch: a self-hosted, open-source (AGPL-3.0) dashboard to monitor and control trading bots. Hobby project, no commercial variant. First target: cTrader CLI running bots in Docker containers.
+wickwatch: a self-hosted, open-source (AGPL-3.0) dashboard to monitor and control trading bots. Hobby project, no commercial variant. First target: cTrader CLI running bots in Docker containers.
 
 ## Non-negotiables
 - **Core is broker- and strategy-neutral.** No cTrader types, paths or strategy names in core code. Everything cTrader-specific lives in adapters (`docs/ADAPTERS.md`).
@@ -19,6 +19,7 @@ TypeScript, Node, Fastify (REST + OpenAPI, SSE), Vue 3 + Vite SPA, vue-i18n, SQL
 
 ## Conventions
 - English for code, identifiers, commits, README. Conventional Commits, `Signed-off-by` on every commit (DCO).
+- The name is always lower case: **wickwatch**, also at the start of a sentence (`BRAND.md`).
 - Internal time in UTC.
 - Label prefix for runtime discovery configurable, default `wickwatch.*`.
 

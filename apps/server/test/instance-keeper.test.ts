@@ -70,7 +70,7 @@ describe("instance keeper", () => {
     expect(started).toEqual([]);
   });
 
-  it("does not take an instance over again while Wickwatch stops it", async () => {
+  it("does not take an instance over again while wickwatch stops it", async () => {
     await t.db.updateTable("instances").set({ should_run: 1 }).execute();
     const k = keeper();
     instances = [bot("running")];

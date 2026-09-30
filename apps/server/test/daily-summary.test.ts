@@ -89,7 +89,7 @@ describe("daily summary", () => {
     expect(posts).toHaveLength(1);
     expect(posts[0]).toMatchObject({ event: "daily_summary", date: "2026-09-30", alerts: 1 });
     expect(posts[0]?.text.split("\n")).toEqual([
-      "Wickwatch daily summary 2026-09-30",
+      "wickwatch daily summary 2026-09-30",
       "Challenge US100 (7532555): balance 9,960.79 USD, equity 9,960.79 USD, P&L today (UTC) -101.26 USD, open positions 0, instances running 1 of 1",
       "  Challenge day 185, Running: Daily loss 1.0 % of 5.0 % · Trading days 48 of 4",
       "5902789: not reachable (Login failed – check the credentials.)",

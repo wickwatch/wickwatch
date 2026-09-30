@@ -57,10 +57,10 @@ The web app imports types from `@wickwatch/core` and runtime code only through t
 ## First implementations
 - **demo** (all three): fake data, deterministic, used for development, tests and screenshots.
 - **docker** runtime ([`packages/adapter-docker`](../packages/adapter-docker)): dockerode via `tecnativa/docker-socket-proxy`; one container per instance.
-  - Discovery: containers with the label `<prefix>.instance`. Containers without it are treated as not found, so the API can never start or stop unrelated containers (the proxy, Wickwatch itself).
+  - Discovery: containers with the label `<prefix>.instance`. Containers without it are treated as not found, so the API can never start or stop unrelated containers (the proxy, wickwatch itself).
   - Status: `running` (`error` if the health check reports unhealthy), `restarting`, `stopped` for exit code 0 or a stop signal (130, 137, 143), `error` for other exit codes and dead containers.
   - Logs: Docker's timestamps; the level is guessed from the text (`error`, `failed`, `warn` …), `WW-SETUP` lines are parsed.
-  - Host status: load, memory and disk of the machine Wickwatch runs on; NTP state is not reported.
+  - Host status: load, memory and disk of the machine wickwatch runs on; NTP state is not reported.
   - Tools (`runTool`): a container with the label `<prefix>.tool`, open stdin, `AutoRemove`, no log driver, `CapDrop ALL`, `no-new-privileges`; files are copied in before the start, stdin/stdout go through `attach` (works through docker-socket-proxy with `CONTAINERS=1`, `POST=1`). Tools left over from an earlier run are killed before the first new one.
   - `create` pulls the image if needed, creates a stopped container (restart policy from `INSTANCE_RESTART_POLICY`, no extra capabilities, `no-new-privileges`, log rotation) and copies the spec's files into it through the Docker API (a tar archive), so passwords never appear in `docker inspect` or host folders. It sets `<prefix>.managed=true`.
   - `update` builds the replacement under a temporary name, then swaps it in; a running (or restarting) instance is started again, a stopped or crashed one stays stopped. `update` and `remove` refuse containers without `<prefix>.managed=true`, so compose-defined containers are never touched.

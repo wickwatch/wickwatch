@@ -17,7 +17,7 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import ParameterList from "./ParameterList.vue";
 
 /**
- * The "Configuration" tab of an instance. `managed` is set when Wickwatch keeps the configuration; otherwise only the
+ * The "Configuration" tab of an instance. `managed` is set when wickwatch keeps the configuration; otherwise only the
  * runtime's `labels` are known.
  */
 const props = defineProps<{

@@ -4,7 +4,7 @@ import { computed } from "vue";
 
 /**
  * `connectionLost`: the instance runs but has no broker connection, which matters more than "running".
- * `notCreated`: Wickwatch has a configuration for the instance but no container yet.
+ * `notCreated`: wickwatch has a configuration for the instance but no container yet.
  */
 const props = defineProps<{
   instance?: InstanceStatus | undefined;

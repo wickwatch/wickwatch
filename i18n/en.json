@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Wickwatch",
+    "name": "wickwatch",
     "skipToContent": "Skip to content"
   },
   "footer": {
-    "version": "Wickwatch {version}",
+    "version": "wickwatch {version}",
     "source": "Source code (AGPL-3.0)",
     "support": "Support the project"
   },
@@ -101,7 +101,7 @@
       "breached": "Limit breached",
       "reached": "Reached"
     },
-    "approximate": "Estimated: a value at a day start was not recorded (Wickwatch was not running at the reset).",
+    "approximate": "Estimated: a value at a day start was not recorded (wickwatch was not running at the reset).",
     "pending": "loading …",
     "add": "Add challenge profile",
     "edit": "Edit challenge profile",
@@ -116,7 +116,7 @@
     "startDate": "Start date",
     "startBalance": "Start balance",
     "rules": "Rules",
-    "rulesHint": "Leave a field empty if the rule does not apply. Check the values against the firm's official rules. Wickwatch watches; it acts only with the protection below switched on.",
+    "rulesHint": "Leave a field empty if the rule does not apply. Check the values against the firm's official rules. wickwatch watches; it acts only with the protection below switched on.",
     "reference": "Daily loss is measured from",
     "references": {
       "balance-or-equity-at-day-start": "the higher of balance and equity at the day start",
@@ -143,7 +143,7 @@
       "title": "Protection",
       "enable": "Stop the account automatically (emergency stop) when a loss limit is used up to",
       "usage": "Share of the daily or max loss limit (%)",
-      "hint": "For bots without a reliable daily stop of their own. Wickwatch checks every ACCOUNT_POLL_SECONDS (default 60 s) and acts once per trading day: it stops the account's instances, cancels all orders and closes all positions, manual ones too. Instances stay stopped until you start them. A second line of defence – it does not replace a stop inside the bot.",
+      "hint": "For bots without a reliable daily stop of their own. wickwatch checks every ACCOUNT_POLL_SECONDS (default 60 s) and acts once per trading day: it stops the account's instances, cancels all orders and closes all positions, manual ones too. Instances stay stopped until you start them. A second line of defence – it does not replace a stop inside the bot.",
       "needsLimit": "Needs a daily or max loss limit."
     }
   },
@@ -170,7 +170,7 @@
     "closeConfirm": "Close position {id} ({symbol}) at market price now?",
     "positionClosed": "Position {id} closed.",
     "closeFailed": "Closing position {id} failed: {reason}",
-    "externallyManaged": "Defined outside Wickwatch (e.g. in a compose file); only its labels are known.",
+    "externallyManaged": "Defined outside wickwatch (e.g. in a compose file); only its labels are known.",
     "cancelTitle": "Cancel order",
     "cancelConfirm": "Cancel order {id} ({type} {side} {symbol} at {price})?",
     "orderCancelled": "Order {id} cancelled.",
@@ -180,7 +180,7 @@
     "more": "More actions",
     "configVersion": "Configuration v{version}",
     "notCreated": "No container yet, so there are no trades and no log. Create it under Configuration.",
-    "managedLabels": "Set by Wickwatch from the configuration.",
+    "managedLabels": "Set by wickwatch from the configuration.",
     "moreShort": "More"
   },
   "confirm": {
@@ -240,7 +240,7 @@
       "account_in_use": "Instances are set up on this account; delete them first.",
       "algo_in_use": "An instance uses this algo version; switch it to another version first.",
       "launch_unsupported": "This broker adapter cannot start bots.",
-      "parameter_file_invalid": "This is not a parameter file this Wickwatch can read.",
+      "parameter_file_invalid": "This is not a parameter file this wickwatch can read.",
       "parameters_incomplete": "This version cannot start: some parameters need a value first (see the configuration)."
     }
   },
@@ -290,13 +290,13 @@
     "loading": "Loading…",
     "loadFailed": "Could not load data – retrying automatically.",
     "noAccounts": "No accounts configured.",
-    "noInstances": "No instances found. Wickwatch looks for containers with the label {label}.",
+    "noInstances": "No instances found. wickwatch looks for containers with the label {label}.",
     "noMatches": "No instance matches the filter.",
     "filterAccount": "Account",
     "allAccounts": "All accounts",
     "onlyRunning": "Only running",
     "notDeployed": "Set up, not running",
-    "notDeployedHint": "Saved in Wickwatch; no container runs under this name yet."
+    "notDeployedHint": "Saved in wickwatch; no container runs under this name yet."
   },
   "table": {
     "instance": "Instance",
@@ -353,13 +353,13 @@
     "code": "Authenticator code",
     "codeHint": "6-digit code from your authenticator app.",
     "logout": "Log out",
-    "masterKeyMissing": "MASTER_KEY is not set on the server. Set it (openssl rand -base64 32) and restart Wickwatch.",
+    "masterKeyMissing": "MASTER_KEY is not set on the server. Set it (openssl rand -base64 32) and restart wickwatch.",
     "login": {
       "title": "Log in",
       "submit": "Log in"
     },
     "setup": {
-      "title": "Set up Wickwatch",
+      "title": "Set up wickwatch",
       "intro": "Create the admin account. The setup token is printed once in the server log.",
       "token": "Setup token",
       "tokenHint": "Shown in the server log: “No admin yet … setup token: …”",
@@ -371,7 +371,7 @@
     },
     "totp": {
       "title": "Two-factor authentication",
-      "recommended": "Recommended: Wickwatch can stop bots and close positions. A code from an authenticator app protects it even if the password leaks.",
+      "recommended": "Recommended: wickwatch can stop bots and close positions. A code from an authenticator app protects it even if the password leaks.",
       "scan": "Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator), then enter the current code.",
       "qrAlt": "QR code for the authenticator app",
       "manual": "Can't scan? Enter the key manually"
@@ -476,7 +476,7 @@
     "remove": "Remove",
     "saved": "Saved.",
     "removed": "Removed.",
-    "removeAccountConfirm": "Remove account {name} ({number}) from Wickwatch? Nothing changes at the broker; its challenge profile and recorded trading days are deleted.",
+    "removeAccountConfirm": "Remove account {name} ({number}) from wickwatch? Nothing changes at the broker; its challenge profile and recorded trading days are deleted.",
     "removeLoginConfirm": "Remove the login {label}? The encrypted password is deleted.",
     "addAccount": "Add account",
     "needLogin": "Add a broker login first (below).",
@@ -499,7 +499,7 @@
     "loginInUse": "Used by accounts – remove or switch them first.",
     "addLogin": "Add login",
     "loginAdded": "Login added.",
-    "encrypted": "Stored encrypted; Wickwatch uses it only to talk to the broker.",
+    "encrypted": "Stored encrypted; wickwatch uses it only to talk to the broker.",
     "loginOption": "{label} ({login})",
     "inactive": "(inactive – closed at the broker)"
   },
@@ -606,7 +606,7 @@
     "none": "No container yet.",
     "create": "Create container",
     "createAndStart": "Create and start",
-    "foreign": "A container with this name exists but was not created by Wickwatch (e.g. from a compose file); Wickwatch leaves it alone.",
+    "foreign": "A container with this name exists but was not created by wickwatch (e.g. from a compose file); wickwatch leaves it alone.",
     "outdated": "Version {version} is saved, the container still uses version {running}.",
     "apply": "Apply version {version}",
     "applyRestart": "Apply version {version} (restart)",
@@ -673,7 +673,7 @@
   },
   "audit": {
     "title": "Audit log",
-    "intro": "Who did what, and what Wickwatch did by itself (loss guard, restarts). Kept for AUDIT_RETENTION_DAYS.",
+    "intro": "Who did what, and what wickwatch did by itself (loss guard, restarts). Kept for AUDIT_RETENTION_DAYS.",
     "action": "Action",
     "allActions": "All actions",
     "allOf": "{group}: all",
@@ -681,7 +681,7 @@
     "targetPlaceholder": "Instance, account or user",
     "time": "Time",
     "user": "User",
-    "system": "Wickwatch",
+    "system": "wickwatch",
     "result": "Result",
     "ok": "OK",
     "failed": "Failed",
@@ -741,7 +741,7 @@
     }
   },
   "summary": {
-    "title": "Wickwatch daily summary {date}",
+    "title": "wickwatch daily summary {date}",
     "account": "{name}: balance {balance}, equity {equity}, P&L today (UTC) {pnl}, open positions {positions}, instances running {running} of {total}",
     "accountError": "{name}: not reachable ({reason})",
     "challenge": "  Challenge day {day}, {status}: {rules}",

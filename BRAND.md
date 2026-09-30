@@ -1,12 +1,12 @@
-# Wickwatch brand & style guide
+# wickwatch brand & style guide
 
 Short on purpose: enough to keep the dashboard, docs and repo consistent. Design tokens live in [`design/tokens.json`](design/tokens.json) and are generated into [`design/tokens.css`](design/tokens.css). Always use the tokens, never hard-coded colour values; the only exceptions are the logo and the language flags in [`assets/flags`](assets/flags). Logo files and logo rules: [`assets/logo/README.md`](assets/logo/README.md).
 
 ## Name
-A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick. Write it as **Wickwatch** in text, **wickwatch** only in the wordmark, package and repo names.
+A *wick* is the thin line above and below a candlestick that shows how far price moved. *wickwatch* keeps watch over your trading bots, down to every wick. Always write it in lower case, **wickwatch**, like the wordmark: in the UI, in texts and docs, also at the start of a sentence, and in package and repo names. Code identifiers follow their language's conventions.
 
 ## Colour modes
-Wickwatch ships with a **dark** and a **light** mode. The system preference decides by default; the header switch overrides it (`data-theme="dark"` or `"light"` on `<html>`). Every screen must work in both.
+wickwatch ships with a **dark** and a **light** mode. The system preference decides by default; the header switch overrides it (`data-theme="dark"` or `"light"` on `<html>`). Every screen must work in both.
 
 | Role | Token | Dark | Light |
 | --- | --- | --- | --- |

@@ -73,7 +73,7 @@ describe("totp", () => {
 
   it("builds an otpauth URI", () => {
     expect(totpUri("ABC", "admin")).toBe(
-      "otpauth://totp/Wickwatch%3Aadmin?secret=ABC&issuer=Wickwatch&algorithm=SHA1&digits=6&period=30",
+      "otpauth://totp/wickwatch%3Aadmin?secret=ABC&issuer=wickwatch&algorithm=SHA1&digits=6&period=30",
     );
   });
 });

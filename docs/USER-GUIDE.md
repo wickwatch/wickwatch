@@ -1,13 +1,13 @@
 # User guide
 
-How to run your bots with Wickwatch, from the first login to a running prop challenge. Button and menu names are those of the English UI; the German UI uses the same layout. Settings for the server (adapters, paths, notifications) are in [CONFIGURATION.md](CONFIGURATION.md), deployment in [`deploy/README.md`](../deploy/README.md).
+How to run your bots with wickwatch, from the first login to a running prop challenge. Button and menu names are those of the English UI; the German UI uses the same layout. Settings for the server (adapters, paths, notifications) are in [CONFIGURATION.md](CONFIGURATION.md), deployment in [`deploy/README.md`](../deploy/README.md).
 
 Only an **admin** can change things (start, stop, set up, emergency stop). A **viewer** sees everything except parameter values (they may hold licence keys) but acts on nothing.
 
 ## 1. First login
 
-1. Start Wickwatch and copy the **setup token** from its log (`No admin yet. Open /setup and enter the setup token: …`).
-2. Open Wickwatch, enter the token, a user name and a password. This creates the admin.
+1. Start wickwatch and copy the **setup token** from its log (`No admin yet. Open /setup and enter the setup token: …`).
+2. Open wickwatch, enter the token, a user name and a password. This creates the admin.
 3. Scan the QR code with an authenticator app and enter the code, or skip two-factor authentication for now.
 
 Your user menu (top right) leads to **Profile**: set up or turn off 2FA (turning it off needs your password and a current code) and change the password there. Changing the password logs you out everywhere else.
@@ -16,14 +16,14 @@ Your user menu (top right) leads to **Profile**: set up or turn off 2FA (turning
 
 Under **Accounts**:
 
-1. **Broker logins → add a login:** a label, the user name at the broker (for cTrader: your cTrader ID) and the password. Wickwatch stores it encrypted and never shows it again. One login can serve several accounts.
+1. **Broker logins → add a login:** a label, the user name at the broker (for cTrader: your cTrader ID) and the password. wickwatch stores it encrypted and never shows it again. One login can serve several accounts.
 2. **Add account:** choose the login, **Get accounts from the broker**, and pick the account. Give it a name you recognise (e.g. "Challenge US100 - H1").
 
 The account now appears as a card on the **Overview** and has its own page (click its name).
 
 ## 3. Upload an algo
 
-Under **Algos → Upload algo**, choose the `.algo` file (e.g. exported from cTrader). Wickwatch reads its parameters and stores it per version. The version comes from the form, the bot's `BotVersion` parameter or its build time. Old versions stay, so you can go back. An identical file is refused as a duplicate.
+Under **Algos → Upload algo**, choose the `.algo` file (e.g. exported from cTrader). wickwatch reads its parameters and stores it per version. The version comes from the form, the bot's `BotVersion` parameter or its build time. Old versions stay, so you can go back. An identical file is refused as a duplicate.
 
 ## 4. Set up an instance
 
@@ -31,9 +31,9 @@ An instance is one bot on one account, symbol and timeframe. **Overview → New 
 
 - **Basics:** the instance name (lower-case letters, digits and dashes; it is also the container name and the default order label), the account, the algo version, symbol and timeframe (both from the broker).
 - **Parameters:** the form comes from the algo. Groups are folded; **Search parameters** and **Only changed** help with long lists. A changed value is marked, and the reset button next to it restores the default.
-- **Load parameters from a file:** drop a `.cbotset` (e.g. exported from cTrader) to fill the form, including symbol and timeframe. Wickwatch lists what it did not take and why. Nothing is saved until you press **Save**.
+- **Load parameters from a file:** drop a `.cbotset` (e.g. exported from cTrader) to fill the form, including symbol and timeframe. wickwatch lists what it did not take and why. Nothing is saved until you press **Save**.
 - **Text parameters need a value (cTrader):** the cTrader CLI cannot start a bot while a text parameter is empty. Such fields are marked, and a loaded file lists them. Enter a value your bot reads as "not set" (e.g. `-`, or a value outside the valid range); the bot's documentation says which.
-- **Trade attribution:** how Wickwatch knows which trades belong to this bot. **Automatic** is right almost always; see [BOT-CONTRACT.md](BOT-CONTRACT.md) for the other modes.
+- **Trade attribution:** how wickwatch knows which trades belong to this bot. **Automatic** is right almost always; see [BOT-CONTRACT.md](BOT-CONTRACT.md) for the other modes.
 - **Comment:** optional; it shows in the version history.
 
 **Save** creates configuration version 1. Saving never starts or restarts anything.
@@ -74,23 +74,23 @@ On the account page: **Add challenge profile**.
 
 The account card and page then show each rule with a bar and its state: in words, not only in colour ("50 % of the limit used", "Reached", "Limit breached"). On the card the rules fold away behind the challenge's head and open by themselves when a limit needs attention.
 
-**Trading days** count the days on which a position was opened, as prop firms do. After you save a profile, Wickwatch loads the days since the start date; until then the count says "loading …".
+**Trading days** count the days on which a position was opened, as prop firms do. After you save a profile, wickwatch loads the days since the start date; until then the count says "loading …".
 
-Wickwatch watches the account every minute. The hard daily stop still belongs into the bot ([BOT-CONTRACT.md](BOT-CONTRACT.md)).
+wickwatch watches the account every minute. The hard daily stop still belongs into the bot ([BOT-CONTRACT.md](BOT-CONTRACT.md)).
 
 ## 8. Emergency stop and protection
 
 **Emergency stop** (on the account card and page, when there is something to stop) stops all instances of the account, cancels all its orders and closes all its positions, manual ones too. It asks for confirmation and is written to the audit log.
 
-With **Protection** switched on in the challenge profile, Wickwatch runs the same emergency stop by itself when a loss limit reaches the chosen share, at most once per trading day. An alert says when and why. The instances stay stopped until you start them again, also after a restart of the server or Docker.
+With **Protection** switched on in the challenge profile, wickwatch runs the same emergency stop by itself when a loss limit reaches the chosen share, at most once per trading day. An alert says when and why. The instances stay stopped until you start them again, also after a restart of the server or Docker.
 
 ## 9. After a restart
 
-When the host or Docker restarts, Wickwatch starts the instances it set up again if they were running before. A bot that stopped itself (e.g. after its own daily limit), or one that was stopped by you, the emergency stop or the protection, stays stopped. Details: [CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart).
+When the host or Docker restarts, wickwatch starts the instances it set up again if they were running before. A bot that stopped itself (e.g. after its own daily limit), or one that was stopped by you, the emergency stop or the protection, stays stopped. Details: [CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart).
 
 ## 10. Audit log
 
-Admins find the **Audit log** in the user menu: every login, change and trading action with time, user, target and result, and what Wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).
+Admins find the **Audit log** in the user menu: every login, change and trading action with time, user, target and result, and what wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).
 
 ## 11. Alerts and notifications
 

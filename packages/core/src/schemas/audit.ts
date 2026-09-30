@@ -3,7 +3,7 @@ import Type from "typebox";
 export const AuditRecord = Type.Object({
   id: Type.Integer(),
   time: Type.String(),
-  /** The user who acted; missing for Wickwatch itself (loss guard, autostart) and failed logins. */
+  /** The user who acted; missing for wickwatch itself (loss guard, autostart) and failed logins. */
   user: Type.Optional(Type.String()),
   action: Type.String(),
   target: Type.Optional(Type.String()),

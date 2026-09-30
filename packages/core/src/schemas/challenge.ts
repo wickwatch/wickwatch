@@ -63,7 +63,7 @@ export const ChallengeTemplate = Type.Intersect([
 export type ChallengeTemplate = Type.Static<typeof ChallengeTemplate>;
 
 /**
- * Optional loss guard: once the daily or the max loss limit is used up to `usagePct`, Wickwatch runs
+ * Optional loss guard: once the daily or the max loss limit is used up to `usagePct`, wickwatch runs
  * the emergency stop for the account (once per trading day). Off when missing, e.g. for bots with their
  * own reliable daily stop. Polling-based: a second line of defence, not a replacement for the bot's own.
  */

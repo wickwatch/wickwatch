@@ -43,7 +43,7 @@ describe("AppFooter", () => {
     setLocale("de");
     system.value = info();
     const wrapper = mount(AppFooter, { global: { plugins: [i18n] } });
-    expect(wrapper.text()).toContain("Wickwatch 0.1.0");
+    expect(wrapper.text()).toContain("wickwatch 0.1.0");
     expect(wrapper.findAll("a").map((a) => a.text())).toEqual(["Quellcode (AGPL-3.0)"]);
     system.value = undefined;
     expect(

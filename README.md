@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="assets/logo/wickwatch-logo-horizontal-dark.svg" alt="Wickwatch" width="420">
+  <img src="assets/logo/wickwatch-logo-horizontal-dark.svg" alt="wickwatch" width="420">
 </p>
 
-**Wickwatch** is a self-hosted dashboard to monitor and control trading bots: see what runs where and with which parameters, start and stop instances, follow positions and deals live, and keep prop-firm challenge limits in view.
+**wickwatch** is a self-hosted dashboard to monitor and control trading bots: see what runs where and with which parameters, start and stop instances, follow positions and deals live, and keep prop-firm challenge limits in view.
 
-> **Status:** early development, used on demo and prop-challenge accounts. Phase 1 of the [roadmap](docs/ROADMAP.md) is largely done: Wickwatch runs cTrader bots in Docker containers through the cTrader CLI, reads accounts, positions and deals, and can stop everything on an account.
+> **Status:** early development, used on demo and prop-challenge accounts. Phase 1 of the [roadmap](docs/ROADMAP.md) is largely done: wickwatch runs cTrader bots in Docker containers through the cTrader CLI, reads accounts, positions and deals, and can stop everything on an account.
 
 ## Try it
-Wickwatch starts with a **demo adapter**: fake accounts, instances, positions and logs, so you can look around without a broker or bots.
+wickwatch starts with a **demo adapter**: fake accounts, instances, positions and logs, so you can look around without a broker or bots.
 
 With Docker:
 
@@ -42,7 +42,7 @@ How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and
 - Deploy standalone, behind nginx-proxy, Traefik or any reverse proxy.
 
 ## Architecture
-A strategy- and broker-neutral core talks to pluggable adapters. Docker is reached only through a docker-socket-proxy that allows the few API calls Wickwatch needs.
+A strategy- and broker-neutral core talks to pluggable adapters. Docker is reached only through a docker-socket-proxy that allows the few API calls wickwatch needs.
 
 ```mermaid
 flowchart LR
@@ -66,17 +66,17 @@ flowchart LR
 Every adapter also has a demo implementation with fake data. See [`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.md). Security model: [`SECURITY.md`](SECURITY.md).
 
 ## About the name
-A *wick* is the thin line above and below a candlestick that shows how far price moved. *Wickwatch* keeps watch over your trading bots, down to every wick.
+A *wick* is the thin line above and below a candlestick that shows how far price moved. *wickwatch* keeps watch over your trading bots, down to every wick.
 
 ## Contributing
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md). Commits must be signed off (DCO).
 
 ## Support
 
-Wickwatch is a hobby project. If it helps you, you can support it on [Ko-fi](https://ko-fi.com/mmohrx) or through [GitHub Sponsors](https://github.com/sponsors/mmohrx). The dashboard's footer links there too; `SUPPORT_URL=off` hides the link.
+wickwatch is a hobby project. If it helps you, you can support it on [Ko-fi](https://ko-fi.com/mmohrx) or through [GitHub Sponsors](https://github.com/sponsors/mmohrx). The dashboard's footer links there too; `SUPPORT_URL=off` hides the link.
 
 ## Disclaimer
-Wickwatch is a monitoring and control tool, not financial advice. Trading involves risk; you are responsible for your bots and accounts. cTrader is a trademark of its respective owner; Wickwatch is not affiliated with or endorsed by Spotware.
+wickwatch is a monitoring and control tool, not financial advice. Trading involves risk; you are responsible for your bots and accounts. cTrader is a trademark of its respective owner; wickwatch is not affiliated with or endorsed by Spotware.
 
 ## License
 [AGPL-3.0](LICENSE)

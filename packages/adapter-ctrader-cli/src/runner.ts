@@ -16,7 +16,7 @@ export interface CliRunner {
 }
 
 /**
- * The CLI installed where Wickwatch runs. Files with content go to a private temp directory that
+ * The CLI installed where wickwatch runs. Files with content go to a private temp directory that
  * is removed when the CLI ends; the password is never an argument, so `ps` does not show it.
  */
 export function localRunner(binary: string, binaryArgs: string[] = []): CliRunner {
@@ -80,7 +80,7 @@ const TOOL_DIR = "/mnt/wickwatch";
 
 /**
  * The CLI of the official image, run by the runtime (e.g. a throwaway container), so the
- * Wickwatch image does not have to contain the proprietary CLI. Local files are copied in.
+ * wickwatch image does not have to contain the proprietary CLI. Local files are copied in.
  */
 export function toolRunner(runTool: (spec: ToolSpec) => Promise<ToolProcess>, image: string): CliRunner {
   return {

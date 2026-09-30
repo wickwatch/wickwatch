@@ -1,6 +1,6 @@
-# Contributing to Wickwatch
+# Contributing to wickwatch
 
-Thanks for helping! Wickwatch is a hobby project; please be patient with reviews.
+Thanks for helping! wickwatch is a hobby project; please be patient with reviews.
 
 ## Before you start
 - Open an issue for larger changes so we can agree on the approach.

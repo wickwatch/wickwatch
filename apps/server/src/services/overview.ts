@@ -84,7 +84,7 @@ export class OverviewLoader {
 
   /**
    * One account for its page, from the same data as the overview; only this account is asked at the broker. Undefined
-   * if Wickwatch does not know the account.
+   * if wickwatch does not know the account.
    */
   async accountDetail(number: string, now = new Date()): Promise<AccountDetail | undefined> {
     return buildAccountDetail(await this.input(now, number), number);

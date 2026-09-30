@@ -76,7 +76,7 @@ export default defineConfig(
     rules: {
       "vue/no-bare-strings-in-template": [
         "error",
-        { allowlist: ["Wickwatch", "·", "–", "+", "−", "%", "(%)", "≈", "/", ":"] },
+        { allowlist: ["wickwatch", "·", "–", "+", "−", "%", "(%)", "≈", "/", ":"] },
       ],
     },
   },

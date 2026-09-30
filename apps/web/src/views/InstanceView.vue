@@ -37,7 +37,7 @@ watch([instanceRef, days], () => void refresh());
 /** The runtime does not know the instance, e.g. a configuration without a container yet. */
 const noContainer = computed(() => error.value instanceof ApiError && error.value.status === 404);
 
-/** Set when Wickwatch manages this instance's configuration. */
+/** Set when wickwatch manages this instance's configuration. */
 const managed = ref<ManagedInstanceDetail>();
 const managedLoaded = ref(false);
 async function loadManaged() {
@@ -66,7 +66,7 @@ async function reload() {
 
 const name = computed(() => data.value?.instance.name ?? managed.value?.name ?? instanceRef.value);
 const status = computed(() => data.value?.instance.status ?? managed.value?.deployment?.status);
-/** Configuration version the container was created with, if Wickwatch created it. */
+/** Configuration version the container was created with, if wickwatch created it. */
 const runningVersion = computed(() => {
   const d = managed.value?.deployment;
   return d?.managed ? d.configVersion : undefined;
@@ -75,7 +75,7 @@ const runningVersion = computed(() => {
 /** The container runs another configuration than the saved one (applied in the configuration tab). */
 const outdated = computed(() => (isOutdated(managed.value) ? managed.value : undefined));
 
-/** An account Wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
+/** An account wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
 const knownAccount = computed(() => {
   const a = data.value?.account ?? managed.value?.account;
   return a ? { number: a.number, label: `${a.displayName} · ${a.number}` } : undefined;

@@ -7,7 +7,7 @@ import { ErrorBody } from "../plugins/errors";
 
 const MAX_LIMIT = 200;
 
-/** The audit log, newest first, for admins: who did what and what Wickwatch did by itself. */
+/** The audit log, newest first, for admins: who did what and what wickwatch did by itself. */
 export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { db }) => {
   app.get(
     "/audit",

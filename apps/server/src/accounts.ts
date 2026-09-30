@@ -2,7 +2,7 @@ import { AdapterError, type Credentials } from "@wickwatch/core";
 import type { Db } from "./db";
 import type { Cipher } from "./security/cipher";
 
-/** A broker account known to Wickwatch, with a way to get its (decrypted) credentials. */
+/** A broker account known to wickwatch, with a way to get its (decrypted) credentials. */
 export interface AccountEntry {
   /** Database id. */
   id: number;

@@ -70,7 +70,7 @@ export function verifyTotp(secret: string, code: string, time: number, lastCount
   return undefined;
 }
 
-export function totpUri(secret: string, account: string, issuer = "Wickwatch"): string {
+export function totpUri(secret: string, account: string, issuer = "wickwatch"): string {
   const label = encodeURIComponent(`${issuer}:${account}`);
   const params = new URLSearchParams({
     secret,

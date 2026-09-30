@@ -27,7 +27,7 @@ function webBuild(): string {
   mkdirSync(join(dir, "assets"));
   writeFileSync(
     join(dir, "index.html"),
-    "<!doctype html><html><head><title>Wickwatch</title></head><body></body></html>",
+    "<!doctype html><html><head><title>wickwatch</title></head><body></body></html>",
   );
   writeFileSync(join(dir, "assets", "app.js"), "console.log(1)");
   return dir;

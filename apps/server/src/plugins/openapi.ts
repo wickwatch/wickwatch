@@ -4,7 +4,7 @@ import fp from "fastify-plugin";
 import { SESSION_COOKIE } from "../auth/sessions";
 import { ErrorBody } from "./errors";
 
-const DESCRIPTION = `REST API of Wickwatch.
+const DESCRIPTION = `REST API of wickwatch.
 
 **Authentication:** log in with \`POST /api/v1/auth/login\` (password and TOTP code); the server sets the
 \`${SESSION_COOKIE}\` cookie (HttpOnly, SameSite=Strict). All other endpoints except \`/healthz\` and
@@ -24,7 +24,7 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
   await app.register(swagger, {
     openapi: {
       info: {
-        title: "Wickwatch API",
+        title: "wickwatch API",
         version,
         description: DESCRIPTION,
         license: { name: "AGPL-3.0-only", url: "https://www.gnu.org/licenses/agpl-3.0.html" },

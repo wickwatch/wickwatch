@@ -1,4 +1,4 @@
-/** Where Wickwatch runs the CLI for its own queries. */
+/** Where wickwatch runs the CLI for its own queries. */
 export const CTRADER_CLI_MODES = ["local", "container"] as const;
 export type CtraderCliMode = (typeof CTRADER_CLI_MODES)[number];
 

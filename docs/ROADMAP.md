@@ -1,6 +1,6 @@
 # Roadmap
 
-Wickwatch is built in phases. Order and scope may change; issues and pull requests are welcome.
+wickwatch is built in phases. Order and scope may change; issues and pull requests are welcome.
 
 ## Phase 1 – MVP
 Status: largely done; open items are unchecked.
@@ -23,7 +23,7 @@ Status: largely done; open items are unchecked.
 Added along the way:
 - Optional loss guard per challenge profile: runs the emergency stop when the daily or max loss limit is used up to a set share.
 - Max drawdown trailing on the highest equity or on the end-of-day balance; trading days counted by the day a position opened, as prop firms do.
-- Bots set up in Wickwatch are started again after a host or Docker restart ([CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart)).
+- Bots set up in wickwatch are started again after a host or Docker restart ([CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart)).
 - Account page with all bots, positions and orders of an account.
 - Risk in % and R per trade from the initial stop loss; a details panel per position, order and trade.
 - Password change in the profile.

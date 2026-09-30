@@ -118,7 +118,7 @@ export interface InstancesTable {
   account_id: number;
   created_by: number | null;
   created_at: string;
-  /** 1 while the instance is meant to run (started through Wickwatch, or seen running). */
+  /** 1 while the instance is meant to run (started through wickwatch, or seen running). */
   should_run: Generated<number>;
 }
 

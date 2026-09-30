@@ -1,10 +1,10 @@
 {
   "app": {
-    "name": "Wickwatch",
+    "name": "wickwatch",
     "skipToContent": "Zum Inhalt springen"
   },
   "footer": {
-    "version": "Wickwatch {version}",
+    "version": "wickwatch {version}",
     "source": "Quellcode (AGPL-3.0)",
     "support": "Projekt unterstützen"
   },
@@ -101,7 +101,7 @@
       "breached": "Limit verletzt",
       "reached": "Erreicht"
     },
-    "approximate": "Geschätzt: Ein Wert zu Tagesbeginn wurde nicht erfasst (Wickwatch lief beim Reset nicht).",
+    "approximate": "Geschätzt: Ein Wert zu Tagesbeginn wurde nicht erfasst (wickwatch lief beim Reset nicht).",
     "pending": "wird nachgeladen …",
     "add": "Challenge-Profil hinzufügen",
     "edit": "Challenge-Profil bearbeiten",
@@ -116,7 +116,7 @@
     "startDate": "Startdatum",
     "startBalance": "Startbalance",
     "rules": "Regeln",
-    "rulesHint": "Leere Felder bedeuten: Regel gilt nicht. Werte mit den offiziellen Regeln des Anbieters abgleichen. Wickwatch überwacht; eingreifen tut es nur mit dem Schutz unten.",
+    "rulesHint": "Leere Felder bedeuten: Regel gilt nicht. Werte mit den offiziellen Regeln des Anbieters abgleichen. wickwatch überwacht; eingreifen tut es nur mit dem Schutz unten.",
     "reference": "Tagesverlust wird gemessen ab",
     "references": {
       "balance-or-equity-at-day-start": "dem höheren Wert aus Balance und Equity zu Tagesbeginn",
@@ -143,7 +143,7 @@
       "title": "Schutz",
       "enable": "Konto automatisch stoppen (Not-Stopp), wenn ein Verlustlimit ausgeschöpft ist zu",
       "usage": "Anteil des Tages- oder Gesamtverlustlimits (%)",
-      "hint": "Für Bots ohne verlässlichen eigenen Tagesstopp. Wickwatch prüft alle ACCOUNT_POLL_SECONDS (standardmäßig 60 s) und greift einmal pro Handelstag ein: Es stoppt die Instanzen des Kontos, storniert alle Orders und schließt alle Positionen, auch manuelle. Die Instanzen bleiben gestoppt, bis du sie startest. Eine zweite Verteidigungslinie – sie ersetzt keinen Stopp im Bot.",
+      "hint": "Für Bots ohne verlässlichen eigenen Tagesstopp. wickwatch prüft alle ACCOUNT_POLL_SECONDS (standardmäßig 60 s) und greift einmal pro Handelstag ein: Es stoppt die Instanzen des Kontos, storniert alle Orders und schließt alle Positionen, auch manuelle. Die Instanzen bleiben gestoppt, bis du sie startest. Eine zweite Verteidigungslinie – sie ersetzt keinen Stopp im Bot.",
       "needsLimit": "Braucht ein Tages- oder Gesamtverlustlimit."
     }
   },
@@ -170,7 +170,7 @@
     "closeConfirm": "Position {id} ({symbol}) jetzt zum Marktpreis schließen?",
     "positionClosed": "Position {id} geschlossen.",
     "closeFailed": "Schließen von Position {id} fehlgeschlagen: {reason}",
-    "externallyManaged": "Außerhalb von Wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels.",
+    "externallyManaged": "Außerhalb von wickwatch definiert (z. B. in einer Compose-Datei); bekannt sind nur die Labels.",
     "cancelTitle": "Order stornieren",
     "cancelConfirm": "Order {id} ({type} {side} {symbol} zu {price}) stornieren?",
     "orderCancelled": "Order {id} storniert.",
@@ -180,7 +180,7 @@
     "more": "Weitere Aktionen",
     "configVersion": "Konfiguration v{version}",
     "notCreated": "Noch kein Container, daher keine Trades und kein Log. Anlegen unter Konfiguration.",
-    "managedLabels": "Von Wickwatch aus der Konfiguration gesetzt.",
+    "managedLabels": "Von wickwatch aus der Konfiguration gesetzt.",
     "moreShort": "Mehr"
   },
   "confirm": {
@@ -240,7 +240,7 @@
       "account_in_use": "Auf diesem Konto sind Instanzen eingerichtet; zuerst diese löschen.",
       "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen.",
       "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten.",
-      "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses Wickwatch lesen kann.",
+      "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses wickwatch lesen kann.",
       "parameters_incomplete": "Diese Version kann so nicht starten: Einige Parameter brauchen erst einen Wert (siehe Konfiguration)."
     }
   },
@@ -290,13 +290,13 @@
     "loading": "Wird geladen …",
     "loadFailed": "Daten konnten nicht geladen werden – neuer Versuch folgt automatisch.",
     "noAccounts": "Keine Konten eingerichtet.",
-    "noInstances": "Keine Instanzen gefunden. Wickwatch sucht Container mit dem Label {label}.",
+    "noInstances": "Keine Instanzen gefunden. wickwatch sucht Container mit dem Label {label}.",
     "noMatches": "Keine Instanz passt zum Filter.",
     "filterAccount": "Konto",
     "allAccounts": "Alle Konten",
     "onlyRunning": "Nur laufende",
     "notDeployed": "Eingerichtet, läuft nicht",
-    "notDeployedHint": "In Wickwatch gespeichert; unter diesem Namen läuft noch kein Container."
+    "notDeployedHint": "In wickwatch gespeichert; unter diesem Namen läuft noch kein Container."
   },
   "table": {
     "instance": "Instanz",
@@ -353,13 +353,13 @@
     "code": "Code aus der Authenticator-App",
     "codeHint": "6-stelliger Code aus deiner Authenticator-App.",
     "logout": "Abmelden",
-    "masterKeyMissing": "MASTER_KEY ist auf dem Server nicht gesetzt. Setzen (openssl rand -base64 32) und Wickwatch neu starten.",
+    "masterKeyMissing": "MASTER_KEY ist auf dem Server nicht gesetzt. Setzen (openssl rand -base64 32) und wickwatch neu starten.",
     "login": {
       "title": "Anmelden",
       "submit": "Anmelden"
     },
     "setup": {
-      "title": "Wickwatch einrichten",
+      "title": "wickwatch einrichten",
       "intro": "Lege das Admin-Konto an. Der Setup-Token steht einmalig im Server-Log.",
       "token": "Setup-Token",
       "tokenHint": "Steht im Server-Log: „No admin yet … setup token: …“",
@@ -371,7 +371,7 @@
     },
     "totp": {
       "title": "Zwei-Faktor-Authentisierung",
-      "recommended": "Empfohlen: Wickwatch kann Bots stoppen und Positionen schließen. Ein Code aus einer Authenticator-App schützt auch dann, wenn das Passwort bekannt wird.",
+      "recommended": "Empfohlen: wickwatch kann Bots stoppen und Positionen schließen. Ein Code aus einer Authenticator-App schützt auch dann, wenn das Passwort bekannt wird.",
       "scan": "Scanne den QR-Code mit einer Authenticator-App (z. B. 2FAS, Aegis, Google Authenticator) und gib dann den aktuellen Code ein.",
       "qrAlt": "QR-Code für die Authenticator-App",
       "manual": "Scannen klappt nicht? Schlüssel manuell eingeben"
@@ -476,7 +476,7 @@
     "remove": "Entfernen",
     "saved": "Gespeichert.",
     "removed": "Entfernt.",
-    "removeAccountConfirm": "Konto {name} ({number}) aus Wickwatch entfernen? Beim Broker ändert sich nichts; Challenge-Profil und erfasste Handelstage werden gelöscht.",
+    "removeAccountConfirm": "Konto {name} ({number}) aus wickwatch entfernen? Beim Broker ändert sich nichts; Challenge-Profil und erfasste Handelstage werden gelöscht.",
     "removeLoginConfirm": "Login {label} entfernen? Das verschlüsselte Passwort wird gelöscht.",
     "addAccount": "Konto hinzufügen",
     "needLogin": "Lege zuerst unten einen Broker-Login an.",
@@ -499,7 +499,7 @@
     "loginInUse": "Wird von Konten genutzt – diese zuerst entfernen oder umstellen.",
     "addLogin": "Login hinzufügen",
     "loginAdded": "Login hinzugefügt.",
-    "encrypted": "Wird verschlüsselt gespeichert; Wickwatch nutzt es nur für die Verbindung zum Broker.",
+    "encrypted": "Wird verschlüsselt gespeichert; wickwatch nutzt es nur für die Verbindung zum Broker.",
     "loginOption": "{label} ({login})",
     "inactive": "(inaktiv – beim Broker geschlossen)"
   },
@@ -606,7 +606,7 @@
     "none": "Noch kein Container.",
     "create": "Container anlegen",
     "createAndStart": "Anlegen und starten",
-    "foreign": "Ein Container mit diesem Namen existiert, wurde aber nicht von Wickwatch angelegt (z. B. aus einer Compose-Datei); Wickwatch lässt ihn in Ruhe.",
+    "foreign": "Ein Container mit diesem Namen existiert, wurde aber nicht von wickwatch angelegt (z. B. aus einer Compose-Datei); wickwatch lässt ihn in Ruhe.",
     "outdated": "Version {version} ist gespeichert, der Container nutzt noch Version {running}.",
     "apply": "Version {version} übernehmen",
     "applyRestart": "Version {version} übernehmen (Neustart)",
@@ -673,7 +673,7 @@
   },
   "audit": {
     "title": "Audit-Log",
-    "intro": "Wer was getan hat, und was Wickwatch selbst getan hat (Schutz, Neustarts). Aufbewahrt für AUDIT_RETENTION_DAYS.",
+    "intro": "Wer was getan hat, und was wickwatch selbst getan hat (Schutz, Neustarts). Aufbewahrt für AUDIT_RETENTION_DAYS.",
     "action": "Aktion",
     "allActions": "Alle Aktionen",
     "allOf": "{group}: alle",
@@ -681,7 +681,7 @@
     "targetPlaceholder": "Instanz, Konto oder Nutzer",
     "time": "Zeit",
     "user": "Nutzer",
-    "system": "Wickwatch",
+    "system": "wickwatch",
     "result": "Ergebnis",
     "ok": "OK",
     "failed": "Fehlgeschlagen",
@@ -741,7 +741,7 @@
     }
   },
   "summary": {
-    "title": "Wickwatch Tageszusammenfassung {date}",
+    "title": "wickwatch Tageszusammenfassung {date}",
     "account": "{name}: Balance {balance}, Equity {equity}, P&L heute (UTC) {pnl}, offene Positionen {positions}, Instanzen aktiv {running} von {total}",
     "accountError": "{name}: nicht erreichbar ({reason})",
     "challenge": "  Challenge Tag {day}, {status}: {rules}",

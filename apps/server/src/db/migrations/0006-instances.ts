@@ -3,7 +3,7 @@ import type { Migration } from "kysely/migration";
 
 export const instances: Migration = {
   async up(db: Kysely<unknown>) {
-    // Instances set up in Wickwatch; containers defined elsewhere (e.g. compose) are not listed here.
+    // Instances set up in wickwatch; containers defined elsewhere (e.g. compose) are not listed here.
     await db.schema
       .createTable("instances")
       .addColumn("id", "integer", (c) => c.primaryKey().autoIncrement())

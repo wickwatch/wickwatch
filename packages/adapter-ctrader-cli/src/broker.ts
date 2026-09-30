@@ -44,7 +44,7 @@ const PRICE_ATTEMPTS = 6;
 
 /** Official image of the CLI; pinned, the version the adapter was tested with. */
 export const DEFAULT_CTRADER_IMAGE = "ghcr.io/spotware/ctrader-console:5.9.11";
-/** Where Wickwatch puts the algo and the password file inside an instance. */
+/** Where wickwatch puts the algo and the password file inside an instance. */
 const MOUNT = "/mnt/wickwatch";
 
 export interface CtraderCliBrokerOptions extends Partial<CliOptions> {

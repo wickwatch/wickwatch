@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Wickwatch dashboard: API server + built SPA in one image.
+# wickwatch dashboard: API server + built SPA in one image.
 ARG NODE_VERSION=24
 
 FROM node:${NODE_VERSION}-slim AS build

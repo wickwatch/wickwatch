@@ -194,7 +194,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       preHandler: requireAdmin,
       schema: {
         tags: ["accounts"],
-        summary: "Remove an account from Wickwatch (nothing changes at the broker)",
+        summary: "Remove an account from wickwatch (nothing changes at the broker)",
         params: Type.Object({ id: Type.Integer() }),
         response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },

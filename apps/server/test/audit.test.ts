@@ -17,7 +17,7 @@ const get = (query = "", cookie = admin) =>
   t.app.inject({ method: "GET", url: `/api/v1/audit${query}`, headers: { cookie } });
 
 describe("audit log API", () => {
-  it("lists entries newest first with the user, and what Wickwatch did by itself", async () => {
+  it("lists entries newest first with the user, and what wickwatch did by itself", async () => {
     await audit(t.db, { action: "instance.autostart", target: "bot-a", details: { ok: true } });
     const res = await get();
     expect(res.statusCode).toBe(200);

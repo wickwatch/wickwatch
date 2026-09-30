@@ -44,7 +44,7 @@ onMounted(() => {
     () => undefined,
   );
 });
-/** Set up in Wickwatch, but no runtime instance with that name (yet). */
+/** Set up in wickwatch, but no runtime instance with that name (yet). */
 const notRunning = computed(() =>
   managed.value.filter((m) => !(data.value?.instances ?? []).some((i) => i.ref === m.name || i.name === m.name)),
 );
