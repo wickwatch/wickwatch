@@ -4,6 +4,10 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.1.0 – 2026-09-30
+
+First release.
+
 ### Added
 - Monorepo with server (Fastify), web app (Vue 3), neutral core and demo adapter.
 - Adapter contracts as TypeBox schemas with shared contract tests.
