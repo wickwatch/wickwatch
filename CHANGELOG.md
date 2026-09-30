@@ -8,11 +8,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Monorepo with server (Fastify), web app (Vue 3), neutral core and demo adapter.
 - Adapter contracts as TypeBox schemas with shared contract tests.
 - Overview screen: accounts, instances, alerts, start/stop/restart, emergency stop per account.
-- Built-in login with optional TOTP (can be skipped at setup, switched on/off under Account), first-run setup with a one-time token, roles `admin` and `viewer`.
+- Built-in login with optional TOTP (can be skipped at setup, switched on/off under Profile), first-run setup with a one-time token, roles `admin` and `viewer`.
 - Encrypted broker credentials (AES-256-GCM, `MASTER_KEY`), accounts stored in the database.
 - English and German UI, dark and light mode.
 - Docker image, CI with DCO check, release workflow for GHCR.
-- cTrader CLI broker adapter (read-only): accounts with active flag and names, balances, positions, orders, deals, algo metadata; one shell session per account.
+- cTrader CLI broker adapter: accounts with active flag and names, balances, positions, orders, deals, algo metadata; one shell session per account.
 - Docker runtime adapter: finds labelled containers, start/stop/restart, logs (also followed), host status.
 - Accounts page: add accounts from the broker's list, rename, switch login, remove; broker logins with password change (encrypted, never shown again).
 - Challenge profiles per account (from a template or entered manually): profit target, daily loss with reset time and time zone, static or trailing max drawdown, minimum trading days, duration; traffic light on the account card and alerts near limits. A background poller records balance and equity per trading day.
@@ -33,3 +33,19 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Bots started from Wickwatch get their parameters as a `.cbotset` file in the container instead of `--Name=Value` arguments, so `docker inspect` no longer shows values like licence keys; such values are also hidden in the start table of the log. `.cbotset` format support (`CONFIG_ADAPTER=cbotset`), checked against 316 real files.
 - Parameter files in the UI: "Load parameters from file" in the instance form takes the values, symbol and timeframe of a `.cbotset` (e.g. exported from cTrader) and says what it did not take (rejected values as a warning, all of them with the reason); every configuration version can be downloaded as `.cbotset` (admins, audit-logged).
 - Colour parameters of cBots (`#AARRGGBB` with a colour picker); algos uploaded before are repaired at start.
+- Account page per account: its instances, all open positions and pending orders (with the instance each belongs to), figures, the challenge profile in a modal and the emergency stop when there is something to stop.
+- Risk in % of the balance and result in R per trade, from the stop loss the position opened with (cTrader: from `orders-history`); columns in the trade history and average/total R in the key figures.
+- A details panel (drawer) per position, order and trade: entry and exit, initial stop, opening and closing time with holding time, gross result, commission, swap, net, risk and R, label and IDs.
+- Bots set up in Wickwatch are started again after a host or Docker restart when they were meant to run; a bot that stopped itself stays stopped, and one that ends again within 10 minutes is given up (audit-logged). Stops, the emergency stop and the loss guard are no longer undone by this.
+- Password change in the profile (needs the current password; other sessions are logged out).
+- Challenge templates for FTMO (2-Step, 1-Step, Free Trial) and The Trading Pit (CFD Prime, Classic), grouped by firm in the form. New max-drawdown type trailing on the end-of-day balance; trailing limits are a share of the start balance.
+- Trading days are counted by the day a position opened, as prop firms do, including positions still open; they are marked right after a profile is saved and show "loading …" until then.
+- Where the runtime has no empty text (cTrader CLI), every text parameter needs a value: the form, a loaded parameter file and the configuration tab say which ones, and a version without them cannot be applied.
+- Stored algo metadata is read again at start when the reader learned more (`algoMetadataVersion`), so no re-upload is needed.
+- A saved version the container does not use yet is also shown on the instance overview tab. The challenge on an account card folds away. Loading states show the radar spinner.
+- `pnpm start` and `pnpm dev:server` let `.env` win over variables exported in the shell.
+
+### Fixed
+- Applying a configuration no longer starts an instance that had crashed.
+- The loss guard's emergency stop was undone by the automatic restart of stopped instances.
+- Trading days of challenge profiles with a reset in the afternoon (e.g. 16:15 America/Chicago) were loaded from the wrong day start.

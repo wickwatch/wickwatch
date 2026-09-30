@@ -17,11 +17,11 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DOCKER_HOST` | local socket | Docker API for the `docker` runtime, e.g. `tcp://socket-proxy:2375` (recommended) or `unix:///var/run/docker.sock`. |
 | `BROKER_ADAPTER` | `demo` | Accounts and trading data. Available: `demo` (demo accounts are added to an empty database) and `ctrader-cli` (accounts, balances, positions, orders, deals, algo metadata, starting bots in the official CLI image, closing positions, cancelling orders, emergency stop). |
 | `CTRADER_IMAGE` | `ghcr.io/spotware/ctrader-console:5.9.11` | Image instances run with (`BROKER_ADAPTER=ctrader-cli`). Must be pinned to a version or digest, never `latest`; change it deliberately and re-apply the instances. |
-| `INSTANCE_RESTART_POLICY` | `on-failure` | Docker restart policy of created instances: `on-failure` restarts after a crash but leaves a bot stopped that stopped itself (e.g. after its own daily loss rule); `unless-stopped` always restarts; `no` never. |
+| `INSTANCE_RESTART_POLICY` | `on-failure` | Docker restart policy of created instances: `on-failure` restarts after a crash but leaves a bot stopped that stopped itself (e.g. after its own daily loss rule); `unless-stopped` always restarts; `no` never. A host or Docker restart ends bots cleanly, so `on-failure` alone does not bring them back; Wickwatch does, see [Bots after a restart](#bots-after-a-restart). |
 | `CTRADER_CLI` | `local` (`container` in the image) | How Wickwatch runs the cTrader CLI for its own queries (accounts, balances, positions, algo metadata). `local`: `CTRADER_CLI_PATH` on the same machine. `container`: the CLI of `CTRADER_IMAGE` in a throwaway container per call or shell session, through `RUNTIME_ADAPTER=docker`; the Wickwatch image does not contain the proprietary CLI. |
 | `CTRADER_CLI_PATH` | `ctrader-cli` | cTrader CLI executable for `CTRADER_CLI=local`. It must be installed where the server runs. |
 | `CONFIG_ADAPTER` | `demo` | Parameter files for upload and download. Available: `demo` (JSON) and `cbotset` (cTrader's `.cbotset`; use it with `BROKER_ADAPTER=ctrader-cli`). |
-| `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals are checked every 5 minutes. Also the interval of the optional loss guard of challenge profiles. |
+| `ACCOUNT_POLL_SECONDS` | `60` | How often balance and equity of every account are sampled (10–3600). Needed for daily loss and trailing drawdown; deals (for trading days) are checked every 5 minutes, and right away when a challenge profile is saved; until the days since its start date are loaded, the profile shows "loading …" instead of a count. Also the interval of the optional loss guard of challenge profiles. |
 | `ALGOS_DIR` | `data/algos` | Where uploaded algo files are stored, one folder per name and version (`<name>/<version>/<name>.algo`). Keep it on a persistent volume. |
 | `CHALLENGE_TEMPLATES_DIR` | `templates/challenges` | Directory with challenge templates (`*.json`, see its README). |
 | `WEB_DIST_DIR` | next to the server | Directory of the built web app. Only needed when running the server outside the image. |
@@ -33,6 +33,19 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `BACKUP_DIR` | `backups` next to the database | Where backups go, e.g. `/app/data/backups` in the image. Files are `wickwatch-<UTC time>.db`, readable only by the owner. |
 | `AUDIT_RETENTION_DAYS` | `365` | Audit entries older than this are deleted (checked hourly); `0` keeps them forever. Expired sessions are deleted hourly as well. |
 | `WICKWATCH_VERSION` | from the build | Version shown in the UI and `/healthz`; set by the image build. |
+
+## Bots after a restart
+
+Docker's `on-failure` restarts a bot that crashed, but not one that ended cleanly. On a host or Docker restart every bot receives SIGTERM, logs "stopped by user" and exits with 0, so it would stay down. Wickwatch keeps track of which instances it set up are meant to run and checks them every 15 seconds:
+
+- An instance that is running is meant to run. Wickwatch takes running instances over only at its first check after it started (e.g. ones started while it was down); later it changes "meant to run" only through its own actions.
+- Start, restart and applying a configuration with start set it; stop, the emergency stop and the loss guard clear it before stopping the container.
+- An instance that ended cleanly while meant to run is started again and audit-logged (`instance.autostart`).
+- An instance that stopped itself (the broker adapter recognises it in the log, for cTrader "cBot stopped itself") is no longer meant to run and stays stopped, e.g. after its own daily loss rule. See [`BOT-CONTRACT.md`](BOT-CONTRACT.md).
+- An instance that ends again within 10 minutes of an automatic start is left stopped (`instance.autostart_gave_up`), so a broken configuration does not loop.
+- A crash (exit code other than a stop signal's) is left to the restart policy.
+
+This covers only instances set up in Wickwatch, not containers from your own compose file. Wickwatch itself needs `restart: unless-stopped`, as in the examples in `deploy/`.
 
 ## Backups and restore
 
@@ -50,7 +63,7 @@ Logs: bot containers created by Wickwatch rotate their logs (json-file, 5 × 10 
 
 ## Notifications
 
-Wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`: stopped or failed instances, a lost broker connection, unreachable accounts (e.g. a failed login), challenge limits and attribution problems. Nobody has to have the dashboard open.
+Wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`: stopped or failed instances, a lost broker connection, bots that threw errors in their event handlers, unreachable accounts (e.g. a failed login), challenge limits, a breached or passed challenge, the loss guard having stopped an account, and attribution problems. Nobody has to have the dashboard open.
 
 `ALERT_WEBHOOK_URL` gets one `POST` per change, as JSON:
 

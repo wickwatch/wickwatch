@@ -13,7 +13,7 @@ One JSON file per firm and phase. Values must come from the firm's **official ru
 | `dailyLoss.resetTime`, `dailyLoss.timezone` | Start of the trading day, e.g. `"00:00"` and an IANA zone such as `"Europe/Prague"` or `"America/New_York"` (daylight saving time is handled; avoid fixed offsets like `GMT+2`) |
 | `dailyLoss.limitBasis` | Optional: the percentage refers to the `initial-balance` (default) or the `day-start` reference |
 | `maxLoss.limitPct`, `maxLoss.type` | Max drawdown in percent of the start balance; `static` from the start balance, `trailing` from the highest equity recorded, or `trailing-eod-balance` from the highest balance at a trading-day start (end-of-day trailing). Trailing limits never sit below the static one |
-| `minTradingDays` | Required trading days: days on which a position was opened (closed or still open) |
+| `minTradingDays` | Required trading days: days on which a position was opened (still open, or closed with a result other than exactly 0) |
 | `durationDays` | Time limit in days, or `null` |
 | `tradingDayDefinition` | Informational; Wickwatch counts the days a position was opened, falling back to the closing day when the broker gives no opening time |
 | `source`, `asOf` | Link to the official rules and the date they were checked |

@@ -26,12 +26,15 @@ The demo adapter (`packages/adapter-demo`) provides fake data, so no broker or D
 | `apps/server` | Fastify server: config, auth, database and migrations, REST API with OpenAPI, serves the web app |
 | `apps/web` | Vue 3 single-page app |
 | `packages/core` | Broker- and strategy-neutral types, adapter contracts, shared logic and contract tests |
-| `packages/adapter-*` | Adapter implementations (`adapter-demo`, `adapter-docker`, `adapter-ctrader-cli`) |
+| `packages/adapter-*` | Adapter implementations (`adapter-demo`, `adapter-docker`, `adapter-ctrader-cli`, `adapter-cbotset`) |
 | `i18n/` | UI translations (`en.json` is the source, `de.json` the first translation) |
 | `design/`, `assets/` | Design tokens and logo files, see `BRAND.md` |
 | `templates/challenges/` | Prop-challenge templates as JSON |
 | `deploy/` | Example compose files |
-| `docs/` | Roadmap, adapter contracts, bot contract, configuration, OpenAPI document |
+| `scripts/` | `load-env.mjs`: loads `.env` for `pnpm start` and `pnpm dev:server`, winning over exported shell variables |
+| `docs/` | User guide, roadmap, adapter contracts, bot contract, configuration, OpenAPI document |
+
+New environment variables: add them to `docs/CONFIGURATION.md` and `.env.example`; a test fails when one is missing.
 
 API changes: the OpenAPI document is generated from the route schemas. Run `pnpm --filter @wickwatch/server openapi` to update `docs/openapi.json`; a test fails when it is out of date.
 

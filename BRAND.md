@@ -63,7 +63,10 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 
 ## Consistency
 - The same kind of action behaves the same everywhere. Adding something (account, login, algo, challenge profile) is a button that opens a modal.
-- If a shared component exists (icon button, menu, modal, file drop zone, parameter list, trade tables, status badge, banner), use it; no local look-alikes.
+- Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from an info button in the row.
+- Loading states show the spinner (`AppSpinner`: the logo symbol with its radar turning; the plain symbol with reduced motion), not a "Loading …" text. Screen readers still get the text.
+- Optional detail (the rules of a challenge on an account card, parameter groups) folds away behind a disclosure with a chevron; it opens by itself when something needs attention.
+- If a shared component exists (icon button, menu, modal and drawer, spinner, file drop zone, parameter list, trade tables, status badge, banner), use it; no local look-alikes.
 - Deviate only for a good reason, and say why in a code comment where the deviation lives.
 
 ## Voice
