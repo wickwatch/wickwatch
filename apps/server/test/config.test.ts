@@ -62,6 +62,8 @@ describe("loadConfig", () => {
     );
     expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:latest" })).toThrow(/pinned/);
     expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console" })).toThrow(/pinned/);
+    expect(() => load({ CTRADER_IMAGE: "registry.local:5000/ctrader-console" })).toThrow(/pinned/);
+    expect(load({ CTRADER_IMAGE: "registry.local:5000/ctrader-console:5.9.11" }).ctraderImage).toMatch(/5\.9\.11$/);
     expect(load({ CTRADER_IMAGE: `ghcr.io/spotware/ctrader-console@sha256:${"a".repeat(64)}` }).ctraderImage).toMatch(
       /@sha256/,
     );

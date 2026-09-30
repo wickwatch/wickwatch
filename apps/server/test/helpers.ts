@@ -1,5 +1,5 @@
 import type { LightMyRequestResponse } from "fastify";
-import { createAdapters } from "../src/adapters";
+import { createAdapters, type Adapters } from "../src/adapters";
 import { buildApp, type App } from "../src/app";
 import { SetupState } from "../src/auth/setup";
 import { loadConfig } from "../src/config";
@@ -19,6 +19,7 @@ export interface TestApp {
   db: Db;
   cipher: Cipher;
   setup: SetupState;
+  adapters: Adapters;
 }
 
 export async function startApp(
@@ -31,16 +32,17 @@ export async function startApp(
   const cipher = createCipher(Buffer.from(MASTER_KEY, "base64"));
   if (seed) await seedDemoAccounts(db, cipher);
   const setup = new SetupState(SETUP_TOKEN);
+  const adapters = createAdapters(config);
   const app = await buildApp({
     config,
     db,
-    adapters: createAdapters(config),
+    adapters,
     version: "1.2.3",
     setup,
     logger: false,
     ...(onChallengeSaved ? { onChallengeSaved } : {}),
   });
-  return { app, db, cipher, setup };
+  return { app, db, cipher, setup, adapters };
 }
 
 export const currentCode = (secret: string) => totpCode(secret, totpCounter(Date.now()));

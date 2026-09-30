@@ -1,4 +1,5 @@
 import { dirname, isAbsolute, resolve } from "node:path";
+import { isPinnedImage } from "@wickwatch/adapter-docker";
 import { DEFAULT_LABEL_PREFIX, isTimeZone } from "@wickwatch/core";
 
 /** Answers with `ts=<unix time>` in milliseconds; any URL whose answer has a Date header works too. */
@@ -87,7 +88,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     problems.push(`INSTANCE_RESTART_POLICY must be one of ${RESTART_POLICIES.join(", ")}`);
   }
   const ctraderImage = get("CTRADER_IMAGE");
-  if (ctraderImage && /:latest$|^[^:]+$/.test(ctraderImage.replace(/@sha256:.*/, "x:y"))) {
+  if (ctraderImage && !isPinnedImage(ctraderImage)) {
     problems.push("CTRADER_IMAGE must be pinned to a version or digest, not latest");
   }
   if (!LOG_LEVELS.includes(logLevel)) problems.push(`LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")}`);
@@ -117,10 +118,6 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (summaryTime !== undefined && !alertWebhookUrl) problems.push("DAILY_SUMMARY_TIME needs ALERT_WEBHOOK_URL");
   const webDistDir = get("WEB_DIST_DIR");
   const dockerHost = get("DOCKER_HOST");
-  const accountPollSeconds = Number(get("ACCOUNT_POLL_SECONDS") ?? 60);
-  if (!Number.isInteger(accountPollSeconds) || accountPollSeconds < 10 || accountPollSeconds > 3600) {
-    problems.push("ACCOUNT_POLL_SECONDS must be an integer between 10 and 3600");
-  }
   const integer = (name: string, fallback: number, min: number, max: number) => {
     const value = Number(get(name) ?? fallback);
     if (!Number.isInteger(value) || value < min || value > max) {
@@ -128,15 +125,13 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     }
     return value;
   };
+  const accountPollSeconds = integer("ACCOUNT_POLL_SECONDS", 60, 10, 3600);
   const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
   const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
   const ctraderCli = get("CTRADER_CLI") ?? "local";
   if (ctraderCli !== "local" && ctraderCli !== "container") problems.push("CTRADER_CLI must be local or container");
-  const alertCheckSeconds = Number(get("ALERT_CHECK_SECONDS") ?? 60);
-  if (!Number.isInteger(alertCheckSeconds) || alertCheckSeconds < 10 || alertCheckSeconds > 3600) {
-    problems.push("ALERT_CHECK_SECONDS must be an integer between 10 and 3600");
-  }
+  const alertCheckSeconds = integer("ALERT_CHECK_SECONDS", 60, 10, 3600);
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
   }

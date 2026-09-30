@@ -19,7 +19,7 @@ import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { InstanceConfigsTable } from "../db/schema";
-import { requireAdmin } from "../plugins/auth";
+import { isAdmin, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { audit } from "../services/audit";
 import { setShouldRun } from "../services/instance-keeper";
@@ -119,6 +119,9 @@ function toConfig(row: ConfigRow): InstanceConfig {
     ...(row.created_by_name ? { createdBy: row.created_by_name } : {}),
   };
 }
+
+/** For viewers: parameter values may hold licence keys. */
+const withoutParameters = (config: InstanceConfig): InstanceConfig => ({ ...config, parameters: {} });
 
 /** JSON with sorted keys, so equal parameter sets compare equal. */
 const canonical = (values: ParameterValues) =>
@@ -273,10 +276,14 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       schema: {
         tags: ["instances"],
         summary: "Instances set up in Wickwatch, with their current configuration",
+        description: "Parameter values only for admins, as with the parameter file: they may hold licence keys.",
         response: { 200: Type.Array(ManagedInstance) },
       },
     },
-    () => load(),
+    async (request) => {
+      const list = await load();
+      return isAdmin(request) ? list : list.map((i) => ({ ...i, config: withoutParameters(i.config) }));
+    },
   );
 
   app.get(
@@ -336,6 +343,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       schema: {
         tags: ["instances"],
         summary: "One managed instance with all configuration versions",
+        description: "Parameter values only for admins, as with the parameter file: they may hold licence keys.",
         params: NameParams,
         response: { 200: ManagedInstanceDetail, 404: ErrorBody },
       },
@@ -347,7 +355,9 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         .where("instance_configs.instance_id", "=", instance.id)
         .orderBy("instance_configs.version", "desc")
         .execute();
-      return { ...instance, history: history.map(toConfig) };
+      const detail = { ...instance, history: history.map(toConfig) };
+      if (isAdmin(request)) return detail;
+      return { ...detail, config: withoutParameters(detail.config), history: detail.history.map(withoutParameters) };
     },
   );
 
@@ -564,8 +574,10 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
       const [instance] = await load(name);
       if (!instance) return reply.code(404).send({ error: "not_found" });
-      // A container of the same name defined elsewhere stays untouched.
-      const removeContainer = instance.deployment?.managed === true;
+      // Asked again without load()'s fallback: an unreachable runtime must fail the delete, not orphan a running
+      // container. A container of the same name defined elsewhere stays untouched.
+      const runtimes = await adapters.runtime.list();
+      const removeContainer = deployment(runtimes.find((i) => i.ref === name))?.managed === true;
       if (removeContainer) await adapters.runtime.remove(name);
       await db.deleteFrom("instances").where("id", "=", instance.id).execute();
       await audit(db, {

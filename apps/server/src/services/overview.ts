@@ -72,7 +72,7 @@ async function loadOverviewInput(
     adapters.runtime.list(),
     directory.list(),
     readProfiles(db),
-    loadOverrides(db),
+    loadOverrides(db, adapters.broker.id),
   ]);
   const entries = only === undefined ? allEntries : allEntries.filter((e) => e.number === only);
   const [lastLogs, logStates, accounts] = await Promise.all([

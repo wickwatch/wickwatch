@@ -28,6 +28,7 @@ import {
   checkParameterNames,
   redactStartupTable,
   toLogEvent,
+  positionIds,
   positionsWithoutPrices,
   toPendingOrders,
   toPositions,
@@ -196,6 +197,10 @@ export class CtraderCliBroker implements BrokerAdapter {
     }
   }
 
+  private async openPositionIds(c: Credentials, account: string): Promise<string[]> {
+    return positionIds(extractJson(await this.pool.run(c, account, "positions")));
+  }
+
   async pendingOrders(c: Credentials, account: string): Promise<PendingOrder[]> {
     return toPendingOrders(extractJson(await this.pool.run(c, account, "orders")));
   }
@@ -236,7 +241,7 @@ export class CtraderCliBroker implements BrokerAdapter {
   /** `position close <id> yes` in the account's shell session. */
   async closePosition(c: Credentials, account: string, positionId: Id): Promise<void> {
     await this.pool.run(c, account, `position close ${shellId(positionId)} yes`);
-    if ((await this.positions(c, account)).some((p) => p.id === positionId)) {
+    if ((await this.openPositionIds(c, account)).includes(positionId)) {
       throw new AdapterError("unavailable", `Position ${positionId} is still open`);
     }
   }
@@ -252,13 +257,17 @@ export class CtraderCliBroker implements BrokerAdapter {
   /**
    * Cancels every pending order of the account first, so none fills while the positions are
    * closed, then closes every position. Stopping the instances is done by the core before.
+   * Positions are counted without prices: a fresh session may have none yet, and waiting must not stop the close.
    */
   async emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult> {
     const orders = await this.pendingOrders(c, account);
     if (orders.length) await this.pool.run(c, account, "order cancel all yes");
-    const positions = await this.positions(c, account);
+    const positions = await this.openPositionIds(c, account);
     if (positions.length) await this.pool.run(c, account, "position close all yes");
-    const [openPositions, pendingOrders] = [await this.positions(c, account), await this.pendingOrders(c, account)];
+    const [openPositions, pendingOrders] = [
+      await this.openPositionIds(c, account),
+      await this.pendingOrders(c, account),
+    ];
     if (openPositions.length || pendingOrders.length) {
       throw new AdapterError(
         "unavailable",

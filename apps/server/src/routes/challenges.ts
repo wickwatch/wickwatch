@@ -1,6 +1,7 @@
 import { ChallengeProfile, ChallengeTemplate, isTimeZone } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
+import { findAccount, type AccountDirectory } from "../accounts";
 import { readProfile } from "../challenges/store";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
@@ -9,6 +10,7 @@ import { audit } from "../services/audit";
 
 export interface ChallengeRouteOptions {
   db: Db;
+  accounts: AccountDirectory;
   templates: ChallengeTemplate[];
   /** Runs after a save, e.g. to mark the trading days since the (new) start date right away. */
   onSaved?: (accountId: number) => void;
@@ -18,10 +20,9 @@ const Params = Type.Object({ number: Type.String({ minLength: 1 }) });
 
 export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> = async (
   app,
-  { db, templates, onSaved },
+  { db, accounts, templates, onSaved },
 ) => {
-  const accountId = async (number: string) =>
-    (await db.selectFrom("accounts").select("id").where("number", "=", number).executeTakeFirst())?.id;
+  const accountId = async (number: string) => (await findAccount(accounts, number))?.id;
 
   app.get(
     "/challenge-templates",

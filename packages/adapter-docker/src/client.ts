@@ -15,6 +15,7 @@ export interface ContainerDetails {
     ExitCode: number;
     StartedAt: string;
     Restarting: boolean;
+    OOMKilled?: boolean;
     Health?: { Status: string };
   };
 }

@@ -8185,6 +8185,7 @@
         "tags": [
           "instances"
         ],
+        "description": "Parameter values only for admins, as with the parameter file: they may hold licence keys.",
         "security": [
           {
             "session": []
@@ -8947,6 +8948,7 @@
         "tags": [
           "instances"
         ],
+        "description": "Parameter values only for admins, as with the parameter file: they may hold licence keys.",
         "parameters": [
           {
             "schema": {

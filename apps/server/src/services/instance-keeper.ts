@@ -21,12 +21,8 @@ export async function setShouldRun(db: Db, names: string | string[], shouldRun: 
 }
 
 /** Before an emergency stop or the loss guard stops an account: its instances are no longer meant to run. */
-export async function clearShouldRunForAccount(db: Db, accountNumber: string): Promise<void> {
-  await db
-    .updateTable("instances")
-    .set({ should_run: 0 })
-    .where("account_id", "in", db.selectFrom("accounts").select("id").where("number", "=", accountNumber))
-    .execute();
+export async function clearShouldRunForAccount(db: Db, accountId: number): Promise<void> {
+  await db.updateTable("instances").set({ should_run: 0 }).where("account_id", "=", accountId).execute();
 }
 
 /**

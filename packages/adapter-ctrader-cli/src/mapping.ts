@@ -163,6 +163,11 @@ export function positionsWithoutPrices(data: unknown): boolean {
   return list(data, "positions").some((p) => p["netProfit"] === null && p["grossProfit"] === null);
 }
 
+/** Ids of the open positions; unlike toPositions this needs no prices. */
+export function positionIds(data: unknown): string[] {
+  return list(data, "positions").flatMap((p) => str(p["positionId"]) ?? str(p["id"]) ?? []);
+}
+
 /**
  * `positions` (5.9): id, symbolName, tradeSide, volume, volumeLots, entryPrice, currentPrice, pips,
  * grossProfit, netProfit, swap, commission, stopLoss, takeProfit, openTime, label, comment.

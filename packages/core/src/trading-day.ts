@@ -26,7 +26,8 @@ function zonedParts(date: Date, timeZone: string): Parts {
     });
     formatters.set(timeZone, format);
   }
-  const get = (type: string) => Number(format.formatToParts(date).find((p) => p.type === type)?.value);
+  const parts = format.formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
   return {
     year: get("year"),
     month: get("month"),

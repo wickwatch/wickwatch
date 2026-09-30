@@ -95,6 +95,20 @@ describe("DockerRuntimeAdapter", () => {
     expect(docker.containers.get("bot-b")?.streams[0]?.destroyed).toBe(true);
   });
 
+  it("closes a follow stream when the signal aborted while the logs request was on its way", async () => {
+    const { adapter, docker } = setup();
+    const controller = new AbortController();
+    const container = docker.container.bind(docker);
+    docker.container = (name) => {
+      const handle = container(name);
+      return { ...handle, logs: (request) => (controller.abort(), handle.logs(request)) };
+    };
+    const seen: string[] = [];
+    for await (const line of adapter.logs("bot-b", { follow: true, signal: controller.signal })) seen.push(line.text);
+    expect(seen).toEqual([]);
+    expect(docker.containers.get("bot-b")?.streams[0]?.destroyed).toBe(true);
+  });
+
   it("maps connection problems to unavailable", async () => {
     const broken = new DockerRuntimeAdapter({
       client: {
@@ -129,6 +143,7 @@ describe("helpers", () => {
     [{ Status: "exited", ExitCode: 0 }, "stopped"],
     [{ Status: "exited", ExitCode: 143 }, "stopped"],
     [{ Status: "exited", ExitCode: 137 }, "stopped"],
+    [{ Status: "exited", ExitCode: 137, OOMKilled: true }, "error"],
     [{ Status: "exited", ExitCode: 1 }, "error"],
     [{ Status: "restarting", Restarting: true }, "restarting"],
     [{ Status: "created" }, "stopped"],

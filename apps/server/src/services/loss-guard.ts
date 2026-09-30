@@ -57,10 +57,16 @@ export class LossGuardService {
     try {
       const { db, accounts } = this.options;
       const [profiles, entries] = await Promise.all([readProfiles(db), accounts.list()]);
-      for (const entry of entries) {
-        const profile = profiles.get(entry.id);
-        if (profile?.guard) await this.guard(entry, profile, profile.guard.usagePct);
-      }
+      // In parallel: a hanging broker session of one account must not delay the stop of another.
+      await Promise.all(
+        entries.map(async (entry) => {
+          const profile = profiles.get(entry.id);
+          if (!profile?.guard) return;
+          await this.guard(entry, profile, profile.guard.usagePct).catch((error: unknown) => {
+            this.options.log.error({ err: error, account: entry.number }, "Loss guard check failed");
+          });
+        }),
+      );
     } catch (error) {
       this.options.log.error({ err: error }, "Loss guard check failed");
     } finally {
@@ -117,7 +123,7 @@ export class LossGuardService {
     let ok = false;
     let details: Record<string, unknown>;
     try {
-      await clearShouldRunForAccount(db, entry.number);
+      await clearShouldRunForAccount(db, entry.id);
       const report = await emergencyStopAccount({
         runtime: adapters.runtime,
         broker: adapters.broker,

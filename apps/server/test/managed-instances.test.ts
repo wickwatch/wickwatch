@@ -1,7 +1,8 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { AdapterError } from "@wickwatch/core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
@@ -202,6 +203,35 @@ describe("managed instances", () => {
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(204);
     const after = (await inject("GET", "/overview")).json<{ instances: { ref: string }[] }>();
     expect(after.instances.some((i) => i.ref === "x1")).toBe(false);
+  });
+
+  it("shows parameter values to admins only", async () => {
+    await create("x1");
+    const viewer = await loginAs(t, "viewer");
+    const params = (m: { config: { parameters: object } }) => m.config.parameters;
+    expect(params((await inject("GET", "/managed-instances/x1")).json())).toMatchObject({
+      RiskPercent: 0.5,
+      EntryMode: "Pullback",
+    });
+    const detail = (await inject("GET", "/managed-instances/x1", undefined, viewer)).json<{
+      config: { parameters: object };
+      history: { parameters: object }[];
+    }>();
+    expect(params(detail)).toEqual({});
+    expect(detail.history.map((h) => h.parameters)).toEqual([{}]);
+    const list = (await inject("GET", "/managed-instances", undefined, viewer)).json<
+      { config: { parameters: object } }[]
+    >();
+    expect(list.map(params)).toEqual([{}]);
+  });
+
+  it("keeps the instance when the runtime cannot be asked whether a container must go", async () => {
+    await create("x1");
+    await inject("POST", "/managed-instances/x1/deploy", { confirm: "x1" });
+    vi.spyOn(t.adapters.runtime, "list").mockRejectedValue(new AdapterError("unavailable", "proxy down"));
+    expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(503);
+    vi.restoreAllMocks();
+    expect((await inject("GET", "/managed-instances/x1")).statusCode).toBe(200);
   });
 
   it("never takes over a container of the same name defined elsewhere", async () => {

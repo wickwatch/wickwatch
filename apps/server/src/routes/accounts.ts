@@ -322,8 +322,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     number: Type.String({ minLength: 1 }),
     positionId: Type.String({ minLength: 1 }),
   });
-  const accountId = async (number: string) =>
-    (await db.selectFrom("accounts").select("id").where("number", "=", number).executeTakeFirst())?.id;
+  const accountId = async (number: string) => (await findAccount(accounts, number))?.id;
 
   app.put(
     "/accounts/:number/positions/:positionId/attribution",
@@ -417,7 +416,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const userId = request.user?.id;
       try {
         // Stopped on purpose: not to be started again after a restart.
-        await clearShouldRunForAccount(db, number);
+        await clearShouldRunForAccount(db, account.id);
         const report = await emergencyStopAccount({
           runtime: adapters.runtime,
           broker: adapters.broker,

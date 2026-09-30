@@ -91,6 +91,7 @@ export async function buildApp({
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, {
     db,
+    accounts,
     templates,
     ...(onChallengeSaved ? { onSaved: onChallengeSaved } : {}),
     prefix: api,

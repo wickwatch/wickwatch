@@ -42,7 +42,7 @@ export async function loadInstanceDetail(
     lastLine(adapters, ref),
     logTracker.states([instance]),
     entry ? brokerData(adapters, history, entry, from, now, range === "all", log) : Promise.resolve(undefined),
-    loadOverrides(db),
+    loadOverrides(db, adapters.broker.id),
   ]);
   const logState = logStates.get(ref);
   return buildInstanceDetail({

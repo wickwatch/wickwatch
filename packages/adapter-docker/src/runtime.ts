@@ -163,6 +163,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     const stop = () => stream.destroy?.();
     opts.signal?.addEventListener("abort", stop, { once: true });
     try {
+      // Aborted while the logs request was on its way: the listener came too late to fire.
+      if (opts.signal?.aborted) return;
       const chunks = stream as AsyncIterable<Buffer>;
       for await (const raw of splitLines(details.Config.Tty ? chunks : demux(chunks))) {
         if (raw) yield toLogLine(raw, this.now);
@@ -309,8 +311,13 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   }
 }
 
+/** A tag or digest in the last path segment (a registry port is not a tag), and not `latest`. */
+export function isPinnedImage(image: string): boolean {
+  return /[:@]/.test(image.split("/").pop() ?? "") && !image.endsWith(":latest");
+}
+
 function checkPinned(image: string): void {
-  if (!/[:@]/.test(image.split("/").pop() ?? "") || image.endsWith(":latest")) {
+  if (!isPinnedImage(image)) {
     throw new AdapterError("invalid_input", `Image ${image} must be pinned to a version`);
   }
 }
@@ -339,6 +346,8 @@ export function toStatus(state: ContainerDetails["State"]): InstanceStatus {
     case "paused":
       return "stopped";
     case "exited":
+      // 137 is also the exit code of a container the kernel killed for memory: that one crashed.
+      if (state.OOMKilled) return "error";
       return state.ExitCode === 0 || STOP_EXIT_CODES.has(state.ExitCode) ? "stopped" : "error";
     case "dead":
       return "error";
