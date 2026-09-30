@@ -527,7 +527,7 @@
     "orderLabel": "Expected order label",
     "orderPattern": "Regular expression",
     "comment": "Comment (optional)",
-    "commentHint": "Shown in the version history, e.g. why something changed.",
+    "commentHint": "Optional; shows in the version history.",
     "noRestart": "Saving does not start or restart anything.",
     "noAlgos": "Upload an algo first:",
     "algoMissing": "The algo version {algo} of this configuration no longer exists; choose another one.",
@@ -541,7 +541,10 @@
     "andMore": "{names} and {count} more",
     "instanceGroup": "Instance",
     "tradingGroup": "Trading",
-    "changes": "No unsaved changes | 1 unsaved change | {count} unsaved changes"
+    "changes": "No unsaved changes | 1 unsaved change | {count} unsaved changes",
+    "attributionHint": "Which of the account's trades count for this instance: its figures, chart and history.",
+    "commentTitle": "Version comment",
+    "commentPlaceholder": "e.g. risk raised to 1 %"
   },
   "instanceConfig": {
     "version": "Version {version}",

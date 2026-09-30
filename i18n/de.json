@@ -527,7 +527,7 @@
     "orderLabel": "Erwartetes Order-Label",
     "orderPattern": "Regulärer Ausdruck",
     "comment": "Kommentar (optional)",
-    "commentHint": "Erscheint in der Versionshistorie, z. B. warum etwas geändert wurde.",
+    "commentHint": "Optional; erscheint in der Versionshistorie.",
     "noRestart": "Speichern startet nichts und startet nichts neu.",
     "noAlgos": "Zuerst einen Algo hochladen:",
     "algoMissing": "Die Algo-Version {algo} dieser Konfiguration gibt es nicht mehr; bitte eine andere wählen.",
@@ -541,7 +541,10 @@
     "andMore": "{names} und {count} weitere",
     "instanceGroup": "Instanz",
     "tradingGroup": "Handel",
-    "changes": "Keine ungespeicherten Änderungen | 1 ungespeicherte Änderung | {count} ungespeicherte Änderungen"
+    "changes": "Keine ungespeicherten Änderungen | 1 ungespeicherte Änderung | {count} ungespeicherte Änderungen",
+    "attributionHint": "Welche Trades des Kontos zu dieser Instanz zählen: für ihre Kennzahlen, das Chart und den Verlauf.",
+    "commentTitle": "Versionskommentar",
+    "commentPlaceholder": "z. B. Risiko auf 1 % erhöht"
   },
   "instanceConfig": {
     "version": "Version {version}",

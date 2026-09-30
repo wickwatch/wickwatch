@@ -445,37 +445,46 @@ const algoLabel = (a: AlgoRow) =>
 
       <section class="panel card" aria-labelledby="attribution-title">
         <h2 id="attribution-title">{{ $t("instanceForm.attribution") }}</h2>
-        <div class="attribution">
-          <label class="field">
-            {{ $t("instanceForm.attributionMode") }}
-            <select v-model="mode" class="input">
-              <option v-for="m in MODES" :key="m" :value="m">{{ $t(`instanceForm.modes.${m}`) }}</option>
-            </select>
-            <span class="field__hint">{{ $t(`instanceForm.modeHints.${mode}`) }}</span>
+        <p class="muted card__hint">{{ $t("instanceForm.attributionHint") }}</p>
+        <!-- All modes with their meaning at once: choosing needs the comparison. -->
+        <fieldset class="modes">
+          <legend class="visually-hidden">{{ $t("instanceForm.attributionMode") }}</legend>
+          <label v-for="m in MODES" :key="m" class="mode" :class="{ 'mode--chosen': mode === m }">
+            <input v-model="mode" type="radio" name="attribution-mode" :value="m" class="mode__radio" />
+            <span class="mode__text">
+              <span class="mode__name">{{ $t(`instanceForm.modes.${m}`) }}</span>
+              <span class="muted mode__hint">{{ $t(`instanceForm.modeHints.${m}`) }}</span>
+            </span>
           </label>
-          <label v-if="usesLabel" class="field">
-            {{ mode === "label" ? $t("instanceForm.orderLabel") : $t("instanceForm.orderPattern") }}
-            <input
-              v-model="orderLabel"
-              v-bind="labelField.attrs.value"
-              class="input mono"
-              maxlength="200"
-              :required="mode === 'label-pattern'"
-              :placeholder="mode === 'label' ? name : ''"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <FieldError :field="labelField" />
-          </label>
-        </div>
+        </fieldset>
+        <label v-if="usesLabel" class="field mode__label">
+          {{ mode === "label" ? $t("instanceForm.orderLabel") : $t("instanceForm.orderPattern") }}
+          <input
+            v-model="orderLabel"
+            v-bind="labelField.attrs.value"
+            class="input mono"
+            maxlength="200"
+            :required="mode === 'label-pattern'"
+            :placeholder="mode === 'label' ? name : ''"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <FieldError :field="labelField" />
+        </label>
       </section>
 
       <section class="panel card" aria-labelledby="comment-title">
-        <h2 id="comment-title" class="visually-hidden">{{ $t("instanceForm.comment") }}</h2>
+        <h2 id="comment-title">{{ $t("instanceForm.commentTitle") }}</h2>
         <label class="field">
-          {{ $t("instanceForm.comment") }}
-          <input v-model="comment" class="input" maxlength="500" autocomplete="off" />
-          <span class="field__hint">{{ $t("instanceForm.commentHint") }}</span>
+          <span class="visually-hidden">{{ $t("instanceForm.comment") }}</span>
+          <input
+            v-model="comment"
+            class="input"
+            maxlength="500"
+            autocomplete="off"
+            :placeholder="$t('instanceForm.commentPlaceholder')"
+          />
+          <span class="field__hint">{{ $t("instanceForm.commentHint") }} {{ $t("instanceForm.noRestart") }}</span>
         </label>
       </section>
 
@@ -494,7 +503,6 @@ const algoLabel = (a: AlgoRow) =>
         >
           {{ $t("instanceForm.changes", changeCount) }}
         </span>
-        <span class="muted field__hint savebar__hint">{{ $t("instanceForm.noRestart") }}</span>
       </div>
     </form>
   </div>
@@ -535,10 +543,59 @@ p {
   font-size: var(--ww-size-sm);
 }
 
-.attribution {
+.modes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ww-space-4);
+  gap: var(--ww-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.mode {
+  display: flex;
+  gap: var(--ww-space-3);
+  align-items: flex-start;
+  padding: var(--ww-space-3) var(--ww-space-4);
+  border: 1px solid var(--ww-border);
+  border-radius: var(--ww-radius-md);
+  cursor: pointer;
+}
+
+/* Chosen: frame and bold name, not colour alone. */
+.mode--chosen {
+  border-color: var(--ww-accent);
+  box-shadow: inset 0 0 0 1px var(--ww-accent);
+}
+
+.mode--chosen .mode__name {
+  font-weight: 700;
+}
+
+.mode__radio {
+  margin-top: 3px;
+  accent-color: var(--ww-accent);
+}
+
+.mode__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-1);
+  min-width: 0;
+}
+
+.mode__name {
+  font-size: var(--ww-size-sm);
+  font-weight: 500;
+}
+
+.mode__hint {
+  font-size: var(--ww-size-xs);
+}
+
+.mode__label {
+  max-width: 480px;
 }
 
 .basics {
@@ -595,13 +652,9 @@ p {
   font-weight: 600;
 }
 
-.savebar__hint {
-  margin-left: auto;
-}
-
 @media (max-width: 900px) {
   .basics,
-  .attribution {
+  .modes {
     grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -80,7 +80,7 @@ describe("AppHeader", () => {
   it("names the icon-only header buttons for tooltips and screen readers", async () => {
     const wrapper = await render();
     const language = wrapper.find('button[aria-label="Language: English"]');
-    expect(language.attributes("title")).toBe("Language: English");
+    expect(language.attributes("data-tooltip")).toBe("Language: English");
     expect(wrapper.find('button[aria-label="Theme: System"]').exists()).toBe(true);
   });
 

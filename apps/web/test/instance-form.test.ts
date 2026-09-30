@@ -138,6 +138,20 @@ describe("InstanceFormView", () => {
     expect(router.currentRoute.value.fullPath).toBe("/instances/alpha-new/config?saved=1");
   });
 
+  it("shows every attribution mode with its meaning and asks for the pattern where needed", async () => {
+    const wrapper = await open(InstanceFormView, "/instances/alpha-ger40/edit");
+    const modes = wrapper.findAll(".mode");
+    expect(modes).toHaveLength(4);
+    expect(modes[2]?.text()).toContain("Order label pattern");
+    expect(wrapper.find(".mode__label").exists()).toBe(false);
+    await wrapper.find('input[type="radio"][value="label-pattern"]').setValue(true);
+    expect(wrapper.find(".mode--chosen").text()).toContain("Order label pattern");
+    await wrapper.find(".mode__label input").setValue("^alpha-\\d+$");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(posted()[0]?.body).toMatchObject({ attribution: { mode: "label-pattern", orderLabel: "^alpha-\\d+$" } });
+  });
+
   it("turns the name into lower case with hyphens and marks what cannot be fixed", async () => {
     const wrapper = await open(InstanceFormView, "/instances/new");
     const name = wrapper.find("input.mono");
