@@ -114,7 +114,8 @@ describe("InstanceFormView", () => {
         ? new Response(JSON.stringify({ ...detail, name: "alpha-new", config: config(1, 0.8) }), { status: 201 })
         : undefined;
     const wrapper = await open(InstanceFormView, "/instances/new");
-    expect(wrapper.find("legend").text()).toBe("Risk");
+    // Grouped by the algo's parameter groups.
+    expect(wrapper.findAll(".group__title").map((g) => g.text())).toEqual(["Risk", "Signal", "General"]);
     expect(wrapper.text()).toContain("2 symbols from the broker of this account");
     await wrapper.find("input.mono").setValue("alpha-new");
     await wrapper.find('input[list="symbols-list"]').setValue("GER40");
@@ -262,6 +263,8 @@ describe("InstanceFormView", () => {
   it("restores an old version into the form and keeps known values when switching algo versions", async () => {
     const wrapper = await open(InstanceFormView, "/instances/alpha-ger40/edit?version=1");
     expect((wrapper.find("#param-RiskPercent").element as HTMLInputElement).value).toBe("0.5");
+    // Version 1 differs from the current version 2 in one value; the save bar counts it.
+    expect(wrapper.find(".savebar__count").text()).toBe("1 unsaved change");
     expect(
       wrapper.findAll("input").some((i) => (i.element as HTMLInputElement).value === "Restored from version 1"),
     ).toBe(true);

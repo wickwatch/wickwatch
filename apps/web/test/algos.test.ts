@@ -76,7 +76,7 @@ describe("AlgosView", () => {
     expect(wrapper.text()).toContain("Fast | Slow");
     // Viewers can neither upload nor delete.
     expect(wrapper.find("input[type=file]").exists()).toBe(false);
-    expect(wrapper.findAll(".version button")).toHaveLength(0);
+    expect(wrapper.findAll(".version .btn--danger")).toHaveLength(0);
   });
 
   it("uploads as octet-stream and shows a translated error", async () => {

@@ -477,11 +477,6 @@
     "uploadedAt": "uploaded {time}",
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} parameters",
-    "parameter": "Parameter",
-    "group": "Group",
-    "type": "Type",
-    "default": "Default",
-    "range": "Range / options",
     "deleteConfirm": "Delete {name} {version}? The file is removed."
   },
   "instanceForm": {
@@ -505,8 +500,6 @@
     "general": "General",
     "dropped": "Not in this algo version and removed on saving: {names}",
     "changed": "Changed",
-    "default": "Default {value}",
-    "reset": "Reset",
     "attribution": "Trade attribution",
     "attributionMode": "Mode",
     "modes": {
@@ -531,13 +524,14 @@
     "restoreComment": "Restored from version {version}",
     "unknownParameters": "The algo does not know these parameters: {names}",
     "pickColor": "Pick a colour",
-    "loadFile": "Load parameters from file",
-    "loadFileHint": "A {formats} file, e.g. exported from the platform. Values the algo knows replace the form's; nothing is saved until you save.",
     "fileLoaded": "{count} values from {file} applied.",
     "fileRejected": "Not applied, they break the algo's rules: {names}",
     "fileUnknown": "Not known to this algo version, ignored: {names}",
     "fileMissing": "Not in the file, left as they were: {names}",
-    "andMore": "{names} and {count} more"
+    "andMore": "{names} and {count} more",
+    "instanceGroup": "Instance",
+    "tradingGroup": "Trading",
+    "changes": "No unsaved changes | 1 unsaved change | {count} unsaved changes"
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -546,7 +540,6 @@
     "currentBadge": "Current",
     "notDeployed": "A saved version takes effect only once it is applied.",
     "algoGone": "Algo version deleted",
-    "value": "Value",
     "created": "Created",
     "restore": "Restore…",
     "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker.",
@@ -592,5 +585,24 @@
     "rejected": "The server did not accept this value.",
     "algoFile": "Choose an .algo file.",
     "chooseAccount": "Choose an account."
+  },
+  "parameters": {
+    "search": "Search parameters",
+    "searchPlaceholder": "Name or label",
+    "onlyChanged": "Only changed",
+    "count": "1 parameter | {count} parameters",
+    "changedCount": "{count} changed",
+    "issueCount": "1 error | {count} errors",
+    "noMatch": "No matching parameters.",
+    "resetAll": "Reset all to default",
+    "resetAllConfirm": "Reset all {count} changed parameters to their default? Nothing is saved until you press \"Save\".",
+    "resetOne": "Reset to default ({value})",
+    "default": "Default {value}",
+    "unknownGroup": "Not in the algo",
+    "fileTitle": "Load parameters from a file",
+    "fileHint": "A {formats} file, e.g. exported from the platform. It fills the form; nothing is saved until you press \"Save\".",
+    "fileChoose": "Choose file",
+    "fileDrop": "or drop it here",
+    "describe": "Description of {name}"
   }
 }

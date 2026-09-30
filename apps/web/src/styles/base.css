@@ -56,8 +56,9 @@ h2 {
 
 /*
  * Tooltip from `data-tooltip`, above the element and flush with its right edge (actions sit at the right of rows and
- * the header). Shown at once on hover and keyboard focus, unlike the delayed native `title`; the element keeps its
- * own accessible name (aria-label or text), so the tooltip is visual only.
+ * the header); tooltip.ts flips it to the left edge where it would leave the window. Shown at once on hover and
+ * keyboard focus, unlike the delayed native `title`; the element keeps its own accessible name (aria-label or text),
+ * so the tooltip is visual only.
  */
 [data-tooltip] {
   position: relative;
@@ -84,6 +85,24 @@ h2 {
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
+}
+
+/* An open disclosure already shows its content; on touch the hover state would keep the tooltip up. */
+[data-tooltip][aria-expanded="true"]::after {
+  display: none;
+}
+
+/* Set by tooltip.ts when hanging from the right edge would leave the window. */
+[data-tooltip][data-tooltip-align="start"]::after {
+  right: auto;
+  left: 0;
+}
+
+/* Long texts (descriptions) wrap instead of running off the screen. */
+[data-tooltip-wrap]::after {
+  width: max-content;
+  max-width: min(360px, 80vw);
+  white-space: normal;
 }
 
 [data-tooltip]:hover::after,

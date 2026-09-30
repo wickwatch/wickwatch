@@ -9,6 +9,7 @@ import { isAdmin } from "../session";
 import { system } from "../system";
 import AppBanner from "./AppBanner.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
+import ParameterList from "./ParameterList.vue";
 
 /**
  * The "Configuration" tab of an instance. `managed` is set when Wickwatch keeps the configuration; otherwise only the
@@ -86,28 +87,8 @@ const schemaOf = (config: InstanceConfigRow): ParameterSchema[] =>
   algos.value.find((a) => a.id === config.algo.id)?.parameters ?? [];
 const show = (value: unknown) => (value === undefined ? "–" : String(value));
 
-interface Row {
-  name: string;
-  label: string;
-  value: unknown;
-  default: unknown;
-}
-/** Parameters of the current configuration in schema order, then values the schema does not know. */
-const rows = computed<Row[]>(() => {
-  const config = props.managed?.config;
-  if (!config) return [];
-  const schema = schemaOf(config);
-  const known = schema.map((p) => ({
-    name: p.name,
-    label: p.label ?? p.name,
-    value: config.parameters[p.name],
-    default: p.default,
-  }));
-  const extra = Object.keys(config.parameters)
-    .filter((k) => !schema.some((p) => p.name === k))
-    .map((k) => ({ name: k, label: k, value: config.parameters[k], default: undefined }));
-  return [...known, ...extra];
-});
+/** The algo's parameters; empty if the algo version was deleted, then the values show as "not in the algo". */
+const schema = computed<ParameterSchema[]>(() => (props.managed ? schemaOf(props.managed.config) : []));
 
 const attributionText = (c: InstanceConfigRow) =>
   [t(`instanceForm.modes.${c.attribution.mode}`), c.attribution.orderLabel].filter(Boolean).join(" · ");
@@ -195,35 +176,7 @@ function changes(index: number): string[] {
           <dt>{{ $t("instanceForm.attribution") }}</dt>
           <dd>{{ attributionText(managed.config) }}</dd>
         </dl>
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">{{ $t("algos.parameter") }}</th>
-                <th scope="col">{{ $t("instanceConfig.value") }}</th>
-                <th scope="col">{{ $t("algos.default") }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="r in rows" :key="r.name">
-                <th scope="row">
-                  <span>{{ r.label }}</span>
-                  <span v-if="r.label !== r.name" class="mono muted key">{{ r.name }}</span>
-                </th>
-                <td class="mono">
-                  {{ show(r.value) }}
-                  <span
-                    v-if="r.default !== undefined && r.value !== undefined && r.value !== r.default"
-                    class="pill tone-warning"
-                  >
-                    {{ $t("instanceForm.changed") }}
-                  </span>
-                </td>
-                <td class="mono muted">{{ show(r.default) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ParameterList mode="view" :schema="schema" :values="managed.config.parameters" />
       </section>
 
       <section class="panel card" aria-labelledby="versions-title">
@@ -327,40 +280,6 @@ p {
 
 .facts dd {
   margin: 0;
-}
-
-.table-wrap {
-  position: relative;
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--ww-size-sm);
-}
-
-th,
-td {
-  padding: var(--ww-space-2) var(--ww-space-3);
-  border-bottom: 1px solid var(--ww-border);
-  text-align: left;
-  vertical-align: top;
-}
-
-thead th {
-  color: var(--ww-text-muted);
-  font-size: var(--ww-size-xs);
-  font-weight: 600;
-}
-
-tbody th {
-  font-weight: 500;
-}
-
-.key {
-  display: block;
-  font-size: var(--ww-size-xs);
 }
 
 .history {

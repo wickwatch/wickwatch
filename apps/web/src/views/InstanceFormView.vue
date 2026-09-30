@@ -2,7 +2,7 @@
 import type { AttributionMode, ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
 // A plain function without the schema library, unlike the core's main entry.
 import { validateParameters } from "@wickwatch/core/parameters";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -14,9 +14,11 @@ import {
   type ConfigInput,
   type InstanceConfigRow,
 } from "../api";
+import AppIcon from "../components/AppIcon.vue";
 import FieldError from "../components/FieldError.vue";
-import ParameterField from "../components/ParameterField.vue";
+import ParameterList from "../components/ParameterList.vue";
 import { formatDateTime } from "../format";
+import { splitLabel } from "../parameter-label";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
@@ -59,11 +61,6 @@ const schema = computed<ParameterSchema[]>(() => algo.value?.parameters ?? []);
 const periods = computed(() => system.value?.periods ?? []);
 /** Values that the chosen algo version does not know; they are left out when saving. */
 const dropped = computed(() => Object.keys(values.value).filter((k) => !schema.value.some((p) => p.name === k)));
-const groups = computed(() => {
-  const byGroup = new Map<string, ParameterSchema[]>();
-  for (const p of schema.value) byGroup.set(p.group ?? "", [...(byGroup.get(p.group ?? "") ?? []), p]);
-  return [...byGroup.entries()];
-});
 const algoGroups = computed(() => {
   const byName = new Map<string, AlgoRow[]>();
   for (const a of algos.value) byName.set(a.name, [...(byName.get(a.name) ?? []), a]);
@@ -107,18 +104,30 @@ const formats = computed(() => system.value?.parameterFormats ?? []);
 type Tone = "positive" | "negative" | "warning" | "muted";
 const fileNotice = ref<{ tone: Tone; text: string }[]>();
 const LISTED = 8;
-const label = (n: string) => schema.value.find((p) => p.name === n)?.label ?? n;
+/** The short name, without a description written into the label. */
+const label = (n: string) => splitLabel(schema.value.find((p) => p.name === n)?.label ?? n).title;
 function names(list: string[]): string {
   const shown = list.slice(0, LISTED).map(label).join(", ");
   return list.length > LISTED ? t("instanceForm.andMore", { names: shown, count: list.length - LISTED }) : shown;
 }
 
-/** Takes the values of a parameter file (e.g. .cbotset) into the form; nothing is saved yet. */
-async function loadFile(event: Event) {
+function onFileInput(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
-  if (!file || algoId.value === undefined) return;
+  if (file) void loadFile(file);
+}
+/** Counts enter/leave, since moving over the zone's children fires both. */
+const dragDepth = ref(0);
+function onDrop(event: DragEvent) {
+  dragDepth.value = 0;
+  const file = event.dataTransfer?.files[0];
+  if (file) void loadFile(file);
+}
+
+/** Takes the values of a parameter file (e.g. .cbotset) into the form; nothing is saved yet. */
+async function loadFile(file: File) {
+  if (algoId.value === undefined) return;
   fileNotice.value = undefined;
   try {
     const parsed = await api.parseParameterFile(algoId.value, file);
@@ -182,6 +191,32 @@ function apply(config: InstanceConfigRow) {
   orderLabel.value = config.attribution.orderLabel ?? "";
 }
 
+interface Snapshot {
+  fields: unknown[];
+  values: Record<string, unknown>;
+}
+const snapshot = (): Snapshot => ({
+  fields: [algoId.value, symbol.value, period.value, mode.value, orderLabel.value],
+  values: { ...values.value },
+});
+function snapshotOf(config: InstanceConfigRow): Snapshot {
+  const found = config.algo.id === null ? undefined : algos.value.find((a) => a.id === config.algo.id);
+  return {
+    fields: [found?.id, config.symbol, config.period, config.attribution.mode, config.attribution.orderLabel ?? ""],
+    values: { ...defaults(found?.parameters ?? []), ...config.parameters },
+  };
+}
+/** The configuration that was edited or duplicated, to count what the user changed since. */
+const initial = ref<Snapshot>();
+const changeCount = computed(() => {
+  const start = initial.value;
+  if (!start) return undefined;
+  const now = snapshot();
+  const fields = start.fields.filter((f, i) => f !== now.fields[i]).length;
+  const keys = new Set([...Object.keys(start.values), ...Object.keys(now.values)]);
+  return fields + [...keys].filter((k) => start.values[k] !== now.values[k]).length;
+});
+
 onMounted(async () => {
   try {
     const [algoRows, accountRows, detail] = await Promise.all([
@@ -199,6 +234,8 @@ onMounted(async () => {
       if (editing.value && wanted && wanted !== detail.config.version) {
         comment.value = t("instanceForm.restoreComment", { version: wanted });
       }
+      // Changes count against the saved configuration; a restored older version shows its differences.
+      initial.value = snapshotOf(detail.config);
     } else {
       accountId.value = accountRows[0]?.id;
       algoId.value = algoRows[0]?.id;
@@ -216,6 +253,8 @@ async function save() {
   sent.value = true;
   const fieldsOk = form.validate();
   if (!fieldsOk || shownIssues.value.size) {
+    // After the render, when the group with the problem has opened.
+    await nextTick();
     if (fieldsOk) document.querySelector<HTMLElement>(`#param-${String([...shownIssues.value.keys()][0])}`)?.focus();
     return;
   }
@@ -288,85 +327,96 @@ const algoLabel = (a: AlgoRow) =>
 
       <section class="panel card" aria-labelledby="basics-title">
         <h2 id="basics-title">{{ $t("instanceForm.basics") }}</h2>
-        <div class="grid">
-          <label class="field">
-            {{ $t("instanceForm.name") }}
-            <input
-              v-model.trim="name"
-              v-normalize="normalizers.slug"
-              v-bind="nameField.attrs.value"
-              class="input mono"
-              required
-              maxlength="63"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-              :disabled="editing !== undefined"
-            />
-            <FieldError :field="nameField" />
-            <span class="field__hint">{{ $t("instanceForm.nameHint") }}</span>
-          </label>
-          <label class="field">
-            {{ $t("instanceForm.account") }}
-            <select
-              v-model="accountId"
-              v-bind="accountField.attrs.value"
-              class="input"
-              required
-              :disabled="editing !== undefined"
-            >
-              <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.displayName }} · {{ a.number }}</option>
-            </select>
-            <FieldError :field="accountField" />
-            <span class="field__hint">{{ editing ? $t("instanceForm.fixedHint") : "" }}</span>
-          </label>
-          <label class="field">
-            {{ $t("instanceForm.algo") }}
-            <select v-model="algoId" v-bind="algoField.attrs.value" class="input" required>
-              <optgroup v-for="[algoName, versions] in algoGroups" :key="algoName" :label="algoName">
-                <option v-for="a in versions" :key="a.id" :value="a.id">{{ algoName }} {{ algoLabel(a) }}</option>
-              </optgroup>
-            </select>
-            <FieldError :field="algoField" />
-            <span v-if="algo?.fullAccess" class="field__hint tone-warning">{{ $t("instanceForm.fullAccess") }}</span>
-          </label>
-          <label class="field">
-            {{ $t("instanceForm.symbol") }}
-            <input
-              v-model.trim="symbol"
-              v-normalize="normalizers.noSpaces"
-              v-bind="symbolField.attrs.value"
-              class="input mono"
-              list="symbols-list"
-              required
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-            />
-            <FieldError :field="symbolField" />
-            <span class="field__hint" :class="{ 'tone-negative': symbolsError }">
-              {{
-                symbolsError
-                  ? $t("instanceForm.symbolsFailed", { reason: symbolsError })
-                  : $t("instanceForm.symbolsHint", { count: symbols.length })
-              }}
-            </span>
-          </label>
-          <label class="field">
-            {{ $t("instanceForm.period") }}
-            <input
-              v-model.trim="period"
-              v-normalize="normalizers.noSpaces"
-              v-bind="periodField.attrs.value"
-              class="input mono"
-              list="periods-list"
-              required
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-            />
-            <FieldError :field="periodField" />
-          </label>
+        <div class="basics">
+          <fieldset class="basics__group">
+            <legend>{{ $t("instanceForm.instanceGroup") }}</legend>
+            <div class="basics__fields">
+              <label class="field">
+                {{ $t("instanceForm.name") }}
+                <input
+                  v-model.trim="name"
+                  v-normalize="normalizers.slug"
+                  v-bind="nameField.attrs.value"
+                  class="input mono"
+                  required
+                  maxlength="63"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  :disabled="editing !== undefined"
+                />
+                <FieldError :field="nameField" />
+                <span v-if="!editing" class="field__hint hint--focus">{{ $t("instanceForm.nameHint") }}</span>
+              </label>
+              <label class="field">
+                {{ $t("instanceForm.account") }}
+                <select
+                  v-model="accountId"
+                  v-bind="accountField.attrs.value"
+                  class="input"
+                  required
+                  :disabled="editing !== undefined"
+                >
+                  <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.displayName }} · {{ a.number }}</option>
+                </select>
+                <FieldError :field="accountField" />
+              </label>
+            </div>
+            <p v-if="editing" class="field__hint">{{ $t("instanceForm.fixedHint") }}</p>
+          </fieldset>
+          <fieldset class="basics__group">
+            <legend>{{ $t("instanceForm.tradingGroup") }}</legend>
+            <div class="basics__fields">
+              <label class="field">
+                {{ $t("instanceForm.algo") }}
+                <select v-model="algoId" v-bind="algoField.attrs.value" class="input" required>
+                  <optgroup v-for="[algoName, versions] in algoGroups" :key="algoName" :label="algoName">
+                    <option v-for="a in versions" :key="a.id" :value="a.id">{{ algoName }} {{ algoLabel(a) }}</option>
+                  </optgroup>
+                </select>
+                <FieldError :field="algoField" />
+                <span v-if="algo?.fullAccess" class="field__hint tone-warning">{{
+                  $t("instanceForm.fullAccess")
+                }}</span>
+              </label>
+              <label class="field">
+                {{ $t("instanceForm.symbol") }}
+                <input
+                  v-model.trim="symbol"
+                  v-normalize="normalizers.noSpaces"
+                  v-bind="symbolField.attrs.value"
+                  class="input mono"
+                  list="symbols-list"
+                  required
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                />
+                <FieldError :field="symbolField" />
+                <span v-if="symbolsError" class="field__hint tone-negative">
+                  {{ $t("instanceForm.symbolsFailed", { reason: symbolsError }) }}
+                </span>
+                <span v-else class="field__hint hint--focus">
+                  {{ $t("instanceForm.symbolsHint", { count: symbols.length }) }}
+                </span>
+              </label>
+              <label class="field">
+                {{ $t("instanceForm.period") }}
+                <input
+                  v-model.trim="period"
+                  v-normalize="normalizers.noSpaces"
+                  v-bind="periodField.attrs.value"
+                  class="input mono"
+                  list="periods-list"
+                  required
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                />
+                <FieldError :field="periodField" />
+              </label>
+            </div>
+          </fieldset>
         </div>
         <datalist id="symbols-list">
           <option v-for="s in symbols" :key="s" :value="s" />
@@ -380,18 +430,34 @@ const algoLabel = (a: AlgoRow) =>
         <h2 id="params-title">{{ $t("instanceForm.parameters") }}</h2>
         <p class="muted card__hint">{{ $t("instanceForm.parametersHint") }}</p>
         <div v-if="formats.length && algoId !== undefined" class="file-load">
-          <label class="btn btn--small">
-            {{ $t("instanceForm.loadFile") }}
-            <input
-              type="file"
-              class="visually-hidden"
-              :accept="formats.map((f) => `.${f}`).join(',')"
-              @change="loadFile"
-            />
-          </label>
-          <span class="field__hint">{{
-            $t("instanceForm.loadFileHint", { formats: formats.map((f) => `.${f}`).join(", ") })
-          }}</span>
+          <div
+            class="dropzone"
+            :class="{ 'dropzone--over': dragDepth > 0 }"
+            @dragenter.prevent="dragDepth++"
+            @dragover.prevent
+            @dragleave="dragDepth = Math.max(0, dragDepth - 1)"
+            @drop.prevent="onDrop"
+          >
+            <AppIcon name="upload" :size="24" class="dropzone__icon" />
+            <div class="dropzone__text">
+              <strong>{{ $t("parameters.fileTitle") }}</strong>
+              <span class="muted">{{
+                $t("parameters.fileHint", { formats: formats.map((f) => `.${f}`).join(", ") })
+              }}</span>
+            </div>
+            <div class="dropzone__action">
+              <label class="btn">
+                {{ $t("parameters.fileChoose") }}
+                <input
+                  type="file"
+                  class="visually-hidden"
+                  :accept="formats.map((f) => `.${f}`).join(',')"
+                  @change="onFileInput"
+                />
+              </label>
+              <span class="muted dropzone__drop">{{ $t("parameters.fileDrop") }}</span>
+            </div>
+          </div>
           <div v-if="fileNotice" role="status">
             <p v-for="line in fileNotice" :key="line.text" class="file-load__line" :class="`tone-${line.tone}`">
               {{ line.text }}
@@ -402,25 +468,20 @@ const algoLabel = (a: AlgoRow) =>
         <p v-if="dropped.length" class="tone-warning">
           {{ $t("instanceForm.dropped", { names: dropped.join(", ") }) }}
         </p>
-        <fieldset v-for="[group, params] in groups" :key="group" class="group">
-          <legend>{{ group || $t("instanceForm.general") }}</legend>
-          <div class="grid">
-            <ParameterField
-              v-for="p in params"
-              :key="p.name"
-              v-model="values[p.name]"
-              :param="p"
-              :issue="shownIssues.get(p.name)"
-              symbols-list="symbols-list"
-              periods-list="periods-list"
-            />
-          </div>
-        </fieldset>
+        <ParameterList
+          v-if="schema.length"
+          v-model:values="values"
+          mode="edit"
+          :schema="schema"
+          :issues="shownIssues"
+          symbols-list="symbols-list"
+          periods-list="periods-list"
+        />
       </section>
 
       <section class="panel card" aria-labelledby="attribution-title">
         <h2 id="attribution-title">{{ $t("instanceForm.attribution") }}</h2>
-        <div class="grid">
+        <div class="attribution">
           <label class="field">
             {{ $t("instanceForm.attributionMode") }}
             <select v-model="mode" class="input">
@@ -445,22 +506,32 @@ const algoLabel = (a: AlgoRow) =>
         </div>
       </section>
 
-      <section class="panel card" aria-labelledby="save-title">
-        <h2 id="save-title" class="visually-hidden">{{ $t("action.save") }}</h2>
+      <section class="panel card" aria-labelledby="comment-title">
+        <h2 id="comment-title" class="visually-hidden">{{ $t("instanceForm.comment") }}</h2>
         <label class="field">
           {{ $t("instanceForm.comment") }}
           <input v-model="comment" class="input" maxlength="500" autocomplete="off" />
           <span class="field__hint">{{ $t("instanceForm.commentHint") }}</span>
         </label>
-        <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
-        <div class="actions">
-          <button type="submit" class="btn btn--primary" :disabled="busy || algoId === undefined">
-            {{ $t("action.save") }}
-          </button>
-          <RouterLink :to="cancelTarget" class="btn btn--ghost">{{ $t("action.cancel") }}</RouterLink>
-          <span class="muted field__hint">{{ $t("instanceForm.noRestart") }}</span>
-        </div>
       </section>
+
+      <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
+      <!-- Stays in view at the bottom: the parameter list can be very long. -->
+      <div class="panel savebar">
+        <button type="submit" class="btn btn--primary" :disabled="busy || algoId === undefined">
+          {{ $t("action.save") }}
+        </button>
+        <RouterLink :to="cancelTarget" class="btn btn--ghost">{{ $t("action.cancel") }}</RouterLink>
+        <span
+          v-if="changeCount !== undefined"
+          class="savebar__count"
+          :class="changeCount ? 'tone-warning' : 'muted'"
+          role="status"
+        >
+          {{ $t("instanceForm.changes", changeCount) }}
+        </span>
+        <span class="muted field__hint savebar__hint">{{ $t("instanceForm.noRestart") }}</span>
+      </div>
     </form>
   </div>
 </template>
@@ -500,33 +571,118 @@ p {
   font-size: var(--ww-size-sm);
 }
 
-.grid {
+.attribution {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ww-space-4);
 }
 
-.group {
-  min-width: 0;
-  margin: 0;
-  padding: var(--ww-space-4) 0 0;
-  border: 0;
-  border-top: 1px solid var(--ww-border);
+.basics {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--ww-space-6);
 }
 
-.group legend {
-  padding-right: var(--ww-space-2);
+.basics__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.basics__group legend {
+  margin-bottom: var(--ww-space-3);
+  padding: 0;
   color: var(--ww-text-muted);
   font-size: var(--ww-size-xs);
   font-weight: 600;
   text-transform: uppercase;
 }
 
-.actions {
+.basics__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--ww-space-4);
+}
+
+/* Long hints only while the field is being filled in; errors always show. */
+.field:not(:focus-within) > .hint--focus {
+  display: none;
+}
+
+.dropzone {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-4);
+  align-items: center;
+  padding: var(--ww-space-4) var(--ww-space-5);
+  border: 1px dashed var(--ww-border-strong);
+  border-radius: var(--ww-radius-lg);
+  background: var(--ww-inset);
+}
+
+.dropzone--over {
+  border-color: var(--ww-accent);
+  border-style: solid;
+}
+
+.dropzone__icon {
+  color: var(--ww-text-muted);
+}
+
+.dropzone__text {
+  display: flex;
+  flex: 1 1 320px;
+  flex-direction: column;
+  gap: var(--ww-space-1);
+  font-size: var(--ww-size-sm);
+}
+
+.dropzone__action {
+  display: flex;
+  gap: var(--ww-space-3);
+  align-items: center;
+}
+
+.dropzone__action .btn:focus-within {
+  outline: 2px solid var(--ww-focus);
+  outline-offset: 2px;
+}
+
+.dropzone__drop {
+  font-size: var(--ww-size-xs);
+}
+
+.savebar {
+  position: sticky;
+  bottom: var(--ww-space-4);
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   gap: var(--ww-space-3);
   align-items: center;
+  padding: var(--ww-space-3) var(--ww-space-5);
+  border-color: var(--ww-border-strong);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ww-bg) 70%, transparent);
+}
+
+.savebar__count {
+  font-size: var(--ww-size-sm);
+  font-weight: 600;
+}
+
+.savebar__hint {
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .basics,
+  .attribution {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
@@ -539,12 +695,6 @@ p {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-2);
-  align-items: flex-start;
-}
-
-.file-load .btn:focus-within {
-  outline: 2px solid var(--ww-focus);
-  outline-offset: 2px;
 }
 
 .file-load__line {

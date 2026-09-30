@@ -477,11 +477,6 @@
     "uploadedAt": "hochgeladen {time}",
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} Parameter",
-    "parameter": "Parameter",
-    "group": "Gruppe",
-    "type": "Typ",
-    "default": "Default",
-    "range": "Bereich / Optionen",
     "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt."
   },
   "instanceForm": {
@@ -505,8 +500,6 @@
     "general": "Allgemein",
     "dropped": "In dieser Algo-Version nicht vorhanden, wird beim Speichern entfernt: {names}",
     "changed": "Geändert",
-    "default": "Default {value}",
-    "reset": "Zurücksetzen",
     "attribution": "Trade-Zuordnung",
     "attributionMode": "Modus",
     "modes": {
@@ -531,13 +524,14 @@
     "restoreComment": "Wiederhergestellt aus Version {version}",
     "unknownParameters": "Diese Parameter kennt der Algo nicht: {names}",
     "pickColor": "Farbe wählen",
-    "loadFile": "Parameter aus Datei laden",
-    "loadFileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Werte, die das Algo kennt, ersetzen die im Formular; gespeichert wird erst mit „Speichern“.",
     "fileLoaded": "{count} Werte aus {file} übernommen.",
     "fileRejected": "Nicht übernommen, sie verletzen die Regeln des Algos: {names}",
     "fileUnknown": "Dieser Algo-Version unbekannt, ignoriert: {names}",
     "fileMissing": "Nicht in der Datei, unverändert: {names}",
-    "andMore": "{names} und {count} weitere"
+    "andMore": "{names} und {count} weitere",
+    "instanceGroup": "Instanz",
+    "tradingGroup": "Handel",
+    "changes": "Keine ungespeicherten Änderungen | 1 ungespeicherte Änderung | {count} ungespeicherte Änderungen"
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -546,7 +540,6 @@
     "currentBadge": "Aktuell",
     "notDeployed": "Eine gespeicherte Version wirkt erst, wenn sie übernommen wird.",
     "algoGone": "Algo-Version gelöscht",
-    "value": "Wert",
     "created": "Angelegt",
     "restore": "Wiederherstellen…",
     "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts.",
@@ -592,5 +585,24 @@
     "rejected": "Der Server hat diesen Wert nicht angenommen.",
     "algoFile": "Bitte eine .algo-Datei wählen.",
     "chooseAccount": "Bitte ein Konto wählen."
+  },
+  "parameters": {
+    "search": "Parameter suchen",
+    "searchPlaceholder": "Name oder Bezeichnung",
+    "onlyChanged": "Nur geänderte",
+    "count": "1 Parameter | {count} Parameter",
+    "changedCount": "{count} geändert",
+    "issueCount": "1 Fehler | {count} Fehler",
+    "noMatch": "Keine passenden Parameter.",
+    "resetAll": "Alle auf Standard zurücksetzen",
+    "resetAllConfirm": "Alle {count} geänderten Parameter auf ihren Standard zurücksetzen? Gespeichert wird erst mit „Speichern“.",
+    "resetOne": "Auf Standard zurücksetzen ({value})",
+    "default": "Standard {value}",
+    "unknownGroup": "Nicht im Algo",
+    "fileTitle": "Parameter aus Datei laden",
+    "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Sie füllt das Formular; gespeichert wird erst mit „Speichern“.",
+    "fileChoose": "Datei wählen",
+    "fileDrop": "oder hierher ziehen",
+    "describe": "Beschreibung zu {name}"
   }
 }

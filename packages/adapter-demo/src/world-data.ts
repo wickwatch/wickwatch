@@ -88,7 +88,14 @@ export const ALGOS: Record<string, DemoAlgo> = {
       },
       { name: "StopLossPoints", type: "int", group: "Risk", default: 40, min: 5, max: 500, step: 5 },
       { name: "TakeProfitPoints", type: "int", group: "Risk", default: 80, min: 5, max: 1000, step: 5 },
-      { name: "SessionStart", type: "time", group: "Session", default: "08:00" },
+      {
+        name: "SessionStart",
+        type: "time",
+        // A description written into the label, as many bots do; the dashboard shows it behind an info button.
+        label: "Session start - Start of the trading window in the account time zone; no new entries before it.",
+        group: "Session",
+        default: "08:00",
+      },
       { name: "SessionEnd", type: "time", group: "Session", default: "17:30" },
       { name: "EntryMode", type: "enum", group: "Signal", default: "Breakout", options: ["Breakout", "Pullback"] },
       { name: "UseTrendFilter", type: "bool", group: "Signal", default: true },

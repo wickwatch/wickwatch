@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type AlgoRow } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import ParameterList from "../components/ParameterList.vue";
 import FieldError from "../components/FieldError.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
@@ -168,39 +169,7 @@ const fileSize = (bytes: number) => {
           </div>
           <details>
             <summary>{{ $t("algos.parameters", { count: a.parameters.length }) }}</summary>
-            <div class="table-wrap">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th scope="col">{{ $t("algos.parameter") }}</th>
-                    <th scope="col">{{ $t("algos.group") }}</th>
-                    <th scope="col">{{ $t("algos.type") }}</th>
-                    <th scope="col">{{ $t("algos.default") }}</th>
-                    <th scope="col">{{ $t("algos.range") }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in a.parameters" :key="p.name">
-                    <th scope="row">
-                      <span>{{ p.label ?? p.name }}</span>
-                      <span v-if="p.label" class="mono muted param-key">{{ p.name }}</span>
-                    </th>
-                    <td>{{ p.group ?? "" }}</td>
-                    <td class="mono">{{ p.type }}</td>
-                    <td class="mono">{{ p.default === undefined ? "" : String(p.default) }}</td>
-                    <td class="mono">
-                      {{
-                        p.options
-                          ? p.options.join(" | ")
-                          : [p.min, p.max].some((v) => v !== undefined)
-                            ? `${p.min ?? ""} … ${p.max ?? ""}`
-                            : ""
-                      }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <ParameterList mode="schema" :schema="a.parameters" class="algo-params" />
           </details>
         </div>
       </section>
@@ -291,39 +260,8 @@ details summary {
   font-size: var(--ww-size-sm);
 }
 
-.table-wrap {
-  position: relative;
-  overflow-x: auto;
-  margin-top: var(--ww-space-2);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--ww-size-sm);
-}
-
-th,
-td {
-  padding: var(--ww-space-2) var(--ww-space-3);
-  border-bottom: 1px solid var(--ww-border);
-  text-align: left;
-  vertical-align: top;
-}
-
-thead th {
-  color: var(--ww-text-muted);
-  font-size: var(--ww-size-xs);
-  font-weight: 600;
-}
-
-tbody th {
-  font-weight: 500;
-}
-
-.param-key {
-  display: block;
-  font-size: var(--ww-size-xs);
+.algo-params {
+  margin-top: var(--ww-space-3);
 }
 
 @media (max-width: 640px) {
