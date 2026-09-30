@@ -17,6 +17,15 @@ const loading = ref(true);
 const loadingMore = ref(false);
 const error = ref<string>();
 const action = ref("");
+/** "" for all, "today" from the viewer's midnight, or a number of days back. */
+const period = ref<"" | "today" | "7" | "30">("");
+const since = () => {
+  if (!period.value) return undefined;
+  const start = new Date();
+  if (period.value === "today") start.setHours(0, 0, 0, 0);
+  else start.setTime(start.getTime() - Number(period.value) * 24 * 60 * 60 * 1000);
+  return start.toISOString();
+};
 const target = ref("");
 
 /** Groups by the part before the dot ("instance."), each followed by its actions. */
@@ -36,8 +45,10 @@ async function load(append = false) {
   else loading.value = true;
   try {
     const before = append ? entries.value.at(-1)?.id : undefined;
+    const from = since();
     const page = await api.audit({
       ...(action.value ? { action: action.value } : {}),
+      ...(from ? { since: from } : {}),
       ...(target.value.trim() ? { target: target.value.trim() } : {}),
       ...(before !== undefined ? { before } : {}),
     });
@@ -94,6 +105,15 @@ onMounted(() => {
 
     <template v-else>
       <form class="filters" @submit.prevent="load()">
+        <label class="field">
+          {{ $t("audit.period") }}
+          <select v-model="period" class="input" @change="load()">
+            <option value="">{{ $t("audit.periods.all") }}</option>
+            <option value="today">{{ $t("audit.periods.today") }}</option>
+            <option value="7">{{ $t("audit.periods.days", { days: 7 }) }}</option>
+            <option value="30">{{ $t("audit.periods.days", { days: 30 }) }}</option>
+          </select>
+        </label>
         <label class="field">
           {{ $t("audit.action") }}
           <select v-model="action" class="input" @change="load()">

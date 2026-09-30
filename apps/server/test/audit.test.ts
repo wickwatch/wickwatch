@@ -47,6 +47,24 @@ describe("audit log API", () => {
     expect(next).toMatchObject({ entries: [{ target: "bot-a" }], more: false });
   });
 
+  it("filters by time", async () => {
+    await t.db
+      .insertInto("audit_log")
+      .values({
+        time: "2020-01-01T00:00:00.000Z",
+        user_id: null,
+        action: "instance.stop",
+        target: "old-bot",
+        details: null,
+      })
+      .execute();
+    const targets = async (query: string) =>
+      (await get(query)).json<{ entries: { target?: string }[] }>().entries.map((e) => e.target);
+    expect(await targets("?action=instance.stop")).toContain("old-bot");
+    expect(await targets("?action=instance.stop&since=2021-01-01T00:00:00.000Z")).not.toContain("old-bot");
+    expect((await get("?since=yesterday")).statusCode).toBe(400);
+  });
+
   it("is for admins only", async () => {
     const viewer = await loginAs(t, "viewer");
     expect((await get("", viewer)).statusCode).toBe(403);

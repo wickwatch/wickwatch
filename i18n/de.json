@@ -726,6 +726,12 @@
       "instance": "Instanzen",
       "order": "Orders",
       "position": "Positionen"
+    },
+    "period": "Zeitraum",
+    "periods": {
+      "all": "Alle",
+      "today": "Heute",
+      "days": "Letzte {days} Tage"
     }
   },
   "summary": {

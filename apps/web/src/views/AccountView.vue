@@ -104,7 +104,7 @@ const meta = computed(() => {
 
     <template v-if="data && account">
       <section class="head">
-        <div>
+        <div class="head__title">
           <div class="head__name">
             <h1>{{ account.displayName }}</h1>
             <StatusBadge :account="account.state" />
@@ -267,12 +267,30 @@ const meta = computed(() => {
   font-size: var(--ww-size-sm);
 }
 
+/*
+ * Name and actions share the first row, the meta line runs below at full width: on phones the actions (icons only
+ * there) never drop below the meta line or squeeze it.
+ */
 .head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-4);
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name actions"
+    "meta meta";
+  gap: var(--ww-space-1) var(--ww-space-4);
+  align-items: start;
+}
+
+.head__title {
+  display: contents;
+}
+
+.head__name {
+  grid-area: name;
+}
+
+.head__actions {
+  grid-area: actions;
 }
 
 .head__name {
@@ -286,16 +304,19 @@ h1 {
   margin: 0;
   font-size: var(--ww-size-3xl);
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .head__meta {
-  margin: var(--ww-space-1) 0 0;
+  grid-area: meta;
+  margin: 0;
   font-size: var(--ww-size-sm);
 }
 
 .head__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--ww-space-2);
 }
 

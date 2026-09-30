@@ -8021,7 +8021,7 @@
         "tags": [
           "system"
         ],
-        "description": "`action` filters by exact action or, ending in a dot, by prefix (`instance.`); `target` by part of the target. `before` pages back: pass the smallest `id` of the previous page.",
+        "description": "`action` filters by exact action or, ending in a dot, by prefix (`instance.`); `target` by part of the target; `since` by time. `before` pages back: pass the smallest `id` of the previous page.",
         "parameters": [
           {
             "schema": {
@@ -8048,6 +8048,15 @@
             },
             "in": "query",
             "name": "before",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "in": "query",
+            "name": "since",
             "required": false
           },
           {

@@ -236,10 +236,11 @@ export const api = {
       confirm: orderId,
     }),
   algos: () => request<AlgoRow[]>("algos"),
-  audit: (query: { action?: string; target?: string; before?: number }) => {
+  audit: (query: { action?: string; target?: string; since?: string; before?: number }) => {
     const params = new URLSearchParams();
     if (query.action) params.set("action", query.action);
     if (query.target) params.set("target", query.target);
+    if (query.since) params.set("since", query.since);
     if (query.before !== undefined) params.set("before", String(query.before));
     const qs = params.toString();
     return request<AuditPage>(`audit${qs ? `?${qs}` : ""}`);

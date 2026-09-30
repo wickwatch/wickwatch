@@ -46,7 +46,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - `pnpm start` and `pnpm dev:server` let `.env` win over variables exported in the shell.
 - Clock check with the Docker runtime: the server clock is compared hourly with `CLOCK_CHECK_URL` (default Cloudflare's trace); the header shows a clock icon with a tooltip (green up to 1 s, yellow up to 2 s, red beyond, each with its own shape; a question mark when the check had no usable answer lately, nothing when it is off), and more than 2 s raises an alert (`host_clock`, also as a notification).
 - Daily summary to the alert webhook at `DAILY_SUMMARY_TIME` in `DAILY_SUMMARY_TIMEZONE`: per account balance, equity, today's P&L, positions, instances and the challenge rules, and the number of open alerts; sent once a day, also after a restart.
-- Audit log page for admins (user menu): time, user or "Wickwatch" for its own actions, action, target (linked to instance and account pages), result and details; filters by action, action group and target, older entries page by page (`GET /api/v1/audit`).
+- Page heads on phones: the actions stay in the title row (icons only there) on the instance, account and algos pages instead of wrapping below the text.
+- Audit log page for admins (user menu), with a time range filter (today, 7 or 30 days): time, user or "Wickwatch" for its own actions, action, target (linked to instance and account pages), result and details; filters by action, action group and target, older entries page by page (`GET /api/v1/audit`).
 
 ### Fixed
 - Applying a configuration no longer starts an instance that had crashed.

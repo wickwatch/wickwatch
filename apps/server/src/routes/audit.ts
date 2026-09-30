@@ -26,11 +26,13 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
         tags: ["system"],
         summary: "Audit log entries, newest first (admins)",
         description:
-          "`action` filters by exact action or, ending in a dot, by prefix (`instance.`); `target` by part of the target. `before` pages back: pass the smallest `id` of the previous page.",
+          "`action` filters by exact action or, ending in a dot, by prefix (`instance.`); `target` by part of the target; `since` by time. `before` pages back: pass the smallest `id` of the previous page.",
         querystring: Type.Object({
           action: Type.Optional(Type.String({ maxLength: 100 })),
           target: Type.Optional(Type.String({ maxLength: 200 })),
           before: Type.Optional(Type.Integer({ minimum: 1 })),
+          /** Only entries at or after this time (ISO, UTC). */
+          since: Type.Optional(Type.String({ format: "date-time" })),
           limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_LIMIT })),
         }),
         response: {
@@ -46,7 +48,7 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
       },
     },
     async (request) => {
-      const { action, target, before } = request.query;
+      const { action, target, before, since } = request.query;
       const limit = request.query.limit ?? 100;
       const rows = await db
         .selectFrom("audit_log")
@@ -65,6 +67,7 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
         .$if(action !== undefined && !action.endsWith("."), (q) => q.where("audit_log.action", "=", action ?? ""))
         .$if(Boolean(target), (q) => q.where("audit_log.target", "like", `%${target ?? ""}%`))
         .$if(before !== undefined, (q) => q.where("audit_log.id", "<", before ?? 0))
+        .$if(since !== undefined, (q) => q.where("audit_log.time", ">=", new Date(since ?? 0).toISOString()))
         .orderBy("audit_log.id", "desc")
         .limit(limit + 1)
         .execute();

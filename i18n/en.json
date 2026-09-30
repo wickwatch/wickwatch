@@ -726,6 +726,12 @@
       "instance": "Instances",
       "order": "Orders",
       "position": "Positions"
+    },
+    "period": "Time range",
+    "periods": {
+      "all": "All",
+      "today": "Today",
+      "days": "Last {days} days"
     }
   },
   "summary": {

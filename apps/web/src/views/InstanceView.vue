@@ -195,6 +195,7 @@ async function remove() {
               icon="stop"
               :label="$t('action.stop')"
               show-label
+              collapse
               :disabled="busy"
               @click="act('stop')"
             />
@@ -203,6 +204,7 @@ async function remove() {
               icon="play"
               :label="$t('action.start')"
               show-label
+              collapse
               :disabled="busy"
               @click="act('start')"
             />
@@ -210,6 +212,7 @@ async function remove() {
               icon="restart"
               :label="$t('action.restart')"
               show-label
+              collapse
               :disabled="busy"
               @click="act('restart')"
             />
@@ -219,6 +222,7 @@ async function remove() {
               icon="edit"
               :label="$t('action.edit')"
               show-label
+              collapse
               :to="{ name: 'instance-edit', params: { ref: managed.name } }"
             />
             <MenuButton :label="$t('instance.more')" :items="moreItems" @select="onMore">
@@ -305,12 +309,30 @@ async function remove() {
   font-size: var(--ww-size-sm);
 }
 
+/*
+ * Name and actions share the first row, the meta line runs below at full width: on phones the actions (icons only
+ * there) never drop below the meta line or squeeze it.
+ */
 .head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-4);
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name actions"
+    "meta meta";
+  gap: var(--ww-space-1) var(--ww-space-4);
+  align-items: start;
+}
+
+.head__title {
+  display: contents;
+}
+
+.head__name {
+  grid-area: name;
+}
+
+.head__actions {
+  grid-area: actions;
 }
 
 .head__name {
@@ -327,13 +349,15 @@ h1 {
 }
 
 .head__title p {
-  margin: var(--ww-space-1) 0 0;
+  grid-area: meta;
+  margin: 0;
   font-size: var(--ww-size-sm);
 }
 
 .head__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--ww-space-2);
   align-items: center;
 }
@@ -389,6 +413,11 @@ p[role="alert"],
 }
 
 @media (max-width: 640px) {
+  /* Instance names are one word in a wide font: a size smaller, so they fit next to four action icons. */
+  h1 {
+    font-size: var(--ww-size-2xl);
+  }
+
   .detail {
     padding: var(--ww-space-4);
   }
