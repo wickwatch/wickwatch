@@ -6327,6 +6327,12 @@
                                     "enum": [
                                       "trailing"
                                     ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "trailing-eod-balance"
+                                    ]
                                   }
                                 ]
                               }
@@ -6573,6 +6579,12 @@
                                   "enum": [
                                     "trailing"
                                   ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "trailing-eod-balance"
+                                  ]
                                 }
                               ]
                             }
@@ -6786,6 +6798,12 @@
                                 "enum": [
                                   "trailing"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "trailing-eod-balance"
+                                ]
                               }
                             ]
                           }
@@ -6966,6 +6984,12 @@
                                   "type": "string",
                                   "enum": [
                                     "trailing"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "trailing-eod-balance"
                                   ]
                                 }
                               ]

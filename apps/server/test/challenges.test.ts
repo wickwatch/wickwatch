@@ -1,10 +1,11 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { tradingDayKey, type ChallengeProfile, type Overview } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dbAccountDirectory } from "../src/accounts";
 import { createAdapters } from "../src/adapters";
+import { evaluateForAccount } from "../src/challenges/store";
 import { loadChallengeTemplates } from "../src/challenges/templates";
 import { loadConfig } from "../src/config";
 import { seedDemoChallenges } from "../src/demo-seed";
@@ -56,10 +57,13 @@ describe("challenge templates", () => {
     expect(templates.map((t) => t.id)).toEqual(["firm-a-phase-1"]);
   });
 
-  it("has no templates for the example-only directory in the repo", async () => {
-    expect(
-      await loadChallengeTemplates(loadConfig({}, join(__dirname, "../../..")).challengeTemplatesDir, log),
-    ).toEqual([]);
+  it("loads every template in the repo without warnings", async () => {
+    const dir = loadConfig({}, join(__dirname, "../../..")).challengeTemplatesDir;
+    const files = readdirSync(dir).filter((f) => f.endsWith(".json") && !f.startsWith("_"));
+    const repoLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const templates = await loadChallengeTemplates(dir, repoLog as never);
+    expect(repoLog.warn).not.toHaveBeenCalled();
+    expect(templates.map((t) => `${t.id}.json`).sort()).toEqual(files.sort());
   });
 });
 
@@ -180,5 +184,64 @@ describe("account poller", () => {
     }
     const traded = await t.db.selectFrom("daily_stats").select("day").where("traded", "=", 1).execute();
     expect(traded.length).toBeGreaterThan(0);
+  });
+});
+
+describe("challenge evaluation from the recorded days", () => {
+  it("trails end-of-day max loss on the best earlier day-start balance and flags late samples", async () => {
+    const t = await startApp();
+    try {
+      await seedDemoChallenges(t.db);
+      const { id } = await t.db.selectFrom("accounts").select("id").orderBy("id").executeTakeFirstOrThrow();
+      const eod: ChallengeProfile = {
+        name: "EOD",
+        startDate: "2026-09-21",
+        startBalance: 100_000,
+        rules: {
+          dailyLoss: {
+            limitPct: 5,
+            reference: "balance-at-day-start",
+            resetTime: "16:15",
+            timezone: "America/Chicago",
+          },
+          maxLoss: { limitPct: 10, type: "trailing-eod-balance" },
+        },
+      };
+      const row = (day: string, start_balance: number, first_sample_at: string) => ({
+        account_id: id,
+        day,
+        start_balance,
+        start_equity: start_balance,
+        min_equity: start_balance,
+        max_equity: start_balance + 5_000,
+        first_sample_at,
+        last_sample_at: first_sample_at,
+      });
+      await t.db.deleteFrom("daily_stats").where("account_id", "=", id).execute();
+      await t.db
+        .insertInto("daily_stats")
+        .values([
+          // Day 2026-09-22 starts at 21:15 UTC; sampled a minute later.
+          row("2026-09-22", 106_000, "2026-09-22T21:16:00.000Z"),
+          row("2026-09-23", 104_000, "2026-09-23T21:16:00.000Z"),
+        ])
+        .execute();
+      const now = new Date("2026-09-25T15:00:00Z");
+      const state = { balance: 103_000, equity: 101_000, deals: [] };
+
+      const onTime = await evaluateForAccount(t.db, id, eod, state, now);
+      // Limit from 106,000 (not from the intraday equity peak 111,000): 5,000 below is 5 %.
+      expect(onTime.rules.find((r) => r.id === "maxLoss")).toMatchObject({ value: 5, status: "warning" });
+      expect(onTime.rules.find((r) => r.id === "maxLoss")?.approximate).toBeUndefined();
+
+      await t.db
+        .insertInto("daily_stats")
+        .values(row("2026-09-21", 100_000, "2026-09-22T02:00:00.000Z"))
+        .execute();
+      const late = await evaluateForAccount(t.db, id, eod, state, now);
+      expect(late.rules.find((r) => r.id === "maxLoss")).toMatchObject({ value: 5, approximate: true });
+    } finally {
+      await t.app.close();
+    }
   });
 });

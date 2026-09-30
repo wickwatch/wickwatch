@@ -1,0 +1,26 @@
+{
+  "id": "the-trading-pit-classic-earning-50k-100k",
+  "firm": "The Trading Pit",
+  "program": "Classic",
+  "phase": "Earning Phase",
+  "name": {
+    "en": "The Trading Pit Classic ($50k–$100k) – Earning Phase",
+    "de": "The Trading Pit Classic ($50k–$100k) – Earning-Phase"
+  },
+  "profitTargetPct": 8,
+  "dailyLoss": {
+    "limitPct": 4,
+    "reference": "equity-at-day-start",
+    "resetTime": "16:15",
+    "timezone": "America/Chicago"
+  },
+  "maxLoss": {
+    "limitPct": 7,
+    "type": "trailing"
+  },
+  "minTradingDays": 5,
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-trade-placed",
+  "source": "https://www.thetradingpit.com/cfds-prop-trading",
+  "asOf": "2026-09-30"
+}

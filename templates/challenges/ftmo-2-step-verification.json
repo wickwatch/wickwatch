@@ -1,0 +1,26 @@
+{
+  "id": "ftmo-2-step-verification",
+  "firm": "FTMO",
+  "program": "2-Step",
+  "phase": "Verification",
+  "name": {
+    "en": "FTMO 2-Step – Verification",
+    "de": "FTMO 2-Step – Verification"
+  },
+  "profitTargetPct": 5,
+  "dailyLoss": {
+    "limitPct": 5,
+    "reference": "balance-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": {
+    "limitPct": 10,
+    "type": "static"
+  },
+  "minTradingDays": 4,
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-position-opened",
+  "source": "https://ftmo.com/en/trading-objectives/",
+  "asOf": "2026-09-30"
+}

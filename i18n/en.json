@@ -96,7 +96,7 @@
       "breached": "Limit breached",
       "reached": "Reached"
     },
-    "approximate": "Estimated: equity at the day start was not recorded (Wickwatch was not running at the reset).",
+    "approximate": "Estimated: a value at a day start was not recorded (Wickwatch was not running at the reset).",
     "add": "Add challenge profile",
     "edit": "Edit challenge profile",
     "editorTitle": "Challenge profile · account {account}",
@@ -127,7 +127,8 @@
     "maxLossType": "Max drawdown type",
     "maxLossTypes": {
       "static": "Static (from the start balance)",
-      "trailing": "Trailing (from the highest equity)"
+      "trailing": "Trailing (from the highest equity)",
+      "trailingEodBalance": "Trailing (from the highest day-start balance)"
     },
     "durationDays": "Duration (days)",
     "delete": "Remove profile",

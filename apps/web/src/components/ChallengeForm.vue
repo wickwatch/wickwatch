@@ -42,7 +42,7 @@ const form = reactive({
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   limitBasis: "initial-balance" as "initial-balance" | "day-start",
   maxLossPct: undefined as number | undefined,
-  maxLossType: "static" as "static" | "trailing",
+  maxLossType: "static" as NonNullable<ChallengeRules["maxLoss"]>["type"],
   minTradingDays: undefined as number | undefined,
   durationDays: undefined as number | undefined,
   guardOn: false,
@@ -69,11 +69,20 @@ function applyTemplate() {
   const template = templates.value.find((t) => t.id === form.templateId);
   if (!template) return;
   applyRules(template);
-  form.name = template.name[locale.value] ?? template.name["en"] ?? template.program;
+  form.name = templateName(template);
   form.phase = template.phase;
 }
 
 const selectedTemplate = computed(() => templates.value.find((t) => t.id === form.templateId));
+const templateName = (t: ChallengeTemplate) => t.name[locale.value] ?? t.name["en"] ?? t.id;
+/** Templates by firm; names sorted with numbers compared by value ("$2.5k" before "$100k"). */
+const templateGroups = computed(() => {
+  const groups = new Map<string, ChallengeTemplate[]>();
+  for (const t of templates.value) groups.set(t.firm, [...(groups.get(t.firm) ?? []), t]);
+  const byName = (a: ChallengeTemplate, b: ChallengeTemplate) =>
+    templateName(a).localeCompare(templateName(b), locale.value, { numeric: true });
+  return [...groups].map(([firm, list]) => ({ firm, templates: list.sort(byName) }));
+});
 const isSet = (n: number | undefined): n is number => typeof n === "number" && !Number.isNaN(n);
 
 function toProfile(): ChallengeProfile {
@@ -189,7 +198,9 @@ const remove = () =>
         {{ $t("challenge.template") }}
         <select v-model="form.templateId" class="input" @change="applyTemplate">
           <option value="">{{ $t("challenge.noTemplate") }}</option>
-          <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name[locale] ?? t.name["en"] ?? t.id }}</option>
+          <optgroup v-for="group in templateGroups" :key="group.firm" :label="group.firm">
+            <option v-for="t in group.templates" :key="t.id" :value="t.id">{{ templateName(t) }}</option>
+          </optgroup>
         </select>
         <span v-if="selectedTemplate" class="field__hint">
           {{ $t("challenge.templateSource", { date: selectedTemplate.asOf }) }}
@@ -324,6 +335,7 @@ const remove = () =>
             <select v-model="form.maxLossType" class="input">
               <option value="static">{{ $t("challenge.maxLossTypes.static") }}</option>
               <option value="trailing">{{ $t("challenge.maxLossTypes.trailing") }}</option>
+              <option value="trailing-eod-balance">{{ $t("challenge.maxLossTypes.trailingEodBalance") }}</option>
             </select>
           </label>
         </div>

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { evaluateChallenge, tradingDayKey, tradingDayStart, type ChallengeInput, type ChallengeProfile } from "../src";
+import {
+  evaluateChallenge,
+  tradingDayKey,
+  tradingDayStart,
+  tradingDayStartOf,
+  type ChallengeInput,
+  type ChallengeProfile,
+} from "../src";
 
 describe("trading day", () => {
   it("starts at the reset time in the given zone, also across DST", () => {
@@ -19,6 +26,14 @@ describe("trading day", () => {
       "2026-09-24T21:00:00.000Z",
     );
     expect(tradingDayKey(new Date("2026-07-10T22:01:00Z"), "00:00", "Europe/Prague")).toBe("2026-07-11");
+  });
+
+  it("finds the start of a trading day from its key, also for afternoon resets", () => {
+    expect(tradingDayStartOf("2026-07-11", "00:00", "Europe/Prague").toISOString()).toBe("2026-07-10T22:00:00.000Z");
+    // 16:15 Chicago (CDT, UTC-5) is 21:15 UTC on the same date.
+    const start = tradingDayStartOf("2026-09-24", "16:15", "America/Chicago");
+    expect(start.toISOString()).toBe("2026-09-24T21:15:00.000Z");
+    expect(tradingDayKey(start, "16:15", "America/Chicago")).toBe("2026-09-24");
   });
 });
 
@@ -99,8 +114,57 @@ describe("evaluateChallenge", () => {
       ...profile,
       rules: { ...profile.rules, maxLoss: { limitPct: 10, type: "trailing" } },
     };
+    // 5,500 below the peak is 5.5 % of the start balance: the limit is 10,000, now at 100,000.
     const result = evaluateChallenge(input({ profile: trailing, peakEquity: 110_000, equity: 104_500, today: {} }));
+    expect(rule(result, "maxLoss")).toMatchObject({ value: 5.5, status: "warning" });
+  });
+
+  it("trails max loss on the highest day-start balance, not on intraday equity", () => {
+    const eod: ChallengeProfile = {
+      ...profile,
+      rules: { ...profile.rules, maxLoss: { limitPct: 10, type: "trailing-eod-balance" } },
+    };
+    // An intraday equity peak of 112,000 does not move the limit; the best day start (106,000) does.
+    const result = evaluateChallenge(
+      input({
+        profile: eod,
+        balance: 103_000,
+        equity: 101_000,
+        today: {},
+        peakEquity: 112_000,
+        peakDayStartBalance: { value: 106_000, approximate: false },
+      }),
+    );
     expect(rule(result, "maxLoss")).toMatchObject({ value: 5, status: "warning" });
+    expect(rule(result, "maxLoss")?.approximate).toBeUndefined();
+  });
+
+  it("counts today's day-start balance for the end-of-day trail and marks late samples", () => {
+    const eod: ChallengeProfile = {
+      ...profile,
+      rules: { ...profile.rules, maxLoss: { limitPct: 10, type: "trailing-eod-balance" } },
+    };
+    // Day start today: 108,000 (balance 105,000 after a 3,000 loss today).
+    const result = evaluateChallenge(
+      input({
+        profile: eod,
+        balance: 105_000,
+        equity: 99_000,
+        realizedToday: -3_000,
+        today: {},
+        peakDayStartBalance: { value: 104_000, approximate: true },
+      }),
+    );
+    expect(rule(result, "maxLoss")).toMatchObject({ value: 9, status: "danger", approximate: true });
+  });
+
+  it("never trails below the start balance", () => {
+    const eod: ChallengeProfile = {
+      ...profile,
+      rules: { ...profile.rules, maxLoss: { limitPct: 10, type: "trailing-eod-balance" } },
+    };
+    const result = evaluateChallenge(input({ profile: eod, balance: 97_000, equity: 96_000, today: {} }));
+    expect(rule(result, "maxLoss")).toMatchObject({ value: 4, status: "ok" });
   });
 
   it("passes when target and trading days are reached and nothing is breached", () => {

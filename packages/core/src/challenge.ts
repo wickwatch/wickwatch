@@ -9,8 +9,8 @@ import type {
 import { toIsoTime } from "./schemas";
 import { daysBetween, tradingDayKey, tradingDayStart } from "./trading-day";
 
-/** Day-start equity counts as recorded only if the first sample of the day came this soon after the reset. */
-const DAY_START_TOLERANCE_MS = 5 * 60 * 1000;
+/** Day-start values count as recorded only if the first sample of the day came this soon after the reset. */
+export const DAY_START_TOLERANCE_MS = 5 * 60 * 1000;
 
 export interface DayRecord {
   startEquity?: number;
@@ -29,6 +29,8 @@ export interface ChallengeInput {
   today?: DayRecord;
   /** Highest equity recorded since the start (for trailing max loss). */
   peakEquity?: number;
+  /** Highest balance recorded at the start of an earlier trading day (for trailing-eod-balance max loss). */
+  peakDayStartBalance?: { value: number; approximate: boolean };
   /** Days with at least one closed trade since the start. */
   tradingDays: number;
 }
@@ -71,9 +73,9 @@ export function evaluateChallenge(input: ChallengeInput): ChallengeEvaluation {
   }
 
   const dayLow = Math.min(equity, input.today?.minEquity ?? equity);
+  const dayStartBalance = balance - input.realizedToday;
 
   if (rules.dailyLoss) {
-    const dayStartBalance = balance - input.realizedToday;
     const recorded =
       input.today?.startEquity !== undefined &&
       input.today.firstSampleAt !== undefined &&
@@ -101,9 +103,16 @@ export function evaluateChallenge(input: ChallengeInput): ChallengeEvaluation {
   }
 
   if (rules.maxLoss) {
-    const base =
-      rules.maxLoss.type === "trailing" ? Math.max(startBalance, input.peakEquity ?? startBalance) : startBalance;
-    const value = round(pct(Math.max(0, base - dayLow), base));
+    const { type } = rules.maxLoss;
+    const peak =
+      type === "trailing"
+        ? (input.peakEquity ?? startBalance)
+        : type === "trailing-eod-balance"
+          ? Math.max(dayStartBalance, input.peakDayStartBalance?.value ?? startBalance)
+          : startBalance;
+    const base = Math.max(startBalance, peak);
+    // Firms state the limit as a share of the initial balance, also when it trails.
+    const value = round(pct(Math.max(0, base - dayLow), startBalance));
     const usage = value / rules.maxLoss.limitPct;
     results.push({
       id: "maxLoss",
@@ -112,6 +121,7 @@ export function evaluateChallenge(input: ChallengeInput): ChallengeEvaluation {
       limit: rules.maxLoss.limitPct,
       usage,
       unit: "percent",
+      ...(type === "trailing-eod-balance" && input.peakDayStartBalance?.approximate ? { approximate: true } : {}),
     });
   }
 

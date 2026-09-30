@@ -1,10 +1,12 @@
 import {
   ChallengeProfile,
+  DAY_START_TOLERANCE_MS,
   dealResult,
   evaluateChallenge,
   profileDay,
   tradingDayKey,
   tradingDayStart,
+  tradingDayStartOf,
   type ChallengeEvaluation,
   type Deal,
 } from "@wickwatch/core";
@@ -50,6 +52,18 @@ export async function evaluateForAccount(
     .execute();
   const todayRow = rows.find((r) => r.day === today);
   const peaks = rows.map((r) => r.max_equity).filter((v): v is number => v !== null);
+  // Today's day-start balance comes exactly from today's deals; earlier days from their first sample.
+  const earlierStarts = rows.filter((r) => r.day < today && r.start_balance !== null && r.first_sample_at !== null);
+  const peakDayStartBalance = earlierStarts.length
+    ? {
+        value: Math.max(...earlierStarts.map((r) => r.start_balance as number)),
+        approximate: earlierStarts.some(
+          (r) =>
+            Date.parse(r.first_sample_at as string) - tradingDayStartOf(r.day, resetTime, timeZone).getTime() >
+            DAY_START_TOLERANCE_MS,
+        ),
+      }
+    : undefined;
   const dayStart = tradingDayStart(now, resetTime, timeZone).getTime();
   const dealsToday = state.deals.filter((d) => Date.parse(d.time) >= dayStart);
   const realizedToday = dealsToday.reduce((sum, d) => sum + dealResult(d), 0);
@@ -72,6 +86,7 @@ export async function evaluateForAccount(
         }
       : {}),
     ...(peaks.length ? { peakEquity: Math.max(...peaks, state.equity) } : { peakEquity: state.equity }),
+    ...(peakDayStartBalance ? { peakDayStartBalance } : {}),
     tradingDays: rows.filter((r) => r.traded === 1).length + (tradedToday ? 1 : 0),
   });
 }

@@ -1,0 +1,26 @@
+{
+  "id": "the-trading-pit-prime-1-phase-2k5-50k-challenge",
+  "firm": "The Trading Pit",
+  "program": "Prime 1-Phase",
+  "phase": "Challenge",
+  "name": {
+    "en": "The Trading Pit Prime 1-Phase ($2.5k–$50k) – Challenge",
+    "de": "The Trading Pit Prime 1-Phase ($2.5k–$50k) – Challenge"
+  },
+  "profitTargetPct": 10,
+  "dailyLoss": {
+    "limitPct": 3,
+    "reference": "balance-at-day-start",
+    "resetTime": "16:15",
+    "timezone": "America/Chicago"
+  },
+  "maxLoss": {
+    "limitPct": 6,
+    "type": "static"
+  },
+  "minTradingDays": 3,
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-trade-placed",
+  "source": "https://www.thetradingpit.com/cfds-prop-trading",
+  "asOf": "2026-09-30"
+}

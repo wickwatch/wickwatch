@@ -1,4 +1,4 @@
-import { profileDay, tradingDayKey, tradingDayStart } from "@wickwatch/core";
+import { profileDay, tradingDayKey, tradingDayStartOf } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -104,7 +104,7 @@ export class AccountPoller {
           const { resetTime, timeZone } = profileDay(profile?.rules ?? {});
           const now = this.now();
           const from = profile
-            ? tradingDayStart(new Date(`${profile.startDate}T12:00:00Z`), resetTime, timeZone)
+            ? tradingDayStartOf(profile.startDate, resetTime, timeZone)
             : new Date(now.getTime() - DEFAULT_HISTORY_DAYS * DAY_MS);
           const deals = await adapters.broker.deals(
             await entry.credentials(),

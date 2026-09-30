@@ -33,8 +33,11 @@ export const ChallengeRules = Type.Object({
   maxLoss: Type.Optional(
     Type.Object({
       limitPct: Type.Number({ exclusiveMinimum: 0, maximum: 100 }),
-      /** static: from the initial balance; trailing: from the highest equity recorded. */
-      type: Type.Union([Type.Literal("static"), Type.Literal("trailing")]),
+      /**
+       * static: from the initial balance; trailing: from the highest equity recorded;
+       * trailing-eod-balance: from the highest balance at a trading-day start. The limit is always a share of the initial balance.
+       */
+      type: Type.Union([Type.Literal("static"), Type.Literal("trailing"), Type.Literal("trailing-eod-balance")]),
     }),
   ),
   minTradingDays: Type.Optional(Type.Integer({ minimum: 0, maximum: 1000 })),

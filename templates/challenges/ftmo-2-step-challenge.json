@@ -1,0 +1,26 @@
+{
+  "id": "ftmo-2-step-challenge",
+  "firm": "FTMO",
+  "program": "2-Step",
+  "phase": "FTMO Challenge",
+  "name": {
+    "en": "FTMO 2-Step – FTMO Challenge",
+    "de": "FTMO 2-Step – FTMO Challenge"
+  },
+  "profitTargetPct": 10,
+  "dailyLoss": {
+    "limitPct": 5,
+    "reference": "balance-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": {
+    "limitPct": 10,
+    "type": "static"
+  },
+  "minTradingDays": 4,
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-position-opened",
+  "source": "https://ftmo.com/en/trading-objectives/",
+  "asOf": "2026-09-30"
+}

@@ -84,6 +84,13 @@ export function tradingDayKey(time: Date, resetTime = "00:00", timeZone = "UTC")
   return `${String(p.year).padStart(4, "0")}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 
+/** Start (UTC) of the trading day with the key `day` (YYYY-MM-DD, see tradingDayKey). */
+export function tradingDayStartOf(day: string, resetTime = "00:00", timeZone = "UTC"): Date {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
+  const [hour = 0, minute = 0] = resetTime.split(":").map(Number);
+  return zonedToUtc(year, month, date, hour, minute, timeZone);
+}
+
 /** Whole days from `from` to `to` (both YYYY-MM-DD); 0 for the same day. */
 export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);

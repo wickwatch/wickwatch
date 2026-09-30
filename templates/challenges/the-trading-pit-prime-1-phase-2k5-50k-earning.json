@@ -1,0 +1,24 @@
+{
+  "id": "the-trading-pit-prime-1-phase-2k5-50k-earning",
+  "firm": "The Trading Pit",
+  "program": "Prime 1-Phase",
+  "phase": "Earning Phase",
+  "name": {
+    "en": "The Trading Pit Prime 1-Phase ($2.5k–$50k) – Earning Phase",
+    "de": "The Trading Pit Prime 1-Phase ($2.5k–$50k) – Earning-Phase"
+  },
+  "dailyLoss": {
+    "limitPct": 3,
+    "reference": "balance-at-day-start",
+    "resetTime": "16:15",
+    "timezone": "America/Chicago"
+  },
+  "maxLoss": {
+    "limitPct": 6,
+    "type": "static"
+  },
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-trade-placed",
+  "source": "https://www.thetradingpit.com/cfds-prop-trading",
+  "asOf": "2026-09-30"
+}

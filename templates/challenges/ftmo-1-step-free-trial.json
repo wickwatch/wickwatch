@@ -1,0 +1,25 @@
+{
+  "id": "ftmo-1-step-free-trial",
+  "firm": "FTMO",
+  "program": "1-Step",
+  "phase": "Free Trial",
+  "name": {
+    "en": "FTMO 1-Step – Free Trial",
+    "de": "FTMO 1-Step – Free Trial"
+  },
+  "profitTargetPct": 5,
+  "dailyLoss": {
+    "limitPct": 3,
+    "reference": "balance-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": {
+    "limitPct": 10,
+    "type": "trailing-eod-balance"
+  },
+  "durationDays": 14,
+  "tradingDayDefinition": "at-least-one-position-opened",
+  "source": "https://ftmo.com/en/faq/how-about-a-free-trial/",
+  "asOf": "2026-09-30"
+}

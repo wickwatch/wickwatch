@@ -1,0 +1,25 @@
+{
+  "id": "ftmo-1-step-challenge",
+  "firm": "FTMO",
+  "program": "1-Step",
+  "phase": "FTMO Challenge",
+  "name": {
+    "en": "FTMO 1-Step – FTMO Challenge",
+    "de": "FTMO 1-Step – FTMO Challenge"
+  },
+  "profitTargetPct": 10,
+  "dailyLoss": {
+    "limitPct": 3,
+    "reference": "balance-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": {
+    "limitPct": 10,
+    "type": "trailing-eod-balance"
+  },
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-position-opened",
+  "source": "https://ftmo.com/en/trading-objectives/",
+  "asOf": "2026-09-30"
+}

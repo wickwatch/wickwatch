@@ -1,0 +1,24 @@
+{
+  "id": "the-trading-pit-prime-2-phase-100k-earning",
+  "firm": "The Trading Pit",
+  "program": "Prime 2-Phase",
+  "phase": "Earning Phase",
+  "name": {
+    "en": "The Trading Pit Prime 2-Phase ($100k) – Earning Phase",
+    "de": "The Trading Pit Prime 2-Phase ($100k) – Earning-Phase"
+  },
+  "dailyLoss": {
+    "limitPct": 4,
+    "reference": "balance-at-day-start",
+    "resetTime": "16:15",
+    "timezone": "America/Chicago"
+  },
+  "maxLoss": {
+    "limitPct": 8,
+    "type": "trailing-eod-balance"
+  },
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-trade-placed",
+  "source": "https://www.thetradingpit.com/cfds-prop-trading",
+  "asOf": "2026-09-30"
+}

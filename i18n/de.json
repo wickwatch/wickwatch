@@ -96,7 +96,7 @@
       "breached": "Limit verletzt",
       "reached": "Erreicht"
     },
-    "approximate": "Geschätzt: Die Equity zu Tagesbeginn wurde nicht erfasst (Wickwatch lief beim Reset nicht).",
+    "approximate": "Geschätzt: Ein Wert zu Tagesbeginn wurde nicht erfasst (Wickwatch lief beim Reset nicht).",
     "add": "Challenge-Profil hinzufügen",
     "edit": "Challenge-Profil bearbeiten",
     "editorTitle": "Challenge-Profil · Konto {account}",
@@ -127,7 +127,8 @@
     "maxLossType": "Art des Max-Drawdowns",
     "maxLossTypes": {
       "static": "Statisch (ab Startbalance)",
-      "trailing": "Trailing (ab höchster Equity)"
+      "trailing": "Trailing (ab höchster Equity)",
+      "trailingEodBalance": "Trailing (ab höchster Balance zu Tagesbeginn)"
     },
     "durationDays": "Laufzeit (Tage)",
     "delete": "Profil entfernen",

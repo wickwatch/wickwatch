@@ -1,0 +1,24 @@
+{
+  "id": "ftmo-2-step-account",
+  "firm": "FTMO",
+  "program": "2-Step",
+  "phase": "FTMO Account",
+  "name": {
+    "en": "FTMO 2-Step – FTMO Account",
+    "de": "FTMO 2-Step – FTMO Account"
+  },
+  "dailyLoss": {
+    "limitPct": 5,
+    "reference": "balance-at-day-start",
+    "resetTime": "00:00",
+    "timezone": "Europe/Prague"
+  },
+  "maxLoss": {
+    "limitPct": 10,
+    "type": "static"
+  },
+  "durationDays": null,
+  "tradingDayDefinition": "at-least-one-position-opened",
+  "source": "https://ftmo.com/en/trading-objectives/",
+  "asOf": "2026-09-30"
+}
