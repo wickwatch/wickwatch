@@ -165,6 +165,8 @@ describe("managed instances", () => {
       (await inject("POST", "/managed-instances", { name: "x9", accountId, config: config() }, viewer)).statusCode,
     ).toBe(403);
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" }, viewer)).statusCode).toBe(403);
+    // The admin check comes before the confirmation.
+    expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x2" }, viewer)).statusCode).toBe(403);
   });
 
   it("deploys the current version, replaces it on request and removes the container with the instance", async () => {

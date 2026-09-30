@@ -360,8 +360,6 @@
       "next": "Continue",
       "passwordHint": "At least {min} characters.",
       "repeat": "Repeat password",
-      "passwordTooShort": "The password needs at least {min} characters.",
-      "passwordMismatch": "The passwords do not match.",
       "finishWithTotp": "Enable 2FA and finish",
       "skipTotp": "Skip for now – set up later under Profile"
     },

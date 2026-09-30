@@ -1,4 +1,4 @@
-import { BrokerAccount } from "@wickwatch/core";
+import { Credential, OfferedAccount } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import { decryptCredential } from "../accounts";
@@ -8,16 +8,6 @@ import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
-
-/** Never contains the secret. */
-const Credential = Type.Object({
-  id: Type.Integer(),
-  label: Type.String(),
-  login: Type.String(),
-  createdAt: Type.String(),
-  /** Number of accounts using this login. */
-  accounts: Type.Integer({ minimum: 0 }),
-});
 
 const Id = Type.Object({ id: Type.Integer() });
 
@@ -166,7 +156,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         summary: "Accounts the broker offers for this login, and whether they are added already",
         params: Id,
         response: {
-          200: Type.Array(Type.Intersect([BrokerAccount, Type.Object({ added: Type.Boolean() })])),
+          200: Type.Array(OfferedAccount),
           403: ErrorBody,
           404: ErrorBody,
           502: ErrorBody,

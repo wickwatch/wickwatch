@@ -360,8 +360,6 @@
       "next": "Weiter",
       "passwordHint": "Mindestens {min} Zeichen.",
       "repeat": "Passwort wiederholen",
-      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen.",
-      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
       "finishWithTotp": "2FA aktivieren und abschließen",
       "skipTotp": "Überspringen – später unter Profil einrichten"
     },

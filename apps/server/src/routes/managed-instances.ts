@@ -2,14 +2,18 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   AdapterError,
-  ATTRIBUTION_MODES,
+  InstanceConfigInput,
   InstanceStatus,
+  ManagedInstance,
+  ManagedInstanceDetail,
   managedLabels,
   parameterDefaults,
   ParameterIssue,
   ParameterValues,
   readLabels,
   type AttributionMode,
+  type Deployment,
+  type InstanceConfig,
   type RuntimeInstance,
 } from "@wickwatch/core";
 import { INSTANCE_NAME } from "@wickwatch/core/rules";
@@ -20,7 +24,7 @@ import { findAccountById, type AccountDirectory, type AccountEntry } from "../ac
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { InstanceConfigsTable } from "../db/schema";
-import { isAdmin, requireAdmin } from "../plugins/auth";
+import { isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { schemaOf } from "../services/algo-metadata";
 import { audit } from "../services/audit";
@@ -29,61 +33,6 @@ import { isUp, setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
 const NAME = INSTANCE_NAME.source;
-
-const Attribution = Type.Object({
-  mode: Type.Enum(ATTRIBUTION_MODES),
-  /** Expected order label (`label`, default: the instance name) or regular expression (`label-pattern`). */
-  orderLabel: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })),
-});
-
-const ConfigInput = Type.Object({
-  algoId: Type.Integer(),
-  symbol: Type.String({ minLength: 1, maxLength: 100 }),
-  period: Type.String({ minLength: 1, maxLength: 50 }),
-  /** Parameters left out are stored with the algo's default. */
-  parameters: ParameterValues,
-  attribution: Attribution,
-  comment: Type.Optional(Type.String({ maxLength: 500 })),
-});
-type ConfigInput = Type.Static<typeof ConfigInput>;
-
-const InstanceConfig = Type.Object({
-  version: Type.Integer(),
-  /** `id` is null when this algo version was deleted since. */
-  algo: Type.Object({ id: Type.Union([Type.Integer(), Type.Null()]), name: Type.String(), version: Type.String() }),
-  symbol: Type.String(),
-  period: Type.String(),
-  parameters: ParameterValues,
-  attribution: Attribution,
-  comment: Type.Optional(Type.String()),
-  createdAt: Type.String(),
-  createdBy: Type.Optional(Type.String()),
-});
-type InstanceConfig = Type.Static<typeof InstanceConfig>;
-
-/** The runtime instance of the same name, if there is one. */
-const Deployment = Type.Object({
-  status: InstanceStatus,
-  /** Created by Wickwatch; false for a container of the same name defined elsewhere. */
-  managed: Type.Boolean(),
-  /** Configuration version the instance runs with (from its labels). */
-  configVersion: Type.Optional(Type.Integer()),
-});
-
-const ManagedInstance = Type.Object({
-  id: Type.Integer(),
-  name: Type.String(),
-  account: Type.Object({ id: Type.Integer(), number: Type.String(), displayName: Type.String() }),
-  createdAt: Type.String(),
-  config: InstanceConfig,
-  deployment: Type.Optional(Deployment),
-});
-type ManagedInstance = Type.Static<typeof ManagedInstance>;
-
-const ManagedInstanceDetail = Type.Intersect([
-  ManagedInstance,
-  Type.Object({ history: Type.Array(InstanceConfig, { description: "All versions, newest first" }) }),
-]);
 
 /** A rejected configuration; `issues` and `unknown` are set for `invalid_parameters`. */
 const ConfigErrorBody = Type.Object({
@@ -163,7 +112,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         "users.username as created_by_name",
       ]);
 
-  function deployment(runtime: RuntimeInstance | undefined): Type.Static<typeof Deployment> | undefined {
+  function deployment(runtime: RuntimeInstance | undefined): Deployment | undefined {
     if (!runtime) return undefined;
     const labels = readLabels(labelPrefix, runtime.labels);
     const version = Number(labels["config-version"]);
@@ -202,7 +151,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     });
   }
 
-  async function check(input: ConfigInput, entry: AccountEntry): Promise<Checked> {
+  async function check(input: InstanceConfigInput, entry: AccountEntry): Promise<Checked> {
     const algo = await db.selectFrom("algos").selectAll().where("id", "=", input.algoId).executeTakeFirst();
     if (!algo) return { ok: false, status: 404, body: { error: "algo_not_found" } };
     const schema = schemaOf(algo.metadata);
@@ -358,7 +307,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         body: Type.Object({
           name: Type.String({ pattern: NAME }),
           accountId: Type.Integer(),
-          config: ConfigInput,
+          config: InstanceConfigInput,
         }),
         response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },
@@ -410,7 +359,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         summary: "Save a new configuration version (also used to roll back to an old one)",
         description: "Nothing is restarted; a running instance keeps its configuration until it is redeployed.",
         params: NameParams,
-        body: ConfigInput,
+        body: InstanceConfigInput,
         response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },
     },
@@ -457,7 +406,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   app.post(
     "/managed-instances/:name/deploy",
     {
-      preHandler: requireAdmin,
+      preHandler: [requireAdmin, requireConfirmation("name")],
       schema: {
         tags: ["instances"],
         summary: "Create or replace the instance with its current configuration",
@@ -480,7 +429,6 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
     async (request, reply) => {
       const { name } = request.params;
-      if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
       const [instance] = await load(name);
       const entry = instance && (await findAccountById(accounts, instance.account.id));
       if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
@@ -548,7 +496,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   app.delete(
     "/managed-instances/:name",
     {
-      preHandler: requireAdmin,
+      preHandler: [requireAdmin, requireConfirmation("name")],
       schema: {
         tags: ["instances"],
         summary: "Delete a managed instance, its container (stopping it) and its configuration history",
@@ -559,7 +507,6 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
     async (request, reply) => {
       const { name } = request.params;
-      if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
       const [instance] = await load(name);
       if (!instance) return reply.code(404).send({ error: "not_found" });
       // Asked again without load()'s fallback: an unreachable runtime must fail the delete, not orphan a running

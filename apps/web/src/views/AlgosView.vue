@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, errorKey, type AlgoRow } from "../api";
+import { api, type AlgoRow } from "../api";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import ParameterList from "../components/ParameterList.vue";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
@@ -18,9 +19,6 @@ import AppSpinner from "../components/AppSpinner.vue";
 const { t, locale } = useI18n();
 const algos = ref<AlgoRow[]>([]);
 const loading = ref(true);
-const busy = ref(false);
-const error = ref<string>();
-const notice = ref<string>();
 const file = ref<File>();
 const version = ref("");
 const removing = ref<AlgoRow>();
@@ -46,21 +44,7 @@ const groups = computed(() => [...groupBy(algos.value, (a) => a.name)]);
 async function load() {
   algos.value = await api.algos();
 }
-
-async function run(action: () => Promise<void>, done?: () => string) {
-  busy.value = true;
-  error.value = undefined;
-  notice.value = undefined;
-  try {
-    await action();
-    await load();
-    if (done) notice.value = done();
-  } catch (e) {
-    error.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
-  }
-}
+const { busy, error, notice, run } = useAsyncAction({ reload: load });
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
@@ -81,31 +65,26 @@ function closeUpload() {
   // A cleared form shows no "Required." until the next attempt.
   form.reset();
 }
-async function upload() {
-  if (!form.validate() || !file.value) return;
-  busy.value = true;
-  uploadError.value = undefined;
-  notice.value = undefined;
-  try {
-    const uploaded = await api.uploadAlgo(file.value, version.value.trim() || undefined);
-    closeUpload();
-    await load();
-    notice.value = t("algos.uploaded", { name: uploaded.name, version: uploaded.version });
-  } catch (e) {
-    uploadError.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
-  }
+function upload() {
+  const chosen = file.value;
+  if (!form.validate() || !chosen) return;
+  void run(
+    async () => {
+      const uploaded = await api.uploadAlgo(chosen, version.value.trim() || undefined);
+      closeUpload();
+      return uploaded;
+    },
+    { done: (a) => t("algos.uploaded", { name: a.name, version: a.version }), error: uploadError },
+  );
 }
 
 const confirmRemove = () => {
   const algo = removing.value;
   removing.value = undefined;
   if (algo)
-    void run(
-      () => api.deleteAlgo(algo.id),
-      () => t("algos.deleted", { name: algo.name, version: algo.version }),
-    );
+    void run(() => api.deleteAlgo(algo.id), {
+      done: () => t("algos.deleted", { name: algo.name, version: algo.version }),
+    });
 };
 </script>
 
@@ -126,7 +105,7 @@ const confirmRemove = () => {
       <p class="muted intro">{{ $t("algos.intro", { formats }) }}</p>
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
-    <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
+    <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
     <AppSpinner v-if="loading" />
 
     <template v-else>
@@ -201,7 +180,7 @@ const confirmRemove = () => {
             <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("algos.upload") }}</button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
-          <p v-if="uploadError" class="tone-negative" role="alert">{{ uploadError }}</p>
+          <p v-if="uploadError" class="tone-negative" role="alert">{{ $t(uploadError) }}</p>
         </form>
       </template>
     </AppModal>

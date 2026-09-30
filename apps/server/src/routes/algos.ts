@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { isAdapterError, ParameterFile, ParameterSchema, type AlgoMetadata } from "@wickwatch/core";
+import { Algo, isAdapterError, ParameterFile, type AlgoMetadata } from "@wickwatch/core";
 import { SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -15,19 +15,6 @@ import { audit } from "../services/audit";
 import { latestConfigIds } from "../services/instance-configs";
 
 const MAX_ALGO_BYTES = 64 * 1024 * 1024;
-
-const Algo = Type.Object({
-  id: Type.Integer(),
-  name: Type.String(),
-  version: Type.String(),
-  sha256: Type.String(),
-  size: Type.Integer(),
-  buildTime: Type.Optional(Type.String()),
-  fullAccess: Type.Boolean(),
-  parameters: Type.Array(ParameterSchema),
-  uploadedAt: Type.String(),
-});
-type Algo = Type.Static<typeof Algo>;
 
 const SAFE = SAFE_NAME;
 const safe = (value: string) =>

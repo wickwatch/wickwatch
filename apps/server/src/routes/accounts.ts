@@ -1,30 +1,15 @@
-import { EmergencyStopReport, isTimeZone } from "@wickwatch/core";
+import { Account, EmergencyStopReport, isTimeZone } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import { decryptCredential, findAccount, findAccountById, findAccountId, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { requireAdmin } from "../plugins/auth";
+import { requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
-
-const Account = Type.Object({
-  id: Type.Integer(),
-  adapter: Type.String(),
-  number: Type.String(),
-  broker: Type.String(),
-  currency: Type.String(),
-  displayName: Type.String(),
-  credentialId: Type.Union([Type.Integer(), Type.Null()]),
-  /** Label of the login (never the secret), so viewers can see which login an account uses. */
-  credentialLabel: Type.Union([Type.String(), Type.Null()]),
-  timezone: Type.Union([Type.String(), Type.Null()]),
-  hasChallenge: Type.Boolean(),
-});
-type Account = Type.Static<typeof Account>;
 
 const PositionParams = Type.Object({
   number: Type.String({ minLength: 1 }),
@@ -257,7 +242,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   app.post(
     "/accounts/:number/positions/:positionId/close",
     {
-      preHandler: requireAdmin,
+      preHandler: [requireAdmin, requireConfirmation("positionId")],
       schema: {
         tags: ["accounts"],
         summary: "Close one open position at the broker",
@@ -269,7 +254,6 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
     async (request, reply) => {
       const { number, positionId } = request.params;
-      if (request.body.confirm !== positionId) return reply.code(400).send({ error: "confirmation_required" });
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
@@ -285,7 +269,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   app.post(
     "/accounts/:number/orders/:orderId/cancel",
     {
-      preHandler: requireAdmin,
+      preHandler: [requireAdmin, requireConfirmation("orderId")],
       schema: {
         tags: ["accounts"],
         summary: "Cancel one pending order at the broker",
@@ -297,7 +281,6 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
     async (request, reply) => {
       const { number, orderId } = request.params;
-      if (request.body.confirm !== orderId) return reply.code(400).send({ error: "confirmation_required" });
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
@@ -375,7 +358,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   app.post(
     "/accounts/:number/emergency-stop",
     {
-      preHandler: requireAdmin,
+      preHandler: [requireAdmin, requireConfirmation("number")],
       schema: {
         tags: ["accounts"],
         summary: "Stop all instances of the account, cancel pending orders and close all positions",
@@ -394,7 +377,6 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
     async (request, reply) => {
       const { number } = request.params;
-      if (request.body.confirm !== number) return reply.code(400).send({ error: "confirmation_required" });
 
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });

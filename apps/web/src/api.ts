@@ -1,9 +1,15 @@
 import type {
-  AttributionMode,
+  Account,
+  Algo,
+  AuditPage,
+  Credential,
+  InstanceConfig,
+  InstanceConfigInput,
+  ManagedInstance,
+  ManagedInstanceDetail,
+  OfferedAccount,
   ParameterFile,
   ParameterIssue,
-  ParameterSchema,
-  ParameterValues,
   AccountDetail,
   ChallengeProfile,
   ChallengeTemplate,
@@ -69,98 +75,14 @@ const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
 
-export interface AccountRow {
-  id: number;
-  adapter: string;
-  number: string;
-  broker: string;
-  currency: string;
-  displayName: string;
-  credentialId: number | null;
-  credentialLabel: string | null;
-  timezone: string | null;
-  hasChallenge: boolean;
-}
-
-export interface AlgoRow {
-  id: number;
-  name: string;
-  version: string;
-  sha256: string;
-  size: number;
-  buildTime?: string;
-  fullAccess: boolean;
-  parameters: ParameterSchema[];
-  uploadedAt: string;
-}
-
-export interface Attribution {
-  mode: AttributionMode;
-  orderLabel?: string;
-}
-
-export interface InstanceConfigRow {
-  version: number;
-  /** `id` is null when this algo version was deleted since. */
-  algo: { id: number | null; name: string; version: string };
-  symbol: string;
-  period: string;
-  parameters: ParameterValues;
-  attribution: Attribution;
-  comment?: string;
-  createdAt: string;
-  createdBy?: string;
-}
-
-export interface Deployment {
-  status: InstanceStatus;
-  /** False for a container of the same name that Wickwatch did not create. */
-  managed: boolean;
-  configVersion?: number;
-}
-
-export interface ManagedInstanceRow {
-  id: number;
-  name: string;
-  account: { id: number; number: string; displayName: string };
-  createdAt: string;
-  config: InstanceConfigRow;
-  deployment?: Deployment;
-}
-
-export interface ManagedInstanceDetail extends ManagedInstanceRow {
-  /** Newest first. */
-  history: InstanceConfigRow[];
-}
-
-export interface ConfigInput {
-  algoId: number;
-  symbol: string;
-  period: string;
-  parameters: ParameterValues;
-  attribution: Attribution;
-  comment?: string;
-}
-
-export interface CredentialRow {
-  id: number;
-  label: string;
-  login: string;
-  createdAt: string;
-  accounts: number;
-}
-
-export interface OfferedAccount {
-  number: string;
-  broker: string;
-  currency: string;
-  live: boolean;
-  /** False for closed accounts the broker still lists. */
-  active?: boolean;
-  /** Name the broker shows, e.g. a challenge name. */
-  name?: string;
-  added: boolean;
-}
+// Response and request shapes of the server routes, from the schemas in @wickwatch/core.
+export type AccountRow = Account;
+export type AlgoRow = Algo;
+export type InstanceConfigRow = InstanceConfig;
+export type ManagedInstanceRow = ManagedInstance;
+export type ConfigInput = InstanceConfigInput;
+export type CredentialRow = Credential;
+export type { AuditPage, AuditRecord, ManagedInstanceDetail, OfferedAccount } from "@wickwatch/core";
 
 export interface SessionUser {
   username: string;
@@ -179,20 +101,6 @@ export interface TotpSetup {
   uri: string;
   /** PNG data URL of the QR code. */
   qr: string;
-}
-
-export interface AuditRecord {
-  id: number;
-  time: string;
-  user?: string;
-  action: string;
-  target?: string;
-  details?: Record<string, unknown>;
-}
-export interface AuditPage {
-  entries: AuditRecord[];
-  more: boolean;
-  actions: string[];
 }
 
 export const api = {

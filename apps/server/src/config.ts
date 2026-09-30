@@ -1,6 +1,9 @@
 import { dirname, isAbsolute, resolve } from "node:path";
-import { isPinnedImage } from "@wickwatch/adapter-docker";
 import { DEFAULT_LABEL_PREFIX, isTimeZone } from "@wickwatch/core";
+import { readAdapterSettings, type AdapterSettings } from "./adapters";
+import { ConfigError } from "./config-error";
+
+export { ConfigError };
 
 /** Answers with `ts=<unix time>` in milliseconds; any URL whose answer has a Date header works too. */
 const DEFAULT_CLOCK_CHECK_URL = "https://www.cloudflare.com/cdn-cgi/trace";
@@ -24,12 +27,8 @@ export interface Config {
   adapters: { runtime: string; broker: string; config: string };
   /** Docker API for the docker runtime adapter, e.g. tcp://socket-proxy:2375. */
   dockerHost?: string;
-  /** `local`: CTRADER_CLI_PATH on this machine; `container`: the CLI of CTRADER_IMAGE via the runtime. */
-  ctraderCli: CtraderCliMode;
-  /** cTrader CLI executable for BROKER_ADAPTER=ctrader-cli. */
-  ctraderCliPath: string;
-  /** Image instances run with (ctrader-cli); the adapter's tested version when unset. */
-  ctraderImage?: string;
+  /** Settings of the adapters themselves, by adapter id (adapters.ts). */
+  adapterSettings: AdapterSettings;
   /** Docker restart policy of created instances. */
   instanceRestartPolicy: RestartPolicy;
   /** Directory with challenge templates (*.json). */
@@ -53,17 +52,7 @@ export interface Config {
   dailySummary?: { time: string; timeZone: string };
 }
 
-export class ConfigError extends Error {
-  override readonly name = "ConfigError";
-
-  constructor(readonly problems: string[]) {
-    super(`Invalid configuration:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
-  }
-}
-
 export const RESTART_POLICIES = ["on-failure", "unless-stopped", "no"] as const;
-const CTRADER_CLI_MODES = ["local", "container"] as const;
-export type CtraderCliMode = (typeof CTRADER_CLI_MODES)[number];
 export type RestartPolicy = (typeof RESTART_POLICIES)[number];
 
 const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"];
@@ -75,15 +64,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     const value = env[name]?.trim();
     return value === "" ? undefined : value;
   };
-  /** The value if it is in `list`; otherwise a problem "<name> must be <expected>". */
-  const oneOf = <T extends string>(
-    name: string,
-    fallback: T,
-    list: readonly T[],
-    expected = `one of ${list.join(", ")}`,
-  ): T => {
+  /** The value if it is in `list`; otherwise a problem "<name> must be one of …". */
+  const oneOf = <T extends string>(name: string, fallback: T, list: readonly T[]): T => {
     const value = get(name) ?? fallback;
-    if (!(list as readonly string[]).includes(value)) problems.push(`${name} must be ${expected}`);
+    if (!(list as readonly string[]).includes(value)) problems.push(`${name} must be one of ${list.join(", ")}`);
     // Not in the list only with a problem reported: loadConfig throws then.
     return value as T;
   };
@@ -95,10 +79,6 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (basePath === undefined) problems.push("BASE_PATH must look like /bots (letters, digits, - _ . ~ and /)");
 
   const instanceRestartPolicy = oneOf("INSTANCE_RESTART_POLICY", "on-failure", RESTART_POLICIES);
-  const ctraderImage = get("CTRADER_IMAGE");
-  if (ctraderImage && !isPinnedImage(ctraderImage)) {
-    problems.push("CTRADER_IMAGE must be pinned to a version or digest, not latest");
-  }
   const logLevel = oneOf("LOG_LEVEL", "info", LOG_LEVELS);
 
   const masterKey = parseMasterKey(get("MASTER_KEY"), problems);
@@ -136,7 +116,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
   const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
-  const ctraderCli = oneOf("CTRADER_CLI", "local", CTRADER_CLI_MODES, "local or container");
+  const adapterSettings = readAdapterSettings(get, problems);
   const alertCheckSeconds = integer("ALERT_CHECK_SECONDS", 60, 10, 3600);
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
@@ -157,9 +137,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     defaultLocale,
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
     algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
-    ctraderCli,
-    ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
-    ...(ctraderImage ? { ctraderImage } : {}),
+    adapterSettings,
     instanceRestartPolicy,
     accountPollSeconds,
     alertCheckSeconds,

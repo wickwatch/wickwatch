@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, errorKey, type AccountRow, type CredentialRow, type OfferedAccount } from "../api";
+import { api, type AccountRow, type CredentialRow, type OfferedAccount } from "../api";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import FieldError from "../components/FieldError.vue";
 import IconButton from "../components/IconButton.vue";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { isAdmin } from "../session";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
@@ -14,30 +15,13 @@ const { t } = useI18n();
 const accounts = ref<AccountRow[]>([]);
 const credentials = ref<CredentialRow[]>([]);
 const loading = ref(true);
-const busy = ref(false);
-const error = ref<string>();
-const notice = ref<string>();
 
 async function load() {
   const [a, c] = await Promise.all([api.accounts(), isAdmin.value ? api.credentials() : Promise.resolve([])]);
   accounts.value = a;
   credentials.value = c;
 }
-
-async function run(action: () => Promise<void>, done?: string) {
-  busy.value = true;
-  error.value = undefined;
-  notice.value = undefined;
-  try {
-    await action();
-    await load();
-    if (done) notice.value = done;
-  } catch (e) {
-    error.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
-  }
-}
+const { busy, error, notice, run } = useAsyncAction({ reload: load });
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
@@ -45,21 +29,15 @@ onMounted(() => void run(async () => undefined).finally(() => (loading.value = f
 type ModalKind = "account" | "login" | "edit" | "password";
 const modal = ref<ModalKind>();
 const modalError = ref<string>();
-async function runInModal(action: () => Promise<boolean>, done: string) {
-  busy.value = true;
-  modalError.value = undefined;
-  notice.value = undefined;
-  try {
-    if (!(await action())) return;
-    closeModal();
-    await load();
-    notice.value = done;
-  } catch (e) {
-    modalError.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
-  }
-}
+/** `action` resolves to true when the modal's work is done; it then closes. */
+const runInModal = (action: () => Promise<boolean>, done?: () => string) =>
+  run(
+    async () => {
+      if (!(await action())) return false;
+      closeModal();
+    },
+    { done, error: modalError },
+  );
 function openModal(kind: ModalKind) {
   modalError.value = undefined;
   // Also here: closing blurs the field, which marks it touched after closeModal() reset it.
@@ -114,14 +92,17 @@ function startEdit(a: AccountRow) {
   openModal("edit");
 }
 const saveEdit = () =>
-  runInModal(async () => {
-    if (!editForm.validate()) return false;
-    await api.updateAccount(editing.id, {
-      displayName: editing.displayName.trim(),
-      ...(editing.credentialId ? { credentialId: editing.credentialId } : {}),
-    });
-    return true;
-  }, t("accounts.saved"));
+  runInModal(
+    async () => {
+      if (!editForm.validate()) return false;
+      await api.updateAccount(editing.id, {
+        displayName: editing.displayName.trim(),
+        ...(editing.credentialId ? { credentialId: editing.credentialId } : {}),
+      });
+      return true;
+    },
+    () => t("accounts.saved"),
+  );
 
 // --- removing
 const removing = ref<{ kind: "account"; row: AccountRow } | { kind: "credential"; row: CredentialRow }>();
@@ -136,10 +117,9 @@ const confirmRemove = () => {
   const r = removing.value;
   removing.value = undefined;
   if (!r) return;
-  void run(
-    () => (r.kind === "account" ? api.deleteAccount(r.row.id) : api.deleteCredential(r.row.id)),
-    t("accounts.removed"),
-  );
+  void run(() => (r.kind === "account" ? api.deleteAccount(r.row.id) : api.deleteCredential(r.row.id)), {
+    done: () => t("accounts.removed"),
+  });
 };
 
 // --- adding an account from the broker's list
@@ -165,17 +145,20 @@ const fetchOffered = () =>
     adding.displayName = first?.name ?? "";
     // The list shows in the modal; adding is the next step.
     return false;
-  }, "");
+  });
 const addAccount = () =>
-  runInModal(async () => {
-    if (!addForm.validate()) return false;
-    await api.createAccount({
-      number: adding.number,
-      displayName: adding.displayName.trim() || adding.number,
-      credentialId: adding.credentialId,
-    });
-    return true;
-  }, t("accounts.added"));
+  runInModal(
+    async () => {
+      if (!addForm.validate()) return false;
+      await api.createAccount({
+        number: adding.number,
+        displayName: adding.displayName.trim() || adding.number,
+        credentialId: adding.credentialId,
+      });
+      return true;
+    },
+    () => t("accounts.added"),
+  );
 
 // --- logins
 const newLogin = reactive({ label: "", login: "", secret: "" });
@@ -184,11 +167,14 @@ const labelField = loginForm.field(() => newLogin.label, checks.required);
 const loginField = loginForm.field(() => newLogin.login, checks.required);
 const secretField = loginForm.field(() => newLogin.secret, checks.required);
 const addLogin = () =>
-  runInModal(async () => {
-    if (!loginForm.validate()) return false;
-    await api.createCredential({ ...newLogin, label: newLogin.label.trim() });
-    return true;
-  }, t("accounts.loginAdded"));
+  runInModal(
+    async () => {
+      if (!loginForm.validate()) return false;
+      await api.createCredential({ ...newLogin, label: newLogin.label.trim() });
+      return true;
+    },
+    () => t("accounts.loginAdded"),
+  );
 
 const changingSecret = reactive({ id: 0, label: "", secret: "" });
 const secretForm = useValidation();
@@ -198,18 +184,21 @@ function startPasswordChange(c: CredentialRow) {
   openModal("password");
 }
 const saveSecret = () =>
-  runInModal(async () => {
-    if (!secretForm.validate()) return false;
-    await api.updateCredential(changingSecret.id, { secret: changingSecret.secret });
-    return true;
-  }, t("accounts.passwordChanged"));
+  runInModal(
+    async () => {
+      if (!secretForm.validate()) return false;
+      await api.updateCredential(changingSecret.id, { secret: changingSecret.secret });
+      return true;
+    },
+    () => t("accounts.passwordChanged"),
+  );
 </script>
 
 <template>
   <div class="page">
     <h1>{{ $t("nav.accounts") }}</h1>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
-    <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
+    <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
     <AppSpinner v-if="loading" />
 
     <template v-else>
@@ -407,7 +396,7 @@ const saveSecret = () =>
             </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
-          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
         </form>
       </template>
       <template v-else-if="modal === 'edit'" #default="{ close }">
@@ -435,7 +424,7 @@ const saveSecret = () =>
             <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
-          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
         </form>
       </template>
       <template v-else-if="modal === 'password'" #default="{ close }">
@@ -457,7 +446,7 @@ const saveSecret = () =>
             <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
-          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
         </form>
       </template>
       <template v-else #default="{ close }">
@@ -501,7 +490,7 @@ const saveSecret = () =>
             <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("accounts.addLogin") }}</button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
-          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
         </form>
       </template>
     </AppModal>

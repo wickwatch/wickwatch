@@ -6,3 +6,7 @@ export * from "./config";
 export * from "./overview";
 export * from "./instance";
 export * from "./challenge";
+export * from "./account";
+export * from "./algo";
+export * from "./managed-instance";
+export * from "./audit";

@@ -25,6 +25,7 @@ import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
 import { LogTracker } from "./services/log-tracker";
+import { OverviewLoader } from "./services/overview";
 import { createSymbolCache } from "./services/symbols";
 
 export interface AppDeps {
@@ -38,6 +39,8 @@ export interface AppDeps {
   logger?: boolean;
   /** Shared with the alert notifier, so both see the same log state. */
   logTracker?: LogTracker;
+  /** Shared with the notifier and the daily summary, so concurrent loads query runtime and broker once. */
+  overview?: OverviewLoader;
   /** Called after a challenge profile was saved, so the poller marks its trading days right away. */
   onChallengeSaved?: (accountId: number) => void;
 }
@@ -52,6 +55,7 @@ export async function buildApp({
   setup = new SetupState(),
   logger,
   logTracker = new LogTracker(adapters.runtime),
+  overview,
   onChallengeSaved,
 }: AppDeps) {
   const { trustProxy } = config;
@@ -71,6 +75,7 @@ export async function buildApp({
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
+  overview ??= new OverviewLoader({ adapters, directory: accounts, db, labelPrefix, logTracker, log: () => app.log });
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -84,7 +89,7 @@ export async function buildApp({
   const api = `${basePath}/api/v1`;
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
-  await app.register(overviewRoutes, { adapters, accounts, db, labelPrefix, logTracker, prefix: api });
+  await app.register(overviewRoutes, { adapters, overview, prefix: api });
   await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, logTracker, history, prefix: api });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });

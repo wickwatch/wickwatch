@@ -1,21 +1,15 @@
 import { AccountDetail, CLOCK_TOLERANCE_MS, HostStatus, Overview } from "@wickwatch/core";
 import Type from "typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
-import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
-import type { Db } from "../db";
 import { clockCheckState, clockOffset } from "../services/clock-check";
-import type { LogTracker } from "../services/log-tracker";
 import { ErrorBody } from "../plugins/errors";
-import { loadAccountDetail, loadOverview } from "../services/overview";
+import type { OverviewLoader } from "../services/overview";
 
 export const overviewRoutes: FastifyPluginAsyncTypebox<{
   adapters: Adapters;
-  accounts: AccountDirectory;
-  db: Db;
-  labelPrefix: string;
-  logTracker: LogTracker;
-}> = async (app, { adapters, accounts, db, labelPrefix, logTracker }) => {
+  overview: OverviewLoader;
+}> = async (app, { adapters, overview }) => {
   app.get(
     "/overview",
     {
@@ -25,7 +19,7 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
         response: { 200: Overview },
       },
     },
-    async (request) => loadOverview(adapters, accounts, db, labelPrefix, logTracker, request.log),
+    async () => overview.overview(),
   );
 
   app.get(
@@ -39,15 +33,7 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
       },
     },
     async (request, reply) => {
-      const detail = await loadAccountDetail(
-        request.params.number,
-        adapters,
-        accounts,
-        db,
-        labelPrefix,
-        logTracker,
-        request.log,
-      );
+      const detail = await overview.accountDetail(request.params.number);
       return detail ?? reply.code(404).send({ error: "not_found" });
     },
   );

@@ -1,18 +1,9 @@
+import { AuditPage } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
-
-const AuditRecord = Type.Object({
-  id: Type.Integer(),
-  time: Type.String(),
-  /** The user who acted; missing for Wickwatch itself (loss guard, autostart) and failed logins. */
-  user: Type.Optional(Type.String()),
-  action: Type.String(),
-  target: Type.Optional(Type.String()),
-  details: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
-});
 
 const MAX_LIMIT = 200;
 
@@ -36,13 +27,7 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
           limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_LIMIT })),
         }),
         response: {
-          200: Type.Object({
-            entries: Type.Array(AuditRecord),
-            /** More entries exist before the last one. */
-            more: Type.Boolean(),
-            /** Every action in the log, for the filter. */
-            actions: Type.Array(Type.String()),
-          }),
+          200: AuditPage,
           403: ErrorBody,
         },
       },

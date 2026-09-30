@@ -23,18 +23,11 @@ const step1 = useValidation();
 const fields = {
   token: step1.field(() => token.value, checks.required),
   username: step1.field(() => username.value, checks.required, checks.username),
-  password: step1.field(
-    () => password.value,
-    checks.required,
-    (v) =>
-      String(v).length < MIN_PASSWORD_LENGTH
-        ? { key: "auth.setup.passwordTooShort", params: { min: MIN_PASSWORD_LENGTH } }
-        : undefined,
-  ),
+  password: step1.field(() => password.value, checks.required, checks.minLength(MIN_PASSWORD_LENGTH)),
   repeat: step1.field(
     () => repeat.value,
     checks.required,
-    (v) => (v !== password.value ? { key: "auth.setup.passwordMismatch" } : undefined),
+    checks.sameAs(() => password.value),
   ),
 };
 const step2 = useValidation();

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import { api, errorKey, type TotpSetup } from "../api";
+import { useI18n } from "vue-i18n";
+import { api, type TotpSetup } from "../api";
 import AppModal from "../components/AppModal.vue";
 import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
@@ -13,13 +14,8 @@ import { checks, MIN_PASSWORD_LENGTH, useValidation } from "../validation";
 const totp = ref<TotpSetup>();
 const code = ref("");
 const password = ref("");
-const notice = ref<string>();
-const { busy, error, run: runAction } = useAsyncAction();
-/** Also clears the last notice, like the password change. */
-const run = (action: () => Promise<void>) => {
-  notice.value = undefined;
-  return runAction(action);
-};
+const { t } = useI18n();
+const { busy, error, notice, run } = useAsyncAction();
 
 const startEnable = () =>
   run(async () => {
@@ -32,15 +28,17 @@ const disableForm = useValidation();
 const passwordField = disableForm.field(() => password.value, checks.required);
 
 const confirmEnable = () =>
-  run(async () => {
-    if (!enableForm.validate()) return;
-    await api.totpEnable(code.value);
-    totp.value = undefined;
-    code.value = "";
-    enableForm.reset();
-    await loadSession();
-    notice.value = "profile.totpEnabledNotice";
-  });
+  run(
+    async () => {
+      if (!enableForm.validate()) return false;
+      await api.totpEnable(code.value);
+      totp.value = undefined;
+      code.value = "";
+      enableForm.reset();
+      await loadSession();
+    },
+    { done: () => t("profile.totpEnabledNotice") },
+  );
 
 // --- password, changed in the shared modal like the other edits
 const changing = ref(false);
@@ -68,37 +66,34 @@ function closePassword() {
   Object.assign(pw, { current: "", next: "", repeat: "" });
   pwForm.reset();
 }
-async function savePassword() {
+function savePassword() {
   if (!pwForm.validate()) return;
-  busy.value = true;
-  pwError.value = undefined;
-  notice.value = undefined;
-  try {
-    await api.changePassword(pw.current, pw.next);
-    closePassword();
-    notice.value = "profile.passwordChanged";
-  } catch (e) {
-    pwError.value = errorKey(e);
-  } finally {
-    busy.value = false;
-  }
+  void run(
+    async () => {
+      await api.changePassword(pw.current, pw.next);
+      closePassword();
+    },
+    { done: () => t("profile.passwordChanged"), error: pwError },
+  );
 }
 
 const disable = () =>
-  run(async () => {
-    if (!disableForm.validate()) return;
-    await api.totpDisable(password.value);
-    password.value = "";
-    disableForm.reset();
-    await loadSession();
-    notice.value = "profile.totpDisabledNotice";
-  });
+  run(
+    async () => {
+      if (!disableForm.validate()) return false;
+      await api.totpDisable(password.value);
+      password.value = "";
+      disableForm.reset();
+      await loadSession();
+    },
+    { done: () => t("profile.totpDisabledNotice") },
+  );
 </script>
 
 <template>
   <div class="account">
     <h1>{{ $t("profile.title") }}</h1>
-    <p class="status" role="status" aria-live="polite">{{ notice ? $t(notice) : "" }}</p>
+    <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
 
     <template v-if="currentUser">

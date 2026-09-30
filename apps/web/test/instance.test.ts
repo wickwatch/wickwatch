@@ -275,6 +275,32 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("reports a failed start, stop or restart like the instance tables", async () => {
+    let action: ((response: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL, init?: RequestInit) => {
+        if (input.pathname.includes("/managed-instances/")) {
+          return Promise.resolve(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }));
+        }
+        if (init?.method === "POST") return new Promise<Response>((resolve) => (action = resolve));
+        return Promise.resolve(new Response(JSON.stringify(detail), { status: 200 }));
+      }),
+    );
+    const wrapper = await render();
+    const stop = wrapper.findAll(".head button").find((b) => b.text() === "Stop");
+    await stop?.trigger("click");
+    // Busy while it runs, like a row in the tables.
+    expect(stop?.attributes("disabled")).toBeDefined();
+    action?.(new Response(JSON.stringify({ error: "internal" }), { status: 500 }));
+    await flushPromises();
+    const notice = wrapper.find(".notice");
+    expect(notice.text()).toBe("Stop alpha failed: Unexpected server error.");
+    expect(notice.classes()).toContain("tone-negative");
+    expect(stop?.attributes("disabled")).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("shows a position's details in the drawer", async () => {
     const wrapper = await render();
     const details = wrapper.findAll(".table-wrap td button").find((b) => b.attributes("aria-label") === "Details");

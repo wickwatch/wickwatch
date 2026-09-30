@@ -3,3 +3,4 @@ export { CtraderCliBroker, DEFAULT_CTRADER_IMAGE, type CtraderCliBrokerOptions }
 export { checkParameterNames, redactStartupTable, toLogEvent } from "./mapping";
 export { DEFAULT_CLI_OPTIONS, extractJson, cliError, type CliOptions } from "./cli";
 export { localRunner, toolRunner, type CliRunner } from "./runner";
+export { readCtraderCliSettings, type CtraderCliSettings } from "./settings";

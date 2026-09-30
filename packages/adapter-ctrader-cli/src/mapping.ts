@@ -1,5 +1,6 @@
 import {
   AdapterError,
+  isObject,
   type AccountStats,
   type AlgoMetadata,
   type BrokerAccount,
@@ -17,7 +18,6 @@ import {
 
 type Json = Record<string, unknown>;
 
-const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown) => (typeof v === "string" ? v : typeof v === "number" ? String(v) : undefined);
 const isoTime = (v: unknown) => {
   const t = typeof v === "string" ? Date.parse(v) : NaN;
@@ -253,7 +253,7 @@ export function toAlgoMetadata(data: unknown): AlgoMetadata {
     const name = str(p["PropertyName"]);
     if (!name) throw unexpected("parameter", p);
     const type = PARAMETER_TYPES[str(p["Type"]) ?? ""] ?? "string";
-    const enumValues = isObject(p["EnumValues"]) ? (p["EnumValues"] as Record<string, unknown>) : undefined;
+    const enumValues = isObject(p["EnumValues"]) ? p["EnumValues"] : undefined;
     // Enum defaults are numbers in the CLI output; the core works with the option names.
     // Colour defaults are { A, R, G, B }; `run` takes them as #AARRGGBB.
     const defaultValue =

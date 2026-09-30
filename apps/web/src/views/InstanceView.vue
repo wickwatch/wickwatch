@@ -12,6 +12,8 @@ import InstanceConfigTab from "../components/InstanceConfigTab.vue";
 import InstanceOverviewTab, { type Range } from "../components/InstanceOverviewTab.vue";
 import MenuButton, { type MenuItem } from "../components/MenuButton.vue";
 import StatusBadge from "../components/StatusBadge.vue";
+import type { Notice } from "../composables/notice";
+import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
 import { durationParts, formatDateTime } from "../format";
 import { isActive, isOutdated, outdatedText } from "../instance-state";
@@ -95,25 +97,10 @@ const uptime = computed(() => {
   return t("instance.runningFor", { duration: t(key, params) });
 });
 
-const busy = ref(false);
-const notice = ref<string>();
-
-async function act(action: InstanceAction) {
-  busy.value = true;
-  notice.value = undefined;
-  try {
-    await api.instanceAction(instanceRef.value, action);
-  } catch (e) {
-    notice.value = t("notice.actionFailed", {
-      action: t(`action.${action}`),
-      name: name.value,
-      reason: t(errorKey(e)),
-    });
-  } finally {
-    busy.value = false;
-    await reload();
-  }
-}
+/** A failed start, stop, restart or delete. */
+const notice = ref<Notice>();
+const { busy, runAction } = useInstanceActions(notice, reload);
+const act = (action: InstanceAction) => runAction({ ref: instanceRef.value, name: name.value }, action);
 
 /** Parameter files come in the config adapter's first format, e.g. .cbotset. */
 const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
@@ -149,7 +136,7 @@ async function remove() {
     await api.deleteManagedInstance(instanceRef.value);
     await router.push({ name: "overview" });
   } catch (e) {
-    notice.value = t(errorKey(e));
+    notice.value = { tone: "negative", text: t(errorKey(e)) };
   }
 }
 </script>
@@ -199,7 +186,7 @@ async function remove() {
               icon="stop"
               :label="$t('action.stop')"
               show-label
-              :disabled="busy"
+              :disabled="busy.has(instanceRef)"
               @click="act('stop')"
             />
             <IconButton
@@ -207,14 +194,14 @@ async function remove() {
               icon="play"
               :label="$t('action.start')"
               show-label
-              :disabled="busy"
+              :disabled="busy.has(instanceRef)"
               @click="act('start')"
             />
             <IconButton
               icon="restart"
               :label="$t('action.restart')"
               show-label
-              :disabled="busy"
+              :disabled="busy.has(instanceRef)"
               @click="act('restart')"
             />
           </template>
@@ -234,7 +221,7 @@ async function remove() {
         </div>
       </section>
 
-      <p v-if="notice" class="tone-negative notice" role="alert">{{ notice }}</p>
+      <p v-if="notice" class="notice" :class="`tone-${notice.tone}`" role="alert">{{ notice.text }}</p>
       <p v-if="data?.instance.connectionLostSince" class="tone-warning" role="alert">
         {{ $t("instance.connectionLost", { since: formatDateTime(locale, data.instance.connectionLostSince) }) }}
       </p>

@@ -1,10 +1,16 @@
 import { dirname } from "node:path";
 import { CbotsetConfigAdapter } from "@wickwatch/adapter-cbotset";
 import { createDemoAdapters } from "@wickwatch/adapter-demo";
-import { CtraderCliBroker, DEFAULT_CTRADER_IMAGE, toolRunner } from "@wickwatch/adapter-ctrader-cli";
-import { DockerRuntimeAdapter } from "@wickwatch/adapter-docker";
+import {
+  CtraderCliBroker,
+  DEFAULT_CTRADER_IMAGE,
+  readCtraderCliSettings,
+  toolRunner,
+} from "@wickwatch/adapter-ctrader-cli";
+import { DockerRuntimeAdapter, isPinnedImage } from "@wickwatch/adapter-docker";
 import type { BrokerAdapter, ConfigAdapter, RuntimeAdapter } from "@wickwatch/core";
-import { ConfigError, type Config } from "./config";
+import type { Config } from "./config";
+import { ConfigError } from "./config-error";
 import { withLogEvents } from "./services/log-tracker";
 
 export interface Adapters {
@@ -14,6 +20,16 @@ export interface Adapters {
 }
 
 type Registry<T> = Record<string, (() => T) | undefined>;
+
+export type AdapterSettings = ReturnType<typeof readAdapterSettings>;
+
+/**
+ * The adapters' own environment variables, by adapter id; loadConfig reads and checks them with its `get` and
+ * `problems`, whichever adapters are selected.
+ */
+export function readAdapterSettings(get: (name: string) => string | undefined, problems: string[]) {
+  return { "ctrader-cli": readCtraderCliSettings(get, problems, isPinnedImage) };
+}
 
 /** The only place that knows concrete adapter implementations. */
 export function createAdapters(config: Config): Adapters {
@@ -42,8 +58,9 @@ export function createAdapters(config: Config): Adapters {
   const broker: Registry<BrokerAdapter> = {
     demo: () => getDemo().broker,
     "ctrader-cli": () => {
-      const image = config.ctraderImage ?? DEFAULT_CTRADER_IMAGE;
-      if (config.ctraderCli === "local") return new CtraderCliBroker({ binary: config.ctraderCliPath, image });
+      const settings = config.adapterSettings["ctrader-cli"];
+      const image = settings.image ?? DEFAULT_CTRADER_IMAGE;
+      if (settings.cli === "local") return new CtraderCliBroker({ binary: settings.cliPath, image });
       // In the Wickwatch image: the CLI of the official image, in a throwaway container per call or session.
       const runTool = selectedRuntime?.runTool?.bind(selectedRuntime);
       if (!runTool) problems.push("CTRADER_CLI=container needs a runtime that runs tools, e.g. RUNTIME_ADAPTER=docker");

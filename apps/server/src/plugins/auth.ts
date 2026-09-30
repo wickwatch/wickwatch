@@ -40,6 +40,14 @@ export const auth = fp<{ db: Db; basePath: string }>(async (app, { db, basePath 
       return reply.code(401).send({ error: "unauthenticated" });
     }
   });
+
+  // Safety net behind `preHandler: requireAdmin` on the routes: a state-changing API route outside auth/ that
+  // forgets it is still for admins only. preHandler, so a viewer's invalid body still answers 400 as before.
+  app.addHook("preHandler", async (request, reply) => {
+    const target = request.routeOptions.url ?? "";
+    if (!UNSAFE_METHODS.has(request.method) || !target.startsWith(apiPrefix) || target.startsWith(publicPrefix)) return;
+    if (!isAdmin(request)) return reply.code(403).send({ error: "forbidden" });
+  });
 });
 
 function sameOrigin(request: FastifyRequest): boolean {
@@ -73,3 +81,16 @@ export const isAdmin = (request: FastifyRequest): boolean => request.user?.role 
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (!isAdmin(request)) await reply.code(403).send({ error: "forbidden" });
 }
+
+/**
+ * preHandler for destructive actions (after requireAdmin): the body's `confirm` must repeat the route parameter
+ * `param`, e.g. the instance name, as typed into the confirmation dialog.
+ */
+export const requireConfirmation =
+  (param: string) =>
+  async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const confirm = (request.body as { confirm?: unknown } | undefined)?.confirm;
+    if (confirm !== (request.params as Record<string, string>)[param]) {
+      await reply.code(400).send({ error: "confirmation_required" });
+    }
+  };

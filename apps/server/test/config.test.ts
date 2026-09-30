@@ -31,8 +31,7 @@ describe("loadConfig", () => {
       alertCheckSeconds: 60,
       backup: { dir: "/srv/wickwatch/data/backups", intervalHours: 24, keep: 7 },
       auditRetentionDays: 365,
-      ctraderCli: "local",
-      ctraderCliPath: "ctrader-cli",
+      adapterSettings: { "ctrader-cli": { cli: "local", cliPath: "ctrader-cli" } },
       instanceRestartPolicy: "on-failure",
       clockCheckUrl: new URL("https://www.cloudflare.com/cdn-cgi/trace"),
     });
@@ -57,16 +56,15 @@ describe("loadConfig", () => {
   });
 
   it("requires a pinned cTrader image and a known restart policy", () => {
-    expect(load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:5.9.11" }).ctraderImage).toBe(
+    const image = (env: Record<string, string>) => load(env).adapterSettings["ctrader-cli"].image;
+    expect(image({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:5.9.11" })).toBe(
       "ghcr.io/spotware/ctrader-console:5.9.11",
     );
     expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console:latest" })).toThrow(/pinned/);
     expect(() => load({ CTRADER_IMAGE: "ghcr.io/spotware/ctrader-console" })).toThrow(/pinned/);
     expect(() => load({ CTRADER_IMAGE: "registry.local:5000/ctrader-console" })).toThrow(/pinned/);
-    expect(load({ CTRADER_IMAGE: "registry.local:5000/ctrader-console:5.9.11" }).ctraderImage).toMatch(/5\.9\.11$/);
-    expect(load({ CTRADER_IMAGE: `ghcr.io/spotware/ctrader-console@sha256:${"a".repeat(64)}` }).ctraderImage).toMatch(
-      /@sha256/,
-    );
+    expect(image({ CTRADER_IMAGE: "registry.local:5000/ctrader-console:5.9.11" })).toMatch(/5\.9\.11$/);
+    expect(image({ CTRADER_IMAGE: `ghcr.io/spotware/ctrader-console@sha256:${"a".repeat(64)}` })).toMatch(/@sha256/);
     expect(() => load({ INSTANCE_RESTART_POLICY: "always" })).toThrow(/INSTANCE_RESTART_POLICY/);
   });
 

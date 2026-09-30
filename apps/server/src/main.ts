@@ -15,7 +15,7 @@ import { LogTracker } from "./services/log-tracker";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
-import { loadOverview } from "./services/overview";
+import { OverviewLoader } from "./services/overview";
 import { ClockCheck } from "./services/clock-check";
 import { DailySummary } from "./services/daily-summary";
 import { AccountPoller } from "./services/poller";
@@ -35,6 +35,17 @@ try {
   const adapters = createAdapters(config);
   const setup = new SetupState();
   const logTracker = new LogTracker(adapters.runtime);
+  const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
+  const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
+  // One for the routes, the notifier and the daily summary, so their loads at the same time query the broker once.
+  const overview = new OverviewLoader({
+    adapters,
+    directory: accounts,
+    db,
+    labelPrefix: config.labelPrefix,
+    logTracker,
+    log: () => app.log,
+  });
   // The poller is created below (it needs the app's logger); a profile saved before that is marked by its first run.
   const tradingDays: { sync?: (accountId: number) => Promise<void> } = {};
   const app = await buildApp({
@@ -44,6 +55,7 @@ try {
     version: VERSION,
     setup,
     logTracker,
+    overview,
     onChallengeSaved: (accountId) => void tradingDays.sync?.(accountId),
   });
 
@@ -52,17 +64,15 @@ try {
   }
   await deleteExpiredSessions(db);
 
-  if (!config.masterKey) {
+  if (!cipher) {
     app.log.warn(
       "MASTER_KEY is not set: setup, login and stored credentials are unavailable (openssl rand -base64 32)",
     );
   } else if (adapters.broker.id === "demo") {
-    if (await seedDemoAccounts(db, createCipher(config.masterKey))) app.log.info("Demo accounts added");
+    if (await seedDemoAccounts(db, cipher)) app.log.info("Demo accounts added");
     if (await seedDemoChallenges(db)) app.log.info("Demo challenge profiles added");
   }
 
-  const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
-  const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const poller = new AccountPoller({
     db,
     adapters,
@@ -73,7 +83,7 @@ try {
   tradingDays.sync = (accountId) => poller.syncTradingDays(accountId);
   const notifier = new AlertNotifier({
     db,
-    load: () => loadOverview(adapters, accounts, db, config.labelPrefix, logTracker, app.log),
+    load: () => overview.overview(),
     ...(config.alertWebhookUrl ? { webhookUrl: config.alertWebhookUrl } : {}),
     ...(config.heartbeatUrl ? { heartbeatUrl: config.heartbeatUrl } : {}),
     locale: config.defaultLocale,
@@ -103,7 +113,7 @@ try {
     config.dailySummary && config.alertWebhookUrl
       ? new DailySummary({
           db,
-          load: () => loadOverview(adapters, accounts, db, config.labelPrefix, logTracker, app.log),
+          load: () => overview.overview(),
           webhookUrl: config.alertWebhookUrl,
           ...config.dailySummary,
           locale: config.defaultLocale,

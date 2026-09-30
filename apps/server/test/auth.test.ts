@@ -1,6 +1,17 @@
+import Fastify from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
+import { auth } from "../src/plugins/auth";
 import { totpCode, totpCounter } from "../src/security/totp";
-import { createUser, currentCode, PASSWORD, SETUP_TOKEN, sessionCookie, startApp, type TestApp } from "./helpers";
+import {
+  createUser,
+  currentCode,
+  loginAs,
+  PASSWORD,
+  SETUP_TOKEN,
+  sessionCookie,
+  startApp,
+  type TestApp,
+} from "./helpers";
 
 let t: TestApp;
 afterEach(async () => {
@@ -247,5 +258,28 @@ describe("turning 2FA on and off", () => {
     t = await startApp();
     expect((await post("/api/v1/auth/totp/setup")).statusCode).toBe(401);
     expect((await post("/api/v1/auth/totp/disable", { password: PASSWORD })).statusCode).toBe(401);
+  });
+});
+
+describe("admin-only writes", () => {
+  it("keeps a state-changing route without its own guard for admins", async () => {
+    t = await startApp();
+    const probe = Fastify({ logger: false });
+    await probe.register(auth, { db: t.db, basePath: "" });
+    probe.post("/api/v1/probe", () => ({ ok: true }));
+    probe.post("/api/v1/auth/probe", () => ({ ok: true }));
+    probe.get("/api/v1/probe", () => ({ ok: true }));
+    const inject = (method: "GET" | "POST", url: string, cookie: string) =>
+      probe.inject({ method, url, headers: { cookie } });
+    try {
+      const viewer = await loginAs(t, "viewer");
+      const admin = await loginAs(t, "admin");
+      expect((await inject("POST", "/api/v1/probe", viewer)).json()).toEqual({ error: "forbidden" });
+      expect((await inject("POST", "/api/v1/probe", admin)).statusCode).toBe(200);
+      expect((await inject("GET", "/api/v1/probe", viewer)).statusCode).toBe(200);
+      expect((await inject("POST", "/api/v1/auth/probe", viewer)).statusCode).toBe(200);
+    } finally {
+      await probe.close();
+    }
   });
 });

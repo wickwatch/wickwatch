@@ -5,7 +5,7 @@ import { createAdapters, type Adapters } from "../src/adapters";
 import { loadConfig } from "../src/config";
 import { LogTracker } from "../src/services/log-tracker";
 import { LossGuardService } from "../src/services/loss-guard";
-import { loadOverview } from "../src/services/overview";
+import { OverviewLoader } from "../src/services/overview";
 import { startApp, type TestApp } from "./helpers";
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as never;
@@ -95,15 +95,14 @@ describe("loss guard", () => {
     await guard.check();
     expect(await running()).toEqual([ref!.ref]);
 
-    const overview = await loadOverview(
+    const overview = await new OverviewLoader({
       adapters,
-      dbAccountDirectory(t.db, t.cipher, "demo"),
-      t.db,
-      "wickwatch",
-      new LogTracker(adapters.runtime),
-      log,
-      NOW,
-    );
+      directory: dbAccountDirectory(t.db, t.cipher, "demo"),
+      db: t.db,
+      labelPrefix: "wickwatch",
+      logTracker: new LogTracker(adapters.runtime),
+      log: () => log,
+    }).overview(NOW);
     expect(overview.alerts).toContainEqual({
       level: "error",
       code: "challenge_guard",

@@ -2,6 +2,7 @@
 import {
   AdapterError,
   enumNumber,
+  isObject,
   validateParameters,
   type ValidateOptions,
   valuesFromFile,
@@ -15,7 +16,6 @@ import {
 const BOM = "\uFEFF";
 
 type Json = Record<string, unknown>;
-const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
  * `.cbotset` as cTrader writes it: JSON `{ "Chart": { "Symbol", "Period" }, "Parameters": { … } }`,

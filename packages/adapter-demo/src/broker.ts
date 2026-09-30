@@ -1,5 +1,6 @@
 import {
   AdapterError,
+  dealResult,
   toIsoTime,
   type AccountStats,
   type AlgoMetadata,
@@ -83,10 +84,7 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     const acc = this.world.account(account);
     const now = this.world.now();
     const historyStart = Math.floor(now.getTime() / DAY_MS) * DAY_MS - HISTORY_DAYS * DAY_MS;
-    const realised = this.generateDeals(acc, historyStart, now.getTime()).reduce(
-      (sum, d) => sum + d.pnl + (d.commission ?? 0) + (d.swap ?? 0),
-      0,
-    );
+    const realised = this.generateDeals(acc, historyStart, now.getTime()).reduce((sum, d) => sum + dealResult(d), 0);
     const positions = this.openPositions(acc.number);
     const balance = round(acc.startBalance + realised, 2);
     const equity = round(balance + positions.reduce((sum, p) => sum + p.pnl, 0), 2);
