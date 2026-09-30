@@ -245,3 +245,52 @@ describe("challenge evaluation from the recorded days", () => {
     }
   });
 });
+
+describe("trading days of a new profile", () => {
+  it("are marked right after saving and shown as loading until then", async () => {
+    const saved: number[] = [];
+    const t = await startApp({}, { onChallengeSaved: (id) => saved.push(id) });
+    try {
+      const admin = await loginAs(t, "admin");
+      const put = (body: ChallengeProfile) =>
+        t.app.inject({
+          method: "PUT",
+          url: "/api/v1/accounts/1111111/challenge",
+          headers: { cookie: admin, "x-requested-with": "wickwatch" },
+          payload: body,
+        });
+      expect((await put(profile)).statusCode).toBe(200);
+      const { id } = await t.db
+        .selectFrom("accounts")
+        .select("id")
+        .where("number", "=", "1111111")
+        .executeTakeFirstOrThrow();
+      expect(saved).toEqual([id]);
+
+      const now = new Date("2026-09-25T10:00:00Z");
+      const state = { balance: 100_000, equity: 100_000, deals: [] };
+      const days = async () =>
+        (await evaluateForAccount(t.db, id, profile, state, now)).rules.find((r) => r.id === "tradingDays");
+      expect(await days()).toMatchObject({ pending: true });
+
+      const config = loadConfig({ DATABASE_URL: "file::memory:" });
+      const poller = new AccountPoller({
+        db: t.db,
+        adapters: createAdapters(config),
+        accounts: dbAccountDirectory(t.db, t.cipher, "demo"),
+        log,
+        now: () => now,
+      });
+      await poller.syncTradingDays(id);
+      expect((await days())?.pending).toBeUndefined();
+
+      // An earlier start date needs the older days first.
+      const earlier = { ...profile, startDate: "2026-08-01" };
+      expect((await put(earlier)).statusCode).toBe(200);
+      const evaluation = await evaluateForAccount(t.db, id, earlier, state, now);
+      expect(evaluation.rules.find((r) => r.id === "tradingDays")).toMatchObject({ pending: true });
+    } finally {
+      await t.app.close();
+    }
+  });
+});

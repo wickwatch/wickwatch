@@ -33,7 +33,17 @@ try {
   const adapters = createAdapters(config);
   const setup = new SetupState();
   const logTracker = new LogTracker(adapters.runtime);
-  const app = await buildApp({ config, db, adapters, version: VERSION, setup, logTracker });
+  // The poller is created below (it needs the app's logger); a profile saved before that is marked by its first run.
+  const tradingDays: { sync?: (accountId: number) => Promise<void> } = {};
+  const app = await buildApp({
+    config,
+    db,
+    adapters,
+    version: VERSION,
+    setup,
+    logTracker,
+    onChallengeSaved: (accountId) => void tradingDays.sync?.(accountId),
+  });
 
   for (const result of await migrateToLatest(db)) {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
@@ -58,6 +68,7 @@ try {
     log: app.log,
     statsIntervalMs: config.accountPollSeconds * 1000,
   });
+  tradingDays.sync = (accountId) => poller.syncTradingDays(accountId);
   const notifier = new AlertNotifier({
     db,
     load: () => loadOverview(adapters, accounts, db, config.labelPrefix, logTracker, app.log),

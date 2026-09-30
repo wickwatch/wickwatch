@@ -59,7 +59,7 @@ const { locale } = useI18n();
     </dl>
 
     <div v-if="account.challenge" class="card__profile">
-      <ChallengeRules :challenge="account.challenge" />
+      <ChallengeRules :challenge="account.challenge" collapsible />
     </div>
 
     <div class="card__foot">

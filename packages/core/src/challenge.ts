@@ -33,6 +33,8 @@ export interface ChallengeInput {
   peakDayStartBalance?: { value: number; approximate: boolean };
   /** Days with at least one closed trade since the start. */
   tradingDays: number;
+  /** The trading days since the start are not all marked yet (new profile, earlier start date). */
+  tradingDaysPending?: boolean;
 }
 
 /** Reset time and zone of the profile's trading day; UTC midnight without a daily-loss rule. */
@@ -134,6 +136,7 @@ export function evaluateChallenge(input: ChallengeInput): ChallengeEvaluation {
       limit: rules.minTradingDays,
       usage,
       unit: "days",
+      ...(input.tradingDaysPending ? { pending: true } : {}),
     });
   }
 

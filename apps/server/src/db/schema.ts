@@ -65,6 +65,8 @@ export interface ChallengeProfilesTable {
   template_id: string | null;
   /** ChallengeProfile as JSON. */
   profile: string;
+  /** YYYY-MM-DD: trading days are marked completely from this day on (services/poller.ts); null before the first run. */
+  trading_days_from: string | null;
   created_at: string;
   updated_at: string;
 }

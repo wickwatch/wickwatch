@@ -315,7 +315,6 @@ p[role="alert"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--ww-space-5);
-  align-items: start;
 }
 
 .summary > :only-child {
@@ -330,9 +329,10 @@ p[role="alert"] {
   padding: var(--ww-space-5);
 }
 
-/* Next to the challenge: one figure per line, label left, value right. */
+/* Next to the challenge: one figure per line, label left, value right, as tall as the challenge. */
 .kpis--list {
   grid-template-columns: minmax(0, 1fr);
+  align-content: space-between;
   gap: 0;
 }
 
@@ -348,10 +348,6 @@ p[role="alert"] {
   border-bottom: 0;
 }
 
-.kpis--list dd {
-  margin: 0;
-}
-
 .kpis dt {
   color: var(--ww-text-muted);
   font-size: var(--ww-size-xs);
@@ -360,6 +356,19 @@ p[role="alert"] {
 .kpis dd {
   margin: var(--ww-space-1) 0 0;
   font-size: var(--ww-size-lg);
+}
+
+.kpis--list dd {
+  margin: 0;
+}
+
+/* Side by side with the challenge (not stacked on narrow screens): its type size. */
+@media (min-width: 1001px) {
+  .kpis--list dt,
+  .kpis--list dd {
+    color: var(--ww-text);
+    font-size: var(--ww-size-sm);
+  }
 }
 
 .card {

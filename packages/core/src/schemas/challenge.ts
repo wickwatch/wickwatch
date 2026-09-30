@@ -117,6 +117,8 @@ export const RuleResult = Type.Object({
   unit: Type.Union([Type.Literal("percent"), Type.Literal("days")]),
   /** Based on an estimate, e.g. day-start equity was not recorded at the reset. */
   approximate: Type.Optional(Type.Boolean()),
+  /** Still being loaded, e.g. the trading days before the start of a new profile: the value may rise. */
+  pending: Type.Optional(Type.Boolean()),
 });
 export type RuleResult = Type.Static<typeof RuleResult>;
 

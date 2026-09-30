@@ -97,6 +97,7 @@
       "reached": "Erreicht"
     },
     "approximate": "Geschätzt: Ein Wert zu Tagesbeginn wurde nicht erfasst (Wickwatch lief beim Reset nicht).",
+    "pending": "wird nachgeladen …",
     "add": "Challenge-Profil hinzufügen",
     "edit": "Challenge-Profil bearbeiten",
     "editorTitle": "Challenge-Profil · Konto {account}",

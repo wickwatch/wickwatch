@@ -50,6 +50,11 @@ export async function evaluateForAccount(
     .where("account_id", "=", accountId)
     .where("day", ">=", profile.startDate)
     .execute();
+  const synced = await db
+    .selectFrom("challenge_profiles")
+    .select("trading_days_from")
+    .where("account_id", "=", accountId)
+    .executeTakeFirst();
   const todayRow = rows.find((r) => r.day === today);
   const peaks = rows.map((r) => r.max_equity).filter((v): v is number => v !== null);
   // Today's day-start balance comes exactly from today's deals; earlier days from their first sample.
@@ -88,5 +93,6 @@ export async function evaluateForAccount(
     ...(peaks.length ? { peakEquity: Math.max(...peaks, state.equity) } : { peakEquity: state.equity }),
     ...(peakDayStartBalance ? { peakDayStartBalance } : {}),
     tradingDays: rows.filter((r) => r.traded === 1).length + (tradedToday ? 1 : 0),
+    ...(!synced?.trading_days_from || synced.trading_days_from > profile.startDate ? { tradingDaysPending: true } : {}),
   });
 }

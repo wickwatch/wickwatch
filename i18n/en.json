@@ -97,6 +97,7 @@
       "reached": "Reached"
     },
     "approximate": "Estimated: a value at a day start was not recorded (Wickwatch was not running at the reset).",
+    "pending": "loading …",
     "add": "Add challenge profile",
     "edit": "Edit challenge profile",
     "editorTitle": "Challenge profile · account {account}",

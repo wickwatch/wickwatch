@@ -21,14 +21,25 @@ export interface TestApp {
   setup: SetupState;
 }
 
-export async function startApp(env: Record<string, string> = {}, { seed = true } = {}): Promise<TestApp> {
+export async function startApp(
+  env: Record<string, string> = {},
+  { seed = true, onChallengeSaved }: { seed?: boolean; onChallengeSaved?: (accountId: number) => void } = {},
+): Promise<TestApp> {
   const config = loadConfig({ DATABASE_URL: "file::memory:", MASTER_KEY, ...env });
   const db = createDatabase(config.database);
   await migrateToLatest(db);
   const cipher = createCipher(Buffer.from(MASTER_KEY, "base64"));
   if (seed) await seedDemoAccounts(db, cipher);
   const setup = new SetupState(SETUP_TOKEN);
-  const app = await buildApp({ config, db, adapters: createAdapters(config), version: "1.2.3", setup, logger: false });
+  const app = await buildApp({
+    config,
+    db,
+    adapters: createAdapters(config),
+    version: "1.2.3",
+    setup,
+    logger: false,
+    ...(onChallengeSaved ? { onChallengeSaved } : {}),
+  });
   return { app, db, cipher, setup };
 }
 

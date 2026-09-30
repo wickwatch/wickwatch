@@ -1570,6 +1570,9 @@
                                     },
                                     "approximate": {
                                       "type": "boolean"
+                                    },
+                                    "pending": {
+                                      "type": "boolean"
                                     }
                                   }
                                 }
@@ -2252,6 +2255,9 @@
                                     ]
                                   },
                                   "approximate": {
+                                    "type": "boolean"
+                                  },
+                                  "pending": {
                                     "type": "boolean"
                                   }
                                 }

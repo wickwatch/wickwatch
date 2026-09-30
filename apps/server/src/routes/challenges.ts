@@ -10,11 +10,16 @@ import { audit } from "../services/audit";
 export interface ChallengeRouteOptions {
   db: Db;
   templates: ChallengeTemplate[];
+  /** Runs after a save, e.g. to mark the trading days since the (new) start date right away. */
+  onSaved?: (accountId: number) => void;
 }
 
 const Params = Type.Object({ number: Type.String({ minLength: 1 }) });
 
-export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> = async (app, { db, templates }) => {
+export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> = async (
+  app,
+  { db, templates, onSaved },
+) => {
   const accountId = async (number: string) =>
     (await db.selectFrom("accounts").select("id").where("number", "=", number).executeTakeFirst())?.id;
 
@@ -82,6 +87,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
         details: { name: profile.name, templateId: profile.templateId ?? null },
         userId: request.user?.id,
       });
+      onSaved?.(id);
       return profile;
     },
   );

@@ -37,6 +37,8 @@ export interface AppDeps {
   logger?: boolean;
   /** Shared with the alert notifier, so both see the same log state. */
   logTracker?: LogTracker;
+  /** Called after a challenge profile was saved, so the poller marks its trading days right away. */
+  onChallengeSaved?: (accountId: number) => void;
 }
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -49,6 +51,7 @@ export async function buildApp({
   setup = new SetupState(),
   logger,
   logTracker = new LogTracker(adapters.runtime),
+  onChallengeSaved,
 }: AppDeps) {
   const { trustProxy } = config;
   const app = Fastify({
@@ -85,7 +88,12 @@ export async function buildApp({
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
-  await app.register(challengeRoutes, { db, templates, prefix: api });
+  await app.register(challengeRoutes, {
+    db,
+    templates,
+    ...(onChallengeSaved ? { onSaved: onChallengeSaved } : {}),
+    prefix: api,
+  });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
   await app.register(managedInstanceRoutes, {
     adapters,
