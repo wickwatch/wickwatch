@@ -238,13 +238,15 @@ const meta = computed(() => {
       :dirty="dirty"
       @close="closeEditor"
     >
-      <ChallengeForm
-        :number="number"
-        @saved="profileChanged"
-        @deleted="profileChanged"
-        @cancel="closeEditor"
-        @dirty="dirty = $event"
-      />
+      <template #default="{ close }">
+        <ChallengeForm
+          :number="number"
+          @saved="profileChanged"
+          @deleted="profileChanged"
+          @cancel="close"
+          @dirty="dirty = $event"
+        />
+      </template>
     </AppModal>
   </div>
 </template>

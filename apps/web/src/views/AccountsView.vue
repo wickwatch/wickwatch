@@ -2,8 +2,10 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type AccountRow, type CredentialRow, type OfferedAccount } from "../api";
+import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import FieldError from "../components/FieldError.vue";
+import IconButton from "../components/IconButton.vue";
 import { isAdmin } from "../session";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
@@ -37,6 +39,43 @@ async function run(action: () => Promise<void>, done?: string) {
 }
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
+
+/** Which add form is open in the modal; its errors stay inside the modal. */
+const modal = ref<"account" | "login">();
+const modalError = ref<string>();
+async function runInModal(action: () => Promise<boolean>, done: string) {
+  busy.value = true;
+  modalError.value = undefined;
+  notice.value = undefined;
+  try {
+    if (!(await action())) return;
+    closeModal();
+    await load();
+    notice.value = done;
+  } catch (e) {
+    modalError.value = t(errorKey(e));
+  } finally {
+    busy.value = false;
+  }
+}
+function openModal(kind: "account" | "login") {
+  modalError.value = undefined;
+  modal.value = kind;
+}
+function closeModal() {
+  modal.value = undefined;
+  offered.value = undefined;
+  Object.assign(adding, { credentialId: 0, number: "", displayName: "" });
+  Object.assign(newLogin, { label: "", login: "", secret: "" });
+  addForm.reset();
+  loginForm.reset();
+}
+/** Typed input that closing would lose. */
+const modalDirty = computed(() =>
+  modal.value === "account"
+    ? adding.credentialId !== 0
+    : modal.value === "login" && Object.values(newLogin).some((v) => v !== ""),
+);
 
 // --- editing an account
 const editing = reactive({ id: 0, displayName: "", credentialId: 0 });
@@ -86,24 +125,24 @@ const accountChoice = addForm.field(
   (v) => (v ? undefined : { key: "validation.chooseAccount" }),
 );
 const fetchOffered = () =>
-  run(async () => {
-    if (!addForm.validate()) return;
+  runInModal(async () => {
+    if (!addForm.validate()) return false;
     offered.value = await api.brokerAccounts(adding.credentialId);
     const first = offered.value.find(selectable);
     adding.number = first?.number ?? "";
     adding.displayName = first?.name ?? "";
-  });
+    // The list shows in the modal; adding is the next step.
+    return false;
+  }, "");
 const addAccount = () =>
-  run(async () => {
-    if (!addForm.validate()) return;
+  runInModal(async () => {
+    if (!addForm.validate()) return false;
     await api.createAccount({
       number: adding.number,
       displayName: adding.displayName.trim() || adding.number,
       credentialId: adding.credentialId,
     });
-    offered.value = undefined;
-    Object.assign(adding, { credentialId: 0, number: "", displayName: "" });
-    addForm.reset();
+    return true;
   }, t("accounts.added"));
 
 // --- logins
@@ -113,11 +152,10 @@ const labelField = loginForm.field(() => newLogin.label, checks.required);
 const loginField = loginForm.field(() => newLogin.login, checks.required);
 const secretField = loginForm.field(() => newLogin.secret, checks.required);
 const addLogin = () =>
-  run(async () => {
-    if (!loginForm.validate()) return;
+  runInModal(async () => {
+    if (!loginForm.validate()) return false;
     await api.createCredential({ ...newLogin, label: newLogin.label.trim() });
-    Object.assign(newLogin, { label: "", login: "", secret: "" });
-    loginForm.reset();
+    return true;
   }, t("accounts.loginAdded"));
 
 const changingSecret = reactive({ id: 0, secret: "" });
@@ -141,7 +179,16 @@ const saveSecret = () =>
 
     <template v-else>
       <section class="panel card" aria-labelledby="accounts-title">
-        <h2 id="accounts-title">{{ $t("accounts.accounts") }}</h2>
+        <div class="card__head">
+          <h2 id="accounts-title">{{ $t("accounts.accounts") }}</h2>
+          <IconButton
+            v-if="isAdmin"
+            icon="plus"
+            :label="$t('accounts.addAccount')"
+            show-label
+            @click="openModal('account')"
+          />
+        </div>
         <p v-if="!accounts.length" class="muted">{{ $t("overview.noAccounts") }}</p>
         <div v-else class="table-wrap">
           <table class="table">
@@ -220,69 +267,11 @@ const saveSecret = () =>
       </section>
 
       <template v-if="isAdmin">
-        <section class="panel card" aria-labelledby="add-title">
-          <h2 id="add-title">{{ $t("accounts.addAccount") }}</h2>
-          <p v-if="!credentials.length" class="muted">{{ $t("accounts.needLogin") }}</p>
-          <form v-else class="form" novalidate @submit.prevent="offered ? addAccount() : fetchOffered()">
-            <label class="field">
-              {{ $t("accounts.login") }}
-              <select
-                v-model="adding.credentialId"
-                v-bind="loginChoice.attrs.value"
-                class="input"
-                required
-                @change="offered = undefined"
-              >
-                <option :value="0" disabled>{{ $t("accounts.chooseLogin") }}</option>
-                <option v-for="c in credentials" :key="c.id" :value="c.id">
-                  {{ $t("accounts.loginOption", { label: c.label, login: c.login }) }}
-                </option>
-              </select>
-              <FieldError :field="loginChoice" />
-            </label>
-            <template v-if="offered">
-              <fieldset class="offered">
-                <legend>{{ $t("accounts.offered") }}</legend>
-                <p v-if="!offered.length" class="muted">{{ $t("accounts.noneOffered") }}</p>
-                <label v-for="o in offered" :key="o.number" class="offered__item" :class="{ muted: !selectable(o) }">
-                  <input
-                    v-bind="accountChoice.attrs.value"
-                    type="radio"
-                    name="offered"
-                    :value="o.number"
-                    :checked="adding.number === o.number"
-                    :disabled="!selectable(o)"
-                    @change="choose(o)"
-                  />
-                  <span class="mono">{{ o.number }}</span>
-                  <span>{{
-                    [o.name, o.broker, o.currency, o.live ? $t("accounts.live") : $t("accounts.demo")]
-                      .filter(Boolean)
-                      .join(" · ")
-                  }}</span>
-                  <span v-if="o.added">{{ $t("accounts.alreadyAdded") }}</span>
-                  <span v-else-if="o.active === false">{{ $t("accounts.inactive") }}</span>
-                </label>
-                <FieldError :field="accountChoice" />
-              </fieldset>
-              <label class="field">
-                {{ $t("accounts.name") }}
-                <input v-model="adding.displayName" class="input" maxlength="100" :placeholder="adding.number" />
-              </label>
-            </template>
-            <div class="buttons">
-              <button v-if="!offered" type="submit" class="btn" :disabled="busy">
-                {{ $t("accounts.fetchOffered") }}
-              </button>
-              <button v-else type="submit" class="btn btn--primary" :disabled="busy">
-                {{ $t("accounts.addAccount") }}
-              </button>
-            </div>
-          </form>
-        </section>
-
         <section class="panel card" aria-labelledby="logins-title">
-          <h2 id="logins-title">{{ $t("accounts.logins") }}</h2>
+          <div class="card__head">
+            <h2 id="logins-title">{{ $t("accounts.logins") }}</h2>
+            <IconButton icon="plus" :label="$t('accounts.addLogin')" show-label @click="openModal('login')" />
+          </div>
           <p class="muted hint">{{ $t("accounts.loginsHint") }}</p>
           <div v-if="credentials.length" class="table-wrap">
             <table class="table">
@@ -356,58 +345,122 @@ const saveSecret = () =>
               </tbody>
             </table>
           </div>
-
-          <form class="form" novalidate @submit.prevent="addLogin">
-            <h3>{{ $t("accounts.addLogin") }}</h3>
-            <div class="grid">
-              <label class="field">
-                {{ $t("accounts.label") }}
-                <input
-                  v-model="newLogin.label"
-                  v-bind="labelField.attrs.value"
-                  class="input"
-                  maxlength="100"
-                  required
-                />
-                <FieldError :field="labelField" />
-              </label>
-              <label class="field">
-                {{ $t("accounts.loginName") }}
-                <input
-                  v-model="newLogin.login"
-                  v-normalize="normalizers.noSpaces"
-                  v-bind="loginField.attrs.value"
-                  class="input"
-                  maxlength="200"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  spellcheck="false"
-                  required
-                />
-                <FieldError :field="loginField" />
-              </label>
-              <label class="field">
-                {{ $t("auth.password") }}
-                <input
-                  v-model="newLogin.secret"
-                  v-bind="secretField.attrs.value"
-                  class="input"
-                  type="password"
-                  autocomplete="new-password"
-                  required
-                />
-                <FieldError :field="secretField" />
-              </label>
-            </div>
-            <p class="field__hint">{{ $t("accounts.encrypted") }}</p>
-            <div class="buttons">
-              <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("accounts.addLogin") }}</button>
-            </div>
-          </form>
         </section>
       </template>
     </template>
 
+    <AppModal
+      :open="modal !== undefined"
+      :title="modal === 'login' ? $t('accounts.addLogin') : $t('accounts.addAccount')"
+      :dirty="modalDirty"
+      @close="closeModal"
+    >
+      <template v-if="modal === 'account'" #default="{ close }">
+        <p v-if="!credentials.length" class="muted">{{ $t("accounts.needLogin") }}</p>
+        <form v-else class="form" novalidate @submit.prevent="offered ? addAccount() : fetchOffered()">
+          <label class="field">
+            {{ $t("accounts.login") }}
+            <select
+              v-model="adding.credentialId"
+              v-bind="loginChoice.attrs.value"
+              class="input"
+              required
+              @change="offered = undefined"
+            >
+              <option :value="0" disabled>{{ $t("accounts.chooseLogin") }}</option>
+              <option v-for="c in credentials" :key="c.id" :value="c.id">
+                {{ $t("accounts.loginOption", { label: c.label, login: c.login }) }}
+              </option>
+            </select>
+            <FieldError :field="loginChoice" />
+          </label>
+          <template v-if="offered">
+            <fieldset class="offered">
+              <legend>{{ $t("accounts.offered") }}</legend>
+              <p v-if="!offered.length" class="muted">{{ $t("accounts.noneOffered") }}</p>
+              <label v-for="o in offered" :key="o.number" class="offered__item" :class="{ muted: !selectable(o) }">
+                <input
+                  v-bind="accountChoice.attrs.value"
+                  type="radio"
+                  name="offered"
+                  :value="o.number"
+                  :checked="adding.number === o.number"
+                  :disabled="!selectable(o)"
+                  @change="choose(o)"
+                />
+                <span class="mono">{{ o.number }}</span>
+                <span>{{
+                  [o.name, o.broker, o.currency, o.live ? $t("accounts.live") : $t("accounts.demo")]
+                    .filter(Boolean)
+                    .join(" · ")
+                }}</span>
+                <span v-if="o.added">{{ $t("accounts.alreadyAdded") }}</span>
+                <span v-else-if="o.active === false">{{ $t("accounts.inactive") }}</span>
+              </label>
+              <FieldError :field="accountChoice" />
+            </fieldset>
+            <label class="field">
+              {{ $t("accounts.name") }}
+              <input v-model="adding.displayName" class="input" maxlength="100" :placeholder="adding.number" />
+            </label>
+          </template>
+          <div class="buttons">
+            <button v-if="!offered" type="submit" class="btn" :disabled="busy">
+              {{ $t("accounts.fetchOffered") }}
+            </button>
+            <button v-else type="submit" class="btn btn--primary" :disabled="busy">
+              {{ $t("accounts.addAccount") }}
+            </button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+        </form>
+      </template>
+      <template v-else #default="{ close }">
+        <form class="form" novalidate @submit.prevent="addLogin">
+          <div class="grid">
+            <label class="field">
+              {{ $t("accounts.label") }}
+              <input v-model="newLogin.label" v-bind="labelField.attrs.value" class="input" maxlength="100" required />
+              <FieldError :field="labelField" />
+            </label>
+            <label class="field">
+              {{ $t("accounts.loginName") }}
+              <input
+                v-model="newLogin.login"
+                v-normalize="normalizers.noSpaces"
+                v-bind="loginField.attrs.value"
+                class="input"
+                maxlength="200"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+              />
+              <FieldError :field="loginField" />
+            </label>
+            <label class="field">
+              {{ $t("auth.password") }}
+              <input
+                v-model="newLogin.secret"
+                v-bind="secretField.attrs.value"
+                class="input"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+              <FieldError :field="secretField" />
+            </label>
+          </div>
+          <p class="field__hint">{{ $t("accounts.encrypted") }}</p>
+          <div class="buttons">
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("accounts.addLogin") }}</button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+        </form>
+      </template>
+    </AppModal>
     <ConfirmDialog
       :open="removing !== undefined"
       :title="$t('accounts.remove')"
@@ -438,6 +491,14 @@ const saveSecret = () =>
 
 .card {
   padding: var(--ww-space-5);
+}
+
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-3);
+  justify-content: space-between;
+  align-items: center;
 }
 
 h3 {

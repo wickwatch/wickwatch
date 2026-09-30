@@ -80,7 +80,6 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
                 v-if="canClose && !excluded"
                 icon="close"
                 :label="$t('action.closePosition')"
-                :text="$t('action.closeShort')"
                 variant="danger"
                 small
                 :disabled="busy?.has(p.id)"
@@ -122,7 +121,6 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
             <IconButton
               icon="close"
               :label="$t('action.cancelOrder')"
-              :text="$t('action.cancelOrderShort')"
               variant="danger"
               small
               :disabled="busy?.has(o.id)"

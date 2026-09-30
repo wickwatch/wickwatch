@@ -37,7 +37,15 @@ export function formatPrice(locale: string, value: number): string {
 const dateTimeCache = new Map<string, Intl.DateTimeFormat>();
 
 /** Local date and time in the browser's time zone; internally everything is UTC. */
-export function formatDateTime(locale: string, iso: string, style: "datetime" | "time" | "date" = "datetime"): string {
+/**
+ * `datetime` and `day` carry the year (trades and versions can be from last year); `date` is the short day for chart
+ * axes, `time` the time of day for log lines.
+ */
+export function formatDateTime(
+  locale: string,
+  iso: string,
+  style: "datetime" | "time" | "date" | "day" = "datetime",
+): string {
   const key = `${locale}|${style}`;
   let format = dateTimeCache.get(key);
   if (!format) {
@@ -46,7 +54,9 @@ export function formatDateTime(locale: string, iso: string, style: "datetime" | 
         ? { hour: "2-digit", minute: "2-digit", second: "2-digit" }
         : style === "date"
           ? { day: "2-digit", month: "2-digit" }
-          : { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" };
+          : style === "day"
+            ? { day: "2-digit", month: "2-digit", year: "numeric" }
+            : { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
     dateTimeCache.set(key, (format = new Intl.DateTimeFormat(locale, options)));
   }
   return format.format(new Date(iso));

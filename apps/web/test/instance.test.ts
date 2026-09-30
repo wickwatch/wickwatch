@@ -214,9 +214,10 @@ describe("InstanceView", () => {
     // The expiry column appears because the order has one.
     expect(wrapper.text()).toContain("Expires");
     expect(wrapper.text()).toContain(formatDateTime("en", "2026-09-26T21:00:00.000Z"));
-    // The row button shows the short verb; its accessible name is the full action.
+    // A row action is an icon with tooltip; it asks before cancelling.
     const cancel = wrapper.findAll("button").find((b) => b.attributes("aria-label") === "Cancel order");
-    expect(cancel?.text()).toBe("Cancel");
+    expect(cancel?.text()).toBe("");
+    expect(cancel?.attributes("data-tooltip")).toBe("Cancel order");
     await cancel?.trigger("click");
     expect(wrapper.text()).toContain("Cancel order 320393475 (Stop Buy GER40 at 19,600)?");
     const dialogButtons = wrapper.findAll("dialog")[1]?.findAll("button") ?? [];

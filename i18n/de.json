@@ -29,12 +29,10 @@
     "newInstance": "Neue Instanz",
     "emergencyStop": "Notstopp",
     "closePosition": "Position schließen",
-    "closeShort": "Schließen",
     "save": "Speichern",
     "saveAndStart": "Speichern & starten",
     "cancel": "Abbrechen",
-    "cancelOrder": "Order stornieren",
-    "cancelOrderShort": "Stornieren"
+    "cancelOrder": "Order stornieren"
   },
   "account": {
     "balance": "Balance",
@@ -478,7 +476,8 @@
     "uploadedAt": "hochgeladen {time}",
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} Parameter",
-    "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt."
+    "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt.",
+    "fileHint": "Eine .algo-Datei, z. B. aus der Plattform exportiert."
   },
   "instanceForm": {
     "newTitle": "Neue Instanz",
@@ -602,8 +601,6 @@
     "unknownGroup": "Nicht im Algo",
     "fileTitle": "Parameter aus Datei laden",
     "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Sie füllt das Formular; gespeichert wird erst mit „Speichern“.",
-    "fileChoose": "Datei wählen",
-    "fileDrop": "oder hierher ziehen",
     "describe": "Beschreibung zu {name}"
   },
   "modal": {
@@ -611,5 +608,10 @@
     "discardTitle": "Änderungen verwerfen?",
     "discardMessage": "Die Eingaben in diesem Fenster sind noch nicht gespeichert und gingen verloren.",
     "discard": "Verwerfen"
+  },
+  "file": {
+    "choose": "Datei wählen",
+    "drop": "oder hierher ziehen",
+    "selected": "Gewählt: {name}"
   }
 }

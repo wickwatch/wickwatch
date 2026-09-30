@@ -58,7 +58,9 @@ describe("AccountsView", () => {
     expect(wrapper.text()).toContain("Prop A");
     expect(wrapper.text()).toContain("me@example.com");
     // A login in use cannot be removed.
-    const removeLogin = wrapper.findAll("#logins-title ~ .table-wrap button").find((b) => b.text() === "Remove");
+    const removeLogin = wrapper
+      .findAll("section[aria-labelledby=logins-title] .table-wrap button")
+      .find((b) => b.text() === "Remove");
     expect(removeLogin?.attributes("disabled")).toBeDefined();
     // The reason shows as tooltip and is read out with the button.
     const reason = wrapper.find(`#${removeLogin?.attributes("aria-describedby") ?? ""}`).text();
@@ -73,18 +75,23 @@ describe("AccountsView", () => {
       user: { username: "a", role: "admin", totpEnabled: false },
     };
     const wrapper = await render();
-    const form = wrapper.findAll("form").at(-1);
-    await form?.trigger("submit");
+    // "Add login" is a button that opens the form in a modal.
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Add login")
+      ?.trigger("click");
+    const form = wrapper.find("dialog form");
+    await form.trigger("submit");
     await flushPromises();
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "POST")).toBe(false);
-    expect(form?.findAll(".field__error").map((e) => e.text())).toEqual(["Required.", "Required.", "Required."]);
+    expect(form.findAll(".field__error").map((e) => e.text())).toEqual(["Required.", "Required.", "Required."]);
 
-    const inputs = form?.findAll("input") ?? [];
+    const inputs = form.findAll("input");
     await inputs[0]?.setValue("Spotware demo");
     await inputs[1]?.setValue(" me@example.com ");
     await inputs[2]?.setValue("secret");
     expect((inputs[1]?.element as HTMLInputElement).value).toBe("me@example.com");
-    await form?.trigger("submit");
+    await form.trigger("submit");
     await flushPromises();
     const post = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST");
     expect(JSON.parse(String((post?.[1] as RequestInit).body))).toEqual({
@@ -92,8 +99,9 @@ describe("AccountsView", () => {
       login: "me@example.com",
       secret: "secret",
     });
-    // The cleared form shows no "Required." until the next attempt.
-    expect(form?.findAll(".field__error")).toHaveLength(0);
+    // Saved: the modal closes and the page says so.
+    expect(wrapper.find("dialog form").exists()).toBe(false);
+    expect(wrapper.find(".status").text()).toBe("Login added.");
   });
 
   it("shows viewers the accounts only, without actions or logins", async () => {

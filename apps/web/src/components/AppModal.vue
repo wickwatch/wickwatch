@@ -6,7 +6,7 @@ import IconButton from "./IconButton.vue";
 /**
  * The shared modal (BRAND.md, "Consistency") on a native modal <dialog>: focus stays inside, Escape closes, focus
  * returns to where it was. A full-screen sheet on phones. With `dirty` it asks before closing, so typed input is
- * not lost by accident; field errors stay inside the content.
+ * not lost by accident; the slot gets `close`, which asks the same way. Field errors stay inside the content.
  */
 const props = defineProps<{ open: boolean; title: string; dirty?: boolean }>();
 const emit = defineEmits<{ close: [] }>();
@@ -15,18 +15,27 @@ const titleId = useId();
 const asking = ref(false);
 let returnTo: HTMLElement | null = null;
 
+const FIELDS = "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])";
+
+// After the render, so the content exists: focus goes to its first field, ready to type. Not to the close button,
+// and not to a file picker (a focused "Choose file" only looks pressed): then the dialog itself takes it.
 watch(
   () => props.open,
   (open) => {
-    if (open && !dialog.value?.open) {
+    const el = dialog.value;
+    if (!el) return;
+    if (open && !el.open) {
       returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      dialog.value?.showModal();
+      el.showModal();
+      const first = el.querySelector<HTMLElement>(`.modal__body :is(${FIELDS})`);
+      (first && !(first instanceof HTMLInputElement && first.type === "file") ? first : el).focus();
     }
-    if (!open && dialog.value?.open) {
-      dialog.value.close();
+    if (!open && el.open) {
+      el.close();
       returnTo?.focus();
     }
   },
+  { flush: "post" },
 );
 
 function requestClose() {
@@ -40,21 +49,15 @@ function discard() {
 </script>
 
 <template>
-  <!-- autofocus: the dialog itself takes focus, not the close button, so nothing is triggered by accident. -->
-  <dialog
-    ref="dialog"
-    class="modal panel"
-    :aria-labelledby="titleId"
-    autofocus
-    tabindex="-1"
-    @cancel.prevent="requestClose"
-  >
+  <!-- tabindex: takes focus itself when the content has no field. -->
+  <dialog ref="dialog" class="modal panel" :aria-labelledby="titleId" tabindex="-1" @cancel.prevent="requestClose">
     <header class="modal__head">
       <h2 :id="titleId">{{ title }}</h2>
       <IconButton icon="close" :label="$t('modal.close')" variant="ghost" @click="requestClose" />
     </header>
     <div class="modal__body">
-      <slot v-if="open" />
+      <!-- `close` asks first like the X, for a cancel button in the content. -->
+      <slot v-if="open" :close="requestClose" />
     </div>
     <ConfirmDialog
       :open="asking"

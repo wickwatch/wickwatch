@@ -29,12 +29,10 @@
     "newInstance": "New instance",
     "emergencyStop": "Emergency stop",
     "closePosition": "Close position",
-    "closeShort": "Close",
     "save": "Save",
     "saveAndStart": "Save & start",
     "cancel": "Cancel",
-    "cancelOrder": "Cancel order",
-    "cancelOrderShort": "Cancel"
+    "cancelOrder": "Cancel order"
   },
   "account": {
     "balance": "Balance",
@@ -478,7 +476,8 @@
     "uploadedAt": "uploaded {time}",
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} parameters",
-    "deleteConfirm": "Delete {name} {version}? The file is removed."
+    "deleteConfirm": "Delete {name} {version}? The file is removed.",
+    "fileHint": "An .algo file, e.g. exported from the platform."
   },
   "instanceForm": {
     "newTitle": "New instance",
@@ -602,8 +601,6 @@
     "unknownGroup": "Not in the algo",
     "fileTitle": "Load parameters from a file",
     "fileHint": "A {formats} file, e.g. exported from the platform. It fills the form; nothing is saved until you press \"Save\".",
-    "fileChoose": "Choose file",
-    "fileDrop": "or drop it here",
     "describe": "Description of {name}"
   },
   "modal": {
@@ -611,5 +608,10 @@
     "discardTitle": "Discard changes?",
     "discardMessage": "The inputs in this window are not saved yet and would be lost.",
     "discard": "Discard"
+  },
+  "file": {
+    "choose": "Choose file",
+    "drop": "or drop it here",
+    "selected": "Selected: {name}"
   }
 }

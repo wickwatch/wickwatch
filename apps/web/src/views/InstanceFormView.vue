@@ -14,8 +14,8 @@ import {
   type ConfigInput,
   type InstanceConfigRow,
 } from "../api";
-import AppIcon from "../components/AppIcon.vue";
 import FieldError from "../components/FieldError.vue";
+import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
 import { formatDateTime } from "../format";
 import { splitLabel } from "../parameter-label";
@@ -109,20 +109,6 @@ const label = (n: string) => splitLabel(schema.value.find((p) => p.name === n)?.
 function names(list: string[]): string {
   const shown = list.slice(0, LISTED).map(label).join(", ");
   return list.length > LISTED ? t("instanceForm.andMore", { names: shown, count: list.length - LISTED }) : shown;
-}
-
-function onFileInput(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = "";
-  if (file) void loadFile(file);
-}
-/** Counts enter/leave, since moving over the zone's children fires both. */
-const dragDepth = ref(0);
-function onDrop(event: DragEvent) {
-  dragDepth.value = 0;
-  const file = event.dataTransfer?.files[0];
-  if (file) void loadFile(file);
 }
 
 /** Takes the values of a parameter file (e.g. .cbotset) into the form; nothing is saved yet. */
@@ -306,7 +292,7 @@ const cancelTarget = computed(() =>
   editing.value ? { name: "instance-config", params: { ref: editing.value } } : { name: "overview" },
 );
 const algoLabel = (a: AlgoRow) =>
-  a.buildTime ? `${a.version} · ${formatDateTime(locale.value, a.buildTime, "date")}` : a.version;
+  a.buildTime ? `${a.version} · ${formatDateTime(locale.value, a.buildTime, "day")}` : a.version;
 </script>
 
 <template>
@@ -430,34 +416,12 @@ const algoLabel = (a: AlgoRow) =>
         <h2 id="params-title">{{ $t("instanceForm.parameters") }}</h2>
         <p class="muted card__hint">{{ $t("instanceForm.parametersHint") }}</p>
         <div v-if="formats.length && algoId !== undefined" class="file-load">
-          <div
-            class="dropzone"
-            :class="{ 'dropzone--over': dragDepth > 0 }"
-            @dragenter.prevent="dragDepth++"
-            @dragover.prevent
-            @dragleave="dragDepth = Math.max(0, dragDepth - 1)"
-            @drop.prevent="onDrop"
-          >
-            <AppIcon name="upload" :size="24" class="dropzone__icon" />
-            <div class="dropzone__text">
-              <strong>{{ $t("parameters.fileTitle") }}</strong>
-              <span class="muted">{{
-                $t("parameters.fileHint", { formats: formats.map((f) => `.${f}`).join(", ") })
-              }}</span>
-            </div>
-            <div class="dropzone__action">
-              <label class="btn">
-                {{ $t("parameters.fileChoose") }}
-                <input
-                  type="file"
-                  class="visually-hidden"
-                  :accept="formats.map((f) => `.${f}`).join(',')"
-                  @change="onFileInput"
-                />
-              </label>
-              <span class="muted dropzone__drop">{{ $t("parameters.fileDrop") }}</span>
-            </div>
-          </div>
+          <FileDrop
+            :accept="formats.map((f) => `.${f}`).join(',')"
+            :title="$t('parameters.fileTitle')"
+            :hint="$t('parameters.fileHint', { formats: formats.map((f) => `.${f}`).join(', ') })"
+            @file="loadFile"
+          />
           <div v-if="fileNotice" role="status">
             <p v-for="line in fileNotice" :key="line.text" class="file-load__line" :class="`tone-${line.tone}`">
               {{ line.text }}
@@ -611,49 +575,6 @@ p {
 /* Long hints only while the field is being filled in; errors always show. */
 .field:not(:focus-within) > .hint--focus {
   display: none;
-}
-
-.dropzone {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-4);
-  align-items: center;
-  padding: var(--ww-space-4) var(--ww-space-5);
-  border: 1px dashed var(--ww-border-strong);
-  border-radius: var(--ww-radius-lg);
-  background: var(--ww-inset);
-}
-
-.dropzone--over {
-  border-color: var(--ww-accent);
-  border-style: solid;
-}
-
-.dropzone__icon {
-  color: var(--ww-text-muted);
-}
-
-.dropzone__text {
-  display: flex;
-  flex: 1 1 320px;
-  flex-direction: column;
-  gap: var(--ww-space-1);
-  font-size: var(--ww-size-sm);
-}
-
-.dropzone__action {
-  display: flex;
-  gap: var(--ww-space-3);
-  align-items: center;
-}
-
-.dropzone__action .btn:focus-within {
-  outline: 2px solid var(--ww-focus);
-  outline-offset: 2px;
-}
-
-.dropzone__drop {
-  font-size: var(--ww-size-xs);
 }
 
 .savebar {

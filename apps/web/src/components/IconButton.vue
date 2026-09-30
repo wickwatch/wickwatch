@@ -6,9 +6,8 @@ import AppIcon from "./AppIcon.vue";
 
 /**
  * A button with an icon (BRAND.md, "Buttons and icons"). Icon only by default, with the label as tooltip and accessible
- * name; `showLabel` adds the text for primary page actions and anything destructive. `text` shows a shorter text
- * where the row already says what the action applies to (e.g. "Close" in a positions table); the full label stays the
- * tooltip and accessible name. `tooltip` shows other text than the label, e.g. the description an info button reveals.
+ * name; `showLabel` adds the text for primary page actions and destructive ones outside table rows. `tooltip` shows
+ * other text than the label, e.g. the description an info button reveals.
  * With `to` it is a link that looks the same, for actions that open a page (edit).
  */
 const props = withDefaults(
@@ -16,7 +15,6 @@ const props = withDefaults(
     icon: IconName;
     label: string;
     showLabel?: boolean;
-    text?: string | undefined;
     variant?: "default" | "ghost" | "primary" | "danger";
     small?: boolean;
     type?: "button" | "submit";
@@ -25,7 +23,6 @@ const props = withDefaults(
   }>(),
   {
     showLabel: false,
-    text: undefined,
     variant: "default",
     small: false,
     type: "button",
@@ -44,7 +41,7 @@ const tip = computed(() => props.tooltip ?? (props.showLabel ? undefined : props
     :type="to ? undefined : type"
     class="btn"
     :class="{
-      'btn--icon': !showLabel && !text,
+      'btn--icon': !showLabel,
       'btn--small': small,
       'btn--ghost': variant === 'ghost',
       'btn--primary': variant === 'primary',
@@ -54,7 +51,6 @@ const tip = computed(() => props.tooltip ?? (props.showLabel ? undefined : props
     :data-tooltip="tip"
   >
     <AppIcon :name="icon" :size="small ? 16 : 18" />
-    <span v-if="text">{{ text }}</span>
-    <span v-else-if="showLabel">{{ label }}</span>
+    <span v-if="showLabel">{{ label }}</span>
   </component>
 </template>

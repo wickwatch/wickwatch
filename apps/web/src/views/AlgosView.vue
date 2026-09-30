@@ -2,9 +2,12 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type AlgoRow } from "../api";
+import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import IconButton from "../components/IconButton.vue";
 import ParameterList from "../components/ParameterList.vue";
 import FieldError from "../components/FieldError.vue";
+import FileDrop from "../components/FileDrop.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
@@ -18,7 +21,6 @@ const notice = ref<string>();
 const file = ref<File>();
 const version = ref("");
 const removing = ref<AlgoRow>();
-const fileInput = ref<HTMLInputElement>();
 
 const form = useValidation();
 const fileField = form.field(
@@ -57,20 +59,37 @@ async function run(action: () => Promise<void>, done?: () => string) {
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
-let uploaded: AlgoRow | undefined;
-const upload = () =>
-  run(
-    async () => {
-      if (!form.validate() || !file.value) return;
-      uploaded = await api.uploadAlgo(file.value, version.value.trim() || undefined);
-      file.value = undefined;
-      version.value = "";
-      if (fileInput.value) fileInput.value.value = "";
-      // A cleared form shows no "Required." until the next attempt.
-      form.reset();
-    },
-    () => t("algos.uploaded", { name: uploaded?.name ?? "", version: uploaded?.version ?? "" }),
-  );
+/** The upload form sits in a modal; its errors stay inside it. */
+const uploading = ref(false);
+const uploadError = ref<string>();
+const uploadDirty = computed(() => file.value !== undefined || version.value !== "");
+function openUpload() {
+  uploadError.value = undefined;
+  uploading.value = true;
+}
+function closeUpload() {
+  uploading.value = false;
+  file.value = undefined;
+  version.value = "";
+  // A cleared form shows no "Required." until the next attempt.
+  form.reset();
+}
+async function upload() {
+  if (!form.validate() || !file.value) return;
+  busy.value = true;
+  uploadError.value = undefined;
+  notice.value = undefined;
+  try {
+    const uploaded = await api.uploadAlgo(file.value, version.value.trim() || undefined);
+    closeUpload();
+    await load();
+    notice.value = t("algos.uploaded", { name: uploaded.name, version: uploaded.version });
+  } catch (e) {
+    uploadError.value = t(errorKey(e));
+  } finally {
+    busy.value = false;
+  }
+}
 
 const confirmRemove = () => {
   const algo = removing.value;
@@ -91,51 +110,18 @@ const fileSize = (bytes: number) => {
 
 <template>
   <div class="page">
-    <h1>{{ $t("nav.algos") }}</h1>
-    <p class="muted intro">{{ $t("algos.intro") }}</p>
+    <div class="head">
+      <div>
+        <h1>{{ $t("nav.algos") }}</h1>
+        <p class="muted intro">{{ $t("algos.intro") }}</p>
+      </div>
+      <IconButton v-if="isAdmin" icon="upload" :label="$t('algos.upload')" show-label @click="openUpload" />
+    </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
     <p v-if="loading" class="muted">{{ $t("overview.loading") }}</p>
 
     <template v-else>
-      <section v-if="isAdmin" class="panel card" aria-labelledby="upload-title">
-        <h2 id="upload-title">{{ $t("algos.upload") }}</h2>
-        <form class="form" novalidate @submit.prevent="upload">
-          <div class="grid">
-            <label class="field">
-              {{ $t("algos.file") }}
-              <input
-                ref="fileInput"
-                class="input"
-                type="file"
-                accept=".algo"
-                required
-                v-bind="fileField.attrs.value"
-                @change="file = ($event.target as HTMLInputElement).files?.[0]"
-              />
-              <FieldError :field="fileField" />
-            </label>
-            <label class="field">
-              {{ $t("algos.version") }}
-              <input
-                v-model="version"
-                v-normalize="normalizers.hyphenate"
-                v-bind="versionField.attrs.value"
-                class="input mono"
-                maxlength="100"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <FieldError :field="versionField" />
-              <span class="field__hint">{{ $t("algos.versionHint") }}</span>
-            </label>
-          </div>
-          <div>
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("algos.upload") }}</button>
-          </div>
-        </form>
-      </section>
-
       <p v-if="!algos.length" class="muted">{{ $t("algos.none") }}</p>
       <section v-for="[name, versions] in groups" :key="name" class="panel card" :aria-label="name">
         <h2 class="mono">{{ name }}</h2>
@@ -175,6 +161,42 @@ const fileSize = (bytes: number) => {
       </section>
     </template>
 
+    <AppModal :open="uploading" :title="$t('algos.upload')" :dirty="uploadDirty" @close="closeUpload">
+      <template #default="{ close }">
+        <form class="form" novalidate @submit.prevent="upload">
+          <div class="field">
+            <FileDrop
+              v-bind="fileField.attrs.value"
+              accept=".algo"
+              :title="$t('algos.file')"
+              :hint="$t('algos.fileHint')"
+              :selected="file?.name"
+              @file="file = $event"
+            />
+            <FieldError :field="fileField" />
+          </div>
+          <label class="field">
+            {{ $t("algos.version") }}
+            <input
+              v-model="version"
+              v-normalize="normalizers.hyphenate"
+              v-bind="versionField.attrs.value"
+              class="input mono"
+              maxlength="100"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <FieldError :field="versionField" />
+            <span class="field__hint">{{ $t("algos.versionHint") }}</span>
+          </label>
+          <div class="buttons">
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("algos.upload") }}</button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="uploadError" class="tone-negative" role="alert">{{ uploadError }}</p>
+        </form>
+      </template>
+    </AppModal>
     <ConfirmDialog
       :open="removing !== undefined"
       :title="$t('action.delete')"
@@ -187,6 +209,26 @@ const fileSize = (bytes: number) => {
 </template>
 
 <style scoped>
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-4);
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.head > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-2);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-2);
+}
+
 .page {
   display: flex;
   flex-direction: column;
@@ -220,12 +262,6 @@ p[role="alert"] {
 
 .card {
   padding: var(--ww-space-5);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--ww-space-4);
 }
 
 .version {

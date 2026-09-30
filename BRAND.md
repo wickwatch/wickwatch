@@ -54,7 +54,8 @@ Sizes: 12, 13, 14 (default), 16, 18, 20, 28, 36 px (`--ww-size-*`). Numbers in t
 ## Buttons and icons
 Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, rendered by `AppIcon`); no icon font, no library. Buttons with an icon use `IconButton`.
 - **Icon only**, with the label as tooltip and accessible name: actions repeated in every row (tables, history) and the compact header controls.
-- **Icon and text**: the primary actions of a page (edit, save, start) and anything destructive (delete, emergency stop, close position, cancel order), so a tap is never a guess. In a table row the text may be the short verb ("Close"), since the row names the object; the full label stays the tooltip and accessible name.
+- **Icon and text**: the primary actions of a page (edit, save, start) and destructive actions outside table rows (delete, emergency stop), so a tap is never a guess.
+- Destructive row actions (close position, cancel order) are icon only in the negative colour, with tooltip; they always ask for confirmation first.
 - An icon-only button keeps the 44 px touch target on touch screens.
 - Tooltips use `data-tooltip` (shown at once on hover and focus), not the native `title`. A row action names its row ("Restart: alpha-ger40"), since the name is far away at the start of the row. A disabled action says why in a tooltip on a wrapper (a disabled button gets no focus).
 - Action columns in tables are right-aligned.
@@ -62,7 +63,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 
 ## Consistency
 - The same kind of action behaves the same everywhere. Adding something (account, login, algo, challenge profile) is a button that opens a modal.
-- If a shared component exists (icon button, menu, modal, parameter list, trade tables, status badge), use it; no local look-alikes.
+- If a shared component exists (icon button, menu, modal, file drop zone, parameter list, trade tables, status badge, banner), use it; no local look-alikes.
 - Deviate only for a good reason, and say why in a code comment where the deviation lives.
 
 ## Voice

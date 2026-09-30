@@ -62,6 +62,13 @@ const render = async () => {
   await flushPromises();
   return wrapper;
 };
+/** "Upload algo" is a button that opens the form in a modal. */
+const openUpload = async (wrapper: Awaited<ReturnType<typeof render>>) => {
+  await wrapper
+    .findAll("button")
+    .find((b) => b.text() === "Upload algo")
+    ?.trigger("click");
+};
 
 describe("AlgosView", () => {
   it("groups versions by algo and shows parameters and the full-access marker", async () => {
@@ -82,9 +89,12 @@ describe("AlgosView", () => {
   it("uploads as octet-stream and shows a translated error", async () => {
     asRole("admin");
     const wrapper = await render();
+    await openUpload(wrapper);
     const input = wrapper.find("input[type=file]");
     Object.defineProperty(input.element, "files", { value: [new File(["x"], "SampleBot.algo")] });
     await input.trigger("change");
+    // The same drop zone as for parameter files; it names the chosen file until the upload.
+    expect(wrapper.find(".dropzone__selected").text()).toBe("Selected: SampleBot.algo");
     await wrapper.find("input.mono").setValue("1.0.0");
     await wrapper.find("form").trigger("submit");
     await flushPromises();
@@ -94,10 +104,11 @@ describe("AlgosView", () => {
     ];
     expect(url.search).toBe("?fileName=SampleBot.algo&version=1.0.0");
     expect(new Headers(init.headers).get("content-type")).toBe("application/octet-stream");
-    expect(wrapper.find("[role=alert]").text()).toBe("This version already exists; enter another version.");
+    // The error stays inside the modal, next to the input to fix.
+    expect(wrapper.find("dialog [role=alert]").text()).toBe("This version already exists; enter another version.");
   });
 
-  it("shows no field problem after a successful upload clears the form", async () => {
+  it("closes the modal after a successful upload and opens it empty again", async () => {
     asRole("admin");
     fetchMock.mockImplementation((_input: URL, init?: RequestInit) =>
       Promise.resolve(
@@ -107,14 +118,18 @@ describe("AlgosView", () => {
       ),
     );
     const wrapper = await render();
+    await openUpload(wrapper);
     const input = wrapper.find("input[type=file]");
     Object.defineProperty(input.element, "files", { value: [new File(["x"], "SampleBot.algo")], configurable: true });
     await input.trigger("change");
     await wrapper.find("form").trigger("submit");
     await flushPromises();
     expect(wrapper.text()).toContain("uploaded");
+    // The modal closed; opened again, the form is empty and shows no problem.
+    expect(wrapper.find("dialog form").exists()).toBe(false);
+    await openUpload(wrapper);
     expect(wrapper.findAll(".field__error")).toHaveLength(0);
-    expect(input.attributes("aria-invalid")).toBeUndefined();
+    expect(wrapper.find("input[type=file]").attributes("aria-invalid")).toBeUndefined();
   });
 
   it("deletes a version only after confirmation", async () => {
@@ -125,7 +140,8 @@ describe("AlgosView", () => {
       .filter((b) => b.text() === "Delete")[1]
       ?.trigger("click");
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
-    await wrapper.findComponent({ name: "ConfirmDialog" }).vm.$emit("confirm");
+    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" }).find((d) => d.props("title") === "Delete");
+    await dialog?.vm.$emit("confirm");
     await flushPromises();
     const del = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "DELETE") as [URL];
     expect(del[0].pathname).toMatch(/\/algos\/1$/);

@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { durationParts, formatNumber, formatPercent, formatSigned } from "../src/format";
+import { durationParts, formatDateTime, formatNumber, formatPercent, formatSigned } from "../src/format";
 
 describe("format", () => {
+  it("shows dates with the year, except the short day on chart axes", () => {
+    const iso = "2026-09-30T02:47:00Z";
+    expect(formatDateTime("de", iso)).toMatch(/^30\.09\.2026, \d\d:47$/);
+    expect(formatDateTime("de", iso, "day")).toBe("30.09.2026");
+    expect(formatDateTime("de", iso, "date")).toBe("30.09.");
+  });
+
   it("formats numbers per locale", () => {
     expect(formatNumber("en", 104180.2)).toBe("104,180.20");
     expect(formatNumber("de", 104180.2)).toBe("104.180,20");
