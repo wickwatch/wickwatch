@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import type { AttributionMode, ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
+import type {
+  Account,
+  Algo,
+  AttributionMode,
+  InstanceConfig,
+  InstanceConfigInput,
+  ParameterIssueCode,
+  ParameterSchema,
+} from "@wickwatch/core";
+import { groupBy } from "@wickwatch/core/group-by";
 // Plain functions and constants without the schema library, unlike the core's main entry.
 import { parameterDefaults, validateParameters } from "@wickwatch/core/parameters";
 import { ATTRIBUTION_MODES } from "@wickwatch/core/rules";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
-import {
-  api,
-  ApiError,
-  errorKey,
-  type AccountRow,
-  type AlgoRow,
-  type ConfigInput,
-  type InstanceConfigRow,
-} from "../api";
+import { api, ApiError, errorKey } from "../api";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
 import { formatDateTime } from "../format";
-import { groupBy } from "../group-by";
 import { parameterTitle } from "../parameter-label";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
@@ -35,8 +35,8 @@ const source = computed(
   () => editing.value ?? (typeof route.query["from"] === "string" ? route.query["from"] : undefined),
 );
 
-const algos = ref<AlgoRow[]>([]);
-const accounts = ref<AccountRow[]>([]);
+const algos = ref<Algo[]>([]);
+const accounts = ref<Account[]>([]);
 const symbols = ref<string[]>([]);
 const symbolsError = ref<string>();
 const loading = ref(true);
@@ -176,12 +176,12 @@ watch(accountId, async (id) => {
 });
 
 /** A saved configuration's algo (undefined if that version no longer exists) and its complete values. */
-function fromConfig(config: InstanceConfigRow) {
+function fromConfig(config: InstanceConfig) {
   const found = config.algo.id === null ? undefined : algos.value.find((a) => a.id === config.algo.id);
   return { found, values: { ...parameterDefaults(found?.parameters ?? []), ...config.parameters } };
 }
 
-function apply(config: InstanceConfigRow) {
+function apply(config: InstanceConfig) {
   const { found, values: configValues } = fromConfig(config);
   algoId.value = found?.id;
   missingAlgo.value = found ? undefined : `${config.algo.name} ${config.algo.version}`;
@@ -200,7 +200,7 @@ const snapshot = (): Snapshot => ({
   fields: [algoId.value, symbol.value, period.value, mode.value, orderLabel.value],
   values: { ...values.value },
 });
-function snapshotOf(config: InstanceConfigRow): Snapshot {
+function snapshotOf(config: InstanceConfig): Snapshot {
   const { found, values } = fromConfig(config);
   return {
     fields: [found?.id, config.symbol, config.period, config.attribution.mode, config.attribution.orderLabel ?? ""],
@@ -266,7 +266,7 @@ async function save() {
   busy.value = true;
   error.value = undefined;
   issues.value = new Map();
-  const config: ConfigInput = {
+  const config: InstanceConfigInput = {
     algoId: algoId.value,
     symbol: symbol.value.trim(),
     period: period.value.trim(),
@@ -307,7 +307,7 @@ async function save() {
 const cancelTarget = computed(() =>
   editing.value ? { name: "instance-config", params: { ref: editing.value } } : { name: "overview" },
 );
-const algoLabel = (a: AlgoRow) =>
+const algoLabel = (a: Algo) =>
   a.buildTime ? `${a.version} · ${formatDateTime(locale.value, a.buildTime, "day")}` : a.version;
 </script>
 

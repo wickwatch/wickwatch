@@ -53,3 +53,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Applying a configuration no longer starts an instance that had crashed.
 - The loss guard's emergency stop was undone by the automatic restart of stopped instances.
 - Trading days of challenge profiles with a reset in the afternoon (e.g. 16:15 America/Chicago) were loaded from the wrong day start.
+
+### Security
+- Parameter values of instance configurations (they may hold licence keys) are stored encrypted with `MASTER_KEY`, like credentials; values stored before are encrypted once at start, so backups no longer contain them in plaintext.
+- Switching 2FA off needs a current code besides the password; the code that was just used to log in does not count again.
+- Encrypted values with a shortened authentication tag are rejected.
+- Failed deploys and deletions of instances set up in Wickwatch are audit-logged too, with the error.

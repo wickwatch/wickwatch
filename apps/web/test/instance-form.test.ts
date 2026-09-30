@@ -1,6 +1,7 @@
+import type { Account, Algo, SystemInfo } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountRow, AlgoRow, ManagedInstanceDetail } from "../src/api";
+import type { ManagedInstanceDetail } from "../src/api";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
@@ -8,7 +9,7 @@ import { system } from "../src/system";
 import InstanceFormView from "../src/views/InstanceFormView.vue";
 import InstanceView from "../src/views/InstanceView.vue";
 
-const algo = (id: number, version: string, extra: AlgoRow["parameters"] = []): AlgoRow => ({
+const algo = (id: number, version: string, extra: Algo["parameters"] = []): Algo => ({
   id,
   name: "alpha",
   version,
@@ -23,7 +24,7 @@ const algo = (id: number, version: string, extra: AlgoRow["parameters"] = []): A
   uploadedAt: "2026-09-20T10:00:00.000Z",
 });
 const algos = [algo(2, "1.6.0", [{ name: "UseFilter", type: "bool", default: true }]), algo(1, "1.5.0")];
-const accounts: AccountRow[] = [
+const accounts: Account[] = [
   {
     id: 7,
     adapter: "demo",
@@ -342,6 +343,99 @@ describe("InstanceView configuration tab", () => {
         body: { confirm: "alpha-ger40", start: true },
       },
     ]);
+  });
+
+  it("reports the result of a deployment, or why it failed", async () => {
+    let fail = false;
+    response = (url, init) =>
+      init?.method === "POST" && url.pathname.endsWith("/deploy")
+        ? fail
+          ? new Response(JSON.stringify({ error: "internal" }), { status: 500 })
+          : new Response(JSON.stringify({ status: "stopped", configVersion: 2 }), { status: 200 })
+        : undefined;
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+    const create = async () => {
+      await wrapper
+        .findAll("button")
+        .find((b) => b.text() === "Create")
+        ?.trigger("click");
+      await wrapper.findAllComponents({ name: "ConfirmDialog" })[0]?.vm.$emit("confirm");
+      await flushPromises();
+    };
+    await create();
+    expect(wrapper.find(".tab [role=status]").text()).toBe("Configuration version 2 applied; status: Stopped.");
+    fail = true;
+    await create();
+    expect(wrapper.find(".tab [role=alert]").text()).toBe("Unexpected server error.");
+    expect(wrapper.find(".tab [role=status]").exists()).toBe(false);
+  });
+
+  describe("with a runtime that needs every text value", () => {
+    const runtime: SystemInfo = {
+      version: "test",
+      defaultLocale: "en",
+      labelPrefix: "wickwatch",
+      adapters: { runtime: "demo", broker: "demo", config: "cbotset" },
+      capabilities: {
+        backtest: false,
+        optimize: false,
+        partialClose: false,
+        pendingOrders: true,
+        emergencyStop: true,
+        requiresTextValues: true,
+        parameterExport: [],
+      },
+      algoFormats: ["algo"],
+      parameterFormats: ["cbotset"],
+    };
+    const withLicence = [
+      {
+        ...algo(1, "1.5.0"),
+        parameters: [...algo(1, "1.5.0").parameters, { name: "Licence", type: "string" as const }],
+      },
+    ];
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+    /** The runtime and an algo with a text parameter the saved versions leave empty; `managed` as the server sends it. */
+    const serve = (managed: ManagedInstanceDetail) => {
+      response = (url) =>
+        url.pathname.endsWith("/api/v1/system")
+          ? json(runtime)
+          : url.pathname.endsWith("/api/v1/algos")
+            ? json(withLicence)
+            : url.pathname.endsWith("/managed-instances/alpha-ger40")
+              ? json(managed)
+              : undefined;
+    };
+    beforeEach(() => {
+      system.value = runtime;
+    });
+    afterEach(() => {
+      system.value = undefined;
+    });
+
+    it("warns admins about an empty text value and blocks the deployment", async () => {
+      serve(detail);
+      const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+      expect(wrapper.find(".banner").text()).toContain("Version 2 cannot start");
+      expect(wrapper.find(".banner").text()).toContain("Licence");
+      const create = wrapper.findAll("button").find((b) => b.text() === "Create and start");
+      expect(create?.attributes("disabled")).toBeDefined();
+    });
+
+    it("shows viewers neither the warning nor empty values: they get no parameter values", async () => {
+      session.value = {
+        setupRequired: false,
+        masterKeyConfigured: true,
+        user: { username: "v", role: "viewer", totpEnabled: false },
+      };
+      const hide = (c: ManagedInstanceDetail["config"]) => ({ ...c, parameters: {} });
+      serve({ ...detail, config: hide(detail.config), history: detail.history.map(hide) });
+      const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+      expect(wrapper.text()).not.toContain("cannot start");
+      expect(wrapper.find(".params").exists()).toBe(false);
+      expect(wrapper.text()).toContain("Only admins see the parameter values; they may hold licence keys.");
+      expect(wrapper.find(".facts").text()).toContain("GER40");
+    });
   });
 
   it("offers to apply a newer version to the running bot as a restart", async () => {

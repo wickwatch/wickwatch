@@ -212,6 +212,7 @@
       "invalid_code": "Der Code ist falsch oder abgelaufen. Uhrzeit am Gerät prüfen.",
       "totp_required": "Gib den Code aus deiner Authenticator-App ein.",
       "totp_already_enabled": "2FA ist bereits an.",
+      "totp_not_enabled": "2FA ist bereits aus.",
       "invalid_password": "Das Passwort ist falsch.",
       "invalid_timezone": "Unbekannte Zeitzone.",
       "template_not_found": "Vorlage nicht gefunden.",
@@ -593,6 +594,7 @@
     "deleteContainer": "Sein Container wird gestoppt und entfernt.",
     "download": "Als .{format} herunterladen",
     "incomplete": "Version {version} kann so nicht starten: Die Laufzeit braucht für jeden Text-Parameter einen Wert, und diese sind leer: {names}. Trag einen Wert ein, den dein Bot als „nicht gesetzt“ versteht, z. B. „-“ oder einen Wert außerhalb des gültigen Bereichs; welcher, steht in der Doku des Bots.",
+    "valuesAdminOnly": "Die Parameterwerte sehen nur Admins, denn sie können Lizenzschlüssel enthalten.",
     "edit": "Bearbeiten"
   },
   "deploy": {

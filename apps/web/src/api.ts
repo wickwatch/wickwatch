@@ -3,7 +3,6 @@ import type {
   Algo,
   AuditPage,
   Credential,
-  InstanceConfig,
   InstanceConfigInput,
   ManagedInstance,
   ManagedInstanceDetail,
@@ -75,13 +74,6 @@ const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
 
-// Response and request shapes of the server routes, from the schemas in @wickwatch/core.
-export type AccountRow = Account;
-export type AlgoRow = Algo;
-export type InstanceConfigRow = InstanceConfig;
-export type ManagedInstanceRow = ManagedInstance;
-export type ConfigInput = InstanceConfigInput;
-export type CredentialRow = Credential;
 export type { AuditPage, AuditRecord, ManagedInstanceDetail, OfferedAccount } from "@wickwatch/core";
 
 export interface SessionUser {
@@ -114,7 +106,8 @@ export const api = {
     post<SessionUser>("auth/setup", body),
   totpSetup: () => post<TotpSetup>("auth/totp/setup"),
   totpEnable: (code: string) => post<undefined>("auth/totp/enable", { code }),
-  totpDisable: (password: string) => post<undefined>("auth/totp/disable", { password }),
+  /** Needs the password and a current code. */
+  totpDisable: (password: string, code: string) => post<undefined>("auth/totp/disable", { password, code }),
   /** Logs out the user's other sessions; this one stays. */
   changePassword: (current: string, next: string) => post<undefined>("auth/password", { current, next }),
   system: () => request<SystemInfo>("system"),
@@ -139,7 +132,7 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/orders/${encodeURIComponent(orderId)}/cancel`, {
       confirm: orderId,
     }),
-  algos: () => request<AlgoRow[]>("algos"),
+  algos: () => request<Algo[]>("algos"),
   audit: (query: { action?: string; target?: string; since?: string; before?: number }) => {
     const params = new URLSearchParams();
     if (query.action) params.set("action", query.action);
@@ -150,7 +143,7 @@ export const api = {
     return request<AuditPage>(`audit${qs ? `?${qs}` : ""}`);
   },
   uploadAlgo: (file: File, version?: string) =>
-    request<AlgoRow>(
+    request<Algo>(
       `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}`,
       { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
     ),
@@ -165,12 +158,12 @@ export const api = {
   /** Download link for a configuration version as a parameter file (admins). */
   parameterFileUrl: (name: string, version: number) =>
     url(`managed-instances/${encodeURIComponent(name)}/parameter-file?version=${String(version)}`).toString(),
-  managedInstances: () => request<ManagedInstanceRow[]>("managed-instances"),
+  managedInstances: () => request<ManagedInstance[]>("managed-instances"),
   managedInstance: (name: string) => request<ManagedInstanceDetail>(`managed-instances/${encodeURIComponent(name)}`),
-  createManagedInstance: (body: { name: string; accountId: number; config: ConfigInput }) =>
-    post<ManagedInstanceRow>("managed-instances", body),
-  saveInstanceConfig: (name: string, config: ConfigInput) =>
-    post<ManagedInstanceRow>(`managed-instances/${encodeURIComponent(name)}/configs`, config),
+  createManagedInstance: (body: { name: string; accountId: number; config: InstanceConfigInput }) =>
+    post<ManagedInstance>("managed-instances", body),
+  saveInstanceConfig: (name: string, config: InstanceConfigInput) =>
+    post<ManagedInstance>(`managed-instances/${encodeURIComponent(name)}/configs`, config),
   deleteManagedInstance: (name: string) =>
     send<undefined>("DELETE", `managed-instances/${encodeURIComponent(name)}`, { confirm: name }),
   /** Creates or replaces the container with the current configuration; `start` also starts it. */
@@ -180,17 +173,16 @@ export const api = {
       start,
     }),
   accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
-  accounts: () => request<AccountRow[]>("accounts"),
+  accounts: () => request<Account[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>
-    post<AccountRow>("accounts", body),
+    post<Account>("accounts", body),
   updateAccount: (id: number, body: { displayName?: string; credentialId?: number }) =>
-    send<AccountRow>("PATCH", `accounts/${String(id)}`, body),
+    send<Account>("PATCH", `accounts/${String(id)}`, body),
   deleteAccount: (id: number) => send<undefined>("DELETE", `accounts/${String(id)}`),
-  credentials: () => request<CredentialRow[]>("credentials"),
-  createCredential: (body: { label: string; login: string; secret: string }) =>
-    post<CredentialRow>("credentials", body),
+  credentials: () => request<Credential[]>("credentials"),
+  createCredential: (body: { label: string; login: string; secret: string }) => post<Credential>("credentials", body),
   updateCredential: (id: number, body: { label?: string; login?: string; secret?: string }) =>
-    send<CredentialRow>("PATCH", `credentials/${String(id)}`, body),
+    send<Credential>("PATCH", `credentials/${String(id)}`, body),
   deleteCredential: (id: number) => send<undefined>("DELETE", `credentials/${String(id)}`),
   brokerAccounts: (credentialId: number) =>
     request<OfferedAccount[]>(`credentials/${String(credentialId)}/broker-accounts`),

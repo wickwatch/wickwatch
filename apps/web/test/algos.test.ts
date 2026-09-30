@@ -1,12 +1,12 @@
+import type { Algo } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AlgoRow } from "../src/api";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
 import AlgosView from "../src/views/AlgosView.vue";
 
-const algos: AlgoRow[] = [
+const algos: Algo[] = [
   {
     id: 2,
     name: "SampleBot",

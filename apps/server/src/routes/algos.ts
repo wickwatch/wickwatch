@@ -16,7 +16,6 @@ import { latestConfigIds } from "../services/instance-configs";
 
 const MAX_ALGO_BYTES = 64 * 1024 * 1024;
 
-const SAFE = SAFE_NAME;
 const safe = (value: string) =>
   value
     .replace(/[^A-Za-z0-9._-]/g, "-")
@@ -45,7 +44,7 @@ function toAlgo(
 /** Default version: the bot's own `BotVersion` default, else its build time, else the hash. */
 function defaultVersion(metadata: AlgoMetadata, sha256: string): string {
   const botVersion = metadata.parameters.find((p) => p.name === "BotVersion")?.default;
-  if (typeof botVersion === "string" && SAFE.test(botVersion)) return botVersion;
+  if (typeof botVersion === "string" && SAFE_NAME.test(botVersion)) return botVersion;
   if (metadata.buildTime) return metadata.buildTime.slice(0, 16).replace(/[-:]/g, "").replace("T", "-");
   return sha256.slice(0, 12);
 }
@@ -113,7 +112,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
           "The name comes from the algo's metadata. `version` defaults to the bot's BotVersion parameter, else its build time.",
         querystring: Type.Object({
           fileName: Type.String({ minLength: 1, maxLength: 255 }),
-          version: Type.Optional(Type.String({ pattern: SAFE.source })),
+          version: Type.Optional(Type.String({ pattern: SAFE_NAME.source })),
         }),
         response: { 201: Algo, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody },
       },
@@ -147,7 +146,8 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         }
         const name = safe(metadata.name);
         const version = request.query.version ?? defaultVersion(metadata, sha256);
-        if (!SAFE.test(name) || !SAFE.test(version)) return await reply.code(400).send({ error: "invalid_input" });
+        if (!SAFE_NAME.test(name) || !SAFE_NAME.test(version))
+          return await reply.code(400).send({ error: "invalid_input" });
         const exists = await db
           .selectFrom("algos")
           .select("id")

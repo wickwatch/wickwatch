@@ -1,7 +1,6 @@
 import {
   buildAccountDetail,
   buildOverview,
-  isAdapterError,
   profileDay,
   readLabels,
   tradingDayStart,
@@ -22,12 +21,18 @@ import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
+import { brokerErrorCode } from "./broker-error";
 import { clockOffset } from "./clock-check";
 import type { LogTracker } from "./log-tracker";
 import { guardTripToday } from "./loss-guard";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * How long after its start a running load is still joined. A hanging broker session must not hand out old data under a
+ * caller's fresh time: later callers start a load of their own.
+ */
+const JOIN_WITHIN_MS = 5_000;
 
 export interface OverviewLoaderOptions {
   adapters: Adapters;
@@ -35,8 +40,8 @@ export interface OverviewLoaderOptions {
   db: Db;
   labelPrefix: string;
   logTracker: LogTracker;
-  /** The app's logger, for failed broker queries; a function because main.ts creates the loader before the app. */
-  log: () => FastifyBaseLogger;
+  /** For failed broker queries. */
+  log: FastifyBaseLogger;
 }
 
 /** What runtime and broker answered in one load, as of `time`. */
@@ -45,6 +50,11 @@ interface Fetched {
   instances: RuntimeInstance[];
   logs: Awaited<ReturnType<LogTracker["read"]>>;
   accounts: FetchedAccount[];
+}
+
+interface RunningLoad {
+  time: Date;
+  fetched: Promise<Fetched>;
 }
 
 interface FetchedAccount {
@@ -57,12 +67,13 @@ interface FetchedAccount {
 
 /**
  * Builds the overview and the account pages. Every browser tab, the notifier and the daily summary ask on their own;
- * callers that ask while a load of the same accounts is running share its runtime, log and broker queries. What
- * depends on the time (today's deals, challenge, loss guard, clock) is derived per caller with its own `now`.
+ * callers that ask while a load of the same accounts (or of all accounts) started just before is running share its
+ * runtime, log and broker queries. What depends on the time (today's deals, challenge, loss guard, clock) is derived
+ * per caller with its own `now`.
  */
 export class OverviewLoader {
   /** Running loads by the one account asked for; `undefined` for all accounts. */
-  private readonly running = new Map<string | undefined, { time: Date; fetched: Promise<Fetched> }>();
+  private readonly running = new Map<string | undefined, RunningLoad>();
 
   constructor(private readonly options: OverviewLoaderOptions) {}
 
@@ -97,15 +108,22 @@ export class OverviewLoader {
   }
 
   /**
-   * Joins a running load if it was started at `now` or before: the day starts of a later `now` are no earlier, so the
-   * deals asked for cover its days as well (everything using them filters by its own day). A caller with an earlier
-   * `now` gets a load of its own.
+   * Joins a running load if it was started at `now` or up to JOIN_WITHIN_MS before: the day starts of a later `now` are
+   * no earlier, so the deals asked for cover its days as well (everything using them filters by its own day). One
+   * account also joins a load of all accounts. A caller with an earlier `now` gets a load of its own; so does one more
+   * than JOIN_WITHIN_MS later, whose load then replaces the running one for the callers after it.
    */
   private fetch(now: Date, only: string | undefined): Promise<Fetched> {
+    const joinable = (load: RunningLoad) => load.time <= now && now.getTime() - load.time.getTime() <= JOIN_WITHIN_MS;
     const running = this.running.get(only);
-    if (running && running.time.getTime() <= now.getTime()) return running.fetched;
+    if (running && joinable(running)) return running.fetched;
+    if (only !== undefined) {
+      const all = this.running.get(undefined);
+      if (all && joinable(all)) return all.fetched.then((fetched) => this.narrow(fetched, only));
+    }
     const fetched = this.query(now, only);
-    if (!running) {
+    // Kept for the callers after it, unless the running load started later (this caller asked for an earlier time).
+    if (!running || running.time < now) {
       this.running.set(only, { time: now, fetched });
       const done = () => {
         if (this.running.get(only)?.fetched === fetched) this.running.delete(only);
@@ -116,18 +134,15 @@ export class OverviewLoader {
   }
 
   private async query(now: Date, only: string | undefined): Promise<Fetched> {
-    const { adapters, directory, db, labelPrefix, logTracker } = this.options;
+    const { adapters, directory, db, logTracker } = this.options;
     const [instances, allEntries, profiles] = await Promise.all([
       adapters.runtime.list(),
       directory.list(),
       readProfiles(db),
     ]);
     const entries = only === undefined ? allEntries : allEntries.filter((e) => e.number === only);
-    // Logs only of the instances shown; attribution still needs all of them.
-    const shown =
-      only === undefined ? instances : instances.filter((i) => readLabels(labelPrefix, i.labels).account === only);
     const [logs, accounts] = await Promise.all([
-      logTracker.read(shown),
+      logTracker.read(this.shown(instances, only)),
       Promise.all(
         entries.map(async (entry): Promise<FetchedAccount> => {
           const profile = profiles.get(entry.id);
@@ -136,6 +151,23 @@ export class OverviewLoader {
       ),
     ]);
     return { time: now, instances, logs, accounts };
+  }
+
+  /** Logs are read only of the instances shown; attribution still needs all of them. */
+  private shown(instances: RuntimeInstance[], only: string | undefined): RuntimeInstance[] {
+    const { labelPrefix } = this.options;
+    return only === undefined ? instances : instances.filter((i) => readLabels(labelPrefix, i.labels).account === only);
+  }
+
+  /** A load of all accounts cut down to what a load of `only` fetches. */
+  private narrow(fetched: Fetched, only: string): Fetched {
+    const refs = new Set(this.shown(fetched.instances, only).map((i) => i.ref));
+    const keep = <T>(map: Map<string, T>) => new Map([...map].filter(([ref]) => refs.has(ref)));
+    return {
+      ...fetched,
+      logs: { states: keep(fetched.logs.states), lastLines: keep(fetched.logs.lastLines) },
+      accounts: fetched.accounts.filter((a) => a.entry.number === only),
+    };
   }
 
   private async ask(
@@ -155,7 +187,7 @@ export class OverviewLoader {
       ]);
       return { stats, positions, deals, ...(pendingOrders ? { pendingOrders } : {}) };
     } catch (error) {
-      return brokerErrorCode(error, entry.number, this.options.log());
+      return brokerErrorCode(error, entry.number, this.options.log);
     }
   }
 }
@@ -198,11 +230,4 @@ async function snapshot(db: Db, { entry, profile, answer }: FetchedAccount, now:
     data: { stats, positions, dealsToday, ...(pendingOrders ? { pendingOrders } : {}) },
     ...(challenge ? { challenge } : {}),
   };
-}
-
-/** What a failed broker query shows as; errors other than the adapter's own are logged. */
-export function brokerErrorCode(error: unknown, account: string, log: FastifyBaseLogger): AdapterErrorCode {
-  if (isAdapterError(error)) return error.code;
-  log.error({ err: error, account }, "Broker query failed");
-  return "unavailable";
 }

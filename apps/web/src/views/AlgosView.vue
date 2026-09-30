@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { Algo } from "@wickwatch/core";
+import { groupBy } from "@wickwatch/core/group-by";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, type AlgoRow } from "../api";
+import { api } from "../api";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
@@ -10,18 +12,17 @@ import ParameterList from "../components/ParameterList.vue";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import { formatDateTime, formatFileSize } from "../format";
-import { groupBy } from "../group-by";
 import { isAdmin } from "../session";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
 
 const { t, locale } = useI18n();
-const algos = ref<AlgoRow[]>([]);
+const algos = ref<Algo[]>([]);
 const loading = ref(true);
 const file = ref<File>();
 const version = ref("");
-const removing = ref<AlgoRow>();
+const removing = ref<Algo>();
 
 /** The broker's algo file extensions, e.g. ".algo". */
 const extensions = computed(() => (system.value?.algoFormats ?? []).map((f) => `.${f}`));

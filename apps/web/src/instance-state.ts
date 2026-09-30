@@ -1,8 +1,4 @@
-import type { InstanceStatus } from "@wickwatch/core";
 import type { ManagedInstanceDetail } from "./api";
-
-/** Running, or about to run again: it can be stopped, and applying a configuration restarts it. */
-export const isActive = (status: InstanceStatus | undefined) => status === "running" || status === "restarting";
 
 /** The container Wickwatch created runs another configuration than the saved one. */
 export const isOutdated = (managed: ManagedInstanceDetail | undefined): boolean =>

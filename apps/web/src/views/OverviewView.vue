@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { ManagedInstance } from "@wickwatch/core";
 import { DEFAULT_LABEL_PREFIX } from "@wickwatch/core/rules";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, errorKey, type ManagedInstanceRow } from "../api";
+import { api, errorKey } from "../api";
 import AccountCard from "../components/AccountCard.vue";
 import AlertList from "../components/AlertList.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -36,7 +37,7 @@ const instances = computed(() =>
 const { confirming, running, message, stop } = useEmergencyStop(notice, refresh);
 const { busy, runAction } = useInstanceActions(notice, refresh);
 const canEmergencyStop = computed(() => isAdmin.value && (system.value?.capabilities.emergencyStop ?? false));
-const managed = ref<ManagedInstanceRow[]>([]);
+const managed = ref<ManagedInstance[]>([]);
 onMounted(() => {
   api.managedInstances().then(
     (rows) => (managed.value = rows),

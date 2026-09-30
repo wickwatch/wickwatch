@@ -109,6 +109,19 @@ describe("app", () => {
 
     expect((await app.inject("/bots/assets/missing.js")).statusCode).toBe(404);
     expect((await app.inject("/elsewhere")).statusCode).toBe(404);
+
+    // The static wildcard matches unknown API paths; they still need a login.
+    for (const url of ["/bots/api/v1/nope", "/bots/api/v1/auth/nope"]) {
+      expect((await app.inject(url)).statusCode, url).toBe(401);
+    }
+  });
+
+  it("requires a login for unknown API paths", async () => {
+    const { app } = await start();
+    expect((await app.inject("/api/v1/nope")).statusCode).toBe(401);
+    expect((await app.inject({ method: "POST", url: "/api/v1/nope" })).statusCode).toBe(401);
+    // Unknown paths under auth/ are as public as the auth routes.
+    expect((await app.inject("/api/v1/auth/nope")).statusCode).toBe(404);
   });
 
   it("uses X-Forwarded-For only when TRUST_PROXY is set", async () => {

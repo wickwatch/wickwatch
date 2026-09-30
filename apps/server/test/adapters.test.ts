@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createAdapters } from "../src/adapters";
-import { ConfigError, loadConfig } from "../src/config";
+import { loadConfig } from "../src/config";
+import { ConfigError } from "../src/config-error";
 
 const config = (env: Record<string, string>) => loadConfig({ DATABASE_URL: "file::memory:", ...env });
 

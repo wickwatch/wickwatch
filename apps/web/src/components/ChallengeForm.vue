@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { ChallengeProfile, ChallengeRules, ChallengeTemplate, DailyLossReference } from "@wickwatch/core";
+import { groupBy } from "@wickwatch/core/group-by";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, ApiError, errorKey } from "../api";
 import { useAsyncAction } from "../composables/useAsyncAction";
-import { groupBy } from "../group-by";
 import { isAdmin } from "../session";
 import { checks, useValidation } from "../validation";
 import ConfirmDialog from "./ConfirmDialog.vue";
@@ -439,7 +439,10 @@ legend {
   gap: var(--ww-space-4);
 }
 
-.hint,
+.hint {
+  margin: 0;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

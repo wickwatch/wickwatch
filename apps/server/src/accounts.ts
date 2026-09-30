@@ -10,6 +10,8 @@ export interface AccountEntry {
   displayName: string;
   broker: string;
   currency: string;
+  /** Stored login used for the broker; missing if there is none. */
+  credentialId?: number;
   credentialLabel?: string;
   credentials(): Promise<Credentials>;
 }
@@ -49,6 +51,7 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
           "accounts.display_name",
           "accounts.broker",
           "accounts.currency",
+          "accounts.credential_id",
           "credentials.label as credential_label",
           "credentials.login",
           "credentials.secret",
@@ -63,6 +66,7 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
         displayName: row.display_name,
         broker: row.broker,
         currency: row.currency,
+        ...(row.credential_id !== null ? { credentialId: row.credential_id } : {}),
         ...(row.credential_label ? { credentialLabel: row.credential_label } : {}),
         credentials: () => {
           const { login, secret } = row;

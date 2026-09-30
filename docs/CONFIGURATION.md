@@ -9,7 +9,7 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `BASE_PATH` | `/` | Path prefix when served under a sub-path, e.g. `/bots`. UI, API and cookies use it; `/healthz` also answers at the root. |
 | `TRUST_PROXY` | `false` | Behind a reverse proxy: `true`, a hop count (`1`) or a comma-separated list of proxy IPs/CIDRs. Needed for correct client IPs (rate limiting, logs) and for `Secure` cookies behind TLS-terminating proxies. |
 | `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. Logs are JSON on stdout. |
-| `MASTER_KEY` | – | **Required.** 32 random bytes, base64 (`openssl rand -base64 32`). Encrypts broker credentials and TOTP secrets. Back it up: without it, stored secrets cannot be decrypted. Changing it is not supported yet. |
+| `MASTER_KEY` | – | **Required.** 32 random bytes, base64 (`openssl rand -base64 32`). Encrypts broker credentials, TOTP secrets and the parameter values of instance configurations (values stored in plaintext by earlier versions are encrypted at the first start with a key). Without it, nobody can log in, and instances can be neither saved nor deployed. Back it up: without it, stored secrets cannot be decrypted. Changing it is not supported yet. |
 | `DATABASE_URL` | `file:./data/wickwatch.db` | SQLite file, relative to the working directory (`/app` in the image). Postgres is planned. |
 | `LABEL_PREFIX` | `wickwatch` | Prefix of the container labels used to find instances, e.g. `wickwatch.instance`. |
 | `DEFAULT_LOCALE` | `en` | `en` or `de`; used when the browser language is not supported. |
@@ -52,9 +52,9 @@ This covers only instances set up in Wickwatch, not containers from your own com
 
 ## Backups and restore
 
-The backups hold the whole database: users, accounts, encrypted credentials, challenge profiles, instances with their configuration versions, audit log. They do **not** hold:
+The backups hold the whole database: users, accounts, encrypted credentials, challenge profiles, instances with their configuration versions (parameter values encrypted), audit log. They do **not** hold:
 
-- `MASTER_KEY`: without it the stored credentials and TOTP secrets cannot be decrypted. Keep it separately (see `SECURITY.md`).
+- `MASTER_KEY`: without it the stored credentials, TOTP secrets and instance parameter values cannot be decrypted. Keep it separately (see `SECURITY.md`).
 - Uploaded algo files in `ALGOS_DIR` (`data/algos`).
 - Bot containers and their logs.
 

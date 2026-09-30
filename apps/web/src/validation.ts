@@ -36,9 +36,6 @@ const format =
     return pattern.test(v) ? undefined : { key };
   };
 
-/** The server's minimum, shared through the core. */
-export { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
-
 export const checks = {
   required: ((value) => (isEmpty(value) ? { key: "validation.required" } : undefined)) as Check,
   /** Also the container name and the default order label. */

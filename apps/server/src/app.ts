@@ -28,6 +28,13 @@ import { LogTracker } from "./services/log-tracker";
 import { OverviewLoader } from "./services/overview";
 import { createSymbolCache } from "./services/symbols";
 
+declare module "fastify" {
+  interface FastifyInstance {
+    /** Shared by the routes, the notifier and the daily summary, so concurrent loads query runtime and broker once. */
+    overview: OverviewLoader;
+  }
+}
+
 export interface AppDeps {
   config: Config;
   db: Db;
@@ -37,10 +44,6 @@ export interface AppDeps {
   setup?: SetupState;
   /** Overrides pino options, e.g. `false` in tests. */
   logger?: boolean;
-  /** Shared with the alert notifier, so both see the same log state. */
-  logTracker?: LogTracker;
-  /** Shared with the notifier and the daily summary, so concurrent loads query runtime and broker once. */
-  overview?: OverviewLoader;
   /** Called after a challenge profile was saved, so the poller marks its trading days right away. */
   onChallengeSaved?: (accountId: number) => void;
 }
@@ -54,8 +57,6 @@ export async function buildApp({
   version,
   setup = new SetupState(),
   logger,
-  logTracker = new LogTracker(adapters.runtime),
-  overview,
   onChallengeSaved,
 }: AppDeps) {
   const { trustProxy } = config;
@@ -75,7 +76,9 @@ export async function buildApp({
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
-  overview ??= new OverviewLoader({ adapters, directory: accounts, db, labelPrefix, logTracker, log: () => app.log });
+  const logTracker = new LogTracker(adapters.runtime);
+  const overview = new OverviewLoader({ adapters, directory: accounts, db, labelPrefix, logTracker, log: app.log });
+  app.decorate("overview", overview);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -107,6 +110,7 @@ export async function buildApp({
     adapters,
     accounts,
     db,
+    cipher,
     symbols,
     labelPrefix,
     algosDir: config.algosDir,

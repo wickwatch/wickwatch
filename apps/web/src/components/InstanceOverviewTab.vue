@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { InstanceDetail } from "@wickwatch/core";
+import { isUp } from "@wickwatch/core/rules";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
 import type { Notice } from "../composables/notice";
 import { useTradeActions } from "../composables/useTradeActions";
-import { isActive } from "../instance-state";
 import { isAdmin } from "../session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import KpiTiles from "./KpiTiles.vue";
@@ -91,7 +91,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
 
       <section class="panel card" aria-labelledby="log-title">
         <h2 id="log-title">{{ $t("instance.liveLog") }}</h2>
-        <LogPanel :instance-ref="data.instance.ref" :running="isActive(data.instance.status)" />
+        <LogPanel :instance-ref="data.instance.ref" :running="isUp(data.instance.status)" />
       </section>
     </div>
 

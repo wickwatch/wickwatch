@@ -241,11 +241,6 @@ const meta = computed(() => {
 <style scoped src="../styles/page-head.css"></style>
 
 <style scoped>
-/* The same padding as the instance page. */
-.page {
-  padding: var(--ww-space-6) var(--ww-space-10) var(--ww-space-10);
-}
-
 .back {
   align-self: flex-start;
   font-size: var(--ww-size-sm);
@@ -331,12 +326,6 @@ h1 {
 @media (max-width: 1000px) {
   .summary {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
   }
 }
 </style>

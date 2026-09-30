@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
 import { computed, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, type TotpSetup } from "../api";
@@ -9,7 +10,7 @@ import IconButton from "../components/IconButton.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { currentUser, loadSession } from "../session";
-import { checks, MIN_PASSWORD_LENGTH, useValidation } from "../validation";
+import { checks, useValidation } from "../validation";
 
 const totp = ref<TotpSetup>();
 const code = ref("");
@@ -24,8 +25,10 @@ const startEnable = () =>
 
 const enableForm = useValidation();
 const codeField = enableForm.field(() => code.value, checks.required, checks.code);
+const disableCode = ref("");
 const disableForm = useValidation();
 const passwordField = disableForm.field(() => password.value, checks.required);
+const disableCodeField = disableForm.field(() => disableCode.value, checks.required, checks.code);
 
 const confirmEnable = () =>
   run(
@@ -81,8 +84,15 @@ const disable = () =>
   run(
     async () => {
       if (!disableForm.validate()) return false;
-      await api.totpDisable(password.value);
+      try {
+        await api.totpDisable(password.value, disableCode.value);
+      } catch (e) {
+        // Like the login: a code that did not work is not sent again.
+        disableCode.value = "";
+        throw e;
+      }
       password.value = "";
+      disableCode.value = "";
       disableForm.reset();
       await loadSession();
     },
@@ -155,6 +165,7 @@ const disable = () =>
             />
             <FieldError :field="passwordField" />
           </label>
+          <CodeInput v-model="disableCode" :label="$t('auth.code')" :field="disableCodeField" required />
           <div>
             <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("profile.disableTotp") }}</button>
           </div>

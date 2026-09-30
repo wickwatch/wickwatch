@@ -1,6 +1,6 @@
 import { profileDay, tradingDayKey, tradingDays, tradingDayStartOf, type ChallengeProfile } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
-import type { AccountDirectory, AccountEntry } from "../accounts";
+import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { readProfile, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
@@ -8,11 +8,6 @@ import type { Db } from "../db";
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Without a challenge profile, trading days are recorded for this long. */
 const DEFAULT_HISTORY_DAYS = 30;
-
-interface Target {
-  id: number;
-  entry: AccountEntry;
-}
 
 export interface PollerOptions {
   db: Db;
@@ -53,19 +48,19 @@ export class AccountPoller {
   /** Records one balance/equity sample per account. Errors are logged; the next run retries. */
   async pollStats(): Promise<void> {
     const { db, adapters, log } = this.options;
-    const [targets, profiles] = await Promise.all([this.targets(), readProfiles(db)]);
+    const [entries, profiles] = await Promise.all([this.options.accounts.list(), readProfiles(db)]);
     await Promise.all(
-      targets.map(async ({ id, entry }) => {
+      entries.map(async (entry) => {
         try {
           const stats = await adapters.broker.stats(await entry.credentials(), entry.number);
-          const { resetTime, timeZone } = profileDay(profiles.get(id)?.rules ?? {});
+          const { resetTime, timeZone } = profileDay(profiles.get(entry.id)?.rules ?? {});
           const now = this.now();
           const day = tradingDayKey(now, resetTime, timeZone);
           const at = now.toISOString();
           await db
             .insertInto("daily_stats")
             .values({
-              account_id: id,
+              account_id: entry.id,
               day,
               start_balance: stats.balance,
               start_equity: stats.equity,
@@ -101,28 +96,28 @@ export class AccountPoller {
 
   /** Marks the trading days (a position opened, see tradingDays) since the profile start (or the last 30 days). */
   async pollDeals(): Promise<void> {
-    const [targets, profiles] = await Promise.all([this.targets(), readProfiles(this.options.db)]);
-    await Promise.all(targets.map((target) => this.syncDeals(target, profiles.get(target.id))));
+    const [entries, profiles] = await Promise.all([this.options.accounts.list(), readProfiles(this.options.db)]);
+    await Promise.all(entries.map((entry) => this.syncDeals(entry, profiles.get(entry.id))));
   }
 
   /** Marks the trading days of one account right away, e.g. after its challenge profile was saved. */
   async syncTradingDays(accountId: number): Promise<void> {
-    const target = (await this.targets()).find((t) => t.id === accountId);
-    if (target) await this.syncDeals(target, await readProfile(this.options.db, accountId));
+    const entry = await findAccountById(this.options.accounts, accountId);
+    if (entry) await this.syncDeals(entry, await readProfile(this.options.db, accountId));
   }
 
   /** One run per account at a time: a save during the regular run waits for it and then runs again. */
-  private syncDeals(target: Target, profile: ChallengeProfile | undefined): Promise<void> {
-    const previous = this.running.get(target.id) ?? Promise.resolve();
-    const run = previous.then(() => this.markTradingDays(target, profile));
-    this.running.set(target.id, run);
+  private syncDeals(entry: AccountEntry, profile: ChallengeProfile | undefined): Promise<void> {
+    const previous = this.running.get(entry.id) ?? Promise.resolve();
+    const run = previous.then(() => this.markTradingDays(entry, profile));
+    this.running.set(entry.id, run);
     void run.finally(() => {
-      if (this.running.get(target.id) === run) this.running.delete(target.id);
+      if (this.running.get(entry.id) === run) this.running.delete(entry.id);
     });
     return run;
   }
 
-  private async markTradingDays({ id, entry }: Target, profile: ChallengeProfile | undefined): Promise<void> {
+  private async markTradingDays(entry: AccountEntry, profile: ChallengeProfile | undefined): Promise<void> {
     const { db, adapters, log } = this.options;
     try {
       const { resetTime, timeZone } = profileDay(profile?.rules ?? {});
@@ -141,7 +136,7 @@ export class AccountPoller {
       await db
         .updateTable("daily_stats")
         .set({ traded: 0 })
-        .where("account_id", "=", id)
+        .where("account_id", "=", entry.id)
         .where("day", ">=", firstDay)
         .where("traded", "=", 1)
         .$if(days.length > 0, (q) => q.where("day", "not in", days))
@@ -149,7 +144,7 @@ export class AccountPoller {
       if (days.length) {
         await db
           .insertInto("daily_stats")
-          .values(days.map((day) => ({ account_id: id, day, traded: 1 })))
+          .values(days.map((day) => ({ account_id: entry.id, day, traded: 1 })))
           .onConflict((oc) => oc.columns(["account_id", "day"]).doUpdateSet({ traded: 1 }))
           .execute();
       }
@@ -157,15 +152,11 @@ export class AccountPoller {
         await db
           .updateTable("challenge_profiles")
           .set({ trading_days_from: profile.startDate })
-          .where("account_id", "=", id)
+          .where("account_id", "=", entry.id)
           .execute();
       }
     } catch (error) {
       log.warn({ err: error, account: entry.number }, "Polling account deals failed");
     }
-  }
-
-  private async targets(): Promise<Target[]> {
-    return (await this.options.accounts.list()).map((entry) => ({ id: entry.id, entry }));
   }
 }

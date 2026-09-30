@@ -101,7 +101,7 @@ describe("loss guard", () => {
       db: t.db,
       labelPrefix: "wickwatch",
       logTracker: new LogTracker(adapters.runtime),
-      log: () => log,
+      log,
     }).overview(NOW);
     expect(overview.alerts).toContainEqual({
       level: "error",

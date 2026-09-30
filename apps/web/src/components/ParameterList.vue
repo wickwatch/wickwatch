@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
+import { groupBy } from "@wickwatch/core/group-by";
 import { parameterDefaults } from "@wickwatch/core/parameters";
 import { computed, reactive, ref, useId, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { groupBy } from "../group-by";
 import AppIcon from "./AppIcon.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import ParameterField from "./ParameterField.vue";

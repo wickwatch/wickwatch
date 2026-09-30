@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isUp } from "@wickwatch/core/rules";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -16,7 +17,7 @@ import type { Notice } from "../composables/notice";
 import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
 import { durationParts, formatDateTime } from "../format";
-import { isActive, isOutdated, outdatedText } from "../instance-state";
+import { isOutdated, outdatedText } from "../instance-state";
 import { isAdmin } from "../session";
 import { system } from "../system";
 
@@ -142,7 +143,7 @@ async function remove() {
 </script>
 
 <template>
-  <div class="detail">
+  <div class="page">
     <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
 
     <p
@@ -182,7 +183,7 @@ async function remove() {
         <div v-if="isAdmin" class="head__actions">
           <template v-if="status">
             <IconButton
-              v-if="isActive(status)"
+              v-if="isUp(status)"
               icon="stop"
               :label="$t('action.stop')"
               show-label
@@ -279,14 +280,6 @@ async function remove() {
 <style scoped src="../styles/page-head.css"></style>
 
 <style scoped>
-.detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
-  padding: var(--ww-space-6) var(--ww-space-10) var(--ww-space-10);
-}
-
 .back {
   align-self: flex-start;
   font-size: var(--ww-size-sm);
@@ -300,7 +293,7 @@ h1 {
   align-items: center;
 }
 
-.detail > p {
+.page > p {
   margin: 0;
 }
 
@@ -361,10 +354,6 @@ h1 {
 
   .more-label {
     display: inline;
-  }
-
-  .detail {
-    padding: var(--ww-space-4);
   }
 }
 

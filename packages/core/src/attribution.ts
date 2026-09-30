@@ -1,3 +1,4 @@
+import { groupBy } from "./group-by";
 import { readLabels } from "./labels";
 import type { RuntimeInstance } from "./schemas";
 
@@ -90,12 +91,10 @@ export function createAttributor(
   });
 
   // Two instances on the same account and symbol cannot both claim "every trade on the symbol".
-  const groups = new Map<string, Target[]>();
-  for (const t of targets) {
-    if (!t.symbol) continue;
-    const key = `${t.account}\u0000${t.symbol.toLowerCase()}`;
-    groups.set(key, [...(groups.get(key) ?? []), t]);
-  }
+  const groups = groupBy(
+    targets.filter((t) => t.symbol),
+    (t) => `${t.account}\u0000${(t.symbol ?? "").toLowerCase()}`,
+  );
   for (const group of groups.values()) {
     const [first] = group;
     if (first && group.length > 1 && group.some((t) => t.mode === "account-symbol")) {
@@ -108,8 +107,7 @@ export function createAttributor(
     }
   }
 
-  const byAccount = new Map<string, Target[]>();
-  for (const t of targets) byAccount.set(t.account, [...(byAccount.get(t.account) ?? []), t]);
+  const byAccount = groupBy(targets, (t) => t.account);
 
   function automaticOwner(account: string, item: TradeItem): string | undefined {
     const onAccount = byAccount.get(account) ?? [];

@@ -1,3 +1,4 @@
+import { round2 } from "@wickwatch/core/money";
 import { ref, watch } from "vue";
 
 /** A point in SVG coordinates. */
@@ -28,13 +29,11 @@ watch(chartCurve, (curve) => {
   }
 });
 
-const round = (n: number) => Math.round(n * 100) / 100;
-
 /** Horizontal, then vertical: the value only changes at the points. */
 export function steppedPath(points: Point[]): string {
   const [first, ...rest] = points;
   if (!first) return "";
-  return rest.reduce((d, p) => `${d} H${round(p.x)} V${round(p.y)}`, `M${round(first.x)},${round(first.y)}`);
+  return rest.reduce((d, p) => `${d} H${round2(p.x)} V${round2(p.y)}`, `M${round2(first.x)},${round2(first.y)}`);
 }
 
 /**
@@ -64,14 +63,14 @@ export function smoothPath(input: Point[]): string {
     const weighted = (before * h1 + after * h0) / (h0 + h1);
     return Math.sign(before) * Math.min(2 * Math.abs(before), 2 * Math.abs(after), Math.abs(weighted));
   });
-  let d = `M${round(first.x)},${round(first.y)}`;
+  let d = `M${round2(first.x)},${round2(first.y)}`;
   for (let i = 0; i < n - 1; i++) {
     const a = points[i] as Point;
     const b = points[i + 1] as Point;
     const third = (b.x - a.x) / 3;
-    const c1 = `${round(a.x + third)},${round(a.y + (tangents[i] as number) * third)}`;
-    const c2 = `${round(b.x - third)},${round(b.y - (tangents[i + 1] as number) * third)}`;
-    d += ` C${c1} ${c2} ${round(b.x)},${round(b.y)}`;
+    const c1 = `${round2(a.x + third)},${round2(a.y + (tangents[i] as number) * third)}`;
+    const c2 = `${round2(b.x - third)},${round2(b.y - (tangents[i + 1] as number) * third)}`;
+    d += ` C${c1} ${c2} ${round2(b.x)},${round2(b.y)}`;
   }
   return d;
 }

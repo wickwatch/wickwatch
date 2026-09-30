@@ -21,6 +21,15 @@ describe("cipher", () => {
     expect(() => cipher.decrypt(payload, "totp-secret")).toThrow();
     expect(() => createCipher(Buffer.alloc(32, 2)).decrypt(payload, "credential-secret")).toThrow();
   });
+
+  it("rejects a shortened authentication tag", () => {
+    // GCM accepts a prefix of the right tag (Node before 26), and a 4-byte tag can be forged by trying.
+    const [v, iv, tag, data] = cipher.encrypt("s3cret", "credential-secret").split(".");
+    const short = Buffer.from(tag!, "base64url").subarray(0, 4).toString("base64url");
+    expect(() => cipher.decrypt([v, iv, short, data].join("."), "credential-secret")).toThrow(
+      "Authentication tag must be 16 bytes",
+    );
+  });
 });
 
 describe("password", () => {

@@ -1,6 +1,8 @@
 // Input rules shared by the server and the dashboard. Dependency-free, so the SPA can import them at runtime
 // (`@wickwatch/core/rules`) without pulling in the rest of the core.
 
+import type { InstanceStatus } from "./schemas/runtime";
+
 export { ATTRIBUTION_MODES } from "./attribution";
 export { DEFAULT_LABEL_PREFIX } from "./labels";
 
@@ -15,3 +17,6 @@ export const INSTANCE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** Algo names and versions end up in folder names and paths; keep them to safe characters. */
 export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+
+/** Running, or about to run again: counts as meant to run. */
+export const isUp = (status: InstanceStatus | undefined): boolean => status === "running" || status === "restarting";

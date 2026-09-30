@@ -1,4 +1,5 @@
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
+import { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import QRCode from "qrcode";
 import Type from "typebox";
@@ -8,7 +9,7 @@ import type { Db } from "../db";
 import { ErrorBody } from "../plugins/errors";
 import { clearSessionCookie, setSessionCookie } from "../plugins/auth";
 import type { Cipher } from "../security/cipher";
-import { hashPassword, MIN_PASSWORD_LENGTH, verifyDummyPassword, verifyPassword } from "../security/password";
+import { hashPassword, verifyDummyPassword, verifyPassword } from "../security/password";
 import { generateTotpSecret, totpUri, verifyTotp } from "../security/totp";
 import { audit } from "../services/audit";
 
@@ -306,24 +307,34 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       config: limited,
       schema: {
         tags: ["auth"],
-        summary: "Turn 2FA off for the logged-in user; needs the password",
+        summary: "Turn 2FA off for the logged-in user; needs the password and a current code",
+        description:
+          "Wrong password: 403 `invalid_password`. Wrong or already used code: 401 `invalid_credentials`, as at login.",
         security: [{ session: [] }],
-        body: Type.Object({ password: Password }),
-        response: { 204: Type.Null(), 401: ErrorBody, 403: ErrorBody, 429: ErrorBody },
+        body: Type.Object({ password: Password, code: Code }),
+        response: { 204: Type.Null(), 401: ErrorBody, 403: ErrorBody, 409: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
       const current = requireUser(request, reply);
       if (!current) return reply;
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const user = await loadUser(current.id);
-      if (!(await verifyPassword(request.body.password, user.password_hash))) {
+      if (!user.totp_secret) return reply.code(409).send({ error: "totp_not_enabled" });
+      const fail = async (code: 401 | 403, error: "invalid_credentials" | "invalid_password") => {
         await audit(db, {
           action: "auth.totp_disable",
           target: current.username,
           userId: current.id,
-          details: { ok: false },
+          details: { ok: false, error },
         });
-        return reply.code(403).send({ error: "invalid_password" });
+        return reply.code(code).send({ error });
+      };
+      if (!(await verifyPassword(request.body.password, user.password_hash))) return fail(403, "invalid_password");
+      // Like the login, including the replay protection: the code that just logged in does not count again.
+      const secret = cipher.decrypt(user.totp_secret, "totp-secret");
+      if (verifyTotp(secret, request.body.code, Date.now(), user.totp_last_counter ?? -1) === undefined) {
+        return fail(401, "invalid_credentials");
       }
       await db
         .updateTable("users")

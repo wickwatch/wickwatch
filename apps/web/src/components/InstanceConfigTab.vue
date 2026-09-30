@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import type { ParameterSchema } from "@wickwatch/core";
+import type { Algo, InstanceConfig, ParameterSchema } from "@wickwatch/core";
 import { validateParameters } from "@wickwatch/core/parameters";
+import { isUp } from "@wickwatch/core/rules";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-import { api, errorKey, type AlgoRow, type InstanceConfigRow, type ManagedInstanceDetail } from "../api";
+import { api, errorKey, type ManagedInstanceDetail } from "../api";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { formatDateTime } from "../format";
-import { isActive, isOutdated, outdatedText } from "../instance-state";
+import { isOutdated, outdatedText } from "../instance-state";
 import { parameterTitle } from "../parameter-label";
 import { isAdmin } from "../session";
 import { system } from "../system";
@@ -26,12 +28,10 @@ const emit = defineEmits<{ changed: [] }>();
 const { t, locale } = useI18n();
 const route = useRoute();
 
-const busy = ref(false);
-const notice = ref<string>();
-const error = ref<string>();
+const { busy, error, notice, run } = useAsyncAction();
 /** Deploy action waiting for confirmation. */
 const pending = ref<{ start: boolean }>();
-const algos = ref<AlgoRow[]>([]);
+const algos = ref<Algo[]>([]);
 /** Parameter files come in the config adapter's first format, e.g. .cbotset. */
 const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
 const saved = computed(() => (typeof route.query["saved"] === "string" ? route.query["saved"] : undefined));
@@ -40,7 +40,7 @@ onMounted(async () => {
   try {
     algos.value = await api.algos();
   } catch (e) {
-    error.value = t(errorKey(e));
+    error.value = errorKey(e);
   }
 });
 
@@ -48,7 +48,7 @@ const deployment = computed(() => props.managed?.deployment);
 const version = computed(() => props.managed?.config.version ?? 0);
 /** The container runs another configuration than the saved one. */
 const outdated = computed(() => isOutdated(props.managed));
-const running = computed(() => isActive(deployment.value?.status));
+const running = computed(() => isUp(deployment.value?.status));
 
 const confirmTitle = computed(() => {
   if (!deployment.value) return pending.value?.start ? t("deploy.createAndStart") : t("deploy.create");
@@ -72,36 +72,31 @@ async function deploy() {
   const start = pending.value?.start ?? false;
   pending.value = undefined;
   if (!name) return;
-  busy.value = true;
-  error.value = undefined;
-  notice.value = undefined;
-  try {
-    const result = await api.deployInstance(name, start);
-    notice.value = t("deploy.done", { version: result.configVersion, status: t(`status.${result.status}`) });
-  } catch (e) {
-    error.value = t(errorKey(e));
-  } finally {
-    busy.value = false;
-    emit("changed");
-  }
+  await run(() => api.deployInstance(name, start), {
+    done: (result) => t("deploy.done", { version: result.configVersion, status: t(`status.${result.status}`) }),
+  });
+  emit("changed");
 }
 
-const schemaOf = (config: InstanceConfigRow): ParameterSchema[] =>
+const schemaOf = (config: InstanceConfig): ParameterSchema[] =>
   algos.value.find((a) => a.id === config.algo.id)?.parameters ?? [];
 const show = (value: unknown) => (value === undefined ? t("format.none") : String(value));
 
 /** The algo's parameters; empty if the algo version was deleted, then the values show as "not in the algo". */
 const schema = computed<ParameterSchema[]>(() => (props.managed ? schemaOf(props.managed.config) : []));
 
-/** Parameters the runtime needs a value for but the saved version leaves empty; it cannot start like this. */
+/**
+ * Parameters the runtime needs a value for but the saved version leaves empty; it cannot start like this. Viewers get
+ * no parameter values (they may hold licence keys), so there is nothing to check for them.
+ */
 const incomplete = computed(() => {
-  if (!props.managed || system.value?.capabilities?.requiresTextValues !== true) return [];
+  if (!props.managed || !isAdmin.value || system.value?.capabilities?.requiresTextValues !== true) return [];
   return validateParameters(props.managed.config.parameters, schema.value, { requireText: true })
     .errors.filter((i) => i.code === "required")
     .map((i) => parameterTitle(schema.value, i.parameter));
 });
 
-const attributionText = (c: InstanceConfigRow) =>
+const attributionText = (c: InstanceConfig) =>
   [t(`instanceForm.modes.${c.attribution.mode}`), c.attribution.orderLabel].filter(Boolean).join(" · ");
 
 /** What changed from the previous version, as "field: old → new". */
@@ -131,16 +126,17 @@ function changes(index: number): string[] {
 
 <template>
   <div class="tab">
-    <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
+    <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
     <p v-if="saved && !notice" class="tone-positive status" role="status">
       {{ $t("instanceConfig.saved", { version: saved }) }}
     </p>
     <p v-if="notice" class="tone-positive status" role="status">{{ notice }}</p>
 
     <template v-if="managed">
+      <!-- Admins only: viewers get no parameter values to check. -->
       <AppBanner v-if="incomplete.length" tone="warning" :title="$t('alert.level.warning')">
         <span>{{ $t("instanceConfig.incomplete", { version, names: incomplete.join(", ") }) }}</span>
-        <template v-if="isAdmin" #actions>
+        <template #actions>
           <RouterLink :to="{ name: 'instance-edit', params: { ref: managed.name } }" class="btn">
             {{ $t("instanceConfig.edit") }}
           </RouterLink>
@@ -212,7 +208,8 @@ function changes(index: number): string[] {
           <dt>{{ $t("instanceForm.attribution") }}</dt>
           <dd>{{ attributionText(managed.config) }}</dd>
         </dl>
-        <ParameterList mode="view" :schema="schema" :values="managed.config.parameters" />
+        <ParameterList v-if="isAdmin" mode="view" :schema="schema" :values="managed.config.parameters" />
+        <p v-else class="muted card__hint">{{ $t("instanceConfig.valuesAdminOnly") }}</p>
       </section>
 
       <section class="panel card" aria-labelledby="versions-title">

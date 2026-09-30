@@ -1,12 +1,12 @@
+import type { Account, Credential } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AccountRow, CredentialRow } from "../src/api";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
 import AccountsView from "../src/views/AccountsView.vue";
 
-const accounts: AccountRow[] = [
+const accounts: Account[] = [
   {
     id: 1,
     adapter: "demo",
@@ -20,7 +20,7 @@ const accounts: AccountRow[] = [
     hasChallenge: true,
   },
 ];
-const credentials: CredentialRow[] = [
+const credentials: Credential[] = [
   { id: 1, label: "Login A", login: "me@example.com", createdAt: "2026-09-01T00:00:00.000Z", accounts: 1 },
 ];
 

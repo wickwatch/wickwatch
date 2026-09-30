@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AdapterError } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { decryptParameters, encryptStoredParameters } from "../src/services/instance-configs";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
@@ -43,6 +44,10 @@ const inject = (method: "GET" | "POST" | "DELETE", url: string, payload?: Record
   t.app.inject({ method, url: `/api/v1${url}`, headers: { cookie }, ...(payload === undefined ? {} : { payload }) });
 const create = (name: string, cfg = config(), account = accountId) =>
   inject("POST", "/managed-instances", { name, accountId: account, config: cfg });
+const auditDetails = async (action: string) =>
+  (await t.db.selectFrom("audit_log").select("details").where("action", "=", action).orderBy("id").execute()).map(
+    (l) => JSON.parse(l.details ?? "{}") as unknown,
+  );
 
 interface Managed {
   name: string;
@@ -150,6 +155,7 @@ describe("managed instances", () => {
     await create("x1");
     expect((await inject("DELETE", `/accounts/${String(accountId)}`)).json()).toEqual({ error: "account_in_use" });
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x2" })).statusCode).toBe(400);
+    expect((await inject("DELETE", "/managed-instances/x9", { confirm: "x9" })).json()).toEqual({ error: "not_found" });
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(204);
     expect((await inject("GET", "/managed-instances")).json()).toEqual([]);
     expect(await t.db.selectFrom("instance_configs").select("id").execute()).toEqual([]);
@@ -196,15 +202,27 @@ describe("managed instances", () => {
       .where("action", "=", "instance.deploy")
       .execute();
     expect(log.map((l) => JSON.parse(l.details ?? "{}") as unknown)).toEqual([
-      { version: 1, replaced: false, started: false, image: "wickwatch-demo-runtime:1.0.0" },
-      { version: 1, replaced: true, started: true, image: "wickwatch-demo-runtime:1.0.0" },
-      { version: 2, replaced: true, started: false, image: "wickwatch-demo-runtime:1.0.0" },
+      { ok: true, version: 1, replaced: false, started: false, image: "wickwatch-demo-runtime:1.0.0" },
+      { ok: true, version: 1, replaced: true, started: true, image: "wickwatch-demo-runtime:1.0.0" },
+      { ok: true, version: 2, replaced: true, started: false, image: "wickwatch-demo-runtime:1.0.0" },
     ]);
 
     // Removing stops the running instance.
+    const list = vi.spyOn(t.adapters.runtime, "list");
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(204);
+    expect(list).toHaveBeenCalledTimes(1);
     const after = (await inject("GET", "/overview")).json<{ instances: { ref: string }[] }>();
     expect(after.instances.some((i) => i.ref === "x1")).toBe(false);
+    expect(await auditDetails("instance.delete")).toEqual([{ ok: true, versions: 2, containerRemoved: true }]);
+  });
+
+  it("audit-logs a failed deploy", async () => {
+    await create("x1");
+    vi.spyOn(t.adapters.runtime, "create").mockRejectedValue(new AdapterError("unavailable", "proxy down"));
+    expect((await inject("POST", "/managed-instances/x1/deploy", { confirm: "x1" })).json()).toEqual({
+      error: "unavailable",
+    });
+    expect(await auditDetails("instance.deploy")).toEqual([{ ok: false, error: "unavailable" }]);
   });
 
   it("shows parameter values to admins only", async () => {
@@ -234,6 +252,7 @@ describe("managed instances", () => {
     expect((await inject("DELETE", "/managed-instances/x1", { confirm: "x1" })).statusCode).toBe(503);
     vi.restoreAllMocks();
     expect((await inject("GET", "/managed-instances/x1")).statusCode).toBe(200);
+    expect(await auditDetails("instance.delete")).toEqual([{ ok: false, error: "unavailable" }]);
   });
 
   it("never takes over a container of the same name defined elsewhere", async () => {
@@ -247,6 +266,40 @@ describe("managed instances", () => {
     );
     const overview = (await inject("GET", "/overview")).json<{ instances: { ref: string }[] }>();
     expect(overview.instances.some((i) => i.ref === "alpha-ger40-a")).toBe(true);
+  });
+
+  it("stores parameter values encrypted and still finds unchanged versions", async () => {
+    await create("x1");
+    const [row] = await t.db.selectFrom("instance_configs").select("parameters").execute();
+    expect(row?.parameters).toMatch(/^v1\./);
+    expect(row?.parameters).not.toContain("Pullback");
+    expect(JSON.parse(t.cipher.decrypt(row?.parameters ?? "", "instance-parameters"))).toMatchObject({
+      EntryMode: "Pullback",
+      RiskPercent: 0.5,
+    });
+    // Compared on the decrypted values, although every encryption differs.
+    expect((await inject("POST", "/managed-instances/x1/configs", config())).json()).toEqual({
+      error: "config_unchanged",
+    });
+  });
+
+  it("reads plaintext parameter values of earlier versions and encrypts them at start", async () => {
+    await create("x1");
+    const before = (await inject("GET", "/managed-instances/x1")).json<Managed>();
+    const [row] = await t.db.selectFrom("instance_configs").select(["id", "parameters"]).execute();
+    const plaintext = t.cipher.decrypt(row?.parameters ?? "", "instance-parameters");
+    await t.db.updateTable("instance_configs").set({ parameters: plaintext }).execute();
+    expect((await inject("GET", "/managed-instances/x1")).json()).toEqual(before);
+    // Without MASTER_KEY: plaintext stays readable, encrypted values are left out.
+    expect(decryptParameters(undefined, plaintext)).toBe(plaintext);
+    expect(decryptParameters(undefined, row?.parameters ?? "")).toBeUndefined();
+
+    expect(await encryptStoredParameters(t.db, t.cipher)).toBe(1);
+    expect(await encryptStoredParameters(t.db, t.cipher)).toBe(0);
+    const [after] = await t.db.selectFrom("instance_configs").select("parameters").execute();
+    expect(after?.parameters).toMatch(/^v1\./);
+    expect(t.cipher.decrypt(after?.parameters ?? "", "instance-parameters")).toBe(plaintext);
+    expect((await inject("GET", "/managed-instances/x1")).json()).toEqual(before);
   });
 
   it("lists the broker's symbols and periods", async () => {

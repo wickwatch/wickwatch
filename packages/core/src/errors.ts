@@ -29,3 +29,10 @@ export class AdapterError extends Error {
 export function isAdapterError(error: unknown, code?: AdapterErrorCode): error is AdapterError {
   return error instanceof AdapterError && (code === undefined || error.code === code);
 }
+
+/** The adapter's error code of `error`; `fallback` (default `internal`) for any other error. */
+export function errorCode(error: unknown): AdapterErrorCode | "internal";
+export function errorCode<F extends string>(error: unknown, fallback: F): AdapterErrorCode | F;
+export function errorCode(error: unknown, fallback = "internal"): string {
+  return isAdapterError(error) ? error.code : fallback;
+}

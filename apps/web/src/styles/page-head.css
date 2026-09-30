@@ -4,6 +4,12 @@
  * Name and actions share the first row, the meta line runs below at full width. On phones the actions move below the
  * meta line as a two-column grid of full buttons (see the media query), so none is left alone on a row.
  */
+
+/* A detail page starts closer to the header than the other pages (`.page` in base.css). */
+.page {
+  padding: var(--ww-space-6) var(--ww-space-10) var(--ww-space-10);
+}
+
 .head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -46,6 +52,10 @@ h1 {
 }
 
 @media (max-width: 640px) {
+  .page {
+    padding: var(--ww-space-4);
+  }
+
   .head {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:

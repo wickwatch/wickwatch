@@ -1,13 +1,13 @@
 import {
   emergencyStopAccount,
-  type Credentials,
   type EmergencyStopOptions,
   type EmergencyStopReport,
-  type InstanceStatus,
   type RuntimeAdapter,
   type RuntimeInstance,
 } from "@wickwatch/core";
+import { isUp } from "@wickwatch/core/rules";
 import type { FastifyBaseLogger } from "fastify";
+import type { AccountEntry } from "../accounts";
 import type { Db } from "../db";
 import { audit } from "./audit";
 
@@ -16,9 +16,6 @@ const INTERVAL_MS = 15_000;
 const GIVE_UP_WITHIN_MS = 10 * 60_000;
 /** How far back the log is read to tell a self-stop from a stop from outside. */
 const LOG_TAIL = 15;
-
-/** Running, or about to run again: counts as meant to run. */
-export const isUp = (status: InstanceStatus) => status === "running" || status === "restarting";
 
 /** Marks a managed instance as meant to run or not; no-op for instances Wickwatch does not manage. */
 export async function setShouldRun(db: Db, names: string | string[], shouldRun: boolean): Promise<void> {
@@ -37,11 +34,11 @@ export async function setShouldRun(db: Db, names: string | string[], shouldRun: 
  */
 export async function stopAccount(
   db: Db,
-  accountId: number,
-  options: Omit<EmergencyStopOptions, "credentials"> & { credentials: () => Promise<Credentials> },
+  entry: AccountEntry,
+  options: Omit<EmergencyStopOptions, "credentials" | "account">,
 ): Promise<EmergencyStopReport> {
-  await db.updateTable("instances").set({ should_run: 0 }).where("account_id", "=", accountId).execute();
-  return emergencyStopAccount({ ...options, credentials: await options.credentials() });
+  await db.updateTable("instances").set({ should_run: 0 }).where("account_id", "=", entry.id).execute();
+  return emergencyStopAccount({ ...options, account: entry.number, credentials: await entry.credentials() });
 }
 
 /**

@@ -5,17 +5,17 @@ import { createAdapters } from "./adapters";
 import { buildApp } from "./app";
 import { deleteExpiredSessions } from "./auth/sessions";
 import { needsSetup, SetupState } from "./auth/setup";
-import { ConfigError, loadConfig } from "./config";
+import { loadConfig } from "./config";
+import { ConfigError } from "./config-error";
 import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
 import { refreshAlgoMetadata } from "./services/algo-metadata";
+import { encryptStoredParameters } from "./services/instance-configs";
 import { InstanceKeeper } from "./services/instance-keeper";
-import { LogTracker } from "./services/log-tracker";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
-import { OverviewLoader } from "./services/overview";
 import { ClockCheck } from "./services/clock-check";
 import { DailySummary } from "./services/daily-summary";
 import { AccountPoller } from "./services/poller";
@@ -34,18 +34,8 @@ try {
   const db = createDatabase(config.database);
   const adapters = createAdapters(config);
   const setup = new SetupState();
-  const logTracker = new LogTracker(adapters.runtime);
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
-  // One for the routes, the notifier and the daily summary, so their loads at the same time query the broker once.
-  const overview = new OverviewLoader({
-    adapters,
-    directory: accounts,
-    db,
-    labelPrefix: config.labelPrefix,
-    logTracker,
-    log: () => app.log,
-  });
   // The poller is created below (it needs the app's logger); a profile saved before that is marked by its first run.
   const tradingDays: { sync?: (accountId: number) => Promise<void> } = {};
   const app = await buildApp({
@@ -54,8 +44,6 @@ try {
     adapters,
     version: VERSION,
     setup,
-    logTracker,
-    overview,
     onChallengeSaved: (accountId) => void tradingDays.sync?.(accountId),
   });
 
@@ -63,6 +51,8 @@ try {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
   }
   await deleteExpiredSessions(db);
+  // The app's loader, so loads of the notifier, the daily summary and the routes at the same time query the broker once.
+  const { overview } = app;
 
   if (!cipher) {
     app.log.warn(
@@ -72,6 +62,8 @@ try {
     if (await seedDemoAccounts(db, cipher)) app.log.info("Demo accounts added");
     if (await seedDemoChallenges(db)) app.log.info("Demo challenge profiles added");
   }
+  // Parameter sets saved before they were encrypted at rest; changes nothing once done.
+  if (cipher) await encryptStoredParameters(db, cipher, app.log);
 
   const poller = new AccountPoller({
     db,

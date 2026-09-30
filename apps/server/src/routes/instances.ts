@@ -1,4 +1,4 @@
-import { InstanceDetail, isAdapterError } from "@wickwatch/core";
+import { errorCode, InstanceDetail } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { AccountDirectory } from "../accounts";
@@ -13,7 +13,11 @@ import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
 
 const Action = Type.Union([Type.Literal("start"), Type.Literal("stop"), Type.Literal("restart")]);
-const Ref = Type.String({ minLength: 1, maxLength: 200 });
+/**
+ * The ref reaches the runtime unchanged (for a container runtime inside the path of an API call), so only the characters
+ * of a container name: no slashes, and no dot or dash at the start.
+ */
+const Ref = Type.String({ minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]*$" });
 const KEEP_ALIVE_MS = 15_000;
 
 export interface InstanceRouteOptions {
@@ -106,9 +110,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       } catch (error) {
         if (!controller.signal.aborted) {
           request.log.warn({ err: error, ref }, "Log stream failed");
-          res.write(
-            `event: error\ndata: ${JSON.stringify({ error: isAdapterError(error) ? error.code : "internal" })}\n\n`,
-          );
+          res.write(`event: error\ndata: ${JSON.stringify({ error: errorCode(error) })}\n\n`);
         }
       } finally {
         clearInterval(ping);

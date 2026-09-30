@@ -201,7 +201,10 @@ onMounted(() => {
 }
 
 .head h1,
-.intro,
+.intro {
+  margin: 0;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

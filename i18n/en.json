@@ -212,6 +212,7 @@
       "invalid_code": "The code is wrong or expired. Check the time on your device.",
       "totp_required": "Enter the code from your authenticator app.",
       "totp_already_enabled": "2FA is already on.",
+      "totp_not_enabled": "2FA is already off.",
       "invalid_password": "The password is wrong.",
       "invalid_timezone": "Unknown time zone.",
       "template_not_found": "Template not found.",
@@ -593,6 +594,7 @@
     "deleteContainer": "Its container is stopped and removed.",
     "download": "Download .{format}",
     "incomplete": "Version {version} cannot start: the runtime needs a value for every text parameter, and these are empty: {names}. Enter a value your bot reads as \"not set\", e.g. \"-\" or a value outside the valid range; the bot's documentation says which.",
+    "valuesAdminOnly": "Only admins see the parameter values; they may hold licence keys.",
     "edit": "Edit"
   },
   "deploy": {

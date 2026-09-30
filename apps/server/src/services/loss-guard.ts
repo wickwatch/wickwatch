@@ -1,4 +1,11 @@
-import { isAdapterError, profileDay, tradingDayKey, tradingDayStart, type RuleResult } from "@wickwatch/core";
+import {
+  errorCode,
+  isAdapterError,
+  profileDay,
+  tradingDayKey,
+  tradingDayStart,
+  type RuleResult,
+} from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -84,10 +91,9 @@ export class LossGuardService {
       .executeTakeFirst();
     if (done?.ok === 1) return;
 
-    let credentials;
     let evaluation;
     try {
-      credentials = await entry.credentials();
+      const credentials = await entry.credentials();
       const [stats, deals] = await Promise.all([
         adapters.broker.stats(credentials, entry.number),
         adapters.broker.deals(
@@ -116,17 +122,11 @@ export class LossGuardService {
     let ok = false;
     let details: Record<string, unknown>;
     try {
-      const report = await stopAccount(db, entry.id, {
-        runtime: adapters.runtime,
-        broker: adapters.broker,
-        credentials: () => Promise.resolve(credentials),
-        account: entry.number,
-        labelPrefix,
-      });
+      const report = await stopAccount(db, entry, { runtime: adapters.runtime, broker: adapters.broker, labelPrefix });
       ok = true;
       details = { ...report };
     } catch (error) {
-      details = { error: isAdapterError(error) ? error.code : "internal" };
+      details = { error: errorCode(error) };
       log.error({ err: error, account: entry.number }, "Loss guard: the emergency stop failed, retrying next check");
     }
     const at = now.toISOString();

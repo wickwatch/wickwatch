@@ -1,4 +1,4 @@
-import { isAdapterError } from "@wickwatch/core";
+import { errorCode } from "@wickwatch/core";
 import type { Db } from "../db";
 
 export interface AuditEntry {
@@ -37,7 +37,7 @@ export async function auditOutcome<T>(
     await audit(db, { ...entry, details: { ok: true, ...okDetails?.(result) } });
     return result;
   } catch (error) {
-    await audit(db, { ...entry, details: { ok: false, error: isAdapterError(error) ? error.code : "internal" } });
+    await audit(db, { ...entry, details: { ok: false, error: errorCode(error) } });
     throw error;
   }
 }

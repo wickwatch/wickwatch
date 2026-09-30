@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { api, type TotpSetup } from "../api";
@@ -8,7 +9,7 @@ import FieldError from "../components/FieldError.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { loadSession, session } from "../session";
-import { MIN_PASSWORD_LENGTH, checks, normalizers, useValidation, vNormalize } from "../validation";
+import { checks, normalizers, useValidation, vNormalize } from "../validation";
 
 const router = useRouter();
 const token = ref("");

@@ -24,11 +24,14 @@ export const auth = fp<{ db: Db; basePath: string }>(async (app, { db, basePath 
   const publicPrefix = `${basePath}/api/v1/auth/`;
 
   app.addHook("onRequest", async (request, reply) => {
-    // The router decodes the path before matching (/%61pi/ reaches /api/), so decide by the matched
-    // route and fall back to the raw path only when no route matched.
+    // The router decodes the path before matching (/%61pi/ reaches /api/), so the matched route decides. The raw path
+    // counts too where no API route matched (no route at all, or the SPA's static wildcard <base>/*): an unknown API
+    // path needs a login as well instead of answering to anyone. Public is only a matched auth route, or with no
+    // route at all a path under auth/ (answered 404).
+    const route = request.routeOptions.url;
     const rawPath = request.url.split("?")[0] ?? "";
-    const target = request.routeOptions.url ?? rawPath;
-    if (!target.startsWith(apiPrefix) && !rawPath.startsWith(apiPrefix)) return;
+    if (!(route ?? "").startsWith(apiPrefix) && !rawPath.startsWith(apiPrefix)) return;
+    const publicTarget = route ?? rawPath;
 
     if (UNSAFE_METHODS.has(request.method) && !sameOrigin(request)) {
       return reply.code(403).send({ error: "forbidden_origin" });
@@ -36,7 +39,7 @@ export const auth = fp<{ db: Db; basePath: string }>(async (app, { db, basePath 
 
     const token = request.cookies[SESSION_COOKIE];
     if (token) request.user = await findSession(db, token);
-    if (!request.user && !target.startsWith(publicPrefix)) {
+    if (!request.user && !publicTarget.startsWith(publicPrefix)) {
       return reply.code(401).send({ error: "unauthenticated" });
     }
   });

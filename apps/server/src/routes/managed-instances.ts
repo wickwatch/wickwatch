@@ -16,7 +16,7 @@ import {
   type InstanceConfig,
   type RuntimeInstance,
 } from "@wickwatch/core";
-import { INSTANCE_NAME } from "@wickwatch/core/rules";
+import { INSTANCE_NAME, isUp } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import Value from "typebox/value";
@@ -26,13 +26,12 @@ import type { Db } from "../db";
 import type { InstanceConfigsTable } from "../db/schema";
 import { isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
+import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
-import { audit } from "../services/audit";
-import { latestConfigIds } from "../services/instance-configs";
-import { isUp, setShouldRun } from "../services/instance-keeper";
+import { audit, auditOutcome } from "../services/audit";
+import { decryptParameters, encryptParameters, latestConfigIds } from "../services/instance-configs";
+import { setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
-
-const NAME = INSTANCE_NAME.source;
 
 /** A rejected configuration; `issues` and `unknown` are set for `invalid_parameters`. */
 const ConfigErrorBody = Type.Object({
@@ -43,12 +42,14 @@ const ConfigErrorBody = Type.Object({
 });
 type ConfigErrorBody = Type.Static<typeof ConfigErrorBody>;
 
-const NameParams = Type.Object({ name: Type.String({ pattern: NAME }) });
+const NameParams = Type.Object({ name: Type.String({ pattern: INSTANCE_NAME.source }) });
 
 type ConfigRow = Omit<InstanceConfigsTable, "id" | "instance_id"> & { created_by_name?: string | null };
 
-function toConfig(row: ConfigRow): InstanceConfig {
-  const parameters: unknown = JSON.parse(row.parameters);
+/** Without the master key, encrypted parameter values cannot be read and are left out. */
+function toConfig(row: ConfigRow, cipher: Cipher | undefined): InstanceConfig {
+  const json = decryptParameters(cipher, row.parameters);
+  const parameters: unknown = json === undefined ? {} : JSON.parse(json);
   return {
     version: row.version,
     algo: { id: row.algo_id, name: row.algo_name, version: row.algo_version },
@@ -72,6 +73,7 @@ const withoutParameters = (config: InstanceConfig): InstanceConfig => ({ ...conf
 const canonical = (values: ParameterValues) =>
   JSON.stringify(Object.fromEntries(Object.entries(values).sort(([a], [b]) => a.localeCompare(b))));
 
+/** `row.parameters` is the canonical JSON, encrypted only when stored. */
 type Checked =
   | { ok: true; row: Omit<ConfigRow, "version" | "created_by" | "created_at"> }
   | { ok: false; status: 400 | 404; body: ConfigErrorBody };
@@ -80,6 +82,8 @@ export interface ManagedInstanceRouteOptions {
   adapters: Adapters;
   accounts: AccountDirectory;
   db: Db;
+  /** Encrypts parameter values; without it they cannot be saved, deployed or downloaded. */
+  cipher: Cipher | undefined;
   symbols: SymbolCache;
   labelPrefix: string;
   algosDir: string;
@@ -87,7 +91,7 @@ export interface ManagedInstanceRouteOptions {
 
 export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, symbols, labelPrefix, algosDir },
+  { adapters, accounts, db, cipher, symbols, labelPrefix, algosDir },
 ) => {
   /** The runtime's rules for parameter values, e.g. no empty text for the cTrader CLI. */
   const validateOptions = { requireText: adapters.broker.capabilities().requiresTextValues === true };
@@ -123,9 +127,13 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     };
   }
 
-  /** Managed instances of the active broker adapter with their current configuration. */
-  async function load(name?: string): Promise<ManagedInstance[]> {
-    const [entryList, runtimes] = await Promise.all([accounts.list(), adapters.runtime.list().catch(() => undefined)]);
+  /**
+   * Managed instances of the active broker adapter with their current configuration. An unreachable runtime leaves
+   * `deployment` out, or with `strict` fails the call.
+   */
+  async function load(name?: string, { strict = false } = {}): Promise<ManagedInstance[]> {
+    const runtimeList = strict ? adapters.runtime.list() : adapters.runtime.list().catch(() => undefined);
+    const [entryList, runtimes] = await Promise.all([accounts.list(), runtimeList]);
     const entries = new Map(entryList.map((a) => [a.id, a]));
     let query = db.selectFrom("instances").selectAll().orderBy("name");
     if (name !== undefined) query = query.where("name", "=", name);
@@ -144,7 +152,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           name: row.name,
           account: { id: entry.id, number: entry.number, displayName: entry.displayName },
           createdAt: row.created_at,
-          config: toConfig(config),
+          config: toConfig(config, cipher),
           ...(deployed ? { deployment: deployed } : {}),
         },
       ];
@@ -233,10 +241,11 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           "Admins only: parameter sets may hold licence keys. `version` defaults to the current one. The body is the file.",
         params: NameParams,
         querystring: Type.Object({ version: Type.Optional(Type.Integer({ minimum: 1 })) }),
-        response: { 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+        response: { 403: ErrorBody, 404: ErrorBody, 409: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const [instance] = await load(request.params.name);
       if (!instance) return reply.code(404).send({ error: "not_found" });
       const version = request.query.version ?? instance.config.version;
@@ -251,7 +260,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           ? undefined
           : await db.selectFrom("algos").select("metadata").where("id", "=", row.algo_id).executeTakeFirst();
       if (!algo) return reply.code(409).send({ error: "algo_not_found" });
-      const config = toConfig(row);
+      const config = toConfig(row, cipher);
       const bytes = adapters.config.serialize(config.parameters, schemaOf(algo.metadata), {
         symbol: config.symbol,
         period: config.period,
@@ -291,7 +300,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         .where("instance_configs.instance_id", "=", instance.id)
         .orderBy("instance_configs.version", "desc")
         .execute();
-      const detail = { ...instance, history: history.map(toConfig) };
+      const detail = { ...instance, history: history.map((c) => toConfig(c, cipher)) };
       if (isAdmin(request)) return detail;
       return { ...detail, config: withoutParameters(detail.config), history: detail.history.map(withoutParameters) };
     },
@@ -305,14 +314,22 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         tags: ["instances"],
         summary: "Set up an instance (saved only; nothing is started)",
         body: Type.Object({
-          name: Type.String({ pattern: NAME }),
+          name: Type.String({ pattern: INSTANCE_NAME.source }),
           accountId: Type.Integer(),
           config: InstanceConfigInput,
         }),
-        response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+        response: {
+          201: ManagedInstance,
+          400: ConfigErrorBody,
+          403: ErrorBody,
+          404: ErrorBody,
+          409: ErrorBody,
+          503: ErrorBody,
+        },
       },
     },
     async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const { name, accountId, config } = request.body;
       const entry = await findAccountById(accounts, accountId);
       if (!entry) return reply.code(404).send({ error: "not_found" });
@@ -335,7 +352,14 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           .executeTakeFirstOrThrow();
         await trx
           .insertInto("instance_configs")
-          .values({ ...checked.row, instance_id: id, version: 1, created_by: userId, created_at: now })
+          .values({
+            ...checked.row,
+            parameters: encryptParameters(cipher, checked.row.parameters),
+            instance_id: id,
+            version: 1,
+            created_by: userId,
+            created_at: now,
+          })
           .execute();
       });
       await audit(db, {
@@ -360,10 +384,18 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         description: "Nothing is restarted; a running instance keeps its configuration until it is redeployed.",
         params: NameParams,
         body: InstanceConfigInput,
-        response: { 201: ManagedInstance, 400: ConfigErrorBody, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+        response: {
+          201: ManagedInstance,
+          400: ConfigErrorBody,
+          403: ErrorBody,
+          404: ErrorBody,
+          409: ErrorBody,
+          503: ErrorBody,
+        },
       },
     },
     async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const [instance] = await load(request.params.name);
       const entry = instance && (await findAccountById(accounts, instance.account.id));
       if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
@@ -385,6 +417,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         .insertInto("instance_configs")
         .values({
           ...checked.row,
+          parameters: encryptParameters(cipher, checked.row.parameters),
           instance_id: instance.id,
           version,
           created_by: request.user?.id ?? null,
@@ -424,15 +457,19 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           404: ErrorBody,
           409: ErrorBody,
           501: ErrorBody,
+          502: ErrorBody,
+          503: ErrorBody,
         },
       },
     },
     async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const { name } = request.params;
       const [instance] = await load(name);
       const entry = instance && (await findAccountById(accounts, instance.account.id));
       if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
-      if (!adapters.broker.launch) return reply.code(501).send({ error: "launch_unsupported" });
+      const launch = adapters.broker.launch?.bind(adapters.broker);
+      if (!launch) return reply.code(501).send({ error: "launch_unsupported" });
       if (instance.deployment && !instance.deployment.managed) {
         return reply.code(409).send({ error: "instance_exists" });
       }
@@ -448,47 +485,49 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         return reply.code(400).send({ error: "parameters_incomplete" });
       }
 
-      const launch = await adapters.broker.launch({
-        credentials: await entry.credentials(),
-        account: entry.number,
-        algo: {
-          name: algo.name,
-          file: await readFile(join(algosDir, algo.file_path)),
-          fullAccess: algo.full_access === 1,
-          parameters: schema,
-        },
-        symbol: config.symbol,
-        period: config.period,
-        parameters: config.parameters,
-      });
-      const spec = {
-        ...launch,
-        name,
-        labels: managedLabels(labelPrefix, {
-          name,
-          account: entry.number,
-          symbol: config.symbol,
-          period: config.period,
-          algoVersion: config.algo.version,
-          configVersion: config.version,
-          attribution: config.attribution.mode,
-          orderLabel: config.attribution.orderLabel,
-        }),
-      };
       const replaced = instance.deployment !== undefined;
-      let runtime = replaced ? await adapters.runtime.update(name, spec) : await adapters.runtime.create(spec);
-      const start = request.body.start === true && runtime.status !== "running";
-      if (start) {
-        await adapters.runtime.start(name);
-        runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
-      }
-      await setShouldRun(db, name, isUp(runtime.status));
-      await audit(db, {
-        action: "instance.deploy",
-        target: name,
-        details: { version: config.version, replaced, started: start, image: launch.image },
-        userId: request.user?.id,
-      });
+      const { runtime } = await auditOutcome(
+        db,
+        { action: "instance.deploy", target: name, userId: request.user?.id },
+        async () => {
+          const launched = await launch({
+            credentials: await entry.credentials(),
+            account: entry.number,
+            algo: {
+              name: algo.name,
+              file: await readFile(join(algosDir, algo.file_path)),
+              fullAccess: algo.full_access === 1,
+              parameters: schema,
+            },
+            symbol: config.symbol,
+            period: config.period,
+            parameters: config.parameters,
+          });
+          const spec = {
+            ...launched,
+            name,
+            labels: managedLabels(labelPrefix, {
+              name,
+              account: entry.number,
+              symbol: config.symbol,
+              period: config.period,
+              algoVersion: config.algo.version,
+              configVersion: config.version,
+              attribution: config.attribution.mode,
+              orderLabel: config.attribution.orderLabel,
+            }),
+          };
+          let runtime = replaced ? await adapters.runtime.update(name, spec) : await adapters.runtime.create(spec);
+          const started = request.body.start === true && runtime.status !== "running";
+          if (started) {
+            await adapters.runtime.start(name);
+            runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
+          }
+          await setShouldRun(db, name, isUp(runtime.status));
+          return { runtime, started, image: launched.image };
+        },
+        ({ started, image }) => ({ version: config.version, replaced, started, image }),
+      );
       return { status: runtime.status, configVersion: config.version };
     },
   );
@@ -502,25 +541,26 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         summary: "Delete a managed instance, its container (stopping it) and its configuration history",
         params: NameParams,
         body: Type.Object({ confirm: Type.String({ description: "The instance name" }) }),
-        response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
+        response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
       const { name } = request.params;
-      const [instance] = await load(name);
-      if (!instance) return reply.code(404).send({ error: "not_found" });
-      // Asked again without load()'s fallback: an unreachable runtime must fail the delete, not orphan a running
-      // container. A container of the same name defined elsewhere stays untouched.
-      const runtimes = await adapters.runtime.list();
-      const removeContainer = deployment(runtimes.find((i) => i.ref === name))?.managed === true;
-      if (removeContainer) await adapters.runtime.remove(name);
-      await db.deleteFrom("instances").where("id", "=", instance.id).execute();
-      await audit(db, {
-        action: "instance.delete",
-        target: name,
-        details: { versions: instance.config.version, containerRemoved: removeContainer },
-        userId: request.user?.id,
-      });
+      await auditOutcome(
+        db,
+        { action: "instance.delete", target: name, userId: request.user?.id },
+        async () => {
+          // Strict: an unreachable runtime must fail the delete, not orphan a running container.
+          const [instance] = await load(name, { strict: true });
+          if (!instance) throw new AdapterError("not_found", `No managed instance ${name}`);
+          // A container of the same name defined elsewhere stays untouched.
+          const containerRemoved = instance.deployment?.managed === true;
+          if (containerRemoved) await adapters.runtime.remove(name);
+          await db.deleteFrom("instances").where("id", "=", instance.id).execute();
+          return { versions: instance.config.version, containerRemoved };
+        },
+        (details) => details,
+      );
       return reply.code(204).send(null);
     },
   );

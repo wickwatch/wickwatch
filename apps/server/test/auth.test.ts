@@ -223,7 +223,7 @@ describe("changing the password", () => {
 });
 
 describe("turning 2FA on and off", () => {
-  it("enables 2FA with a confirmed code and disables it with the password", async () => {
+  it("enables 2FA with a confirmed code and disables it with the password and a code", async () => {
     t = await startApp();
     await createUser(t, "anna", "admin", { totp: false });
     const cookie = sessionCookie(await post("/api/v1/auth/login", { username: "anna", password: PASSWORD }));
@@ -246,18 +246,37 @@ describe("turning 2FA on and off", () => {
     const login = await post("/api/v1/auth/login", { username: "anna", password: PASSWORD, code: currentCode(secret) });
     expect(login.statusCode).toBe(200);
 
-    expect((await post("/api/v1/auth/totp/disable", { password: "wrong password!" }, headers)).statusCode).toBe(403);
-    expect((await post("/api/v1/auth/totp/disable", { password: PASSWORD }, headers)).statusCode).toBe(204);
-    expect((await session(cookie)).json()).toMatchObject({ user: { totpEnabled: false } });
+    const disable = (body: object) => post("/api/v1/auth/totp/disable", body, headers);
+    const code = currentCode(secret);
+    expect((await disable({ password: PASSWORD })).statusCode).toBe(400);
+    const wrongPassword = await disable({ password: "wrong password!", code });
+    expect([wrongPassword.statusCode, wrongPassword.json()]).toEqual([403, { error: "invalid_password" }]);
+    const wrongCode = await disable({ password: PASSWORD, code: code === "000000" ? "111111" : "000000" });
+    expect([wrongCode.statusCode, wrongCode.json()]).toEqual([401, { error: "invalid_credentials" }]);
+    // The code that just logged in does not count again.
+    const replayed = await disable({ password: PASSWORD, code });
+    expect([replayed.statusCode, replayed.json()]).toEqual([401, { error: "invalid_credentials" }]);
+    expect((await session(cookie)).json()).toMatchObject({ user: { totpEnabled: true } });
 
-    const actions = (await auditActions()).map((a) => a.action).filter((a) => a.startsWith("auth.totp"));
-    expect(actions).toEqual(["auth.totp_enable", "auth.totp_disable", "auth.totp_disable"]);
+    const next = totpCode(secret, totpCounter(Date.now()) + 1);
+    expect((await disable({ password: PASSWORD, code: next })).statusCode).toBe(204);
+    expect((await session(cookie)).json()).toMatchObject({ user: { totpEnabled: false } });
+    expect((await disable({ password: PASSWORD, code: next })).json()).toEqual({ error: "totp_not_enabled" });
+
+    const disables = (await auditActions()).filter((a) => a.action.startsWith("auth.totp"));
+    expect(disables).toEqual([
+      { action: "auth.totp_enable", details: null },
+      { action: "auth.totp_disable", details: { ok: false, error: "invalid_password" } },
+      { action: "auth.totp_disable", details: { ok: false, error: "invalid_credentials" } },
+      { action: "auth.totp_disable", details: { ok: false, error: "invalid_credentials" } },
+      { action: "auth.totp_disable", details: { ok: true } },
+    ]);
   }, 40_000);
 
   it("needs a session", async () => {
     t = await startApp();
     expect((await post("/api/v1/auth/totp/setup")).statusCode).toBe(401);
-    expect((await post("/api/v1/auth/totp/disable", { password: PASSWORD })).statusCode).toBe(401);
+    expect((await post("/api/v1/auth/totp/disable", { password: PASSWORD, code: "123456" })).statusCode).toBe(401);
   });
 });
 

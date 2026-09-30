@@ -138,6 +138,24 @@ describe("instance actions", () => {
     expect((await post("/api/v1/instances/alpha-ger40-a/delete")).statusCode).toBe(400);
   });
 
+  it("rejects refs that are no container name, before they reach the runtime", async () => {
+    const reached: string[] = [];
+    const { runtime } = t.adapters;
+    const logs = runtime.logs.bind(runtime);
+    runtime.start = (ref) => Promise.resolve(void reached.push(ref));
+    runtime.logs = (ref, opts) => {
+      reached.push(ref);
+      return logs(ref, opts);
+    };
+    for (const ref of ["..%2F..%2Fversion", "%2Fetc", "a%2F..%2Fb", ".hidden", "-x"]) {
+      expect((await post(`/api/v1/instances/${ref}/start`)).statusCode, ref).toBe(400);
+      expect((await get(`/api/v1/instances/${ref}`)).statusCode, ref).toBe(400);
+      expect((await get(`/api/v1/instances/${ref}/logs/stream`)).statusCode, ref).toBe(400);
+    }
+    expect(reached).toEqual([]);
+    expect(await auditRows()).toEqual([]);
+  });
+
   it("lets viewers read but not act", async () => {
     const viewer = await loginAs(t, "viewer");
     expect((await get("/api/v1/overview", viewer)).statusCode).toBe(200);
@@ -319,9 +337,9 @@ describe("managing logins and accounts", () => {
 });
 
 describe("accounts of another broker adapter", () => {
-  it("are not listed", async () => {
+  const insertOther = async () => {
     const now = new Date().toISOString();
-    await t.db
+    const { id } = await t.db
       .insertInto("accounts")
       .values({
         adapter: "other",
@@ -334,9 +352,30 @@ describe("accounts of another broker adapter", () => {
         created_at: now,
         updated_at: now,
       })
-      .execute();
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    return id;
+  };
+
+  it("are not listed", async () => {
+    await insertOther();
     const numbers = (await get("/api/v1/accounts")).json<{ number: string }[]>().map((a) => a.number);
     expect(numbers).toEqual(["1111111", "2222222", "3333333"]);
+  });
+
+  it("can be neither changed nor removed", async () => {
+    const id = await insertOther();
+    const url = `/api/v1/accounts/${String(id)}`;
+    const patched = await t.app.inject({
+      method: "PATCH",
+      url,
+      headers: { cookie: admin },
+      payload: { displayName: "x" },
+    });
+    expect(patched.statusCode).toBe(404);
+    expect((await t.app.inject({ method: "DELETE", url, headers: { cookie: admin } })).statusCode).toBe(404);
+    const row = await t.db.selectFrom("accounts").select("display_name").where("id", "=", id).executeTakeFirst();
+    expect(row).toEqual({ display_name: "Other" });
   });
 });
 

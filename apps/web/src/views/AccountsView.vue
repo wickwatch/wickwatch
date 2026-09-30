@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import type { Account, Credential } from "@wickwatch/core";
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, type AccountRow, type CredentialRow, type OfferedAccount } from "../api";
+import { api, type OfferedAccount } from "../api";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import FieldError from "../components/FieldError.vue";
@@ -12,8 +13,8 @@ import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
 
 const { t } = useI18n();
-const accounts = ref<AccountRow[]>([]);
-const credentials = ref<CredentialRow[]>([]);
+const accounts = ref<Account[]>([]);
+const credentials = ref<Credential[]>([]);
 const loading = ref(true);
 
 async function load() {
@@ -86,7 +87,7 @@ const modalDirty = computed(() => {
 const editing = reactive({ id: 0, displayName: "", credentialId: 0, original: { displayName: "", credentialId: 0 } });
 const editForm = useValidation();
 const editNameField = editForm.field(() => editing.displayName.trim(), checks.required);
-function startEdit(a: AccountRow) {
+function startEdit(a: Account) {
   const values = { displayName: a.displayName, credentialId: a.credentialId ?? 0 };
   Object.assign(editing, { id: a.id, ...values, original: values });
   openModal("edit");
@@ -105,7 +106,7 @@ const saveEdit = () =>
   );
 
 // --- removing
-const removing = ref<{ kind: "account"; row: AccountRow } | { kind: "credential"; row: CredentialRow }>();
+const removing = ref<{ kind: "account"; row: Account } | { kind: "credential"; row: Credential }>();
 const removeMessage = computed(() => {
   const r = removing.value;
   if (!r) return "";
@@ -179,7 +180,7 @@ const addLogin = () =>
 const changingSecret = reactive({ id: 0, label: "", secret: "" });
 const secretForm = useValidation();
 const newSecretField = secretForm.field(() => changingSecret.secret, checks.required);
-function startPasswordChange(c: CredentialRow) {
+function startPasswordChange(c: Credential) {
   Object.assign(changingSecret, { id: c.id, label: c.label, secret: "" });
   openModal("password");
 }

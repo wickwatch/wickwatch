@@ -161,13 +161,9 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     async (request, reply) => {
       const { id } = request.params;
       const { displayName, credentialId } = request.body;
-      const account = await db
-        .selectFrom("accounts")
-        .select(["number", "credential_id"])
-        .where("id", "=", id)
-        .executeTakeFirst();
+      const account = await findAccountById(accounts, id);
       if (!account) return reply.code(404).send({ error: "not_found" });
-      if (credentialId !== undefined && credentialId !== account.credential_id) {
+      if (credentialId !== undefined && credentialId !== account.credentialId) {
         if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
         const { credential, found } = await brokerKnows(credentialId, account.number);
         if (!credential) return reply.code(400).send({ error: "credential_not_found" });
@@ -204,11 +200,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       },
     },
     async (request, reply) => {
-      const account = await db
-        .selectFrom("accounts")
-        .select("number")
-        .where("id", "=", request.params.id)
-        .executeTakeFirst();
+      const account = await findAccountById(accounts, request.params.id);
       if (!account) return reply.code(404).send({ error: "not_found" });
       const used = await db
         .selectFrom("instances")
@@ -384,14 +376,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       return auditOutcome(
         db,
         { action: "account.emergency_stop", target: number, userId: request.user?.id },
-        () =>
-          stopAccount(db, account.id, {
-            runtime: adapters.runtime,
-            broker: adapters.broker,
-            credentials: () => account.credentials(),
-            account: number,
-            labelPrefix,
-          }),
+        () => stopAccount(db, account, { runtime: adapters.runtime, broker: adapters.broker, labelPrefix }),
         (report) => report,
       );
     },

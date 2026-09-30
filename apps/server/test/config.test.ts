@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, loadConfig } from "../src/config";
+import { loadConfig } from "../src/config";
+import { ConfigError } from "../src/config-error";
 
 const load = (env: Record<string, string>) => loadConfig(env, "/srv/wickwatch");
 

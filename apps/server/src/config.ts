@@ -3,8 +3,6 @@ import { DEFAULT_LABEL_PREFIX, isTimeZone } from "@wickwatch/core";
 import { readAdapterSettings, type AdapterSettings } from "./adapters";
 import { ConfigError } from "./config-error";
 
-export { ConfigError };
-
 /** Answers with `ts=<unix time>` in milliseconds; any URL whose answer has a Date header works too. */
 const DEFAULT_CLOCK_CHECK_URL = "https://www.cloudflare.com/cdn-cgi/trace";
 
@@ -33,7 +31,7 @@ export interface Config {
   instanceRestartPolicy: RestartPolicy;
   /** Directory with challenge templates (*.json). */
   challengeTemplatesDir: string;
-  /** Where uploaded algo files are stored, versioned as <name>/<version>/<name>.algo. */
+  /** Where uploaded algo files are stored, one folder per algo name and version. */
   algosDir: string;
   /** How often balance and equity of every account are sampled. */
   accountPollSeconds: number;
