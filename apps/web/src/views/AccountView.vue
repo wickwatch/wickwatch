@@ -115,6 +115,7 @@ const meta = computed(() => {
             :icon="account.challenge ? 'edit' : 'plus'"
             :label="account.challenge ? $t('challenge.edit') : $t('challenge.add')"
             show-label
+            collapse
             @click="editing = true"
           />
           <button

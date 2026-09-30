@@ -127,7 +127,7 @@ const range = (p: ParameterSchema) =>
       <button
         v-if="mode !== 'schema'"
         type="button"
-        class="btn btn--ghost btn--small"
+        class="btn btn--ghost"
         :aria-pressed="onlyChanged"
         @click="onlyChanged = !onlyChanged"
       >
@@ -137,7 +137,7 @@ const range = (p: ParameterSchema) =>
       <button
         v-if="mode === 'edit'"
         type="button"
-        class="btn btn--ghost btn--small params__reset"
+        class="btn btn--ghost params__reset"
         :disabled="!changedCount"
         @click="resetting = true"
       >

@@ -60,6 +60,9 @@ async function runInModal(action: () => Promise<boolean>, done: string) {
 }
 function openModal(kind: "account" | "login") {
   modalError.value = undefined;
+  // Also here: closing blurs the field, which marks it touched after closeModal() reset it.
+  addForm.reset();
+  loginForm.reset();
   modal.value = kind;
 }
 function closeModal() {
@@ -186,6 +189,7 @@ const saveSecret = () =>
             icon="plus"
             :label="$t('accounts.addAccount')"
             show-label
+            collapse
             @click="openModal('account')"
           />
         </div>
@@ -220,18 +224,24 @@ const saveSecret = () =>
                     </select>
                   </td>
                   <td></td>
-                  <td class="actions">
-                    <button
-                      type="button"
-                      class="btn btn--primary btn--small"
-                      :disabled="busy || !editing.displayName.trim()"
-                      @click="saveEdit"
-                    >
-                      {{ $t("action.save") }}
-                    </button>
-                    <button type="button" class="btn btn--ghost btn--small" @click="editing.id = 0">
-                      {{ $t("action.cancel") }}
-                    </button>
+                  <td>
+                    <div class="actions">
+                      <IconButton
+                        icon="check"
+                        :label="$t('action.save')"
+                        variant="primary"
+                        small
+                        :disabled="busy || !editing.displayName.trim()"
+                        @click="saveEdit"
+                      />
+                      <IconButton
+                        icon="close"
+                        :label="$t('action.cancel')"
+                        variant="ghost"
+                        small
+                        @click="editing.id = 0"
+                      />
+                    </div>
                   </td>
                 </template>
                 <template v-else>
@@ -246,18 +256,24 @@ const saveSecret = () =>
                     <!-- Maintained on the account page. -->
                     {{ a.hasChallenge ? $t("accounts.challengeSet") : $t("format.none") }}
                   </td>
-                  <td v-if="isAdmin" class="actions">
-                    <button type="button" class="btn btn--small" :disabled="busy" @click="startEdit(a)">
-                      {{ $t("action.edit") }}
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn--danger btn--small"
-                      :disabled="busy"
-                      @click="removing = { kind: 'account', row: a }"
-                    >
-                      {{ $t("accounts.remove") }}
-                    </button>
+                  <td v-if="isAdmin">
+                    <div class="actions">
+                      <IconButton
+                        icon="edit"
+                        :label="$t('table.actionOn', { action: $t('action.edit'), name: a.displayName })"
+                        small
+                        :disabled="busy"
+                        @click="startEdit(a)"
+                      />
+                      <IconButton
+                        icon="trash"
+                        :label="$t('table.actionOn', { action: $t('accounts.remove'), name: a.displayName })"
+                        variant="danger"
+                        small
+                        :disabled="busy"
+                        @click="removing = { kind: 'account', row: a }"
+                      />
+                    </div>
                   </td>
                 </template>
               </tr>
@@ -270,7 +286,7 @@ const saveSecret = () =>
         <section class="panel card" aria-labelledby="logins-title">
           <div class="card__head">
             <h2 id="logins-title">{{ $t("accounts.logins") }}</h2>
-            <IconButton icon="plus" :label="$t('accounts.addLogin')" show-label @click="openModal('login')" />
+            <IconButton icon="plus" :label="$t('accounts.addLogin')" show-label collapse @click="openModal('login')" />
           </div>
           <p class="muted hint">{{ $t("accounts.loginsHint") }}</p>
           <div v-if="credentials.length" class="table-wrap">
@@ -288,58 +304,73 @@ const saveSecret = () =>
                   <th scope="row">{{ c.label }}</th>
                   <td class="mono">{{ c.login }}</td>
                   <td class="mono num">{{ c.accounts }}</td>
-                  <td class="actions">
-                    <form v-if="changingSecret.id === c.id" class="inline" novalidate @submit.prevent="saveSecret">
-                      <label class="visually-hidden" :for="`secret-${c.id}`">{{ $t("accounts.newPassword") }}</label>
-                      <input
-                        :id="`secret-${c.id}`"
-                        v-model="changingSecret.secret"
-                        v-bind="newSecretField.attrs.value"
-                        class="input"
-                        type="password"
-                        autocomplete="new-password"
-                        :placeholder="$t('accounts.newPassword')"
-                        required
-                      />
-                      <FieldError :field="newSecretField" />
-                      <button type="submit" class="btn btn--primary btn--small" :disabled="busy">
-                        {{ $t("action.save") }}
-                      </button>
-                      <button type="button" class="btn btn--ghost btn--small" @click="changingSecret.id = 0">
-                        {{ $t("action.cancel") }}
-                      </button>
-                    </form>
-                    <template v-else>
-                      <button type="button" class="btn btn--small" :disabled="busy" @click="changingSecret.id = c.id">
-                        {{ $t("accounts.changePassword") }}
-                      </button>
-                      <!-- The reason sits on a wrapper: a disabled button gets no focus and would fade its tooltip. -->
-                      <span
-                        v-if="c.accounts > 0"
-                        class="disabled-tip"
-                        tabindex="0"
-                        :data-tooltip="$t('accounts.loginInUse')"
-                      >
-                        <button
-                          type="button"
-                          class="btn btn--danger btn--small"
-                          disabled
-                          :aria-describedby="`in-use-${c.id}`"
+                  <td>
+                    <div class="actions">
+                      <form v-if="changingSecret.id === c.id" class="inline" novalidate @submit.prevent="saveSecret">
+                        <label class="visually-hidden" :for="`secret-${c.id}`">{{ $t("accounts.newPassword") }}</label>
+                        <input
+                          :id="`secret-${c.id}`"
+                          v-model="changingSecret.secret"
+                          v-bind="newSecretField.attrs.value"
+                          class="input"
+                          type="password"
+                          autocomplete="new-password"
+                          :placeholder="$t('accounts.newPassword')"
+                          required
+                        />
+                        <FieldError :field="newSecretField" />
+                        <IconButton
+                          type="submit"
+                          icon="check"
+                          :label="$t('action.save')"
+                          variant="primary"
+                          small
+                          :disabled="busy"
+                        />
+                        <IconButton
+                          icon="close"
+                          :label="$t('action.cancel')"
+                          variant="ghost"
+                          small
+                          @click="changingSecret.id = 0"
+                        />
+                      </form>
+                      <template v-else>
+                        <IconButton
+                          icon="key"
+                          :label="$t('table.actionOn', { action: $t('accounts.changePassword'), name: c.label })"
+                          small
+                          :disabled="busy"
+                          @click="changingSecret.id = c.id"
+                        />
+                        <!-- The reason sits on a wrapper: a disabled button gets no focus and would fade its tooltip. -->
+                        <span
+                          v-if="c.accounts > 0"
+                          class="disabled-tip"
+                          tabindex="0"
+                          :data-tooltip="$t('accounts.loginInUse')"
                         >
-                          {{ $t("accounts.remove") }}
-                        </button>
-                        <span :id="`in-use-${c.id}`" class="visually-hidden">{{ $t("accounts.loginInUse") }}</span>
-                      </span>
-                      <button
-                        v-else
-                        type="button"
-                        class="btn btn--danger btn--small"
-                        :disabled="busy"
-                        @click="removing = { kind: 'credential', row: c }"
-                      >
-                        {{ $t("accounts.remove") }}
-                      </button>
-                    </template>
+                          <IconButton
+                            icon="trash"
+                            :label="$t('table.actionOn', { action: $t('accounts.remove'), name: c.label })"
+                            variant="danger"
+                            small
+                            disabled
+                            :aria-describedby="`in-use-${c.id}`"
+                          />
+                          <span :id="`in-use-${c.id}`" class="visually-hidden">{{ $t("accounts.loginInUse") }}</span>
+                        </span>
+                        <IconButton
+                          v-else
+                          icon="trash"
+                          :label="$t('table.actionOn', { action: $t('accounts.remove'), name: c.label })"
+                          variant="danger"
+                          small
+                          :disabled="busy"
+                          @click="removing = { kind: 'credential', row: c }"
+                        />
+                      </template>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -569,8 +600,9 @@ tbody th {
   align-items: center;
 }
 
-td.actions,
+td .actions,
 td .inline {
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 

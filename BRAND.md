@@ -56,7 +56,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 - **Icon only**, with the label as tooltip and accessible name: actions repeated in every row (tables, history) and the compact header controls.
 - **Icon and text**: the primary actions of a page (edit, save, start) and destructive actions outside table rows (delete, emergency stop), so a tap is never a guess.
 - Destructive row actions (close position, cancel order) are icon only in the negative colour, with tooltip; they always ask for confirmation first.
-- An icon-only button keeps the 44 px touch target on touch screens.
+- Button sizes come from tokens (`--ww-control`, `--ww-control-sm`), a little larger on touch screens; never below the 24 px minimum target. Row actions stay on one line.
 - Tooltips use `data-tooltip` (shown at once on hover and focus), not the native `title`. A row action names its row ("Restart: alpha-ger40"), since the name is far away at the start of the row. A disabled action says why in a tooltip on a wrapper (a disabled button gets no focus).
 - Action columns in tables are right-aligned.
 - Choices from a short list (language, theme) and secondary actions ("more") open a menu (`MenuButton`); the chosen entry shows a check mark.

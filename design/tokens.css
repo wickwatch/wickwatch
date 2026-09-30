@@ -34,6 +34,11 @@
   --ww-radius-xl: 16px;
   --ww-radius-full: 999px;
   --ww-touch-target: 44px;
+  /* Buttons: regular and small (row actions), a little larger on touch screens (base.css). */
+  --ww-control: 36px;
+  --ww-control-sm: 30px;
+  --ww-control-touch: 40px;
+  --ww-control-sm-touch: 36px;
   color-scheme: light dark;
 }
 

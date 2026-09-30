@@ -87,6 +87,11 @@ h2 {
   visibility: hidden;
 }
 
+/* A disabled button would fade its own tooltip; the reason sits on a wrapper instead (see AccountsView). */
+[data-tooltip]:disabled::after {
+  display: none;
+}
+
 /* An open disclosure already shows its content; on touch the hover state would keep the tooltip up. */
 [data-tooltip][aria-expanded="true"]::after {
   display: none;
@@ -127,8 +132,8 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: var(--ww-space-2);
-  min-height: var(--ww-touch-target);
-  padding: var(--ww-space-2) var(--ww-space-3);
+  min-height: var(--ww-control);
+  padding: 6px var(--ww-space-3);
   border: 1px solid var(--ww-border);
   border-radius: var(--ww-radius-md);
   background: var(--ww-surface-raised);
@@ -168,14 +173,14 @@ h2 {
 }
 
 .btn--small {
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: var(--ww-control-sm);
+  padding: 4px 10px;
   font-size: var(--ww-size-xs);
 }
 
 /* Square, icon only; the label is the tooltip and accessible name (IconButton). */
 .btn--icon {
-  width: var(--ww-touch-target);
+  width: var(--ww-control);
   padding: 0;
 }
 
@@ -192,17 +197,46 @@ h2 {
 }
 
 .btn--icon.btn--small {
-  width: 36px;
+  width: var(--ww-control-sm);
   padding: 0;
 }
 
+/* IconButton `collapse`: text on wide screens, icon only (with tooltip) on phones. */
+.btn--collapse[data-tooltip]::after {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .btn--collapse {
+    width: var(--ww-control);
+    padding: 0;
+  }
+
+  .btn--collapse .btn__text {
+    display: none;
+  }
+
+  .btn--collapse[data-tooltip]::after {
+    display: block;
+  }
+}
+
+/* Touch: a little larger, still well above the 24 px minimum target (WCAG 2.5.8). */
 @media (pointer: coarse) {
+  .btn {
+    min-height: var(--ww-control-touch);
+  }
+
+  .btn--icon {
+    width: var(--ww-control-touch);
+  }
+
   .btn--small {
-    min-height: var(--ww-touch-target);
+    min-height: var(--ww-control-sm-touch);
   }
 
   .btn--icon.btn--small {
-    width: var(--ww-touch-target);
+    width: var(--ww-control-sm-touch);
   }
 }
 
@@ -270,15 +304,40 @@ h2 {
   border-color: var(--ww-negative);
 }
 
+/* Same height as buttons, so fields and buttons in one row line up. */
 .input {
-  min-height: var(--ww-touch-target);
-  padding: var(--ww-space-2) var(--ww-space-3);
+  min-height: var(--ww-control);
+  padding: 6px var(--ww-space-3);
   border: 1px solid var(--ww-border-strong);
   border-radius: var(--ww-radius-md);
   background: var(--ww-inset);
   color: var(--ww-text);
   font: inherit;
   font-size: var(--ww-size-md);
+}
+
+@media (pointer: coarse) {
+  .input {
+    min-height: var(--ww-control-touch);
+  }
+}
+
+/*
+ * Selects draw their own arrow, set in from the edge like the text: the browser's own sits at the very edge. Two
+ * gradients in currentColor make a chevron that follows the text colour in both themes.
+ */
+select.input,
+select.btn {
+  padding-right: calc(var(--ww-space-3) + 20px);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - var(--ww-space-3) - 9px) 55%,
+    calc(100% - var(--ww-space-3) - 4px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
 }
 
 .btn--primary {

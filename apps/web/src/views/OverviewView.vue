@@ -6,6 +6,7 @@ import { api, errorKey, type InstanceAction, type ManagedInstanceRow } from "../
 import AccountCard from "../components/AccountCard.vue";
 import AlertList from "../components/AlertList.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import IconButton from "../components/IconButton.vue";
 import InstanceTable from "../components/InstanceTable.vue";
 import { useEmergencyStop } from "../composables/useEmergencyStop";
 import { usePolling } from "../composables/usePolling";
@@ -109,12 +110,17 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
         <div class="section__head">
           <h2 id="instances-title">{{ $t("overview.instances") }}</h2>
           <div class="filters">
-            <RouterLink v-if="isAdmin" :to="{ name: 'instance-new' }" class="btn btn--primary btn--small">
-              {{ $t("action.newInstance") }}
-            </RouterLink>
-            <label>
+            <IconButton
+              v-if="isAdmin"
+              icon="plus"
+              :label="$t('action.newInstance')"
+              show-label
+              variant="primary"
+              :to="{ name: 'instance-new' }"
+            />
+            <label class="filters__account">
               <span class="visually-hidden">{{ $t("overview.filterAccount") }}</span>
-              <select v-model="filterAccount" class="btn btn--small">
+              <select v-model="filterAccount" class="btn">
                 <option value="">{{ $t("overview.allAccounts") }}</option>
                 <option v-for="a in data.accounts" :key="a.number" :value="a.number">
                   {{ a.displayName }} · {{ a.number }}
@@ -123,7 +129,7 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
             </label>
             <button
               type="button"
-              class="btn btn--ghost btn--small"
+              class="btn btn--ghost"
               :aria-pressed="onlyRunning"
               @click="onlyRunning = !onlyRunning"
             >
@@ -254,7 +260,13 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
 
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--ww-space-2);
+  align-items: center;
+}
+
+.filters .btn {
+  white-space: nowrap;
 }
 
 .notice {
@@ -282,6 +294,24 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
   .overview {
     gap: var(--ww-space-6);
     padding: var(--ww-space-4);
+  }
+
+  /* Both buttons share one line in equal parts, the account filter full width below. */
+  .filters {
+    width: 100%;
+  }
+
+  .filters > .btn {
+    flex: 1 1 0;
+  }
+
+  .filters__account {
+    flex: 1 1 100%;
+    order: 1;
+  }
+
+  .filters__account select {
+    width: 100%;
   }
 }
 </style>

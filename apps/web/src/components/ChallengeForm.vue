@@ -415,7 +415,9 @@ const remove = () =>
   gap: var(--ww-space-5);
 }
 
+/* min-width: a fieldset is never narrower than its content by default, which overflows a phone-wide sheet. */
 fieldset {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-4);

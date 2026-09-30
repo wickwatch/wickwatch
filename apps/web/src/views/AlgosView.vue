@@ -65,6 +65,8 @@ const uploadError = ref<string>();
 const uploadDirty = computed(() => file.value !== undefined || version.value !== "");
 function openUpload() {
   uploadError.value = undefined;
+  // Closing blurs the field, which marks it touched after closeUpload() reset it.
+  form.reset();
   uploading.value = true;
 }
 function closeUpload() {
@@ -115,7 +117,7 @@ const fileSize = (bytes: number) => {
         <h1>{{ $t("nav.algos") }}</h1>
         <p class="muted intro">{{ $t("algos.intro") }}</p>
       </div>
-      <IconButton v-if="isAdmin" icon="upload" :label="$t('algos.upload')" show-label @click="openUpload" />
+      <IconButton v-if="isAdmin" icon="upload" :label="$t('algos.upload')" show-label collapse @click="openUpload" />
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>

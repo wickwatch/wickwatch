@@ -180,8 +180,8 @@ function onPick(event: Event) {
 
 .param__swatch {
   flex: none;
-  width: var(--ww-touch-target);
-  height: var(--ww-touch-target);
+  width: var(--ww-control);
+  height: var(--ww-control);
   padding: 0;
   border: 1px solid var(--ww-border-strong);
   border-radius: var(--ww-radius-md);

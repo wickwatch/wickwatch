@@ -130,15 +130,14 @@ async function logout() {
   gap: var(--ww-space-3);
   min-height: var(--ww-touch-target);
   padding: var(--ww-space-1) var(--ww-space-3) var(--ww-space-1) var(--ww-space-1);
-  border: 1px solid transparent;
   border-radius: var(--ww-radius-lg);
-  background: var(--ww-surface-raised);
   color: var(--ww-text);
 }
 
+/* No frame at rest, like the ghost icon buttons next to it; a surface on hover and while the menu is open. */
 .user-menu:hover .user,
 .user-menu [aria-expanded="true"] .user {
-  border-color: var(--ww-border-strong);
+  background: var(--ww-surface-raised);
 }
 
 .user__chevron {

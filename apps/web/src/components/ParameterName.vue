@@ -85,8 +85,8 @@ const descriptionId = useId();
 
 @media (pointer: coarse) {
   .name__info {
-    width: var(--ww-touch-target);
-    height: var(--ww-touch-target);
+    width: var(--ww-control-sm-touch);
+    height: var(--ww-control-sm-touch);
   }
 }
 </style>

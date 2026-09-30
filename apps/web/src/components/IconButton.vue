@@ -7,7 +7,8 @@ import AppIcon from "./AppIcon.vue";
 /**
  * A button with an icon (BRAND.md, "Buttons and icons"). Icon only by default, with the label as tooltip and accessible
  * name; `showLabel` adds the text for primary page actions and destructive ones outside table rows. `tooltip` shows
- * other text than the label, e.g. the description an info button reveals.
+ * other text than the label, e.g. the description an info button reveals. `collapse` (with `showLabel`) drops the text on
+ * phones, e.g. for an "Add" button next to a section title, so title and button stay on one line.
  * With `to` it is a link that looks the same, for actions that open a page (edit).
  */
 const props = withDefaults(
@@ -20,6 +21,7 @@ const props = withDefaults(
     type?: "button" | "submit";
     to?: RouteLocationRaw | undefined;
     tooltip?: string | undefined;
+    collapse?: boolean;
   }>(),
   {
     showLabel: false,
@@ -28,10 +30,11 @@ const props = withDefaults(
     type: "button",
     to: undefined,
     tooltip: undefined,
+    collapse: false,
   },
 );
 /** A tooltip only where the visible text does not already say it all. */
-const tip = computed(() => props.tooltip ?? (props.showLabel ? undefined : props.label));
+const tip = computed(() => props.tooltip ?? (props.showLabel && !props.collapse ? undefined : props.label));
 </script>
 
 <template>
@@ -46,11 +49,12 @@ const tip = computed(() => props.tooltip ?? (props.showLabel ? undefined : props
       'btn--ghost': variant === 'ghost',
       'btn--primary': variant === 'primary',
       'btn--danger': variant === 'danger',
+      'btn--collapse': showLabel && collapse,
     }"
-    :aria-label="showLabel ? undefined : label"
+    :aria-label="showLabel && !collapse ? undefined : label"
     :data-tooltip="tip"
   >
     <AppIcon :name="icon" :size="small ? 16 : 18" />
-    <span v-if="showLabel">{{ label }}</span>
+    <span v-if="showLabel" class="btn__text">{{ label }}</span>
   </component>
 </template>

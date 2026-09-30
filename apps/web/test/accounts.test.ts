@@ -60,7 +60,7 @@ describe("AccountsView", () => {
     // A login in use cannot be removed.
     const removeLogin = wrapper
       .findAll("section[aria-labelledby=logins-title] .table-wrap button")
-      .find((b) => b.text() === "Remove");
+      .find((b) => b.attributes("aria-label")?.startsWith("Remove") === true);
     expect(removeLogin?.attributes("disabled")).toBeDefined();
     // The reason shows as tooltip and is read out with the button.
     const reason = wrapper.find(`#${removeLogin?.attributes("aria-describedby") ?? ""}`).text();

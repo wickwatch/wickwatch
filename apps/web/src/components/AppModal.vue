@@ -5,7 +5,7 @@ import IconButton from "./IconButton.vue";
 
 /**
  * The shared modal (BRAND.md, "Consistency") on a native modal <dialog>: focus stays inside, Escape closes, focus
- * returns to where it was. A full-screen sheet on phones. With `dirty` it asks before closing, so typed input is
+ * returns to where it was. A sheet at the bottom on phones. With `dirty` it asks before closing, so typed input is
  * not lost by accident; the slot gets `close`, which asks the same way. Field errors stay inside the content.
  */
 const props = defineProps<{ open: boolean; title: string; dirty?: boolean }>();
@@ -15,10 +15,8 @@ const titleId = useId();
 const asking = ref(false);
 let returnTo: HTMLElement | null = null;
 
-const FIELDS = "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])";
-
-// After the render, so the content exists: focus goes to its first field, ready to type. Not to the close button,
-// and not to a file picker (a focused "Choose file" only looks pressed): then the dialog itself takes it.
+// After the render. The dialog itself takes the focus: nothing looks selected, and no field shows a problem before
+// anything was typed. Tab moves into the content.
 watch(
   () => props.open,
   (open) => {
@@ -27,8 +25,7 @@ watch(
     if (open && !el.open) {
       returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       el.showModal();
-      const first = el.querySelector<HTMLElement>(`.modal__body :is(${FIELDS})`);
-      (first && !(first instanceof HTMLInputElement && first.type === "file") ? first : el).focus();
+      el.focus();
     }
     if (!open && el.open) {
       el.close();
@@ -49,7 +46,7 @@ function discard() {
 </script>
 
 <template>
-  <!-- tabindex: takes focus itself when the content has no field. -->
+  <!-- tabindex: the dialog takes the focus itself when it opens. -->
   <dialog ref="dialog" class="modal panel" :aria-labelledby="titleId" tabindex="-1" @cancel.prevent="requestClose">
     <header class="modal__head">
       <h2 :id="titleId">{{ title }}</h2>
@@ -110,14 +107,19 @@ function discard() {
   padding: var(--ww-space-5);
 }
 
+/* Phones: a sheet at the bottom, as tall as its content; long content scrolls inside, the page stays visible above. */
 @media (max-width: 640px) {
   .modal {
     width: 100vw;
     max-width: 100vw;
-    height: 100dvh;
-    max-height: 100dvh;
-    margin: 0;
-    border-radius: 0;
+    max-height: calc(100dvh - var(--ww-space-8));
+    margin: auto 0 0;
+    border-width: 1px 0 0;
+    border-radius: var(--ww-radius-xl) var(--ww-radius-xl) 0 0;
+  }
+
+  .modal__body {
+    padding-bottom: calc(var(--ww-space-5) + env(safe-area-inset-bottom));
   }
 }
 </style>
