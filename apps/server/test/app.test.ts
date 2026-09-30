@@ -71,6 +71,8 @@ describe("app", () => {
       capabilities: { emergencyStop: true },
       defaultPeriod: "M5",
       algoFormats: ["algo"],
+      sourceUrl: "https://github.com/wickwatch/wickwatch",
+      supportUrl: "https://ko-fi.com/mmohrx",
     });
   });
 

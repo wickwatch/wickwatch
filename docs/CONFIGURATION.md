@@ -31,6 +31,8 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `DAILY_SUMMARY_TIME` | – | Local time of day (`HH:MM`) for a daily summary to `ALERT_WEBHOOK_URL`, see [Notifications](#notifications). Off when unset; needs `ALERT_WEBHOOK_URL`. |
 | `DAILY_SUMMARY_TIMEZONE` | `UTC` | IANA time zone of `DAILY_SUMMARY_TIME`, e.g. `Europe/Berlin`. |
 | `CLOCK_CHECK_URL` | `https://www.cloudflare.com/cdn-cgi/trace` | Time reference for the hourly clock check with `RUNTIME_ADAPTER=docker` (a container cannot see whether the host syncs its clock): an answer with a `ts=<unix time>` line or a `Date` header. The header shows it as an icon (up to 1 s fine, up to 2 s worth watching, beyond that an alert). `off` switches it off; the icon is then not shown. |
+| `SOURCE_URL` | `https://github.com/wickwatch/wickwatch` | Source code link in the footer. Wickwatch is AGPL-3.0: if you run a changed version for others, point this at its source. |
+| `SUPPORT_URL` | `https://ko-fi.com/mmohrx` | "Support the project" link in the footer; `off` hides it. |
 | `BACKUP_INTERVAL_HOURS` | `24` | How often the database is backed up (`VACUUM INTO`, consistent while running); `0` turns backups off. A start writes one right away when the last is older. |
 | `BACKUP_KEEP` | `7` | How many backups are kept; older ones are deleted. |
 | `BACKUP_DIR` | `backups` next to the database | Where backups go, e.g. `/app/data/backups` in the image. Files are `wickwatch-<UTC time>.db`, readable only by the owner. |

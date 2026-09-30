@@ -147,5 +147,9 @@ export const SystemInfo = Type.Object({
   algoFormats: Type.Array(Type.String()),
   /** File extensions of parameter files for upload and download, e.g. `cbotset`. */
   parameterFormats: Type.Array(Type.String()),
+  /** Source code of this version, linked in the footer. */
+  sourceUrl: Type.String(),
+  /** Where to support the project; missing when the operator switched it off. */
+  supportUrl: Type.Optional(Type.String()),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

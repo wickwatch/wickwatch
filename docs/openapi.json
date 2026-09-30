@@ -1187,7 +1187,8 @@
                     "adapters",
                     "capabilities",
                     "algoFormats",
-                    "parameterFormats"
+                    "parameterFormats",
+                    "sourceUrl"
                   ],
                   "properties": {
                     "version": {
@@ -1275,6 +1276,12 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "sourceUrl": {
+                      "type": "string"
+                    },
+                    "supportUrl": {
+                      "type": "string"
                     }
                   }
                 }

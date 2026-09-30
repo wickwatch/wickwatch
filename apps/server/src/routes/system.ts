@@ -20,6 +20,8 @@ export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters:
       ...(adapters.broker.defaultPeriod ? { defaultPeriod: adapters.broker.defaultPeriod } : {}),
       algoFormats: adapters.broker.algoFormats(),
       parameterFormats: adapters.config.formats(),
+      sourceUrl: config.sourceUrl.href,
+      ...(config.supportUrl ? { supportUrl: config.supportUrl.href } : {}),
     }),
   );
 };

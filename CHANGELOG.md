@@ -38,6 +38,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - A details panel (drawer) per position, order and trade: entry and exit, initial stop, opening and closing time with holding time, gross result, commission, swap, net, risk and R, label and IDs.
 - Bots set up in Wickwatch are started again after a host or Docker restart when they were meant to run; a bot that stopped itself stays stopped, and one that ends again within 10 minutes is given up (audit-logged). Stops, the emergency stop and the loss guard are no longer undone by this.
 - Password change in the profile (needs the current password; other sessions are logged out).
+- Footer with the version, the source code link (`SOURCE_URL`, for AGPL-3.0 §13) and a support link (`SUPPORT_URL`, Ko-fi by default, `off` hides it).
 - Challenge templates for FTMO (2-Step, 1-Step, Free Trial) and The Trading Pit (CFD Prime, Classic), grouped by firm in the form. New max-drawdown type trailing on the end-of-day balance; trailing limits are a share of the start balance.
 - Trading days are counted by the day a position opened, as prop firms do, including positions still open; they are marked right after a profile is saved and show "loading …" until then.
 - Where the runtime has no empty text (cTrader CLI), every text parameter needs a value: the form, a loaded parameter file and the configuration tab say which ones, and a version without them cannot be applied.

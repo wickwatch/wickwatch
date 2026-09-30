@@ -3,6 +3,11 @@
     "name": "Wickwatch",
     "skipToContent": "Skip to content"
   },
+  "footer": {
+    "version": "Wickwatch {version}",
+    "source": "Source code (AGPL-3.0)",
+    "support": "Support the project"
+  },
   "nav": {
     "overview": "Overview",
     "accounts": "Accounts",

@@ -73,6 +73,7 @@ beforeEach(() => {
     },
     algoFormats: ["algo"],
     parameterFormats: [],
+    sourceUrl: "https://github.com/wickwatch/wickwatch",
   };
   body = detail();
   vi.stubGlobal(

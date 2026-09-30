@@ -35,12 +35,19 @@ describe("loadConfig", () => {
       adapterSettings: { "ctrader-cli": { cli: "local", cliPath: "ctrader-cli" } },
       instanceRestartPolicy: "on-failure",
       clockCheckUrl: new URL("https://www.cloudflare.com/cdn-cgi/trace"),
+      sourceUrl: new URL("https://github.com/wickwatch/wickwatch"),
+      supportUrl: new URL("https://ko-fi.com/mmohrx"),
     });
   });
 
   it("switches the clock check off and checks the daily summary settings", () => {
     expect(load({ CLOCK_CHECK_URL: "off" }).clockCheckUrl).toBeUndefined();
     expect(() => load({ CLOCK_CHECK_URL: "ntp.example" })).toThrow(/CLOCK_CHECK_URL/);
+    expect(load({}).sourceUrl.href).toBe("https://github.com/wickwatch/wickwatch");
+    expect(load({ SOURCE_URL: "https://git.example/fork" }).sourceUrl.href).toBe("https://git.example/fork");
+    expect(load({}).supportUrl?.href).toBe("https://ko-fi.com/mmohrx");
+    expect(load({ SUPPORT_URL: "off" }).supportUrl).toBeUndefined();
+    expect(() => load({ SUPPORT_URL: "ko-fi" })).toThrow(/SUPPORT_URL/);
     const webhook = { ALERT_WEBHOOK_URL: "https://hooks.example/x" };
     expect(
       load({ ...webhook, DAILY_SUMMARY_TIME: "21:30", DAILY_SUMMARY_TIMEZONE: "Europe/Berlin" }).dailySummary,

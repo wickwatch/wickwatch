@@ -71,6 +71,10 @@ A *wick* is the thin line above and below a candlestick that shows how far price
 ## Contributing
 Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md). Commits must be signed off (DCO).
 
+## Support
+
+Wickwatch is a hobby project. If it helps you, you can support it on [Ko-fi](https://ko-fi.com/mmohrx) or through [GitHub Sponsors](https://github.com/sponsors/mmohrx). The dashboard's footer links there too; `SUPPORT_URL=off` hides the link.
+
 ## Disclaimer
 Wickwatch is a monitoring and control tool, not financial advice. Trading involves risk; you are responsible for your bots and accounts. cTrader is a trademark of its respective owner; Wickwatch is not affiliated with or endorsed by Spotware.
 

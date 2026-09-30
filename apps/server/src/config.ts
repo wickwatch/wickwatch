@@ -5,6 +5,9 @@ import { ConfigError } from "./config-error";
 
 /** Answers with `ts=<unix time>` in milliseconds; any URL whose answer has a Date header works too. */
 const DEFAULT_CLOCK_CHECK_URL = "https://www.cloudflare.com/cdn-cgi/trace";
+/** AGPL-3.0 §13: users of a changed version are offered its source; operators of one point SOURCE_URL at theirs. */
+const DEFAULT_SOURCE_URL = "https://github.com/wickwatch/wickwatch";
+const DEFAULT_SUPPORT_URL = "https://ko-fi.com/mmohrx";
 
 export const LOCALES = ["en", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -46,6 +49,10 @@ export interface Config {
   alertWebhookUrl?: URL;
   /** Time reference for the clock check; missing when switched off (`off`). */
   clockCheckUrl?: URL;
+  /** Where the UI's footer links for the source code. */
+  sourceUrl: URL;
+  /** Where the UI's footer links to support the project; missing when switched off (`off`). */
+  supportUrl?: URL;
   /** Once a day at this local time (HH:MM) a summary goes to the alert webhook; missing when off. */
   dailySummary?: { time: string; timeZone: string };
 }
@@ -94,6 +101,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const clockCheckSetting = get("CLOCK_CHECK_URL") ?? DEFAULT_CLOCK_CHECK_URL;
   const clockCheckUrl =
     clockCheckSetting.toLowerCase() === "off" ? undefined : parseUrl("CLOCK_CHECK_URL", clockCheckSetting, problems);
+  const sourceUrl = parseUrl("SOURCE_URL", get("SOURCE_URL") ?? DEFAULT_SOURCE_URL, problems);
+  const supportSetting = get("SUPPORT_URL") ?? DEFAULT_SUPPORT_URL;
+  const supportUrl =
+    supportSetting.toLowerCase() === "off" ? undefined : parseUrl("SUPPORT_URL", supportSetting, problems);
   const summaryTime = get("DAILY_SUMMARY_TIME");
   const summaryZone = get("DAILY_SUMMARY_TIMEZONE") ?? "UTC";
   if (summaryTime !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(summaryTime)) {
@@ -157,6 +168,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(heartbeatUrl ? { heartbeatUrl } : {}),
     ...(alertWebhookUrl ? { alertWebhookUrl } : {}),
     ...(clockCheckUrl ? { clockCheckUrl } : {}),
+    sourceUrl: sourceUrl ?? new URL(DEFAULT_SOURCE_URL),
+    ...(supportUrl ? { supportUrl } : {}),
     ...(summaryTime !== undefined ? { dailySummary: { time: summaryTime, timeZone: summaryZone } } : {}),
   };
 }

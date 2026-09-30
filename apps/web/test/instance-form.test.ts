@@ -222,6 +222,7 @@ describe("InstanceFormView", () => {
       },
       algoFormats: ["algo"],
       parameterFormats: ["cbotset"],
+      sourceUrl: "https://github.com/wickwatch/wickwatch",
     };
     response = (url, init) =>
       init?.method === "POST" && url.pathname.endsWith("/parameter-file")
@@ -387,6 +388,7 @@ describe("InstanceView configuration tab", () => {
       },
       algoFormats: ["algo"],
       parameterFormats: ["cbotset"],
+      sourceUrl: "https://github.com/wickwatch/wickwatch",
     };
     const withLicence = [
       {

@@ -14,6 +14,14 @@ body {
   line-height: 1.45;
 }
 
+/* Header, page and footer as a column at least as tall as the window, so the footer sits at the bottom. */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 a {
   color: var(--ww-link);
 }

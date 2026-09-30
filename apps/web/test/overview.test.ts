@@ -76,6 +76,7 @@ beforeEach(() => {
     },
     algoFormats: ["algo"],
     parameterFormats: [],
+    sourceUrl: "https://github.com/wickwatch/wickwatch",
   };
   fetchMock = vi.fn((input: URL) => {
     const path = input.pathname;
