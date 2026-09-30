@@ -58,6 +58,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 - Destructive row actions (close position, cancel order) are icon only in the negative colour, with tooltip; they always ask for confirmation first.
 - Button sizes come from tokens (`--ww-control`, `--ww-control-sm`), a little larger on touch screens; never below the 24 px minimum target. Row actions stay on one line.
 - Tooltips use `data-tooltip` (shown at once on hover and focus), not the native `title`. A row action names its row ("Restart: alpha-ger40"), since the name is far away at the start of the row. A disabled action says why in a tooltip on a wrapper (a disabled button gets no focus).
+- A status shown as an icon only (e.g. the server time in the header) changes its shape with the state, not only its colour (clock, exclamation mark, cross, question mark), and says in its tooltip what was found and why it matters; the same text is there for screen readers. Long tooltips use `data-tooltip-wrap` and may break into lines: the finding first, the explanation below.
 - Action columns in tables are right-aligned.
 - Choices from a short list (language, theme) and secondary actions ("more") open a menu (`MenuButton`); the chosen entry shows a check mark.
 
