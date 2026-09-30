@@ -577,7 +577,8 @@
     "confirmApplyRunning": "Restart the running bot with configuration version {version}? Open positions stay open; whether the bot manages them again after the restart depends on the bot.",
     "elsewhere": "Make sure the same bot does not also run elsewhere on this account (e.g. on another server).",
     "done": "Configuration version {version} applied; status: {status}.",
-    "outdatedUnknown": "Version {version} is saved; which version the container uses is unknown."
+    "outdatedUnknown": "Version {version} is saved; which version the container uses is unknown.",
+    "toConfig": "Go to configuration"
   },
   "validation": {
     "required": "Required.",

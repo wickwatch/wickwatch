@@ -577,7 +577,8 @@
     "confirmApplyRunning": "Den laufenden Bot mit Konfigurationsversion {version} neu starten? Offene Positionen bleiben offen; ob der Bot sie nach dem Neustart weiter verwaltet, hängt vom Bot ab.",
     "elsewhere": "Sicherstellen, dass derselbe Bot nicht zusätzlich woanders auf diesem Konto läuft (z. B. auf einem anderen Server).",
     "done": "Konfigurationsversion {version} übernommen; Status: {status}.",
-    "outdatedUnknown": "Version {version} ist gespeichert; welche Version der Container nutzt, ist unbekannt."
+    "outdatedUnknown": "Version {version} ist gespeichert; welche Version der Container nutzt, ist unbekannt.",
+    "toConfig": "Zur Konfiguration"
   },
   "validation": {
     "required": "Pflichtfeld.",

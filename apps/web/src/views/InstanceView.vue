@@ -3,7 +3,9 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { ApiError, api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
+import AppBanner from "../components/AppBanner.vue";
 import AppIcon from "../components/AppIcon.vue";
+import AppSpinner from "../components/AppSpinner.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
 import InstanceConfigTab from "../components/InstanceConfigTab.vue";
@@ -14,7 +16,6 @@ import { usePolling } from "../composables/usePolling";
 import { durationParts, formatDateTime } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
-import AppSpinner from "../components/AppSpinner.vue";
 
 /**
  * One instance: the page head with status and actions, then the tabs "Overview" (route `instance`) and
@@ -65,6 +66,12 @@ const status = computed(() => data.value?.instance.status ?? managed.value?.depl
 const runningVersion = computed(() => {
   const d = managed.value?.deployment;
   return d?.managed ? d.configVersion : undefined;
+});
+
+/** The container runs another configuration than the saved one (applied in the configuration tab). */
+const outdated = computed(() => {
+  const m = managed.value;
+  return m?.deployment?.managed === true && m.deployment.configVersion !== m.config.version ? m : undefined;
 });
 
 /** An account Wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
@@ -248,6 +255,19 @@ async function remove() {
       </nav>
 
       <template v-if="tab === 'overview'">
+        <!-- Same message as in the configuration tab; applying stays there, so this only links to it. -->
+        <AppBanner v-if="outdated" tone="warning" :title="$t('alert.level.warning')">
+          <span>{{
+            outdated.deployment?.configVersion
+              ? $t("deploy.outdated", { version: outdated.config.version, running: outdated.deployment.configVersion })
+              : $t("deploy.outdatedUnknown", { version: outdated.config.version })
+          }}</span>
+          <template #actions>
+            <RouterLink :to="{ name: 'instance-config', params: { ref: instanceRef } }" class="btn">
+              {{ $t("deploy.toConfig") }}
+            </RouterLink>
+          </template>
+        </AppBanner>
         <InstanceOverviewTab v-if="data" v-model:days="days" :data="data" @refresh="refresh" />
         <p v-else-if="noContainer" class="muted">
           {{ $t("instance.notCreated") }}
