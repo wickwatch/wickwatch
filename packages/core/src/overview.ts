@@ -44,6 +44,8 @@ export interface OverviewInput {
   accounts: AccountSnapshot[];
   /** Manual attribution per position, see attribution.ts. */
   overrides?: AttributionOverrides;
+  /** Measured offset of the server clock (ms), when the server checks it. */
+  clockOffsetMs?: number;
 }
 
 const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
@@ -133,7 +135,7 @@ export function buildOverview(input: OverviewInput): Overview {
     time: toIsoTime(input.time),
     accounts,
     instances,
-    alerts: alerts(instances, input.accounts, attributor, input.time),
+    alerts: alerts(instances, input.accounts, attributor, input.time, input.clockOffsetMs),
   };
 }
 
@@ -172,14 +174,21 @@ function accountState(account: AccountSnapshot, total: number, running: number):
 
 /** A crash stays an alert for this long after the latest one, so a bot that keeps failing stays visible. */
 export const CRASH_ALERT_MS = 60 * 60 * 1000;
+/** A clock further off than this raises an alert and counts as not synced. */
+export const CLOCK_TOLERANCE_MS = 2000;
 
 function alerts(
   instances: InstanceSummary[],
   accounts: AccountSnapshot[],
   attributor: Attributor,
   time: Date,
+  clockOffsetMs?: number,
 ): Alert[] {
   const result: Alert[] = [];
+  if (clockOffsetMs !== undefined && Math.abs(clockOffsetMs) > CLOCK_TOLERANCE_MS) {
+    const offset = Math.round(clockOffsetMs / 100) / 10;
+    result.push({ level: "warning", code: "host_clock", subject: "host", params: { offset } });
+  }
   for (const problem of attributor.problems) {
     const params = { instances: problem.instances.join(", "), ...(problem.symbol ? { symbol: problem.symbol } : {}) };
     const code = problem.kind === "ambiguous" ? "attribution_ambiguous" : "attribution_invalid";

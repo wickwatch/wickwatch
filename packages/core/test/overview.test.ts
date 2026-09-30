@@ -81,6 +81,14 @@ describe("buildOverview", () => {
     ]);
   });
 
+  it("warns about a server clock that is off, not about a small offset", () => {
+    const base = { time, labelPrefix: "ww", instances: [], lastLogs: new Map(), accounts: [] };
+    expect(buildOverview({ ...base, clockOffsetMs: 1500 }).alerts).toEqual([]);
+    expect(buildOverview({ ...base, clockOffsetMs: -3240 }).alerts).toEqual([
+      { level: "warning", code: "host_clock", subject: "host", params: { offset: -3.2 } },
+    ]);
+  });
+
   it("marks running instances that lost their broker connection and raises a warning", () => {
     const since = "2026-09-25T11:58:00.000Z";
     const result = buildOverview({

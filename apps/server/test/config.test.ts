@@ -34,7 +34,26 @@ describe("loadConfig", () => {
       ctraderCli: "local",
       ctraderCliPath: "ctrader-cli",
       instanceRestartPolicy: "on-failure",
+      clockCheckUrl: new URL("https://www.cloudflare.com/cdn-cgi/trace"),
     });
+  });
+
+  it("switches the clock check off and checks the daily summary settings", () => {
+    expect(load({ CLOCK_CHECK_URL: "off" }).clockCheckUrl).toBeUndefined();
+    expect(() => load({ CLOCK_CHECK_URL: "ntp.example" })).toThrow(/CLOCK_CHECK_URL/);
+    const webhook = { ALERT_WEBHOOK_URL: "https://hooks.example/x" };
+    expect(
+      load({ ...webhook, DAILY_SUMMARY_TIME: "21:30", DAILY_SUMMARY_TIMEZONE: "Europe/Berlin" }).dailySummary,
+    ).toEqual({
+      time: "21:30",
+      timeZone: "Europe/Berlin",
+    });
+    expect(load({ ...webhook, DAILY_SUMMARY_TIME: "07:00" }).dailySummary).toEqual({ time: "07:00", timeZone: "UTC" });
+    expect(() => load({ ...webhook, DAILY_SUMMARY_TIME: "7:00" })).toThrow(/DAILY_SUMMARY_TIME/);
+    expect(() => load({ ...webhook, DAILY_SUMMARY_TIME: "07:00", DAILY_SUMMARY_TIMEZONE: "Mars" })).toThrow(
+      /DAILY_SUMMARY_TIMEZONE/,
+    );
+    expect(() => load({ DAILY_SUMMARY_TIME: "07:00" })).toThrow(/needs ALERT_WEBHOOK_URL/);
   });
 
   it("requires a pinned cTrader image and a known restart policy", () => {

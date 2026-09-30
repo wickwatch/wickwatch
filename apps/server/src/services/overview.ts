@@ -18,6 +18,7 @@ import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
+import { clockOffset } from "./clock-check";
 import type { LogTracker } from "./log-tracker";
 import { guardTripToday } from "./loss-guard";
 import { loadOverrides } from "./overrides";
@@ -79,7 +80,17 @@ async function loadOverviewInput(
     logTracker.states(instances),
     Promise.all(entries.map((entry) => snapshot(adapters, db, entry, profiles.get(entry.id), utcDayStart, now, log))),
   ]);
-  return { time: now, labelPrefix, instances, lastLogs, logStates, accounts, overrides };
+  const clockOffsetMs = clockOffset(now.getTime());
+  return {
+    time: now,
+    labelPrefix,
+    instances,
+    lastLogs,
+    logStates,
+    accounts,
+    overrides,
+    ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
+  };
 }
 
 async function snapshot(

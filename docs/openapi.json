@@ -1861,6 +1861,12 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "host_clock"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "attribution_ambiguous"
                                 ]
                               },
@@ -2700,6 +2706,12 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "host_clock"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "attribution_ambiguous"
                                 ]
                               },
@@ -2829,6 +2841,9 @@
                     },
                     "ntpSynced": {
                       "type": "boolean"
+                    },
+                    "clockOffsetMs": {
+                      "type": "number"
                     }
                   }
                 }

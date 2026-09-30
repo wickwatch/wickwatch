@@ -256,7 +256,10 @@
     "ram": "RAM {used} / {total}",
     "disk": "Disk {value}",
     "ntpSynced": "NTP synced",
-    "ntpNotSynced": "NTP not synced"
+    "ntpNotSynced": "NTP not synced",
+    "clockOk": "Clock OK",
+    "clockOff": "Clock off {offset}",
+    "clockTooltip": "Server clock compared with an external time source (CLOCK_CHECK_URL): {offset}"
   },
   "language": {
     "en": "English",
@@ -311,7 +314,8 @@
     "challenge_passed": "Account {subject}: challenge goals reached",
     "attribution_ambiguous": "Account {subject}: trades on {symbol} cannot be attributed – {instances} share the symbol and one uses account-symbol",
     "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}",
-    "challenge_guard": "Account {subject} was stopped automatically at {since}: {rule} reached the protection limit"
+    "challenge_guard": "Account {subject} was stopped automatically at {since}: {rule} reached the protection limit",
+    "host_clock": "Server clock is off by {offset} s. Bots, trading days and daily loss resets depend on the time; check the time sync (NTP) of the host."
   },
   "emergencyStop": {
     "title": "Emergency stop",
@@ -716,5 +720,14 @@
       "order": "Orders",
       "position": "Positions"
     }
+  },
+  "summary": {
+    "title": "Wickwatch daily summary {date}",
+    "account": "{name}: balance {balance}, equity {equity}, P&L today (UTC) {pnl}, open positions {positions}, instances running {running} of {total}",
+    "accountError": "{name}: not reachable ({reason})",
+    "challenge": "  Challenge day {day}, {status}: {rules}",
+    "noAccounts": "No accounts.",
+    "alerts": "Open alerts: {count}",
+    "noAlerts": "No open alerts."
   }
 }

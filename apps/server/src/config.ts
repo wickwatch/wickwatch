@@ -1,5 +1,8 @@
 import { dirname, isAbsolute, resolve } from "node:path";
-import { DEFAULT_LABEL_PREFIX } from "@wickwatch/core";
+import { DEFAULT_LABEL_PREFIX, isTimeZone } from "@wickwatch/core";
+
+/** Answers with `ts=<unix time>` in milliseconds; any URL whose answer has a Date header works too. */
+const DEFAULT_CLOCK_CHECK_URL = "https://www.cloudflare.com/cdn-cgi/trace";
 
 export const LOCALES = ["en", "de"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -43,6 +46,10 @@ export interface Config {
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
+  /** Time reference for the clock check; missing when switched off (`off`). */
+  clockCheckUrl?: URL;
+  /** Once a day at this local time (HH:MM) a summary goes to the alert webhook; missing when off. */
+  dailySummary?: { time: string; timeZone: string };
 }
 
 export class ConfigError extends Error {
@@ -98,6 +105,16 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
 
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
+  const clockCheckSetting = get("CLOCK_CHECK_URL") ?? DEFAULT_CLOCK_CHECK_URL;
+  const clockCheckUrl =
+    clockCheckSetting.toLowerCase() === "off" ? undefined : parseUrl("CLOCK_CHECK_URL", clockCheckSetting, problems);
+  const summaryTime = get("DAILY_SUMMARY_TIME");
+  const summaryZone = get("DAILY_SUMMARY_TIMEZONE") ?? "UTC";
+  if (summaryTime !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(summaryTime)) {
+    problems.push("DAILY_SUMMARY_TIME must be a time of day like 21:30");
+  }
+  if (!isTimeZone(summaryZone)) problems.push("DAILY_SUMMARY_TIMEZONE must be an IANA time zone, e.g. Europe/Berlin");
+  if (summaryTime !== undefined && !alertWebhookUrl) problems.push("DAILY_SUMMARY_TIME needs ALERT_WEBHOOK_URL");
   const webDistDir = get("WEB_DIST_DIR");
   const dockerHost = get("DOCKER_HOST");
   const accountPollSeconds = Number(get("ACCOUNT_POLL_SECONDS") ?? 60);
@@ -162,6 +179,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(dockerHost ? { dockerHost } : {}),
     ...(heartbeatUrl ? { heartbeatUrl } : {}),
     ...(alertWebhookUrl ? { alertWebhookUrl } : {}),
+    ...(clockCheckUrl ? { clockCheckUrl } : {}),
+    ...(summaryTime !== undefined ? { dailySummary: { time: summaryTime, timeZone: summaryZone } } : {}),
   };
 }
 

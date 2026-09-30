@@ -57,5 +57,7 @@ export const HostStatus = Type.Object({
   diskTotal: Type.Number({ minimum: 0 }),
   /** Missing when the adapter cannot tell. */
   ntpSynced: Type.Optional(Type.Boolean()),
+  /** Measured offset of the server clock from an external time source in ms, positive when it runs ahead. */
+  clockOffsetMs: Type.Optional(Type.Number()),
 });
 export type HostStatus = Type.Static<typeof HostStatus>;

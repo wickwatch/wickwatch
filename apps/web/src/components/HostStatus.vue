@@ -6,6 +6,9 @@ import { formatGigabytes, formatPercent } from "../format";
 
 const { locale } = useI18n();
 const { data } = usePolling(api.host, 30_000);
+/** Signed seconds with one decimal, e.g. "+3.2 s". */
+const seconds = (ms: number) =>
+  `${new Intl.NumberFormat(locale.value, { signDisplay: "always", maximumFractionDigits: 1 }).format(ms / 1000)} s`;
 </script>
 
 <template>
@@ -20,7 +23,15 @@ const { data } = usePolling(api.host, 30_000);
       }}
     </li>
     <li>{{ $t("host.disk", { value: formatPercent(locale, data.diskUsed / data.diskTotal) }) }}</li>
-    <li v-if="data.ntpSynced !== undefined" :class="data.ntpSynced ? 'tone-positive' : 'tone-negative'">
+    <!-- Measured against an external time source when the runtime cannot see the host's NTP (Docker). -->
+    <li
+      v-if="data.clockOffsetMs !== undefined"
+      :class="data.ntpSynced ? 'tone-positive' : 'tone-negative'"
+      :data-tooltip="$t('host.clockTooltip', { offset: seconds(data.clockOffsetMs) })"
+    >
+      {{ data.ntpSynced ? $t("host.clockOk") : $t("host.clockOff", { offset: seconds(data.clockOffsetMs) }) }}
+    </li>
+    <li v-else-if="data.ntpSynced !== undefined" :class="data.ntpSynced ? 'tone-positive' : 'tone-negative'">
       {{ data.ntpSynced ? $t("host.ntpSynced") : $t("host.ntpNotSynced") }}
     </li>
   </ul>

@@ -11,6 +11,7 @@ import { colorParameters } from "./0009-color-parameters";
 import { algoMetadataReader } from "./0010-algo-metadata-reader";
 import { instanceShouldRun } from "./0011-instance-should-run";
 import { tradingDaysFrom } from "./0012-trading-days-from";
+import { dailySummaries } from "./0013-daily-summaries";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -27,4 +28,5 @@ export const migrations: Record<string, Migration> = {
   "0010-algo-metadata-reader": algoMetadataReader,
   "0011-instance-should-run": instanceShouldRun,
   "0012-trading-days-from": tradingDaysFrom,
+  "0013-daily-summaries": dailySummaries,
 };

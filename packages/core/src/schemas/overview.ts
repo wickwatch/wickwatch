@@ -82,6 +82,8 @@ export const AlertCode = Type.Union([
   Type.Literal("challenge_limit"),
   Type.Literal("challenge_passed"),
   Type.Literal("challenge_guard"),
+  /** The server clock is off (subject "host"); bots, trading days and daily resets depend on it. */
+  Type.Literal("host_clock"),
   Type.Literal("attribution_ambiguous"),
   Type.Literal("attribution_invalid"),
 ]);

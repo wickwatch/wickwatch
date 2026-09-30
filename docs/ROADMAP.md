@@ -15,7 +15,7 @@ Status: largely done; open items are unchecked.
   - [x] audit log (written for every change and trading action)
   - [x] audit log view in the web app (admins, user menu → Audit log)
   - [x] host status: CPU, RAM, disk
-  - [ ] host status: NTP with the Docker runtime (only the demo adapter reports it)
+  - [x] host status: clock with the Docker runtime (measured hourly against `CLOCK_CHECK_URL`, alert above 2 s)
 - [x] **Adapters:** Docker runtime (via docker-socket-proxy), cTrader CLI broker, `.cbotset` config.
 - [x] **Availability alerts:** generic webhook and heartbeat URL (e.g. Healthchecks.io, Telegram).
 - [x] **Operations:** log rotation, backups, data retention.
@@ -30,7 +30,7 @@ Added along the way:
 
 ## Phase 2
 - Backtests and optimisation runs started from an instance, backtest vs. live comparison, `.optset` export.
-- Daily summaries (notifications for challenge limits, breaches, passed challenges and the loss guard exist already).
+- [x] Daily summaries (`DAILY_SUMMARY_TIME`); notifications for challenge limits, breaches, passed challenges and the loss guard exist too.
 - Schedules (holidays, weekends, news pauses), exposure across accounts, canary rollout of algo versions.
 - Trade journal, statistics across instances, bots, symbols and accounts.
 - OIDC login, role management UI.

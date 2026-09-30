@@ -141,6 +141,12 @@ export interface InstanceConfigsTable {
 }
 
 /** An alert sent to ALERT_WEBHOOK_URL that has not been resolved yet. */
+export interface DailySummariesTable {
+  /** YYYY-MM-DD in DAILY_SUMMARY_TIMEZONE. */
+  day: string;
+  sent_at: string;
+}
+
 export interface NotifiedAlertsTable {
   /** `<code>:<subject>` */
   key: string;
@@ -179,5 +185,6 @@ export interface Database {
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;
   notified_alerts: NotifiedAlertsTable;
+  daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;
 }

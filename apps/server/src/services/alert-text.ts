@@ -1,4 +1,4 @@
-import type { Alert } from "@wickwatch/core";
+import type { Alert, Overview, RuleResult } from "@wickwatch/core";
 import de from "../../../../i18n/de.json" with { type: "json" };
 import en from "../../../../i18n/en.json" with { type: "json" };
 import type { Locale } from "../config";
@@ -39,4 +39,65 @@ export function alertText(alert: Alert, locale: Locale, resolved = false): strin
   };
   const message = fill(t(`alert.${alert.code}`), params);
   return resolved ? fill(t("alert.resolved"), { message }) : `${t(`alert.level.${alert.level}`)}: ${message}`;
+}
+
+const money = (locale: Locale, value: number, sign = false) =>
+  new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    ...(sign ? { signDisplay: "exceptZero" as const } : {}),
+  }).format(value);
+
+function ruleText(rule: RuleResult, locale: Locale, t: (key: string) => string): string {
+  const number = (value: number) =>
+    rule.unit === "days"
+      ? String(value)
+      : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value)} %`;
+  const value = rule.pending
+    ? t("challenge.pending")
+    : fill(t("challenge.ofValue"), { value: number(rule.value), limit: number(rule.limit) });
+  return `${t(`challenge.rule.${rule.id}`)} ${value}`;
+}
+
+/**
+ * The daily summary as plain text lines in the given locale: per account balance, equity, today's P&L (UTC day, as on
+ * the dashboard), positions, instances and the challenge, then the number of open alerts.
+ */
+export function summaryText(overview: Overview, locale: Locale, day: string): string {
+  const t = (key: string) => lookup(locale, key) ?? lookup("en", key) ?? key;
+  const lines = [fill(t("summary.title"), { date: day })];
+  for (const a of overview.accounts) {
+    const name = a.displayName === a.number ? a.number : `${a.displayName} (${a.number})`;
+    if (a.error || a.balance === undefined) {
+      lines.push(fill(t("summary.accountError"), { name, reason: t(`error.adapter.${a.error ?? "unavailable"}`) }));
+      continue;
+    }
+    const currency = a.currency ? ` ${a.currency}` : "";
+    lines.push(
+      fill(t("summary.account"), {
+        name,
+        balance: `${money(locale, a.balance)}${currency}`,
+        equity: `${money(locale, a.equity ?? a.balance)}${currency}`,
+        pnl: `${money(locale, a.dayPnl ?? 0, true)}${currency}`,
+        positions: a.openPositions,
+        running: a.instances.running,
+        total: a.instances.total,
+      }),
+    );
+    if (a.challenge) {
+      const rules = a.challenge.rules.map((r) => ruleText(r, locale, t)).join(" · ");
+      lines.push(
+        fill(t("summary.challenge"), {
+          status: t(`challenge.status.${a.challenge.status}`),
+          day: a.challenge.day,
+          rules,
+        }),
+      );
+    }
+  }
+  if (!overview.accounts.length) lines.push(t("summary.noAccounts"));
+  lines.push(
+    overview.alerts.length ? fill(t("summary.alerts"), { count: overview.alerts.length }) : t("summary.noAlerts"),
+  );
+  return lines.join("\n");
 }

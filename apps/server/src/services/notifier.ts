@@ -117,7 +117,12 @@ export class AlertNotifier {
 
   private event(event: AlertEvent["event"], alert: Alert, time: string): AlertEvent {
     const text = alertText(alert, this.options.locale, event === "alert_resolved");
-    const about = alert.code.startsWith("instance_") ? { instance: alert.subject } : { account: alert.subject };
+    // Host alerts are about the server itself, neither an instance nor an account.
+    const about = alert.code.startsWith("instance_")
+      ? { instance: alert.subject }
+      : alert.code.startsWith("host_")
+        ? {}
+        : { account: alert.subject };
     return { event, time, ...alert, ...about, text, content: text };
   }
 

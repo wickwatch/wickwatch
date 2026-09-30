@@ -256,7 +256,10 @@
     "ram": "RAM {used} / {total}",
     "disk": "Disk {value}",
     "ntpSynced": "NTP synchron",
-    "ntpNotSynced": "NTP nicht synchron"
+    "ntpNotSynced": "NTP nicht synchron",
+    "clockOk": "Uhr genau",
+    "clockOff": "Uhr {offset} daneben",
+    "clockTooltip": "Server-Uhr im Vergleich mit einer externen Zeitquelle (CLOCK_CHECK_URL): {offset}"
   },
   "language": {
     "en": "English",
@@ -311,7 +314,8 @@
     "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht",
     "attribution_ambiguous": "Konto {subject}: Trades auf {symbol} nicht zuordenbar – {instances} teilen sich das Symbol, eine nutzt account-symbol",
     "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}",
-    "challenge_guard": "Konto {subject} wurde um {since} automatisch gestoppt: {rule} hat die Schutzgrenze erreicht"
+    "challenge_guard": "Konto {subject} wurde um {since} automatisch gestoppt: {rule} hat die Schutzgrenze erreicht",
+    "host_clock": "Die Server-Uhr geht um {offset} s falsch. Bots, Handelstage und der Tagesreset hängen an der Uhrzeit; prüfe die Zeitsynchronisation (NTP) des Hosts."
   },
   "emergencyStop": {
     "title": "Notstopp",
@@ -716,5 +720,14 @@
       "order": "Orders",
       "position": "Positionen"
     }
+  },
+  "summary": {
+    "title": "Wickwatch Tageszusammenfassung {date}",
+    "account": "{name}: Balance {balance}, Equity {equity}, P&L heute (UTC) {pnl}, offene Positionen {positions}, Instanzen aktiv {running} von {total}",
+    "accountError": "{name}: nicht erreichbar ({reason})",
+    "challenge": "  Challenge Tag {day}, {status}: {rules}",
+    "noAccounts": "Keine Konten.",
+    "alerts": "Offene Alarme: {count}",
+    "noAlerts": "Keine offenen Alarme."
   }
 }

@@ -28,6 +28,9 @@ Wickwatch is configured with environment variables only (see [`.env.example`](..
 | `ALERT_WEBHOOK_URL` | – | Receives a JSON `POST` whenever an alert appears or goes away, see [Notifications](#notifications). May contain a token; it is never logged. |
 | `HEARTBEAT_URL` | – | Called with `GET` after every successful alert check, e.g. a Healthchecks.io ping URL. When the calls stop, that service reports the whole server as down. |
 | `ALERT_CHECK_SECONDS` | `60` | How often alerts are checked for the two URLs above (10–3600). |
+| `DAILY_SUMMARY_TIME` | – | Local time of day (`HH:MM`) for a daily summary to `ALERT_WEBHOOK_URL`, see [Notifications](#notifications). Off when unset; needs `ALERT_WEBHOOK_URL`. |
+| `DAILY_SUMMARY_TIMEZONE` | `UTC` | IANA time zone of `DAILY_SUMMARY_TIME`, e.g. `Europe/Berlin`. |
+| `CLOCK_CHECK_URL` | `https://www.cloudflare.com/cdn-cgi/trace` | Time reference for the hourly clock check with `RUNTIME_ADAPTER=docker` (a container cannot see whether the host syncs its clock): an answer with a `ts=<unix time>` line or a `Date` header. More than 2 s off raises an alert and shows in the header. `off` switches it off. |
 | `BACKUP_INTERVAL_HOURS` | `24` | How often the database is backed up (`VACUUM INTO`, consistent while running); `0` turns backups off. A start writes one right away when the last is older. |
 | `BACKUP_KEEP` | `7` | How many backups are kept; older ones are deleted. |
 | `BACKUP_DIR` | `backups` next to the database | Where backups go, e.g. `/app/data/backups` in the image. Files are `wickwatch-<UTC time>.db`, readable only by the owner. |
@@ -82,9 +85,29 @@ Wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`:
 ```
 
 - `event` is `alert_raised` or `alert_resolved` (then `text` starts with "Resolved:").
-- `instance` is set for instance alerts (`instance_*`), `account` (the account number) for all others.
+- `instance` is set for instance alerts (`instance_*`), neither for host alerts (`host_clock`), `account` (the account number) for all others.
 - `text` is in `DEFAULT_LOCALE` with times in UTC. It is also sent as `content`, so services that only read one of the two fields show the message as it is.
 - Alerts already sent are stored in the database: a restart does not send them again. If the webhook does not answer with 2xx, the next check tries again.
+
+With `DAILY_SUMMARY_TIME`, the same URL gets one summary a day (from that time on; a server that was down catches up the same day, a restart does not send it twice):
+
+```json
+{
+  "event": "daily_summary",
+  "time": "2026-09-30T19:30:00.000Z",
+  "date": "2026-09-30",
+  "accounts": [
+    { "number": "7532555", "name": "Challenge US100", "currency": "USD", "balance": 9960.79, "equity": 9960.79,
+      "dayPnl": -101.26, "openPositions": 0, "instances": { "total": 1, "running": 1 },
+      "challenge": { "status": "running", "day": 185 } }
+  ],
+  "alerts": 1,
+  "text": "Wickwatch daily summary 2026-09-30\nChallenge US100 (7532555): balance 9,960.79 USD, …",
+  "content": "…"
+}
+```
+
+`text` has one line per account, the challenge rules under it, and the number of open alerts. Today's P&L is the UTC day, as on the dashboard.
 
 Examples:
 

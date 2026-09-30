@@ -16,6 +16,8 @@ import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
 import { loadOverview } from "./services/overview";
+import { ClockCheck } from "./services/clock-check";
+import { DailySummary } from "./services/daily-summary";
 import { AccountPoller } from "./services/poller";
 import { VERSION } from "./version";
 
@@ -92,10 +94,28 @@ try {
     auditRetentionDays: config.auditRetentionDays,
     ...(config.backup.intervalHours > 0 ? { backup: config.backup } : {}),
   });
+  // The demo runtime reports its own time sync; a real host's clock is measured against CLOCK_CHECK_URL.
+  const clock =
+    config.clockCheckUrl && adapters.runtime.id !== "demo"
+      ? new ClockCheck({ url: config.clockCheckUrl, log: app.log })
+      : undefined;
+  const summary =
+    config.dailySummary && config.alertWebhookUrl
+      ? new DailySummary({
+          db,
+          load: () => loadOverview(adapters, accounts, db, config.labelPrefix, logTracker, app.log),
+          webhookUrl: config.alertWebhookUrl,
+          ...config.dailySummary,
+          locale: config.defaultLocale,
+          log: app.log,
+        })
+      : undefined;
   // Starts managed instances again that a host or Docker restart ended (see the class for the rules).
   const keeper = new InstanceKeeper({ db, runtime: adapters.runtime, broker: adapters.broker, log: app.log });
   app.addHook("onClose", () => {
     keeper.stop();
+    clock?.stop();
+    summary?.stop();
     poller.stop();
     notifier.stop();
     maintenance.stop();
@@ -123,6 +143,8 @@ try {
   maintenance.start();
   lossGuard.start();
   keeper.start();
+  clock?.start();
+  summary?.start();
   // In the background: reading an algo can take a few seconds (the cTrader CLI may run in a helper container).
   refreshAlgoMetadata({ db, broker: adapters.broker, algosDir: config.algosDir, log: app.log }).catch(
     (error: unknown) => {

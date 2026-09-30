@@ -14,6 +14,16 @@ Include steps to reproduce, affected version and impact. We aim to respond withi
 - **Docker access** (docker runtime adapter): only through a docker-socket-proxy with the minimum permissions, never the raw socket.
 - **Audit log:** logins and logouts, setup, password and 2FA changes, instance actions (start, stop, create, configuration versions, deploy, delete, parameter file downloads), automatic restarts after a host restart, emergency stops and the loss guard, closed positions and cancelled orders, trade attribution changes, algo uploads and deletions, challenge profiles, and changes to credentials and accounts. Kept for `AUDIT_RETENTION_DAYS`.
 
+## Outbound connections
+
+Wickwatch itself connects only to:
+- the broker, through its adapter (cTrader CLI: Spotware's servers);
+- the Docker API through the socket proxy, which pulls the pinned images (e.g. `ghcr.io/spotware/ctrader-console`);
+- `ALERT_WEBHOOK_URL` and `HEARTBEAT_URL`, if set (alerts and the daily summary);
+- `CLOCK_CHECK_URL` once an hour with the Docker runtime (default `https://www.cloudflare.com/cdn-cgi/trace`; it sends no data, only reads the time). Set it to `off` to avoid it.
+
+No telemetry, no update checks. The web app loads nothing from third parties; its fonts are bundled.
+
 ## Operating it safely
 
 - Keep Wickwatch off the public internet if you can (VPN such as Tailscale or WireGuard). Otherwise use TLS via a reverse proxy and set `TRUST_PROXY`.
