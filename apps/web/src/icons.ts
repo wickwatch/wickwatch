@@ -26,6 +26,8 @@ export const ICONS = {
   ],
   user: [{ tag: "circle", cx: 12, cy: 8, r: 4 }, path("M4.5 20a7.5 7.5 0 0 1 15 0")],
   chevronDown: [path("M6 9l6 6 6-6")],
+  /** The audit log: lines of a record. */
+  list: [path("M9 6.5h10M9 12h10M9 17.5h10"), path("M5 6.5h.01M5 12h.01M5 17.5h.01")],
   check: [path("M5 12.5l4.5 4.5L19 7.5")],
   close: [path("M6.5 6.5l11 11M17.5 6.5l-11 11")],
   /** "Not from this bot": take a trade out of the instance's figures. */

@@ -88,6 +88,10 @@ With **Protection** switched on in the challenge profile, Wickwatch runs the sam
 
 When the host or Docker restarts, Wickwatch starts the instances it set up again if they were running before. A bot that stopped itself (e.g. after its own daily limit), or one that was stopped by you, the emergency stop or the protection, stays stopped. Details: [CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart).
 
-## 10. Alerts and notifications
+## 10. Audit log
+
+Admins find the **Audit log** in the user menu: every login, change and trading action with time, user, target and result, and what Wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).
+
+## 11. Alerts and notifications
 
 Alerts show at the top of the Overview: stopped or crashed bots, a lost broker connection, accounts that cannot be reached, challenge limits, a breached or passed challenge, the protection having acted, and attribution problems. With `ALERT_WEBHOOK_URL` and `HEARTBEAT_URL` they also reach you without the dashboard open, e.g. on Telegram ([CONFIGURATION.md](CONFIGURATION.md#notifications)).

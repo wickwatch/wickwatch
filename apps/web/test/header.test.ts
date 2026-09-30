@@ -47,7 +47,7 @@ describe("initials", () => {
 });
 
 describe("AppHeader", () => {
-  it("shows the user with initials and role; the menu offers profile and logout", async () => {
+  it("shows the user with initials and role; the menu offers profile, the audit log (admins) and logout", async () => {
     const wrapper = await render();
     const trigger = wrapper.find(".user-menu button");
     expect(trigger.find(".user__avatar").text()).toBe("MM");
@@ -60,7 +60,8 @@ describe("AppHeader", () => {
     const menu = wrapper.find('.user-menu [role="menu"]');
     expect(menu.text()).toContain("Signed in as Martin M.");
     const items = menu.findAll('[role="menuitem"]');
-    expect(items.map((i) => i.text())).toEqual(["Profile", "Log out"]);
+    // Admins also get the audit log.
+    expect(items.map((i) => i.text())).toEqual(["Profile", "Audit log", "Log out"]);
     expect(menu.find('[role="separator"]').exists()).toBe(true);
 
     await items[0]!.trigger("click");
@@ -71,7 +72,7 @@ describe("AppHeader", () => {
   it("logs out from the user menu", async () => {
     const wrapper = await render();
     await wrapper.find(".user-menu button").trigger("click");
-    await wrapper.findAll('.user-menu [role="menuitem"]')[1]!.trigger("click");
+    await wrapper.findAll('.user-menu [role="menuitem"]').at(-1)!.trigger("click");
     await flushPromises();
     expect(session.value?.user).toBeUndefined();
     expect(router.currentRoute.value.name).toBe("login");

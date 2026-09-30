@@ -13,7 +13,7 @@ Status: largely done; open items are unchecked.
 - **Operations and safety:**
   - [x] built-in login with TOTP, emergency stop per account, pinned runtime image versions, parameter and algo versioning with rollback, "data outdated" marker
   - [x] audit log (written for every change and trading action)
-  - [ ] audit log view in the web app (today only in the database)
+  - [x] audit log view in the web app (admins, user menu → Audit log)
   - [x] host status: CPU, RAM, disk
   - [ ] host status: NTP with the Docker runtime (only the demo adapter reports it)
 - [x] **Adapters:** Docker runtime (via docker-socket-proxy), cTrader CLI broker, `.cbotset` config.

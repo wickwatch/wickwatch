@@ -185,6 +185,20 @@ export interface TotpSetup {
   qr: string;
 }
 
+export interface AuditRecord {
+  id: number;
+  time: string;
+  user?: string;
+  action: string;
+  target?: string;
+  details?: Record<string, unknown>;
+}
+export interface AuditPage {
+  entries: AuditRecord[];
+  more: boolean;
+  actions: string[];
+}
+
 export const api = {
   session: () => request<SessionInfo>("auth/session"),
   /** Throws ApiError "totp_required" when 2FA is on and no code was given. */
@@ -222,6 +236,14 @@ export const api = {
       confirm: orderId,
     }),
   algos: () => request<AlgoRow[]>("algos"),
+  audit: (query: { action?: string; target?: string; before?: number }) => {
+    const params = new URLSearchParams();
+    if (query.action) params.set("action", query.action);
+    if (query.target) params.set("target", query.target);
+    if (query.before !== undefined) params.set("before", String(query.before));
+    const qs = params.toString();
+    return request<AuditPage>(`audit${qs ? `?${qs}` : ""}`);
+  },
   uploadAlgo: (file: File, version?: string) =>
     request<AlgoRow>(
       `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}`,

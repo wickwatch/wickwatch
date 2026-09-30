@@ -44,6 +44,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Stored algo metadata is read again at start when the reader learned more (`algoMetadataVersion`), so no re-upload is needed.
 - A saved version the container does not use yet is also shown on the instance overview tab. The challenge on an account card folds away. Loading states show the radar spinner.
 - `pnpm start` and `pnpm dev:server` let `.env` win over variables exported in the shell.
+- Audit log page for admins (user menu): time, user or "Wickwatch" for its own actions, action, target (linked to instance and account pages), result and details; filters by action, action group and target, older entries page by page (`GET /api/v1/audit`).
 
 ### Fixed
 - Applying a configuration no longer starts an instance that had crashed.

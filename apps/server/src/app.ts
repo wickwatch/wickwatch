@@ -13,6 +13,7 @@ import { web } from "./plugins/web";
 import { loadChallengeTemplates } from "./challenges/templates";
 import { accountRoutes } from "./routes/accounts";
 import { algoRoutes } from "./routes/algos";
+import { auditRoutes } from "./routes/audit";
 import { challengeRoutes } from "./routes/challenges";
 import { authRoutes } from "./routes/auth";
 import { credentialRoutes } from "./routes/credentials";
@@ -95,6 +96,7 @@ export async function buildApp({
     prefix: api,
   });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
+  await app.register(auditRoutes, { db, prefix: api });
   await app.register(managedInstanceRoutes, {
     adapters,
     accounts,

@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { api } from "../api";
-import { clearUser, currentUser, initials } from "../session";
+import { clearUser, currentUser, initials, isAdmin } from "../session";
 import AppIcon from "./AppIcon.vue";
 import AppLogo from "./AppLogo.vue";
 import HeaderControls from "./HeaderControls.vue";
@@ -15,11 +15,13 @@ const { t } = useI18n();
 const userInitials = computed(() => (currentUser.value ? initials(currentUser.value.username) : ""));
 const userItems = computed<MenuItem[]>(() => [
   { id: "profile", label: t("profile.title"), icon: "user" },
+  ...(isAdmin.value ? [{ id: "audit", label: t("audit.title"), icon: "list" as const }] : []),
   { id: "logout", label: t("auth.logout"), icon: "logout", separated: true },
 ]);
 
 function onUserMenu(id: string) {
   if (id === "profile") void router.push({ name: "profile" });
+  else if (id === "audit") void router.push({ name: "audit" });
   else if (id === "logout") void logout();
 }
 

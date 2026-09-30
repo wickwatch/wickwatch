@@ -4,6 +4,7 @@ import { clearUser, loadSession, session } from "./session";
 import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
 import AlgosView from "./views/AlgosView.vue";
+import AuditView from "./views/AuditView.vue";
 import AccountView from "./views/AccountView.vue";
 import InstanceFormView from "./views/InstanceFormView.vue";
 import InstanceView from "./views/InstanceView.vue";
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: "/account", redirect: "/profile" },
     { path: "/accounts", name: "accounts", component: AccountsView },
     { path: "/algos", name: "algos", component: AlgosView },
+    { path: "/audit", name: "audit", component: AuditView },
     { path: "/instances/new", name: "instance-new", component: InstanceFormView },
     { path: "/instances/:ref", name: "instance", component: InstanceView },
     // Tabs of the instance page; the same component, so switching keeps its state.
