@@ -3,6 +3,7 @@ import {
   evaluateChallenge,
   tradingDayKey,
   tradingDayStart,
+  tradingDays,
   tradingDayStartOf,
   type ChallengeInput,
   type ChallengeProfile,
@@ -187,5 +188,46 @@ describe("evaluateChallenge", () => {
     const result = evaluateChallenge(input({ profile: minimal, balance: 9_900, equity: 9_880, today: {} }));
     expect(result.rules.map((r) => r.id)).toEqual(["maxLoss"]);
     expect(result).toMatchObject({ day: 1, status: "running" });
+  });
+});
+
+describe("tradingDays", () => {
+  const deal = (time: string, openedAt?: string, pnl = 10) => ({
+    id: time,
+    positionId: time,
+    symbol: "US100",
+    side: "buy" as const,
+    volume: 1,
+    price: 1,
+    pnl,
+    time,
+    ...(openedAt ? { openedAt } : {}),
+  });
+
+  it("counts the day a position opened, also for positions still open", () => {
+    const days = tradingDays(
+      [
+        // Opened Monday evening (Prague), closed Tuesday: counts for Monday.
+        deal("2026-09-22T07:00:00Z", "2026-09-21T19:00:00Z"),
+        // Without an opening time: the closing day.
+        deal("2026-09-23T10:00:00Z"),
+        // Opening deals without a result are no trades.
+        deal("2026-09-24T10:00:00Z", "2026-09-24T09:00:00Z", 0),
+      ],
+      [
+        {
+          id: "p",
+          symbol: "US100",
+          side: "buy",
+          volume: 1,
+          entry: 1,
+          pnl: 0,
+          openedAt: "2026-09-25T08:00:00Z",
+        },
+      ],
+      "00:00",
+      "Europe/Prague",
+    );
+    expect(days).toEqual(["2026-09-21", "2026-09-23", "2026-09-25"]);
   });
 });

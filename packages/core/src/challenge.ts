@@ -1,6 +1,8 @@
 import type {
   ChallengeEvaluation,
   ChallengeProfile,
+  Deal,
+  Position,
   ChallengeRules,
   ChallengeStatus,
   RuleResult,
@@ -31,10 +33,21 @@ export interface ChallengeInput {
   peakEquity?: number;
   /** Highest balance recorded at the start of an earlier trading day (for trailing-eod-balance max loss). */
   peakDayStartBalance?: { value: number; approximate: boolean };
-  /** Days with at least one closed trade since the start. */
+  /** Trading days since the start (see tradingDays). */
   tradingDays: number;
   /** The trading days since the start are not all marked yet (new profile, earlier start date). */
   tradingDaysPending?: boolean;
+}
+
+/**
+ * Trading days as prop firms count them: the days a position was opened, from closed trades (their opening time,
+ * or their closing time when the broker does not tell) and from positions still open.
+ */
+export function tradingDays(deals: Deal[], positions: Position[], resetTime: string, timeZone: string): string[] {
+  return [
+    ...deals.filter((d) => d.pnl !== 0).map((d) => d.openedAt ?? d.time),
+    ...positions.map((p) => p.openedAt),
+  ].map((time) => tradingDayKey(new Date(time), resetTime, timeZone));
 }
 
 /** Reset time and zone of the profile's trading day; UTC midnight without a daily-loss rule. */

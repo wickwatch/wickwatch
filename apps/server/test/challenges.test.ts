@@ -294,3 +294,53 @@ describe("trading days of a new profile", () => {
     }
   });
 });
+
+describe("trading days by opening day", () => {
+  it("marks the day a position opened and clears days marked by closing day before", async () => {
+    const t = await startApp();
+    try {
+      await seedDemoChallenges(t.db);
+      const config = loadConfig({ DATABASE_URL: "file::memory:" });
+      const demo = createAdapters(config);
+      const deal = { id: "1", positionId: "1", symbol: "US100", side: "buy" as const, volume: 1, price: 1, pnl: 10 };
+      const adapters = {
+        ...demo,
+        broker: Object.assign(Object.create(demo.broker) as typeof demo.broker, {
+          // Opened Monday, closed Tuesday.
+          deals: async () => [{ ...deal, time: "2026-09-22T07:00:00.000Z", openedAt: "2026-09-21T19:00:00.000Z" }],
+          positions: async () => [],
+        }),
+      };
+      const { id } = await t.db
+        .selectFrom("accounts")
+        .select("id")
+        .where("number", "=", "1111111")
+        .executeTakeFirstOrThrow();
+      await t.db
+        .updateTable("challenge_profiles")
+        .set({ profile: JSON.stringify(profile) })
+        .where("account_id", "=", id)
+        .execute();
+      await t.db.deleteFrom("daily_stats").where("account_id", "=", id).execute();
+      // Marked by an older version on the closing day.
+      await t.db.insertInto("daily_stats").values({ account_id: id, day: "2026-09-22", traded: 1 }).execute();
+      const poller = new AccountPoller({
+        db: t.db,
+        adapters,
+        accounts: dbAccountDirectory(t.db, t.cipher, "demo"),
+        log,
+        now: () => new Date("2026-09-25T10:00:00Z"),
+      });
+      await poller.syncTradingDays(id);
+      const traded = await t.db
+        .selectFrom("daily_stats")
+        .select("day")
+        .where("account_id", "=", id)
+        .where("traded", "=", 1)
+        .execute();
+      expect(traded.map((r) => r.day)).toEqual(["2026-09-21"]);
+    } finally {
+      await t.app.close();
+    }
+  });
+});

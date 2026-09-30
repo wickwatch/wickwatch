@@ -3399,6 +3399,11 @@
                           "initialStopLoss": {
                             "type": "number"
                           },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
                           "risk": {
                             "type": "number"
                           },
@@ -3548,6 +3553,11 @@
                           },
                           "initialStopLoss": {
                             "type": "number"
+                          },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
                           }
                         }
                       }

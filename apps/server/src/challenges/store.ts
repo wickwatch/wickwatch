@@ -7,8 +7,10 @@ import {
   tradingDayKey,
   tradingDayStart,
   tradingDayStartOf,
+  tradingDays,
   type ChallengeEvaluation,
   type Deal,
+  type Position,
 } from "@wickwatch/core";
 import Value from "typebox/value";
 import type { Db } from "../db";
@@ -39,7 +41,8 @@ export async function evaluateForAccount(
   db: Db,
   accountId: number,
   profile: ChallengeProfile,
-  state: { balance: number; equity: number; deals: Deal[] },
+  /** Deals since the current trading day started; open positions when at hand, so one opened today counts at once. */
+  state: { balance: number; equity: number; deals: Deal[]; positions?: Position[] },
   now: Date,
 ): Promise<ChallengeEvaluation> {
   const { resetTime, timeZone } = profileDay(profile.rules);
@@ -72,8 +75,9 @@ export async function evaluateForAccount(
   const dayStart = tradingDayStart(now, resetTime, timeZone).getTime();
   const dealsToday = state.deals.filter((d) => Date.parse(d.time) >= dayStart);
   const realizedToday = dealsToday.reduce((sum, d) => sum + dealResult(d), 0);
-  // Today counts as soon as a trade closed, even before the poller marked the day.
-  const tradedToday = dealsToday.some((d) => d.pnl !== 0) && todayRow?.traded !== 1;
+  // Today counts as soon as a position opened today, even before the poller marked the day.
+  const tradedToday =
+    todayRow?.traded !== 1 && tradingDays(dealsToday, state.positions ?? [], resetTime, timeZone).includes(today);
 
   return evaluateChallenge({
     now,

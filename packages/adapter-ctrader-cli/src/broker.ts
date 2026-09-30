@@ -24,7 +24,7 @@ import {
   toAlgoMetadata,
   toBrokerAccounts,
   toDeals,
-  toInitialStops,
+  toOpenings,
   checkParameterNames,
   redactStartupTable,
   toLogEvent,
@@ -211,20 +211,20 @@ export class CtraderCliBroker implements BrokerAdapter {
         return t >= start && t <= end;
       })
       .sort((a, b) => a.time.localeCompare(b.time));
-    const stops = await this.initialStops(c, account, start - STOP_LOOKBACK_MS, end + DAY_MS);
-    return deals.map((d) => {
-      const stop = stops.get(d.positionId);
-      return stop === undefined ? d : { ...d, initialStopLoss: stop };
-    });
+    const openings = await this.openings(c, account, start - STOP_LOOKBACK_MS, end + DAY_MS);
+    return deals.map((d) => ({ ...d, ...openings.get(d.positionId) }));
   }
 
-  /** Stops the positions were opened with; without them the deals still count, only their risk and R are unknown. */
-  private async initialStops(c: Credentials, account: string, from: number, to: number) {
+  /**
+   * Initial stops and opening times of the positions; without them the deals still count, only their risk and R are
+   * unknown and trading days fall back to the closing day.
+   */
+  private async openings(c: Credentials, account: string, from: number, to: number) {
     try {
       const answer = await this.pool.run(c, account, `orders-history ${dateOnly(from)} ${dateOnly(to)}`);
-      return toInitialStops(extractJson(answer));
+      return toOpenings(extractJson(answer));
     } catch {
-      return new Map<string, number>();
+      return new Map<string, { initialStopLoss?: number; openedAt?: string }>();
     }
   }
 

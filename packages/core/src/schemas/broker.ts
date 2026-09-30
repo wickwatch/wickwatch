@@ -73,6 +73,8 @@ export const Deal = Type.Object({
   entryPrice: Type.Optional(Type.Number()),
   /** Stop loss the position was opened with, not a later (moved or trailed) one; the base for its risk and R. */
   initialStopLoss: Type.Optional(Type.Number()),
+  /** When the position was opened (its opening fill); prop firms count trading days by it. */
+  openedAt: Type.Optional(IsoTime),
 });
 export type Deal = Type.Static<typeof Deal>;
 

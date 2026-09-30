@@ -1,4 +1,4 @@
-import { profileDay, tradingDayKey, tradingDayStartOf, type ChallengeProfile } from "@wickwatch/core";
+import { profileDay, tradingDayKey, tradingDays, tradingDayStartOf, type ChallengeProfile } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -99,7 +99,7 @@ export class AccountPoller {
     );
   }
 
-  /** Marks the trading days with closed trades since the profile start (or the last 30 days). */
+  /** Marks the trading days (a position opened, see tradingDays) since the profile start (or the last 30 days). */
   async pollDeals(): Promise<void> {
     const [targets, profiles] = await Promise.all([this.targets(), readProfiles(this.options.db)]);
     await Promise.all(targets.map((target) => this.syncDeals(target, profiles.get(target.id))));
@@ -130,15 +130,22 @@ export class AccountPoller {
       const from = profile
         ? tradingDayStartOf(profile.startDate, resetTime, timeZone)
         : new Date(now.getTime() - DEFAULT_HISTORY_DAYS * DAY_MS);
-      const deals = await adapters.broker.deals(
-        await entry.credentials(),
-        entry.number,
-        from.toISOString(),
-        now.toISOString(),
-      );
-      const days = [
-        ...new Set(deals.filter((d) => d.pnl !== 0).map((d) => tradingDayKey(new Date(d.time), resetTime, timeZone))),
-      ];
+      const credentials = await entry.credentials();
+      const [deals, positions] = await Promise.all([
+        adapters.broker.deals(credentials, entry.number, from.toISOString(), now.toISOString()),
+        adapters.broker.positions(credentials, entry.number),
+      ]);
+      const firstDay = tradingDayKey(from, resetTime, timeZone);
+      const days = [...new Set(tradingDays(deals, positions, resetTime, timeZone))].filter((day) => day >= firstDay);
+      // Days marked before (e.g. by closing day, as older versions did) that no position was opened on.
+      await db
+        .updateTable("daily_stats")
+        .set({ traded: 0 })
+        .where("account_id", "=", id)
+        .where("day", ">=", firstDay)
+        .where("traded", "=", 1)
+        .$if(days.length > 0, (q) => q.where("day", "not in", days))
+        .execute();
       if (days.length) {
         await db
           .insertInto("daily_stats")

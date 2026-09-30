@@ -114,7 +114,13 @@ async function snapshot(
     ]);
     const dealsToday = deals.filter((d) => Date.parse(d.time) >= utcDayStart.getTime());
     const challenge = profile
-      ? await evaluateForAccount(db, entry.id, profile, { balance: stats.balance, equity: stats.equity, deals }, now)
+      ? await evaluateForAccount(
+          db,
+          entry.id,
+          profile,
+          { balance: stats.balance, equity: stats.equity, deals, positions },
+          now,
+        )
       : undefined;
     return {
       ...base,

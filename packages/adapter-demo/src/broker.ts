@@ -246,6 +246,10 @@ export class DemoBrokerAdapter implements BrokerAdapter {
           time: toIsoTime(new Date(time)),
           entryPrice,
           initialStopLoss,
+          // Held 1 to 20 hours, so some trades run over a day change.
+          openedAt: toIsoTime(
+            new Date(time - Math.floor((1 + random(seed, instance.name, "hold", slot) * 19) * HOUR_MS)),
+          ),
         });
       }
     }
