@@ -74,6 +74,7 @@ beforeEach(() => {
       emergencyStop: true,
       parameterExport: [],
     },
+    algoFormats: ["algo"],
     parameterFormats: [],
   };
   fetchMock = vi.fn((input: URL) => {

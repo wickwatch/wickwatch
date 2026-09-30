@@ -508,9 +508,9 @@
     "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen."
   },
   "algos": {
-    "intro": "Bot-Dateien (.algo), pro Version abgelegt mit ihren Parametern. Alte Versionen bleiben für ein Rollback erhalten.",
+    "intro": "Bot-Dateien ({formats}), pro Version abgelegt mit ihren Parametern. Alte Versionen bleiben für ein Rollback erhalten.",
     "upload": "Algo hochladen",
-    "file": "Algo-Datei (.algo)",
+    "file": "Algo-Datei ({formats})",
     "version": "Version (optional)",
     "versionHint": "Standard: der Parameter BotVersion des Bots, sonst seine Build-Zeit.",
     "uploaded": "{name} {version} hochgeladen.",
@@ -522,7 +522,7 @@
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} Parameter",
     "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt.",
-    "fileHint": "Eine .algo-Datei, z. B. aus der Plattform exportiert."
+    "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert."
   },
   "instanceForm": {
     "newTitle": "Neue Instanz",
@@ -635,7 +635,7 @@
     "min": "Mindestens {min}.",
     "max": "Höchstens {max}.",
     "rejected": "Der Server hat diesen Wert nicht angenommen.",
-    "algoFile": "Bitte eine .algo-Datei wählen.",
+    "algoFile": "Bitte eine {formats}-Datei wählen.",
     "chooseAccount": "Bitte ein Konto wählen."
   },
   "parameters": {

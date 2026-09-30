@@ -1,17 +1,18 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { AlgoMetadata, isAdapterError, ParameterFile, ParameterSchema } from "@wickwatch/core";
+import { isAdapterError, ParameterFile, ParameterSchema, type AlgoMetadata } from "@wickwatch/core";
+import { SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
-import Value from "typebox/value";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { AlgosTable } from "../db/schema";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
-import { metadataReader } from "../services/algo-metadata";
+import { metadataReader, schemaOf } from "../services/algo-metadata";
 import { audit } from "../services/audit";
+import { latestConfigIds } from "../services/instance-configs";
 
 const MAX_ALGO_BYTES = 64 * 1024 * 1024;
 
@@ -28,8 +29,7 @@ const Algo = Type.Object({
 });
 type Algo = Type.Static<typeof Algo>;
 
-/** Folder and version names end up in paths; keep them to safe characters. */
-const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+const SAFE = SAFE_NAME;
 const safe = (value: string) =>
   value
     .replace(/[^A-Za-z0-9._-]/g, "-")
@@ -42,7 +42,6 @@ function toAlgo(
     "name" | "version" | "sha256" | "size" | "build_time" | "full_access" | "metadata" | "uploaded_at"
   > & { id: number },
 ): Algo {
-  const metadata: unknown = JSON.parse(row.metadata);
   return {
     id: row.id,
     name: row.name,
@@ -51,7 +50,7 @@ function toAlgo(
     size: row.size,
     ...(row.build_time ? { buildTime: row.build_time } : {}),
     fullAccess: row.full_access === 1,
-    parameters: Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [],
+    parameters: schemaOf(row.metadata),
     uploadedAt: row.uploaded_at,
   };
 }
@@ -105,10 +104,8 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         .where("id", "=", request.params.id)
         .executeTakeFirst();
       if (!algo) return reply.code(404).send({ error: "not_found" });
-      const metadata: unknown = JSON.parse(algo.metadata);
-      const schema = Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
       try {
-        return adapters.config.parse(new Uint8Array(body), schema);
+        return adapters.config.parse(new Uint8Array(body), schemaOf(algo.metadata));
       } catch (error) {
         if (isAdapterError(error) && error.code === "invalid_input") {
           return await reply.code(400).send({ error: "parameter_file_invalid" });
@@ -146,8 +143,9 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       if (same) return reply.code(409).send({ error: "algo_duplicate", message: `${same.name} ${same.version}` });
 
       // Read the metadata from a temporary copy that keeps the original file name.
+      const extension = adapters.broker.algoFormats()[0] ?? "bin";
       const incoming = join(algosDir, ".incoming", randomBytes(8).toString("hex"));
-      const temp = join(incoming, safe(request.query.fileName) || "upload.algo");
+      const temp = join(incoming, safe(request.query.fileName) || `upload.${extension}`);
       await mkdir(incoming, { recursive: true });
       try {
         await writeFile(temp, body, { mode: 0o640 });
@@ -171,7 +169,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
           .executeTakeFirst();
         if (exists) return await reply.code(409).send({ error: "algo_version_exists" });
 
-        const filePath = join(name, version, `${name}.algo`);
+        const filePath = join(name, version, `${name}.${extension}`);
         const target = join(algosDir, filePath);
         await mkdir(dirname(target), { recursive: true });
         await rename(temp, target);
@@ -222,14 +220,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         .selectFrom("instance_configs")
         .select("id")
         .where("algo_id", "=", row.id)
-        .where(
-          "id",
-          "in",
-          db
-            .selectFrom("instance_configs")
-            .select((eb) => eb.fn.max("id").as("id"))
-            .groupBy("instance_id"),
-        )
+        .where("id", "in", latestConfigIds(db))
         .executeTakeFirst();
       if (current) return reply.code(409).send({ error: "algo_in_use" });
       await db.deleteFrom("algos").where("id", "=", row.id).execute();

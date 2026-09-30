@@ -6,7 +6,7 @@ import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
-import { audit } from "../services/audit";
+import { auditOutcome } from "../services/audit";
 import { setShouldRun } from "../services/instance-keeper";
 import type { DealHistory } from "../services/deal-history";
 import type { LogTracker } from "../services/log-tracker";
@@ -130,18 +130,12 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
     },
     async (request, reply) => {
       const { ref, action } = request.params;
-      const userId = request.user?.id;
-      try {
+      await auditOutcome(db, { action: `instance.${action}`, target: ref, userId: request.user?.id }, async () => {
         // Before stopping, so the instance keeper does not see it ended while still "meant to run".
         if (action === "stop") await setShouldRun(db, ref, false);
         await adapters.runtime[action](ref);
         if (action !== "stop") await setShouldRun(db, ref, true);
-        await audit(db, { action: `instance.${action}`, target: ref, details: { ok: true }, userId });
-      } catch (error) {
-        const code = isAdapterError(error) ? error.code : "internal";
-        await audit(db, { action: `instance.${action}`, target: ref, details: { ok: false, error: code }, userId });
-        throw error;
-      }
+      });
       return reply.code(204).send(null);
     },
   );

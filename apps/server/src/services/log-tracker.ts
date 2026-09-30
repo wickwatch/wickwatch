@@ -40,6 +40,17 @@ export function withLogEvents(runtime: RuntimeAdapter, { logEvent, redactLog }: 
   });
 }
 
+/** The last line of an instance's log; undefined if there is none or it cannot be read. */
+export async function lastLogLine(runtime: RuntimeAdapter, ref: string): Promise<LogLine | undefined> {
+  let last: LogLine | undefined;
+  try {
+    for await (const line of runtime.logs(ref, { tail: 1 })) last = line;
+  } catch {
+    // A missing log is not worth failing a view for.
+  }
+  return last;
+}
+
 interface Seen {
   startedAt: IsoTime | undefined;
   /** Time of the last line read; the next call reads from here. */
@@ -62,6 +73,27 @@ export class LogTracker {
   /** The log state of each of these instances that has something to report. */
   async states(instances: RuntimeInstance[]): Promise<Map<string, InstanceLogState>> {
     await Promise.all(instances.map((instance) => this.update(instance)));
+    return this.reported(instances);
+  }
+
+  /**
+   * The log states, as `states` gives them, and the last line of each instance's log. For a running instance that is
+   * the last line just read; only where there was none (not running, nothing read, unreadable) it is read separately.
+   */
+  async read(
+    instances: RuntimeInstance[],
+  ): Promise<{ states: Map<string, InstanceLogState>; lastLines: Map<string, LogLine> }> {
+    const lastLines = new Map<string, LogLine>();
+    await Promise.all(
+      instances.map(async (instance) => {
+        const last = (await this.update(instance)) ?? (await lastLogLine(this.runtime, instance.ref));
+        if (last) lastLines.set(instance.ref, last);
+      }),
+    );
+    return { states: this.reported(instances), lastLines };
+  }
+
+  private reported(instances: RuntimeInstance[]): Map<string, InstanceLogState> {
     const result = new Map<string, InstanceLogState>();
     for (const { ref } of instances) {
       const state = this.seen.get(ref)?.state;
@@ -70,10 +102,11 @@ export class LogTracker {
     return result;
   }
 
-  private async update(instance: RuntimeInstance): Promise<void> {
+  /** Reads what is new in a running instance's log; returns the last line read. */
+  private async update(instance: RuntimeInstance): Promise<LogLine | undefined> {
     if (instance.status !== "running") {
       this.seen.delete(instance.ref);
-      return;
+      return undefined;
     }
     const previous = this.seen.get(instance.ref);
     const known = previous?.startedAt === instance.startedAt ? previous : undefined;
@@ -82,9 +115,11 @@ export class LogTracker {
     // Lines already applied at the cursor; the runtime sends them again.
     let expected = [...(known?.atCursor ?? [])];
     let atCursor: string[] = [];
+    let last: LogLine | undefined;
     const state: InstanceLogState = { ...known?.state };
     try {
       for await (const line of this.runtime.logs(instance.ref, { tail: MAX_LINES, ...(since ? { since } : {}) })) {
+        last = line;
         // The runtime may round `since` down and send earlier lines again.
         if (cursor && line.time < cursor) continue;
         if (line.time !== cursor) {
@@ -99,9 +134,10 @@ export class LogTracker {
       }
     } catch {
       // Unreadable log: keep what was known.
-      return;
+      return undefined;
     }
     this.seen.set(instance.ref, { startedAt: instance.startedAt, cursor, atCursor: [...atCursor, ...expected], state });
+    return last;
   }
 }
 

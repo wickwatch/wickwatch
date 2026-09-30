@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import type { InstanceSummary } from "@wickwatch/core";
-import { computed, onMounted, reactive, ref } from "vue";
+import { DEFAULT_LABEL_PREFIX } from "@wickwatch/core/rules";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, errorKey, type InstanceAction, type ManagedInstanceRow } from "../api";
+import { api, errorKey, type ManagedInstanceRow } from "../api";
 import AccountCard from "../components/AccountCard.vue";
 import AlertList from "../components/AlertList.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
 import InstanceTable from "../components/InstanceTable.vue";
+import type { Notice } from "../composables/notice";
 import { useEmergencyStop } from "../composables/useEmergencyStop";
+import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
 import { formatRelative } from "../format";
 import { isAdmin } from "../session";
@@ -17,11 +19,10 @@ import AppSpinner from "../components/AppSpinner.vue";
 
 const POLL_MS = 30_000;
 
-const { t, locale } = useI18n();
+const { locale } = useI18n();
 const { data, error, updatedAt, now, stale, refresh } = usePolling(api.overview, POLL_MS);
 
-const busy = reactive(new Set<string>());
-const notice = ref<{ tone: "positive" | "negative"; text: string }>();
+const notice = ref<Notice>();
 const filterAccount = ref("");
 const onlyRunning = ref(false);
 
@@ -33,6 +34,7 @@ const instances = computed(() =>
   ),
 );
 const { confirming, running, message, stop } = useEmergencyStop(notice, refresh);
+const { busy, runAction } = useInstanceActions(notice, refresh);
 const canEmergencyStop = computed(() => isAdmin.value && (system.value?.capabilities.emergencyStop ?? false));
 const managed = ref<ManagedInstanceRow[]>([]);
 onMounted(() => {
@@ -45,30 +47,14 @@ onMounted(() => {
 const notRunning = computed(() =>
   managed.value.filter((m) => !(data.value?.instances ?? []).some((i) => i.ref === m.name || i.name === m.name)),
 );
-const instanceLabel = computed(() => `${system.value?.labelPrefix ?? "wickwatch"}.instance`);
-
-async function runAction(instance: InstanceSummary, action: InstanceAction) {
-  busy.add(instance.ref);
-  notice.value = undefined;
-  try {
-    await api.instanceAction(instance.ref, action);
-  } catch (e) {
-    notice.value = {
-      tone: "negative",
-      text: t("notice.actionFailed", { action: t(`action.${action}`), name: instance.name, reason: t(errorKey(e)) }),
-    };
-  } finally {
-    busy.delete(instance.ref);
-    await refresh();
-  }
-}
+const instanceLabel = computed(() => `${system.value?.labelPrefix ?? DEFAULT_LABEL_PREFIX}.instance`);
 </script>
 
 <template>
   <div class="overview">
     <h1 class="visually-hidden">{{ $t("overview.title") }}</h1>
 
-    <p class="notice" :class="notice ? `notice--${notice.tone}` : ''" role="status" aria-live="polite">
+    <p class="notice" :class="notice ? `tone-${notice.tone}` : ''" role="status" aria-live="polite">
       {{ notice?.text }}
     </p>
 
@@ -268,23 +254,6 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
 
 .filters .btn {
   white-space: nowrap;
-}
-
-.notice {
-  margin: 0;
-  font-weight: 600;
-}
-
-.notice:empty {
-  display: none;
-}
-
-.notice--positive {
-  color: var(--ww-positive);
-}
-
-.notice--negative {
-  color: var(--ww-negative);
 }
 
 .banner {

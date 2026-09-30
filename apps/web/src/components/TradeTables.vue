@@ -27,7 +27,8 @@ const props = defineProps<{
 defineEmits<{ close: [position: AccountPosition]; cancel: [order: AccountOrder]; attribution: [positionId: string] }>();
 const { t, locale } = useI18n();
 
-const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
+const price = (value: number | undefined) =>
+  value === undefined ? t("format.none") : formatPrice(locale.value, value);
 /** The expiry column only when an order has one. */
 const expiring = computed(() => props.orders?.some((o) => o.expiresAt) ?? false);
 const COLLAPSED_ROWS = 10;
@@ -135,7 +136,9 @@ const detailTitle = computed(() => {
           <td class="mono num">{{ price(o.price) }}</td>
           <td class="mono num">{{ price(o.sl) }}</td>
           <td class="mono num">{{ price(o.tp) }}</td>
-          <td v-if="expiring" class="mono">{{ o.expiresAt ? formatDateTime(locale, o.expiresAt) : "–" }}</td>
+          <td v-if="expiring" class="mono">
+            {{ o.expiresAt ? formatDateTime(locale, o.expiresAt) : $t("format.none") }}
+          </td>
           <td class="num">
             <div class="actions">
               <IconButton

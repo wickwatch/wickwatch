@@ -35,7 +35,8 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 - `Position`, `PendingOrder` and `Deal` volumes are in lots; monetary values in the account currency.
 - `BrokerAdapter.emergencyStop()` only covers the broker side (close positions, cancel orders). Stopping the instances is orchestrated by the core via the runtime adapter.
 - `RuntimeAdapter.create()` takes a neutral `InstanceSpec`: name, pinned image, command, labels and files. The broker adapter's optional `launch()` provides image, command and files (e.g. the algo and a password file); the core adds the labels, including `managed` and `config-version`.
-- `BrokerAdapter.periods()` (optional) lists the timeframes an instance can run on; the instance form offers them and the server checks against them. Without it the timeframe is free text.
+- `BrokerAdapter.periods()` (optional) lists the timeframes an instance can run on; the instance form offers them and the server checks against them. Without it the timeframe is free text. `defaultPeriod` (optional) is the one a new instance is set up with.
+- `BrokerAdapter.algoFormats()` names the file extensions of the algos `algoMetadata()` reads (e.g. `algo`); the upload offers them and stored algo files are named with the first one, so server and web need no platform file names.
 - `RuntimeAdapter.runTool()` (optional) runs a helper program next to the instances, e.g. a broker CLI in a throwaway container: a `ToolSpec` (pinned image, command, files like `InstanceSpec`) gives a `ToolProcess` with `write()`, `onOutput()`, `exit` and `kill()`. Tools are never listed as instances.
 - `BrokerAdapter.redactLog()` (optional) hides secrets the platform prints in an instance's log; the server applies it to every line it reads, before anything shows or stores it.
 - `LaunchInput.algo.parameters` is the algo's schema, so a broker can write the parameters the way its platform expects.

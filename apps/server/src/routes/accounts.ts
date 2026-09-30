@@ -1,14 +1,14 @@
-import { EmergencyStopReport, emergencyStopAccount, isAdapterError, isTimeZone } from "@wickwatch/core";
+import { EmergencyStopReport, isTimeZone } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
-import { findAccount, type AccountDirectory } from "../accounts";
+import { decryptCredential, findAccount, findAccountById, findAccountId, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
-import { audit } from "../services/audit";
-import { clearShouldRunForAccount } from "../services/instance-keeper";
+import { audit, auditOutcome } from "../services/audit";
+import { stopAccount } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
 const Account = Type.Object({
@@ -25,6 +25,11 @@ const Account = Type.Object({
   hasChallenge: Type.Boolean(),
 });
 type Account = Type.Static<typeof Account>;
+
+const PositionParams = Type.Object({
+  number: Type.String({ minLength: 1 }),
+  positionId: Type.String({ minLength: 1 }),
+});
 
 export interface AccountRouteOptions {
   adapters: Adapters;
@@ -78,10 +83,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
   async function brokerKnows(credentialId: number, number: string) {
     const credential = await db.selectFrom("credentials").selectAll().where("id", "=", credentialId).executeTakeFirst();
     if (!credential || !cipher) return { credential, found: undefined };
-    const offered = await adapters.broker.accounts({
-      login: credential.login,
-      secret: cipher.decrypt(credential.secret, "credential-secret"),
-    });
+    const offered = await adapters.broker.accounts(decryptCredential(cipher, credential));
     return { credential, found: offered.find((a) => a.number === number) };
   }
 
@@ -246,7 +248,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       },
     },
     async (request, reply) => {
-      const entry = (await accounts.list()).find((a) => a.id === request.params.id);
+      const entry = await findAccountById(accounts, request.params.id);
       if (!entry) return reply.code(404).send({ error: "not_found" });
       return [...(await symbols.get(entry))].sort((a, b) => a.localeCompare(b));
     },
@@ -260,7 +262,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         tags: ["accounts"],
         summary: "Close one open position at the broker",
         description: "Destructive. `confirm` must repeat the position id.",
-        params: Type.Object({ number: Type.String({ minLength: 1 }), positionId: Type.String({ minLength: 1 }) }),
+        params: PositionParams,
         body: Type.Object({ confirm: Type.String() }),
         response: { 204: Type.Null(), 400: ErrorBody, 403: ErrorBody, 404: ErrorBody, 502: ErrorBody, 503: ErrorBody },
       },
@@ -271,16 +273,11 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
-      const userId = request.user?.id;
-      const target = `${number}/${positionId}`;
-      try {
-        await adapters.broker.closePosition(await account.credentials(), number, positionId);
-        await audit(db, { action: "position.close", target, details: { ok: true }, userId });
-      } catch (error) {
-        const code = isAdapterError(error) ? error.code : "internal";
-        await audit(db, { action: "position.close", target, details: { ok: false, error: code }, userId });
-        throw error;
-      }
+      await auditOutcome(
+        db,
+        { action: "position.close", target: `${number}/${positionId}`, userId: request.user?.id },
+        async () => adapters.broker.closePosition(await account.credentials(), number, positionId),
+      );
       return reply.code(204).send(null);
     },
   );
@@ -304,25 +301,14 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
-      const userId = request.user?.id;
-      const target = `${number}/${orderId}`;
-      try {
-        await adapters.broker.cancelOrder(await account.credentials(), number, orderId);
-        await audit(db, { action: "order.cancel", target, details: { ok: true }, userId });
-      } catch (error) {
-        const code = isAdapterError(error) ? error.code : "internal";
-        await audit(db, { action: "order.cancel", target, details: { ok: false, error: code }, userId });
-        throw error;
-      }
+      await auditOutcome(
+        db,
+        { action: "order.cancel", target: `${number}/${orderId}`, userId: request.user?.id },
+        async () => adapters.broker.cancelOrder(await account.credentials(), number, orderId),
+      );
       return reply.code(204).send(null);
     },
   );
-
-  const PositionParams = Type.Object({
-    number: Type.String({ minLength: 1 }),
-    positionId: Type.String({ minLength: 1 }),
-  });
-  const accountId = async (number: string) => (await findAccount(accounts, number))?.id;
 
   app.put(
     "/accounts/:number/positions/:positionId/attribution",
@@ -339,7 +325,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
     async (request, reply) => {
       const { number, positionId } = request.params;
-      const id = await accountId(number);
+      const id = await findAccountId(accounts, number);
       if (id === undefined) return reply.code(404).send({ error: "not_found" });
       const row = {
         instance: request.body.instance,
@@ -374,7 +360,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
     },
     async (request, reply) => {
       const { number, positionId } = request.params;
-      const id = await accountId(number);
+      const id = await findAccountId(accounts, number);
       if (id === undefined) return reply.code(404).send({ error: "not_found" });
       await db
         .deleteFrom("attribution_overrides")
@@ -413,29 +399,19 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
-      const userId = request.user?.id;
-      try {
-        // Stopped on purpose: not to be started again after a restart.
-        await clearShouldRunForAccount(db, account.id);
-        const report = await emergencyStopAccount({
-          runtime: adapters.runtime,
-          broker: adapters.broker,
-          credentials: await account.credentials(),
-          account: number,
-          labelPrefix,
-        });
-        await audit(db, { action: "account.emergency_stop", target: number, details: { ok: true, ...report }, userId });
-        return report;
-      } catch (error) {
-        const code = isAdapterError(error) ? error.code : "internal";
-        await audit(db, {
-          action: "account.emergency_stop",
-          target: number,
-          details: { ok: false, error: code },
-          userId,
-        });
-        throw error;
-      }
+      return auditOutcome(
+        db,
+        { action: "account.emergency_stop", target: number, userId: request.user?.id },
+        () =>
+          stopAccount(db, account.id, {
+            runtime: adapters.runtime,
+            broker: adapters.broker,
+            credentials: () => account.credentials(),
+            account: number,
+            labelPrefix,
+          }),
+        (report) => report,
+      );
     },
   );
 };

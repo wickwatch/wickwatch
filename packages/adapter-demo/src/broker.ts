@@ -66,6 +66,12 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     return ["M1", "M5", "M15", "M30", "H1", "H4", "D1"];
   }
 
+  readonly defaultPeriod = "M5";
+
+  algoFormats(): string[] {
+    return ["algo"];
+  }
+
   async symbols(c: Credentials, account: string): Promise<string[]> {
     authenticate(c);
     this.world.account(account);

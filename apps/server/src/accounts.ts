@@ -22,6 +22,20 @@ export async function findAccount(directory: AccountDirectory, number: string): 
   return (await directory.list()).find((a) => a.number === number);
 }
 
+export async function findAccountById(directory: AccountDirectory, id: number): Promise<AccountEntry | undefined> {
+  return (await directory.list()).find((a) => a.id === id);
+}
+
+/** Database id of the account with this number. */
+export async function findAccountId(directory: AccountDirectory, number: string): Promise<number | undefined> {
+  return (await findAccount(directory, number))?.id;
+}
+
+/** A stored login with its secret decrypted, for a call to the broker. */
+export function decryptCredential(cipher: Cipher, row: { login: string; secret: string }): Credentials {
+  return { login: row.login, secret: cipher.decrypt(row.secret, "credential-secret") };
+}
+
 /** Accounts of the active broker adapter, stored in the database. Secrets are decrypted only on use. */
 export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId: string): AccountDirectory {
   return {
@@ -51,11 +65,12 @@ export function dbAccountDirectory(db: Db, cipher: Cipher | undefined, brokerId:
         currency: row.currency,
         ...(row.credential_label ? { credentialLabel: row.credential_label } : {}),
         credentials: () => {
+          const { login, secret } = row;
           if (!cipher) return Promise.reject(new AdapterError("unavailable", "MASTER_KEY is not set"));
-          if (row.login === null || row.secret === null) {
+          if (login === null || secret === null) {
             return Promise.reject(new AdapterError("auth_failed", `No credentials for account ${row.number}`));
           }
-          return Promise.resolve({ login: row.login, secret: cipher.decrypt(row.secret, "credential-secret") });
+          return Promise.resolve(decryptCredential(cipher, { login, secret }));
         },
       }));
     },

@@ -517,14 +517,6 @@ const saveSecret = () =>
 </template>
 
 <style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
-  padding: var(--ww-space-8) var(--ww-space-10);
-}
-
 .card,
 .form {
   display: flex;
@@ -545,22 +537,8 @@ const saveSecret = () =>
   align-items: center;
 }
 
-h3 {
-  margin: var(--ww-space-2) 0 0;
-  font-size: var(--ww-size-md);
-}
-
 p {
   margin: 0;
-}
-
-.status:empty {
-  display: none;
-}
-
-.status {
-  color: var(--ww-positive);
-  font-weight: 600;
 }
 
 .hint {
@@ -674,11 +652,5 @@ td .actions {
   gap: var(--ww-space-2);
   align-items: center;
   min-height: var(--ww-touch-target);
-}
-
-@media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
-  }
 }
 </style>

@@ -219,6 +219,7 @@ describe("InstanceFormView", () => {
         emergencyStop: true,
         parameterExport: [],
       },
+      algoFormats: ["algo"],
       parameterFormats: ["cbotset"],
     };
     response = (url, init) =>

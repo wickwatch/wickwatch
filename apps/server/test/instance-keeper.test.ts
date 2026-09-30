@@ -1,6 +1,7 @@
-import type { BrokerAdapter, LogLine, RuntimeAdapter, RuntimeInstance } from "@wickwatch/core";
+import type { LogLine, RuntimeAdapter, RuntimeInstance } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InstanceKeeper } from "../src/services/instance-keeper";
+import { withLogEvents } from "../src/services/log-tracker";
 import { startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
@@ -10,7 +11,7 @@ let started: string[];
 let listFails: boolean;
 let now: number;
 
-const runtime = {
+const plainRuntime = {
   list: async () => {
     if (listFails) throw new Error("docker down");
     return instances;
@@ -22,9 +23,10 @@ const runtime = {
     started.push(ref);
   },
 } as unknown as RuntimeAdapter;
-const broker = {
-  logEvent: (text: string) => (text === "cBot stopped itself" ? "algo_stopped" : undefined),
-} as unknown as BrokerAdapter;
+// As createAdapters hands it out: with the broker's log events.
+const runtime = withLogEvents(plainRuntime, {
+  logEvent: (text) => (text === "cBot stopped itself" ? "algo_stopped" : undefined),
+});
 
 const bot = (status: RuntimeInstance["status"], exitCode?: number): RuntimeInstance => ({
   ref: "bot-a",
@@ -58,7 +60,7 @@ afterEach(async () => {
   await t.app.close();
 });
 
-const keeper = () => new InstanceKeeper({ db: t.db, runtime, broker, log: t.app.log, now: () => now });
+const keeper = () => new InstanceKeeper({ db: t.db, runtime, log: t.app.log, now: () => now });
 
 describe("instance keeper", () => {
   it("takes over a running instance as meant to run", async () => {

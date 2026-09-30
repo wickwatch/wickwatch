@@ -72,13 +72,28 @@ export function formatPercentValue(locale: string, percent: number): string {
   return withMinus(numberFormat(locale, options).format(percent / 100));
 }
 
-export function formatGigabytes(locale: string, bytes: number): string {
-  return numberFormat(locale, { maximumFractionDigits: 1 }).format(bytes / 1024 ** 3);
+/** Up to `digits` decimals, only as many as the value needs ("1.5", "2"). */
+export function formatDecimal(locale: string, value: number, digits = 1): string {
+  return numberFormat(locale, { maximumFractionDigits: digits }).format(value);
 }
+
+export function formatGigabytes(locale: string, bytes: number): string {
+  return formatDecimal(locale, bytes / 1024 ** 3);
+}
+
+/** A file size in bytes, kilobytes or megabytes, with the unit in the locale's words. */
+export function formatFileSize(locale: string, bytes: number): string {
+  const [value, unit] =
+    bytes < 1024 ? [bytes, "byte"] : bytes < 1024 ** 2 ? [bytes / 1024, "kilobyte"] : [bytes / 1024 ** 2, "megabyte"];
+  return numberFormat(locale, { style: "unit", unit, maximumFractionDigits: 1 }).format(value);
+}
+
+const relativeCache = new Map<string, Intl.RelativeTimeFormat>();
 
 export function formatRelative(locale: string, iso: string, now: number): string {
   const seconds = Math.round((Date.parse(iso) - now) / 1000);
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  let rtf = relativeCache.get(locale);
+  if (!rtf) relativeCache.set(locale, (rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })));
   if (Math.abs(seconds) < 60) return rtf.format(seconds, "second");
   if (Math.abs(seconds) < 3600) return rtf.format(Math.round(seconds / 60), "minute");
   return rtf.format(Math.round(seconds / 3600), "hour");

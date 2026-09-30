@@ -3,6 +3,7 @@ import type { InstanceSummary } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
 import type { InstanceAction } from "../api";
 import { durationParts } from "../format";
+import { isActive } from "../instance-state";
 import IconButton from "./IconButton.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
@@ -77,7 +78,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <td v-if="canAct">
             <div class="actions">
               <IconButton
-                v-if="instance.status === 'running' || instance.status === 'restarting'"
+                v-if="isActive(instance.status)"
                 icon="stop"
                 :label="$t('table.actionOn', { action: $t('action.stop'), name: instance.name })"
                 small

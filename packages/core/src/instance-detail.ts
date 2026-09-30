@@ -2,7 +2,7 @@ import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
 import { withRisk } from "./risk";
-import { positionItem, summarizeInstance } from "./overview";
+import { orderItem, positionItem, summarizeInstance } from "./overview";
 import type {
   Deal,
   InstanceDetail,
@@ -62,23 +62,25 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
     input.logState,
   );
   const accountNumber = readLabels(input.labelPrefix, instance.labels).account;
-  const mine = <T>(items: T[] | undefined, item: (x: T) => TradeItem) =>
-    items?.filter((i) => accountNumber !== undefined && attributor.owner(accountNumber, item(i)) === summary.name) ??
-    [];
+  const owns = (item: TradeItem) =>
+    accountNumber !== undefined && attributor.owner(accountNumber, item) === summary.name;
+  const mine = <T>(items: T[] | undefined, item: (x: T) => TradeItem) => items?.filter((i) => owns(item(i))) ?? [];
   /** Removed from this instance by hand; shown separately so they can be restored. */
   const excluded = <T>(items: T[] | undefined, item: (x: T) => TradeItem) =>
-    items?.filter(
-      (i) =>
+    items?.filter((i) => {
+      const trade = item(i);
+      return (
         accountNumber !== undefined &&
-        attributor.isExcluded(accountNumber, item(i)) &&
-        attributor.automaticOwner(accountNumber, item(i)) === summary.name,
-    ) ?? [];
+        attributor.isExcluded(accountNumber, trade) &&
+        attributor.automaticOwner(accountNumber, trade) === summary.name
+      );
+    }) ?? [];
   const asItem = (d: Deal): TradeItem => d;
-  const orderItem = (o: PendingOrder): TradeItem => ({ label: o.label, symbol: o.symbol });
   const byTime = (a: Deal, b: Deal) => a.time.localeCompare(b.time);
   const own = mine(data?.deals, asItem).sort(byTime);
   // The first deal that changed the P&L; deals before it (e.g. openings without costs) add nothing.
-  const first = [...mine(account?.history, asItem), ...own].find((d) => dealResult(d) !== 0)?.time;
+  const changesPnl = (d: Deal) => dealResult(d) !== 0;
+  const first = (account?.history?.find((d) => changesPnl(d) && owns(d)) ?? own.find(changesPnl))?.time;
   const from = input.fromFirstTrade && first ? new Date(first) : input.from;
   const deals = input.fromFirstTrade && first ? own.filter((d) => d.time >= first) : own;
 

@@ -13,7 +13,9 @@ const MAX_LINES = 500;
 type Filter = "all" | "problems" | "setups";
 type State = "connecting" | "live" | "reconnecting" | "stopped";
 
-const lines = ref<LogLine[]>([]);
+/** `seq` numbers the lines as they arrive: a stable key while old lines are dropped at the top. */
+const lines = ref<(LogLine & { seq: number })[]>([]);
+let seq = 0;
 const filter = ref<Filter>("all");
 const follow = ref(true);
 const state = ref<State>("connecting");
@@ -36,7 +38,7 @@ function connect(ref: string) {
     state.value = "reconnecting";
   });
   source.addEventListener("log", (event) => {
-    lines.value.push(JSON.parse((event as MessageEvent<string>).data) as LogLine);
+    lines.value.push({ ...(JSON.parse((event as MessageEvent<string>).data) as LogLine), seq: ++seq });
     if (lines.value.length > MAX_LINES) lines.value.splice(0, lines.value.length - MAX_LINES);
   });
 }
@@ -104,8 +106,8 @@ watch(
       <p v-if="!visible.length" class="muted">{{ $t("log.empty") }}</p>
       <!-- Bot output is shown as is, never translated. -->
       <div
-        v-for="(line, i) in visible"
-        :key="i"
+        v-for="line in visible"
+        :key="line.seq"
         class="log__line"
         :class="line.level ? `log__line--${line.level}` : ''"
       >

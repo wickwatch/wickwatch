@@ -113,6 +113,22 @@ describe("LogTracker", () => {
     expect(await tracker.states([running("2026-09-28T17:00:00.000Z")])).toEqual(new Map());
   });
 
+  it("gives the last line it read, and reads it separately only for instances it did not read", async () => {
+    const last = line("2026-09-28T16:34:50.272Z", "last");
+    const { runtime, reads } = fakeRuntime([line("2026-09-28T16:33:36.000Z", "tick"), last]);
+    const tracker = new LogTracker(runtime);
+    const stopped = { ...running(), ref: "ww-stopped", status: "stopped" as const };
+
+    const { lastLines } = await tracker.read([running(), stopped]);
+    expect(lastLines).toEqual(
+      new Map([
+        ["ww-probe", last],
+        ["ww-stopped", last],
+      ]),
+    );
+    expect(reads).toEqual([{ tail: 1000, since: STARTED }, { tail: 1 }]);
+  });
+
   it("keeps what it knew when the log cannot be read", async () => {
     const { runtime } = fakeRuntime([line("2026-09-28T16:34:50.272Z", "lost")]);
     const annotated = withLogEvents(runtime, { logEvent: classify });

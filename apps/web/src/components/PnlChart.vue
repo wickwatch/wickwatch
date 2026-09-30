@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Deal } from "@wickwatch/core";
+import { dealResult, round2 } from "@wickwatch/core/money";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { CURVES, chartCurve, smoothPath, steppedPath } from "../chart-path";
@@ -22,14 +23,12 @@ onMounted(() => {
 });
 onUnmounted(() => observer?.disconnect());
 
-const result = (d: Deal) => d.pnl + (d.commission ?? 0) + (d.swap ?? 0);
-
 /** Cumulative realised P&L after each deal, starting at 0 at the range start. */
 const points = computed(() => {
   let total = 0;
   return props.deals.map((deal) => {
-    total += result(deal);
-    return { time: Date.parse(deal.time), value: Math.round(total * 100) / 100, deal };
+    total += dealResult(deal);
+    return { time: Date.parse(deal.time), value: round2(total), deal };
   });
 });
 
@@ -51,7 +50,7 @@ const scale = computed(() => {
   const x = (time: number) => PAD.left + ((time - x0) / (x1 - x0 || 1)) * innerW;
   const y = (value: number) => PAD.top + (1 - (value - min) / (max - min || 1)) * innerH;
   const yTicks: number[] = [];
-  for (let v = min; v <= max + step / 2; v += step) yTicks.push(Math.round(v * 100) / 100);
+  for (let v = min; v <= max + step / 2; v += step) yTicks.push(round2(v));
   // Fewer dates on narrow charts, so the labels do not collide.
   const count = width.value < 480 ? 3 : 5;
   const xTicks = Array.from({ length: count }, (_, i) => x0 + ((x1 - x0) * i) / (count - 1));
@@ -79,16 +78,35 @@ const areaPath = computed(() => {
 const active = ref<number>();
 const activePoint = computed(() => (active.value === undefined ? undefined : points.value[active.value]));
 
+/** The x position of each point; deals come oldest first, so these never decrease. */
+const xs = computed(() => points.value.map((p) => scale.value.x(p.time)));
+/** Index of the first point at or right of `at`. */
+function firstFrom(at: number): number {
+  let lo = 0;
+  let hi = xs.value.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((xs.value[mid] ?? Infinity) < at) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** The point nearest to the pointer; of points equally near, the earliest. */
 function onPointer(event: PointerEvent) {
   const svg = event.currentTarget as SVGSVGElement;
   const px = event.clientX - svg.getBoundingClientRect().left;
-  let best: number | undefined;
-  let distance = Infinity;
-  points.value.forEach((p, i) => {
-    const d = Math.abs(scale.value.x(p.time) - px);
-    if (d < distance) [best, distance] = [i, d];
-  });
-  active.value = best;
+  const count = xs.value.length;
+  const right = firstFrom(px);
+  const leftX = xs.value[right - 1];
+  if (!count) active.value = undefined;
+  else if (leftX === undefined) active.value = 0;
+  else {
+    // The first of the points at the same position as the one left of the pointer.
+    const left = firstFrom(leftX);
+    const rightX = xs.value[right];
+    active.value = rightX === undefined || px - leftX <= rightX - px ? left : right;
+  }
 }
 
 function onKey(event: KeyboardEvent) {
@@ -191,7 +209,7 @@ const summary = computed(() => {
         <strong class="mono">{{ formatSigned(locale, activePoint.value) }} {{ currency }}</strong>
         <span class="muted">{{ formatDateTime(locale, activePoint.deal.time) }}</span>
         <span class="muted">
-          {{ $t("chart.deal") }} <span class="mono">{{ formatSigned(locale, result(activePoint.deal)) }}</span>
+          {{ $t("chart.deal") }} <span class="mono">{{ formatSigned(locale, dealResult(activePoint.deal)) }}</span>
         </span>
       </div>
     </template>

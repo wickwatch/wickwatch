@@ -14,6 +14,7 @@ import MenuButton, { type MenuItem } from "../components/MenuButton.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { usePolling } from "../composables/usePolling";
 import { durationParts, formatDateTime } from "../format";
+import { isActive, isOutdated, outdatedText } from "../instance-state";
 import { isAdmin } from "../session";
 import { system } from "../system";
 
@@ -69,10 +70,7 @@ const runningVersion = computed(() => {
 });
 
 /** The container runs another configuration than the saved one (applied in the configuration tab). */
-const outdated = computed(() => {
-  const m = managed.value;
-  return m?.deployment?.managed === true && m.deployment.configVersion !== m.config.version ? m : undefined;
-});
+const outdated = computed(() => (isOutdated(managed.value) ? managed.value : undefined));
 
 /** An account Wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
 const knownAccount = computed(() => {
@@ -128,6 +126,10 @@ const moreItems = computed<MenuItem[]>(() => [
 ]);
 
 const deleting = ref(false);
+const deleteMessage = computed(() => {
+  const confirm = t("instanceConfig.deleteConfirm", { name: name.value });
+  return managed.value?.deployment?.managed ? `${confirm} ${t("instanceConfig.deleteContainer")}` : confirm;
+});
 function onMore(id: string) {
   const m = managed.value;
   if (!m) return;
@@ -156,8 +158,11 @@ async function remove() {
   <div class="detail">
     <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
 
-    <p v-if="error && !data && !noContainer" class="tone-negative" role="alert">{{ $t(errorKey(error)) }}</p>
-    <p v-else-if="noContainer && managedLoaded && !managed" class="tone-negative" role="alert">
+    <p
+      v-if="(error && !data && !noContainer) || (noContainer && managedLoaded && !managed)"
+      class="tone-negative"
+      role="alert"
+    >
       {{ $t(errorKey(error)) }}
     </p>
     <AppSpinner v-else-if="!data && !managed" />
@@ -173,12 +178,11 @@ async function remove() {
               :not-created="!data && !!managed && !managed.deployment"
             />
           </div>
-          <p class="muted">
+          <p class="muted head__meta">
             <RouterLink v-if="knownAccount" :to="{ name: 'account', params: { number: knownAccount.number } }">{{
               knownAccount.label
             }}</RouterLink>
-            <template v-if="knownAccount && meta"> · {{ meta }}</template>
-            <template v-else>{{ meta }}</template>
+            <template v-if="meta">{{ knownAccount ? ` · ${meta}` : meta }}</template>
             <template v-if="runningVersion">
               · {{ $t("instance.configVersion", { version: runningVersion }) }}</template
             >
@@ -191,7 +195,7 @@ async function remove() {
         <div v-if="isAdmin" class="head__actions">
           <template v-if="status">
             <IconButton
-              v-if="status === 'running' || status === 'restarting'"
+              v-if="isActive(status)"
               icon="stop"
               :label="$t('action.stop')"
               show-label
@@ -259,11 +263,7 @@ async function remove() {
       <template v-if="tab === 'overview'">
         <!-- Same message as in the configuration tab; applying stays there, so this only links to it. -->
         <AppBanner v-if="outdated" tone="warning" :title="$t('alert.level.warning')">
-          <span>{{
-            outdated.deployment?.configVersion
-              ? $t("deploy.outdated", { version: outdated.config.version, running: outdated.deployment.configVersion })
-              : $t("deploy.outdatedUnknown", { version: outdated.config.version })
-          }}</span>
+          <span>{{ outdatedText($t, outdated) }}</span>
           <template #actions>
             <RouterLink :to="{ name: 'instance-config', params: { ref: instanceRef } }" class="btn">
               {{ $t("deploy.toConfig") }}
@@ -281,17 +281,15 @@ async function remove() {
     <ConfirmDialog
       :open="deleting"
       :title="$t('action.delete')"
-      :message="
-        managed?.deployment?.managed
-          ? `${$t('instanceConfig.deleteConfirm', { name })} ${$t('instanceConfig.deleteContainer')}`
-          : $t('instanceConfig.deleteConfirm', { name })
-      "
+      :message="deleteMessage"
       :confirm-label="$t('action.delete')"
       @confirm="remove"
       @cancel="deleting = false"
     />
   </div>
 </template>
+
+<style scoped src="../styles/page-head.css"></style>
 
 <style scoped>
 .detail {
@@ -307,64 +305,14 @@ async function remove() {
   font-size: var(--ww-size-sm);
 }
 
-/*
- * Name and actions share the first row, the meta line runs below at full width. On phones the actions move below the
- * meta line as a two-column grid of full buttons (see the media query), so none is left alone on a row.
- */
-.head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "name actions"
-    "meta meta";
-  gap: var(--ww-space-1) var(--ww-space-4);
-  align-items: start;
-}
-
-.head__title {
-  display: contents;
-}
-
-.head__name {
-  grid-area: name;
-}
-
-.head__actions {
-  grid-area: actions;
-}
-
-.head__name {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: center;
-}
-
 h1 {
-  font-size: var(--ww-size-3xl);
-  letter-spacing: -0.02em;
   word-break: break-all;
 }
 
-.head__title p {
-  grid-area: meta;
-  margin: 0;
-  font-size: var(--ww-size-sm);
-}
-
 .head__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--ww-space-2);
   align-items: center;
 }
 
-.notice {
-  font-weight: 600;
-}
-
-p[role="alert"],
 .detail > p {
   margin: 0;
 }
@@ -415,44 +363,9 @@ p[role="alert"],
 }
 
 @media (max-width: 640px) {
-  .head {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "name"
-      "meta"
-      "actions";
-  }
-
-  .head__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: var(--ww-space-2);
-  }
-
-  .head__actions > *,
-  .head__actions :deep(.menu-button > .btn) {
-    width: 100%;
-  }
-
-  /* A button alone on its row (one action, or the last of an odd number) takes the full width. */
-  .head__actions > :last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-
-  /* Labels stay on one line; a long one ends in "…" (the full text stays the accessible name). */
-  .head__actions :deep(.btn),
-  .head__actions :deep(.btn__text) {
-    min-width: 0;
-  }
-
-  .head__actions :deep(.btn__text) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   /* The "more" trigger looks like the buttons next to it here, not like a frameless icon. */
   .head__actions :deep(.menu-button > .btn) {
+    width: 100%;
     border-color: var(--ww-border);
     background: var(--ww-surface-raised);
     color: var(--ww-text);

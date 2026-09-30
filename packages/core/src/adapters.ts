@@ -124,6 +124,8 @@ export interface BrokerAdapter {
   cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void>;
   emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult>;
   algoMetadata(algoPath: string): Promise<AlgoMetadata>;
+  /** File extensions of the algos it reads, e.g. `algo`; the first one names stored algo files. */
+  algoFormats(): string[];
   /**
    * Version of what `algoMetadata` reads. Bump it when the reader learns more (a new field, a fixed type): the server
    * then reads stored algos again once at start, instead of the user re-uploading them. Missing means 0.
@@ -133,6 +135,8 @@ export interface BrokerAdapter {
   launch?(input: LaunchInput): Promise<Launch>;
   /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */
   periods?(): string[];
+  /** The period a new instance is set up with, one of `periods()`. */
+  readonly defaultPeriod?: string;
   /** Recognises platform events in a line an instance logged, e.g. a lost broker connection. */
   logEvent?(text: string): LogEvent | undefined;
   /** Hides secrets the platform prints in an instance's log, e.g. a licence key among the parameters at start. */

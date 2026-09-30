@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { api, errorKey, type TotpSetup } from "../api";
+import { api, type TotpSetup } from "../api";
 import AuthCard from "../components/AuthCard.vue";
 import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { loadSession, session } from "../session";
 import { MIN_PASSWORD_LENGTH, checks, normalizers, useValidation, vNormalize } from "../validation";
 
@@ -16,8 +17,7 @@ const password = ref("");
 const repeat = ref("");
 const code = ref("");
 const totp = ref<TotpSetup>();
-const error = ref<string>();
-const busy = ref(false);
+const { busy, error, run } = useAsyncAction();
 
 const step1 = useValidation();
 const fields = {
@@ -39,18 +39,6 @@ const fields = {
 };
 const step2 = useValidation();
 const codeField = step2.field(() => code.value, checks.required, checks.code);
-
-async function run(action: () => Promise<void>) {
-  busy.value = true;
-  error.value = undefined;
-  try {
-    await action();
-  } catch (e) {
-    error.value = errorKey(e);
-  } finally {
-    busy.value = false;
-  }
-}
 
 /** Step 1: checks the token and gets the QR code for the optional 2FA step. */
 const next = () =>

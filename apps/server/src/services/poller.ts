@@ -166,14 +166,6 @@ export class AccountPoller {
   }
 
   private async targets(): Promise<Target[]> {
-    const { db, adapters, accounts } = this.options;
-    const [rows, entries] = await Promise.all([
-      db.selectFrom("accounts").select(["id", "number"]).where("adapter", "=", adapters.broker.id).execute(),
-      accounts.list(),
-    ]);
-    return rows.flatMap((row) => {
-      const entry = entries.find((e) => e.number === row.number);
-      return entry ? [{ id: row.id, entry }] : [];
-    });
+    return (await this.options.accounts.list()).map((entry) => ({ id: entry.id, entry }));
   }
 }

@@ -3,7 +3,9 @@ import type { InstanceDetail } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
+import type { Notice } from "../composables/notice";
 import { useTradeActions } from "../composables/useTradeActions";
+import { isActive } from "../instance-state";
 import { isAdmin } from "../session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import KpiTiles from "./KpiTiles.vue";
@@ -28,7 +30,7 @@ const ranges = computed<Range[]>(() => {
   return older || props.days === "all" ? [...RANGES, "all"] : [...RANGES];
 });
 
-const notice = ref<{ tone: "positive" | "negative"; text: string }>();
+const notice = ref<Notice>();
 const { busy, closing, cancelling, closeMessage, cancelMessage, closePosition, cancelOrder } = useTradeActions(
   () => props.data.account?.number,
   notice,
@@ -89,10 +91,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
 
       <section class="panel card" aria-labelledby="log-title">
         <h2 id="log-title">{{ $t("instance.liveLog") }}</h2>
-        <LogPanel
-          :instance-ref="data.instance.ref"
-          :running="data.instance.status === 'running' || data.instance.status === 'restarting'"
-        />
+        <LogPanel :instance-ref="data.instance.ref" :running="isActive(data.instance.status)" />
       </section>
     </div>
 
@@ -201,19 +200,6 @@ async function toggleAttribution(positionId: string, restore: boolean) {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ww-space-2);
-}
-
-.notice {
-  margin: 0;
-  font-weight: 600;
-}
-
-.notice:empty {
-  display: none;
-}
-
-p[role="alert"] {
-  margin: 0;
 }
 
 .columns {

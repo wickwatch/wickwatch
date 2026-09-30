@@ -1,6 +1,7 @@
 import { BrokerAccount } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
+import { decryptCredential } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
@@ -182,10 +183,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         .executeTakeFirst();
       if (!credential) return reply.code(404).send({ error: "not_found" });
       const [offered, added] = await Promise.all([
-        adapters.broker.accounts({
-          login: credential.login,
-          secret: cipher.decrypt(credential.secret, "credential-secret"),
-        }),
+        adapters.broker.accounts(decryptCredential(cipher, credential)),
         db.selectFrom("accounts").select("number").where("adapter", "=", adapters.broker.id).execute(),
       ]);
       const known = new Set(added.map((a) => a.number));
@@ -200,7 +198,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
       schema: {
         tags: ["accounts"],
         summary: "Delete a stored login that no account uses",
-        params: Type.Object({ id: Type.Integer() }),
+        params: Id,
         response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
       },
     },

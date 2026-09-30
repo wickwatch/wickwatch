@@ -1,7 +1,7 @@
 import { ChallengeProfile, ChallengeTemplate, isTimeZone } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
-import { findAccount, type AccountDirectory } from "../accounts";
+import { findAccountId, type AccountDirectory } from "../accounts";
 import { readProfile } from "../challenges/store";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
@@ -22,8 +22,6 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
   app,
   { db, accounts, templates, onSaved },
 ) => {
-  const accountId = async (number: string) => (await findAccount(accounts, number))?.id;
-
   app.get(
     "/challenge-templates",
     {
@@ -47,7 +45,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
       },
     },
     async (request, reply) => {
-      const id = await accountId(request.params.number);
+      const id = await findAccountId(accounts, request.params.number);
       const profile = id === undefined ? undefined : await readProfile(db, id);
       return profile ?? reply.code(404).send({ error: "not_found" });
     },
@@ -67,7 +65,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
     },
     async (request, reply) => {
       const profile = request.body;
-      const id = await accountId(request.params.number);
+      const id = await findAccountId(accounts, request.params.number);
       if (id === undefined) return reply.code(404).send({ error: "not_found" });
       if (profile.rules.dailyLoss && !isTimeZone(profile.rules.dailyLoss.timezone)) {
         return reply.code(400).send({ error: "invalid_timezone" });
@@ -105,7 +103,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
       },
     },
     async (request, reply) => {
-      const id = await accountId(request.params.number);
+      const id = await findAccountId(accounts, request.params.number);
       const result =
         id === undefined
           ? undefined

@@ -3,6 +3,8 @@ import type { ChallengeProfile, ChallengeRules, ChallengeTemplate, DailyLossRefe
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, ApiError, errorKey } from "../api";
+import { useAsyncAction } from "../composables/useAsyncAction";
+import { groupBy } from "../group-by";
 import { isAdmin } from "../session";
 import { checks, useValidation } from "../validation";
 import ConfirmDialog from "./ConfirmDialog.vue";
@@ -13,7 +15,6 @@ import AppSpinner from "./AppSpinner.vue";
 const props = defineProps<{ number: string }>();
 const emit = defineEmits<{ saved: []; deleted: []; cancel: []; dirty: [dirty: boolean] }>();
 const { locale } = useI18n();
-const number = computed(() => props.number);
 
 const REFERENCES: DailyLossReference[] = [
   "balance-or-equity-at-day-start",
@@ -25,8 +26,7 @@ const TIME_ZONES = typeof Intl.supportedValuesOf === "function" ? Intl.supported
 const templates = ref<ChallengeTemplate[]>([]);
 const exists = ref(false);
 const loading = ref(true);
-const busy = ref(false);
-const error = ref<string>();
+const { busy, error, run } = useAsyncAction();
 const confirmDelete = ref(false);
 
 /** Flat form state; empty numbers mean "rule not used". */
@@ -66,20 +66,20 @@ function applyRules(rules: ChallengeRules) {
   form.durationDays = rules.durationDays ?? undefined;
 }
 
+const selectedTemplate = computed(() => templates.value.find((t) => t.id === form.templateId));
+
 function applyTemplate() {
-  const template = templates.value.find((t) => t.id === form.templateId);
+  const template = selectedTemplate.value;
   if (!template) return;
   applyRules(template);
   form.name = templateName(template);
   form.phase = template.phase;
 }
 
-const selectedTemplate = computed(() => templates.value.find((t) => t.id === form.templateId));
 const templateName = (t: ChallengeTemplate) => t.name[locale.value] ?? t.name["en"] ?? t.id;
 /** Templates by firm; names sorted with numbers compared by value ("$2.5k" before "$100k"). */
 const templateGroups = computed(() => {
-  const groups = new Map<string, ChallengeTemplate[]>();
-  for (const t of templates.value) groups.set(t.firm, [...(groups.get(t.firm) ?? []), t]);
+  const groups = groupBy(templates.value, (t) => t.firm);
   const byName = (a: ChallengeTemplate, b: ChallengeTemplate) =>
     templateName(a).localeCompare(templateName(b), locale.value, { numeric: true });
   return [...groups].map(([firm, list]) => ({ firm, templates: list.sort(byName) }));
@@ -118,7 +118,7 @@ function toProfile(): ChallengeProfile {
 onMounted(async () => {
   try {
     templates.value = await api.challengeTemplates();
-    const profile = await api.challenge(number.value);
+    const profile = await api.challenge(props.number);
     exists.value = true;
     form.templateId = profile.templateId ?? "";
     form.name = profile.name;
@@ -140,18 +140,6 @@ onMounted(async () => {
 const initial = ref<string>();
 const dirty = computed(() => initial.value !== undefined && JSON.stringify(form) !== initial.value);
 watch(dirty, (d) => emit("dirty", d));
-
-async function run(action: () => Promise<void>) {
-  busy.value = true;
-  error.value = undefined;
-  try {
-    await action();
-  } catch (e) {
-    error.value = errorKey(e);
-  } finally {
-    busy.value = false;
-  }
-}
 
 const v = useValidation();
 const whenDaily = (check: (value: unknown) => ReturnType<typeof checks.required>) => (value: unknown) =>
@@ -177,14 +165,14 @@ const fields = {
 const save = () =>
   run(async () => {
     if (!v.validate()) return;
-    await api.saveChallenge(number.value, toProfile());
+    await api.saveChallenge(props.number, toProfile());
     emit("saved");
   });
 
 const remove = () =>
   run(async () => {
     confirmDelete.value = false;
-    await api.deleteChallenge(number.value);
+    await api.deleteChallenge(props.number);
     emit("deleted");
   });
 </script>
@@ -452,10 +440,6 @@ legend {
 }
 
 .hint,
-p[role="alert"] {
-  margin: 0;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;

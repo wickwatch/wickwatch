@@ -152,10 +152,6 @@ export function toOpenings(data: unknown): Map<string, { initialStopLoss?: numbe
 }
 
 /**
- * Open positions. Field names are assumed to follow the completed-order format
- * (`symbolName, tradeSide, volumeLots, stopLoss, takeProfit, openTime, label`) – verify on a trading day.
- */
-/**
  * A fresh shell session lists open positions before it has prices for them: `currentPrice`,
  * `netProfit` and `grossProfit` are null for a moment (seen with 5.9).
  */
@@ -323,13 +319,13 @@ const CONNECTION_UP = new RegExp(`${PLATFORM_LINE}The connection has been (?:est
 // Logged by the platform with level Error; Print output of a cBot is always Info.
 const ALGO_CRASHED = new RegExp(`${PLATFORM_LINE}Error \\| Crashed in \\S+ event with `);
 
+/** The CLI's last line when the cBot called Stop() itself; stopped from outside (SIGTERM) it says "stopped by user". */
+const ALGO_STOPPED = /^cBot stopped itself\b/;
+
 /**
  * "The connection has been lost. Reconnecting..." / "… restored." and "Error | Crashed in
  * Timer.TimerTick event with InvalidOperationException: …" (the cBot keeps running) as logged by `run` (5.9).
  */
-/** The CLI's last line when the cBot called Stop() itself; stopped from outside (SIGTERM) it says "stopped by user". */
-const ALGO_STOPPED = /^cBot stopped itself\b/;
-
 export function toLogEvent(text: string): LogEvent | undefined {
   if (ALGO_STOPPED.test(text.trim())) return "algo_stopped";
   if (CONNECTION_LOST.test(text)) return "connection_lost";

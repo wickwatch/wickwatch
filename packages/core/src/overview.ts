@@ -25,8 +25,7 @@ export interface AccountSnapshot {
   credentialLabel?: string;
   broker?: string;
   currency?: string;
-  /** Broker data; missing when the query failed. */
-  /** `pendingOrders` only when the broker supports them. */
+  /** Broker data; missing when the query failed. `pendingOrders` only when the broker supports them. */
   data?: { stats: AccountStats; positions: Position[]; dealsToday: Deal[]; pendingOrders?: PendingOrder[] };
   error?: AdapterErrorCode;
   challenge?: ChallengeEvaluation;
@@ -52,6 +51,8 @@ const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
 
 /** Positions are overridden by their id; deals carry `positionId` themselves. */
 export const positionItem = (p: Position): TradeItem => ({ label: p.label, symbol: p.symbol, positionId: p.id });
+/** Pending orders have no position yet, so no manual override applies to them. */
+export const orderItem = (o: PendingOrder): TradeItem => ({ label: o.label, symbol: o.symbol });
 
 /** One instance with its positions and today's P&L; shared by the overview and the detail view. */
 export function summarizeInstance(
@@ -89,9 +90,12 @@ export function summarizeInstance(
 
 /** Combines runtime and broker data into the overview. Pure: no I/O. */
 export function buildOverview(input: OverviewInput): Overview {
+  return overviewWith(input, createAttributor(input.instances, input.labelPrefix, input.overrides));
+}
+
+function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
   const byNumber = new Map(input.accounts.map((a) => [a.number, a]));
 
-  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
   const instances = input.instances.map((instance) => {
     const account = readLabels(input.labelPrefix, instance.labels).account;
     const data = account ? byNumber.get(account)?.data : undefined;
@@ -144,11 +148,11 @@ export function buildOverview(input: OverviewInput): Overview {
  * order with the instance it belongs to (same attribution as everywhere). Undefined if the account is not in `input`.
  */
 export function buildAccountDetail(input: OverviewInput, number: string): AccountDetail | undefined {
-  const overview = buildOverview(input);
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
+  const overview = overviewWith(input, attributor);
   const account = overview.accounts.find((a) => a.number === number);
   if (!account) return undefined;
   const data = input.accounts.find((a) => a.number === number)?.data;
-  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
   const owner = (item: TradeItem) => attributor.owner(number, item);
   const instances = overview.instances.filter((i) => i.account === number);
   const names = new Set([number, ...instances.map((i) => i.name)]);
@@ -157,7 +161,7 @@ export function buildAccountDetail(input: OverviewInput, number: string): Accoun
     account,
     instances,
     positions: (data?.positions ?? []).map((p) => withInstance(p, owner(positionItem(p)))),
-    pendingOrders: (data?.pendingOrders ?? []).map((o) => withInstance(o, owner({ label: o.label, symbol: o.symbol }))),
+    pendingOrders: (data?.pendingOrders ?? []).map((o) => withInstance(o, owner(orderItem(o)))),
     alerts: overview.alerts.filter((a) => names.has(a.subject)),
   };
 }

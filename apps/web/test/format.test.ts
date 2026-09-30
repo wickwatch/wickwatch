@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { durationParts, formatDateTime, formatNumber, formatPercent, formatSigned } from "../src/format";
+import {
+  durationParts,
+  formatDateTime,
+  formatDecimal,
+  formatFileSize,
+  formatNumber,
+  formatPercent,
+  formatRelative,
+  formatSigned,
+} from "../src/format";
 
 describe("format", () => {
   it("shows dates with the year, except the short day on chart axes", () => {
@@ -7,6 +16,16 @@ describe("format", () => {
     expect(formatDateTime("de", iso)).toMatch(/^30\.09\.2026, \d\d:47$/);
     expect(formatDateTime("de", iso, "day")).toBe("30.09.2026");
     expect(formatDateTime("de", iso, "date")).toBe("30.09.");
+  });
+
+  it("formats decimals, file sizes and relative times per locale", () => {
+    expect(formatDecimal("de", 1.25)).toBe("1,3");
+    expect(formatDecimal("en", 2)).toBe("2");
+    expect(formatFileSize("en", 512)).toBe("512 byte");
+    expect(formatFileSize("de", 1536)).toBe("1,5 kB");
+    const now = Date.parse("2026-09-30T12:00:00Z");
+    expect(formatRelative("en", "2026-09-30T11:58:00Z", now)).toBe("2 minutes ago");
+    expect(formatRelative("de", "2026-09-30T11:58:00Z", now)).toBe("vor 2 Minuten");
   });
 
   it("formats numbers per locale", () => {

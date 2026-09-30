@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import type { InstanceSummary } from "@wickwatch/core";
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
-import { api, errorKey, type InstanceAction } from "../api";
+import { api, errorKey } from "../api";
 import AlertList from "../components/AlertList.vue";
 import AppModal from "../components/AppModal.vue";
 import ChallengeForm from "../components/ChallengeForm.vue";
@@ -14,7 +13,9 @@ import InstanceTable from "../components/InstanceTable.vue";
 import SignedValue from "../components/SignedValue.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import TradeTables from "../components/TradeTables.vue";
+import type { Notice } from "../composables/notice";
 import { hasSomethingToStop, useEmergencyStop } from "../composables/useEmergencyStop";
+import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
 import { useTradeActions } from "../composables/useTradeActions";
 import { formatNumber } from "../format";
@@ -35,7 +36,7 @@ const { data, error, now, refresh } = usePolling(() => api.accountDetail(number.
 watch(number, () => void refresh());
 const account = computed(() => data.value?.account);
 
-const notice = ref<{ tone: "positive" | "negative"; text: string }>();
+const notice = ref<Notice>();
 const { busy, closing, cancelling, closeMessage, cancelMessage, closePosition, cancelOrder } = useTradeActions(
   () => number.value,
   notice,
@@ -51,22 +52,7 @@ const canStop = computed(
 );
 const accountNames = computed(() => new Map(account.value ? [[account.value.number, account.value.displayName]] : []));
 
-const instanceBusy = reactive(new Set<string>());
-async function runAction(instance: InstanceSummary, action: InstanceAction) {
-  instanceBusy.add(instance.ref);
-  notice.value = undefined;
-  try {
-    await api.instanceAction(instance.ref, action);
-  } catch (e) {
-    notice.value = {
-      tone: "negative",
-      text: t("notice.actionFailed", { action: t(`action.${action}`), name: instance.name, reason: t(errorKey(e)) }),
-    };
-  } finally {
-    instanceBusy.delete(instance.ref);
-    await refresh();
-  }
-}
+const { busy: instanceBusy, runAction } = useInstanceActions(notice, refresh);
 
 /** The challenge modal; `?challenge=edit` (the old editor's address) opens it. */
 const editing = ref(false);
@@ -252,12 +238,11 @@ const meta = computed(() => {
   </div>
 </template>
 
+<style scoped src="../styles/page-head.css"></style>
+
 <style scoped>
+/* The same padding as the instance page. */
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
   padding: var(--ww-space-6) var(--ww-space-10) var(--ww-space-10);
 }
 
@@ -266,70 +251,9 @@ const meta = computed(() => {
   font-size: var(--ww-size-sm);
 }
 
-/*
- * Name and actions share the first row, the meta line runs below at full width. On phones the actions move below the
- * meta line as a two-column grid of full buttons (see the media query), so none is left alone on a row.
- */
-.head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "name actions"
-    "meta meta";
-  gap: var(--ww-space-1) var(--ww-space-4);
-  align-items: start;
-}
-
-.head__title {
-  display: contents;
-}
-
-.head__name {
-  grid-area: name;
-}
-
-.head__actions {
-  grid-area: actions;
-}
-
-.head__name {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: center;
-}
-
 h1 {
   margin: 0;
-  font-size: var(--ww-size-3xl);
-  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
-}
-
-.head__meta {
-  grid-area: meta;
-  margin: 0;
-  font-size: var(--ww-size-sm);
-}
-
-.head__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--ww-space-2);
-}
-
-.notice {
-  margin: 0;
-  font-weight: 600;
-}
-
-.notice:empty {
-  display: none;
-}
-
-p[role="alert"] {
-  margin: 0;
 }
 
 .summary {
@@ -411,41 +335,6 @@ p[role="alert"] {
 }
 
 @media (max-width: 640px) {
-  .head {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "name"
-      "meta"
-      "actions";
-  }
-
-  .head__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: var(--ww-space-2);
-  }
-
-  .head__actions > * {
-    width: 100%;
-  }
-
-  /* A button alone on its row (one action, or the last of an odd number) takes the full width. */
-  .head__actions > :last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-
-  /* Labels stay on one line; a long one ends in "…" (the full text stays the accessible name). */
-  .head__actions :deep(.btn),
-  .head__actions :deep(.btn__text) {
-    min-width: 0;
-  }
-
-  .head__actions :deep(.btn__text) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .page {
     padding: var(--ww-space-4);
   }

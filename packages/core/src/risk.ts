@@ -20,7 +20,7 @@ export function dealRisk(deal: Deal): number | undefined {
 /** The result including costs in multiples of the risk, e.g. -1 when the initial stop was hit. */
 export function dealR(deal: Deal): number | undefined {
   const risk = dealRisk(deal);
-  return risk ? Math.round((dealResult(deal) / risk) * 100) / 100 : undefined;
+  return risk ? round2(dealResult(deal) / risk) : undefined;
 }
 
 /**
@@ -29,19 +29,12 @@ export function dealR(deal: Deal): number | undefined {
  * overlapping positions make it an approximation of the balance at entry.
  */
 export function withRisk(deals: Deal[], accountDeals: Deal[], balance: number | undefined): TradeDeal[] {
-  const byTime = [...accountDeals].sort((a, b) => b.time.localeCompare(a.time));
+  const beforeAt = balance === undefined ? undefined : balanceBefore(accountDeals, balance);
   return deals.map((deal) => {
     const risk = dealRisk(deal);
     if (risk === undefined) return deal;
     const r = dealR(deal);
-    let before: number | undefined;
-    if (balance !== undefined) {
-      before = balance;
-      for (const d of byTime) {
-        if (d.time < deal.time) break;
-        before -= dealResult(d);
-      }
-    }
+    const before = beforeAt?.(deal.time);
     return {
       ...deal,
       risk,
@@ -49,4 +42,32 @@ export function withRisk(deals: Deal[], accountDeals: Deal[], balance: number | 
       ...(r !== undefined ? { r } : {}),
     };
   });
+}
+
+/**
+ * The balance before a time: `balance` minus the results of the newest account deals, up to (not including) the first
+ * one older than `time`. Sorted and summed once, so each lookup is a binary search instead of a walk over all deals.
+ */
+function balanceBefore(accountDeals: Deal[], balance: number): (time: string) => number {
+  const byTime = [...accountDeals].sort((a, b) => b.time.localeCompare(a.time));
+  // running[i]: the balance minus the i newest results, subtracted one by one (same rounding as a walk).
+  const running = [balance];
+  // earliest[i]: the smallest time among the i + 1 newest deals. The walk stops at the first deal with `time <`;
+  // collation order and `<` may differ, so the search runs on this running minimum, which only falls.
+  const earliest: string[] = [];
+  for (const [i, d] of byTime.entries()) {
+    running.push((running[i] as number) - dealResult(d));
+    const min = earliest[i - 1];
+    earliest.push(min !== undefined && min <= d.time ? min : d.time);
+  }
+  return (time) => {
+    let lo = 0;
+    let hi = byTime.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if ((earliest[mid] as string) < time) hi = mid;
+      else lo = mid + 1;
+    }
+    return running[lo] as number;
+  };
 }

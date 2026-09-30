@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AccountOrder, AccountPosition, TradeDeal } from "@wickwatch/core";
+import { dealResult } from "@wickwatch/core/money";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { durationParts, formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
@@ -24,7 +25,7 @@ const held = (from: string | undefined, to: number) => {
 };
 
 const deal = computed(() => (props.item.kind === "deal" ? props.item.value : undefined));
-const net = computed(() => (deal.value ? deal.value.pnl + (deal.value.commission ?? 0) + (deal.value.swap ?? 0) : 0));
+const net = computed(() => (deal.value ? dealResult(deal.value) : 0));
 </script>
 
 <template>

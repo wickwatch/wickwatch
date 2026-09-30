@@ -2,37 +2,33 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   AdapterError,
-  AlgoMetadata,
   ATTRIBUTION_MODES,
   InstanceStatus,
   managedLabels,
+  parameterDefaults,
   ParameterIssue,
   ParameterValues,
   readLabels,
   type AttributionMode,
   type RuntimeInstance,
 } from "@wickwatch/core";
+import { INSTANCE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import Value from "typebox/value";
-import type { AccountDirectory, AccountEntry } from "../accounts";
+import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { InstanceConfigsTable } from "../db/schema";
 import { isAdmin, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
+import { schemaOf } from "../services/algo-metadata";
 import { audit } from "../services/audit";
-import { setShouldRun } from "../services/instance-keeper";
+import { latestConfigIds } from "../services/instance-configs";
+import { isUp, setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
-/** Lower case, digits and dashes: usable as a container name and host name. */
-const NAME = "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$";
-
-/** The parameter schema of a stored algo; empty if its metadata is unreadable. */
-function schemaOf(metadataJson: string) {
-  const metadata: unknown = JSON.parse(metadataJson);
-  return Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
-}
+const NAME = INSTANCE_NAME.source;
 
 const Attribution = Type.Object({
   mode: Type.Enum(ATTRIBUTION_MODES),
@@ -186,16 +182,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     if (name !== undefined) query = query.where("name", "=", name);
     const rows = (await query.execute()).filter((r) => entries.has(r.account_id));
     if (!rows.length) return [];
-    const latest = await configs()
-      .where(
-        "instance_configs.id",
-        "in",
-        db
-          .selectFrom("instance_configs")
-          .select((eb) => eb.fn.max("id").as("id"))
-          .groupBy("instance_id"),
-      )
-      .execute();
+    const latest = await configs().where("instance_configs.id", "in", latestConfigIds(db)).execute();
     const byInstance = new Map(latest.map((c) => [c.instance_id, c]));
     return rows.flatMap((row) => {
       const entry = entries.get(row.account_id);
@@ -259,7 +246,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         period,
         // Complete: missing parameters get the algo's default, so a version never depends on defaults.
         parameters: canonical({
-          ...Object.fromEntries(schema.filter((p) => p.default !== undefined).map((p) => [p.name, p.default])),
+          ...parameterDefaults(schema),
           ...input.parameters,
         }),
         attribution: mode,
@@ -378,7 +365,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
     async (request, reply) => {
       const { name, accountId, config } = request.body;
-      const entry = (await accounts.list()).find((a) => a.id === accountId);
+      const entry = await findAccountById(accounts, accountId);
       if (!entry) return reply.code(404).send({ error: "not_found" });
       const taken =
         (await db.selectFrom("instances").select("id").where("name", "=", name).executeTakeFirst()) ??
@@ -429,7 +416,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
     async (request, reply) => {
       const [instance] = await load(request.params.name);
-      const entry = instance && (await accounts.list()).find((a) => a.id === instance.account.id);
+      const entry = instance && (await findAccountById(accounts, instance.account.id));
       if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
       const checked = await check(request.body, entry);
       if (!checked.ok) return reply.code(checked.status).send(checked.body);
@@ -495,7 +482,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const { name } = request.params;
       if (request.body.confirm !== name) return reply.code(400).send({ error: "confirmation_required" });
       const [instance] = await load(name);
-      const entry = instance && (await accounts.list()).find((a) => a.id === instance.account.id);
+      const entry = instance && (await findAccountById(accounts, instance.account.id));
       if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
       if (!adapters.broker.launch) return reply.code(501).send({ error: "launch_unsupported" });
       if (instance.deployment && !instance.deployment.managed) {
@@ -507,8 +494,9 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           ? undefined
           : await db.selectFrom("algos").selectAll().where("id", "=", config.algo.id).executeTakeFirst();
       if (!algo) return reply.code(409).send({ error: "algo_not_found" });
+      const schema = schemaOf(algo.metadata);
       // Versions saved before the runtime's rules were known, e.g. empty text parameters for the cTrader CLI.
-      if (adapters.config.validate(config.parameters, schemaOf(algo.metadata), validateOptions).errors.length) {
+      if (adapters.config.validate(config.parameters, schema, validateOptions).errors.length) {
         return reply.code(400).send({ error: "parameters_incomplete" });
       }
 
@@ -519,7 +507,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           name: algo.name,
           file: await readFile(join(algosDir, algo.file_path)),
           fullAccess: algo.full_access === 1,
-          parameters: schemaOf(algo.metadata),
+          parameters: schema,
         },
         symbol: config.symbol,
         period: config.period,
@@ -546,7 +534,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         await adapters.runtime.start(name);
         runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
       }
-      await setShouldRun(db, name, runtime.status === "running" || runtime.status === "restarting");
+      await setShouldRun(db, name, isUp(runtime.status));
       await audit(db, {
         action: "instance.deploy",
         target: name,

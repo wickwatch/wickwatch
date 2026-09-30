@@ -8,8 +8,10 @@ import IconButton from "../components/IconButton.vue";
 import ParameterList from "../components/ParameterList.vue";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
-import { formatDateTime } from "../format";
+import { formatDateTime, formatFileSize } from "../format";
+import { groupBy } from "../group-by";
 import { isAdmin } from "../session";
+import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
 
@@ -23,21 +25,23 @@ const file = ref<File>();
 const version = ref("");
 const removing = ref<AlgoRow>();
 
+/** The broker's algo file extensions, e.g. ".algo". */
+const extensions = computed(() => (system.value?.algoFormats ?? []).map((f) => `.${f}`));
+const formats = computed(() => extensions.value.join(", "));
+
 const form = useValidation();
 const fileField = form.field(
   () => file.value?.name,
   checks.required,
   (name) =>
-    name && !String(name).toLowerCase().endsWith(".algo") ? { key: "validation.algoFile", live: true } : undefined,
+    name && extensions.value.length && !extensions.value.some((e) => String(name).toLowerCase().endsWith(e))
+      ? { key: "validation.algoFile", params: { formats: formats.value }, live: true }
+      : undefined,
 );
 const versionField = form.field(() => version.value, checks.version);
 
 /** Newest version first within each algo. */
-const groups = computed(() => {
-  const byName = new Map<string, AlgoRow[]>();
-  for (const a of algos.value) byName.set(a.name, [...(byName.get(a.name) ?? []), a]);
-  return [...byName.entries()];
-});
+const groups = computed(() => [...groupBy(algos.value, (a) => a.name)]);
 
 async function load() {
   algos.value = await api.algos();
@@ -103,12 +107,6 @@ const confirmRemove = () => {
       () => t("algos.deleted", { name: algo.name, version: algo.version }),
     );
 };
-
-const fileSize = (bytes: number) => {
-  const [value, unit] =
-    bytes < 1024 ? [bytes, "byte"] : bytes < 1024 ** 2 ? [bytes / 1024, "kilobyte"] : [bytes / 1024 ** 2, "megabyte"];
-  return new Intl.NumberFormat(locale.value, { style: "unit", unit, maximumFractionDigits: 1 }).format(value);
-};
 </script>
 
 <template>
@@ -125,7 +123,7 @@ const fileSize = (bytes: number) => {
         class="head__action"
         @click="openUpload"
       />
-      <p class="muted intro">{{ $t("algos.intro") }}</p>
+      <p class="muted intro">{{ $t("algos.intro", { formats }) }}</p>
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
@@ -144,7 +142,7 @@ const fileSize = (bytes: number) => {
                 [
                   a.buildTime ? $t("algos.built", { time: formatDateTime(locale, a.buildTime) }) : undefined,
                   $t("algos.uploadedAt", { time: formatDateTime(locale, a.uploadedAt) }),
-                  fileSize(a.size),
+                  formatFileSize(locale, a.size),
                 ]
                   .filter(Boolean)
                   .join(" · ")
@@ -177,9 +175,9 @@ const fileSize = (bytes: number) => {
           <div class="field">
             <FileDrop
               v-bind="fileField.attrs.value"
-              accept=".algo"
-              :title="$t('algos.file')"
-              :hint="$t('algos.fileHint')"
+              :accept="extensions.join(',')"
+              :title="$t('algos.file', { formats })"
+              :hint="$t('algos.fileHint', { formats })"
               :selected="file?.name"
               @file="file = $event"
             />
@@ -263,27 +261,8 @@ const fileSize = (bytes: number) => {
   gap: var(--ww-space-2);
 }
 
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
-  padding: var(--ww-space-8) var(--ww-space-10);
-}
-
-.intro,
-.status,
-p[role="alert"] {
+.intro {
   margin: 0;
-}
-
-.status:empty {
-  display: none;
-}
-
-.status {
-  color: var(--ww-positive);
-  font-weight: 600;
 }
 
 .card,
@@ -332,11 +311,5 @@ details summary {
 
 .algo-params {
   margin-top: var(--ww-space-3);
-}
-
-@media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
-  }
 }
 </style>

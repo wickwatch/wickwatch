@@ -58,6 +58,10 @@ export function describeBrokerAdapter(name: string, options: BrokerContractOptio
       await expectAdapterError(adapter.accounts(options.invalidCredentials!), "auth_failed");
     });
 
+    it("names the algo file formats it reads", () => {
+      expect(adapter.algoFormats().length).toBeGreaterThan(0);
+    });
+
     it("lists unique periods, if it knows them", () => {
       const periods = adapter.periods?.() ?? ["any"];
       expect(periods.length).toBeGreaterThan(0);

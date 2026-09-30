@@ -108,8 +108,11 @@ export function createAttributor(
     }
   }
 
+  const byAccount = new Map<string, Target[]>();
+  for (const t of targets) byAccount.set(t.account, [...(byAccount.get(t.account) ?? []), t]);
+
   function automaticOwner(account: string, item: TradeItem): string | undefined {
-    const onAccount = targets.filter((t) => t.account === account);
+    const onAccount = byAccount.get(account) ?? [];
     if (item.label) {
       const byLabel = onAccount.find((t) => (t.mode === "auto" || t.mode === "label") && t.orderLabel === item.label);
       if (byLabel) return byLabel.name;

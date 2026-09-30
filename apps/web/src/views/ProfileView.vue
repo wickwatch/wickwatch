@@ -6,28 +6,20 @@ import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
 import IconButton from "../components/IconButton.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { currentUser, loadSession } from "../session";
 import { checks, MIN_PASSWORD_LENGTH, useValidation } from "../validation";
 
 const totp = ref<TotpSetup>();
 const code = ref("");
 const password = ref("");
-const error = ref<string>();
 const notice = ref<string>();
-const busy = ref(false);
-
-async function run(action: () => Promise<void>) {
-  busy.value = true;
-  error.value = undefined;
+const { busy, error, run: runAction } = useAsyncAction();
+/** Also clears the last notice, like the password change. */
+const run = (action: () => Promise<void>) => {
   notice.value = undefined;
-  try {
-    await action();
-  } catch (e) {
-    error.value = errorKey(e);
-  } finally {
-    busy.value = false;
-  }
-}
+  return runAction(action);
+};
 
 const startEnable = () =>
   run(async () => {
@@ -276,15 +268,6 @@ h2 {
 
 p {
   margin: 0;
-}
-
-.status:empty {
-  display: none;
-}
-
-.status {
-  color: var(--ww-positive);
-  font-weight: 600;
 }
 
 .facts {

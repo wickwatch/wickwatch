@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
+import { parameterDefaults } from "@wickwatch/core/parameters";
 import { computed, reactive, ref, useId, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { groupBy } from "../group-by";
 import AppIcon from "./AppIcon.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import ParameterField from "./ParameterField.vue";
@@ -37,7 +39,7 @@ const value = (p: ParameterSchema) => props.values?.[p.name];
 const isChanged = (p: ParameterSchema) =>
   props.mode !== "schema" && p.default !== undefined && value(p) !== undefined && value(p) !== p.default;
 /** An empty value shows as "–", so it reads as empty rather than missing. */
-const show = (v: unknown) => (v === undefined || v === "" ? "–" : String(v));
+const show = (v: unknown) => (v === undefined || v === "" ? t("format.none") : String(v));
 
 /** Values the algo does not know (view only): shown in a group of their own, so nothing is hidden. */
 const unknown = computed<ParameterSchema[]>(() =>
@@ -49,9 +51,7 @@ const unknown = computed<ParameterSchema[]>(() =>
 );
 const grouped = computed(() => props.schema.some((p) => p.group));
 const groups = computed<Group[]>(() => {
-  const byGroup = new Map<string, ParameterSchema[]>();
-  for (const p of props.schema) byGroup.set(p.group ?? "", [...(byGroup.get(p.group ?? "") ?? []), p]);
-  const list = [...byGroup.entries()].map(([key, params]) => ({
+  const list = [...groupBy(props.schema, (p) => p.group ?? "")].map(([key, params]) => ({
     key,
     title: key || t("instanceForm.general"),
     params,
@@ -80,6 +80,8 @@ function toggle(g: Group) {
   if (open.has(g.key)) open.delete(g.key);
   else open.add(g.key);
 }
+/** Changed values per group key. */
+const changedIn = computed(() => new Map(groups.value.map((g) => [g.key, g.params.filter(isChanged).length])));
 const issuesIn = (g: Group) => g.params.filter((p) => props.issues?.has(p.name)).length;
 // A group with a problem opens, so the marked field can be seen and focused.
 watch(
@@ -95,10 +97,7 @@ function update(name: string, v: unknown) {
 const resetting = ref(false);
 function resetAll() {
   resetting.value = false;
-  const defaults = Object.fromEntries(
-    props.schema.filter((p) => p.default !== undefined).map((p) => [p.name, p.default]),
-  );
-  emit("update:values", { ...props.values, ...defaults });
+  emit("update:values", { ...props.values, ...parameterDefaults(props.schema) });
 }
 
 const range = (p: ParameterSchema) =>
@@ -160,8 +159,8 @@ const range = (p: ParameterSchema) =>
           <AppIcon name="chevronDown" class="group__chevron" :size="16" />
           <span class="group__title">{{ g.title }}</span>
           <span class="muted group__meta">{{ $t("parameters.count", g.params.length) }}</span>
-          <span v-if="g.params.filter(isChanged).length" class="pill tone-warning">
-            {{ $t("parameters.changedCount", { count: g.params.filter(isChanged).length }) }}
+          <span v-if="changedIn.get(g.key)" class="pill tone-warning">
+            {{ $t("parameters.changedCount", { count: changedIn.get(g.key) }) }}
           </span>
           <span v-if="issuesIn(g)" class="pill tone-negative">
             {{ $t("parameters.issueCount", issuesIn(g)) }}

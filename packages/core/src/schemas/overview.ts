@@ -141,6 +141,10 @@ export const SystemInfo = Type.Object({
   capabilities: Capabilities,
   /** Timeframes offered by the broker adapter, if it knows them. */
   periods: Type.Optional(Type.Array(Type.String())),
+  /** The period a new instance is set up with, if the broker adapter has one. */
+  defaultPeriod: Type.Optional(Type.String()),
+  /** File extensions of algo files for upload, e.g. `algo`. */
+  algoFormats: Type.Array(Type.String()),
   /** File extensions of parameter files for upload and download, e.g. `cbotset`. */
   parameterFormats: Type.Array(Type.String()),
 });

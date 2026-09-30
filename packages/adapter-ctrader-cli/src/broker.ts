@@ -55,10 +55,6 @@ const ACCOUNTS_CACHE_MS = 60_000;
 
 const dateOnly = (time: number) => new Date(time).toISOString().slice(0, 10);
 
-/**
- * Broker adapter for the cTrader CLI (tested with 5.9): accounts, balances, positions, orders and
- * deals, closing positions, cancelling orders and the emergency stop per account.
- */
 /** Output of `ctrader-cli periods` (5.9), time-based frames first; tokens are case-insensitive. */
 const PERIODS = [
   ..."m1 m2 m3 m4 m5 m6 m7 m8 m9 m10 m15 m20 m30 m45 h1 h2 h3 h4 h6 h8 h12 D1 D2 D3 W1 Month1".split(" "),
@@ -76,6 +72,10 @@ const PERIODS = [
   ),
 ];
 
+/**
+ * Broker adapter for the cTrader CLI (tested with 5.9): accounts, balances, positions, orders and
+ * deals, closing positions, cancelling orders and the emergency stop per account.
+ */
 export class CtraderCliBroker implements BrokerAdapter {
   readonly id = "ctrader-cli";
   private readonly options: CliOptions;
@@ -105,6 +105,12 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   periods(): string[] {
     return PERIODS;
+  }
+
+  readonly defaultPeriod = "m5";
+
+  algoFormats(): string[] {
+    return ["algo"];
   }
 
   logEvent(text: string): LogEvent | undefined {

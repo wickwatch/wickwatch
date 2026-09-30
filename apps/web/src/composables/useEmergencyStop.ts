@@ -2,8 +2,7 @@ import type { AccountSummary } from "@wickwatch/core";
 import { computed, ref, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
-
-type Notice = { tone: "positive" | "negative"; text: string } | undefined;
+import type { Notice } from "./notice";
 
 /**
  * Only offered when there is something to stop: a running instance, an open position or a pending order. It also
@@ -13,7 +12,7 @@ export const hasSomethingToStop = (account: AccountSummary) =>
   account.instances.running > 0 || account.openPositions > 0 || (account.pendingOrders ?? 0) > 0;
 
 /** Emergency stop of an account after confirmation, the same on the overview and the account page. */
-export function useEmergencyStop(notice: Ref<Notice>, refresh: () => Promise<unknown>) {
+export function useEmergencyStop(notice: Ref<Notice | undefined>, refresh: () => Promise<unknown>) {
   const { t } = useI18n();
   const confirming = ref<AccountSummary>();
   /** Account number while its stop runs. */

@@ -3,8 +3,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type { Locale } from "../config";
 import type { Db } from "../db";
 import { alertText } from "./alert-text";
-
-const REQUEST_TIMEOUT_MS = 10_000;
+import { postJson, REQUEST_TIMEOUT_MS } from "./webhook";
 
 export interface NotifierOptions {
   db: Db;
@@ -126,20 +125,16 @@ export class AlertNotifier {
     return { event, time, ...alert, ...about, text, content: text };
   }
 
-  private async post(url: URL, body: AlertEvent): Promise<boolean> {
-    try {
-      const response = await this.fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (response.ok) return true;
-      this.options.log.warn({ status: response.status, code: body.code }, "Alert webhook refused the notification");
-    } catch (error) {
-      this.options.log.warn({ reason: (error as Error).name, code: body.code }, "Alert webhook not reachable");
-    }
-    return false;
+  private post(url: URL, body: AlertEvent): Promise<boolean> {
+    return postJson({
+      fetch: this.fetch,
+      url,
+      body,
+      log: this.options.log,
+      refused: "Alert webhook refused the notification",
+      unreachable: "Alert webhook not reachable",
+      context: { code: body.code },
+    });
   }
 
   private async heartbeat(url: URL): Promise<void> {

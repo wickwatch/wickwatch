@@ -4,7 +4,7 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { api } from "../api";
 import { usePolling } from "../composables/usePolling";
-import { formatGigabytes, formatPercent } from "../format";
+import { formatDecimal, formatGigabytes, formatPercent } from "../format";
 import type { IconName } from "../icons";
 import AppIcon from "./AppIcon.vue";
 
@@ -32,7 +32,7 @@ const clock = computed(() => {
   if (host.clockOffsetMs !== undefined) {
     const off = Math.abs(host.clockOffsetMs);
     const level = off <= WATCH_MS ? "ok" : off <= ALERT_MS ? "warning" : "error";
-    const amount = `${new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(off / 1000)} s`;
+    const amount = `${formatDecimal(locale.value, off / 1000)} s`;
     const drift = t(host.clockOffsetMs >= 0 ? "host.clock.ahead" : "host.clock.behind", { offset: amount });
     return { ...LEVELS[level], text: `${t(`host.clock.${level}`, { drift })}\n${why} ${t("host.clock.source")}` };
   }

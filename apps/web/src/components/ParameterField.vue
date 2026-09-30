@@ -20,9 +20,9 @@ const props = defineProps<{
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
 
 const id = computed(() => `param-${props.param.name}`);
-const changed = computed(() => props.param.default !== undefined && props.modelValue !== props.param.default);
-const text = computed(() => (props.modelValue === undefined ? "" : String(props.modelValue)));
 const hasDefault = computed(() => props.param.default !== undefined);
+const changed = computed(() => hasDefault.value && props.modelValue !== props.param.default);
+const text = computed(() => (props.modelValue === undefined ? "" : String(props.modelValue)));
 
 function onNumber(event: Event) {
   const raw = (event.target as HTMLInputElement).value;

@@ -71,6 +71,7 @@ beforeEach(() => {
       emergencyStop: true,
       parameterExport: [],
     },
+    algoFormats: ["algo"],
     parameterFormats: [],
   };
   body = detail();

@@ -1,18 +1,11 @@
-import {
-  emergencyStopAccount,
-  isAdapterError,
-  profileDay,
-  tradingDayKey,
-  tradingDayStart,
-  type RuleResult,
-} from "@wickwatch/core";
+import { isAdapterError, profileDay, tradingDayKey, tradingDayStart, type RuleResult } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory, AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
 import { audit } from "./audit";
-import { clearShouldRunForAccount } from "./instance-keeper";
+import { stopAccount } from "./instance-keeper";
 
 export interface LossGuardOptions {
   db: Db;
@@ -123,11 +116,10 @@ export class LossGuardService {
     let ok = false;
     let details: Record<string, unknown>;
     try {
-      await clearShouldRunForAccount(db, entry.id);
-      const report = await emergencyStopAccount({
+      const report = await stopAccount(db, entry.id, {
         runtime: adapters.runtime,
         broker: adapters.broker,
-        credentials,
+        credentials: () => Promise.resolve(credentials),
         account: entry.number,
         labelPrefix,
       });

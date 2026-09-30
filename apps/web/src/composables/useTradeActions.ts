@@ -3,14 +3,17 @@ import { computed, reactive, ref, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
 import { formatPrice } from "../format";
-
-type Notice = { tone: "positive" | "negative"; text: string } | undefined;
+import type { Notice } from "./notice";
 
 /**
  * Closing a position and cancelling an order after confirmation, the same on the instance and the account page.
  * `busy` holds the ids being worked on; `account` is the account number the trades are on.
  */
-export function useTradeActions(account: () => string | undefined, notice: Ref<Notice>, refresh: () => unknown) {
+export function useTradeActions(
+  account: () => string | undefined,
+  notice: Ref<Notice | undefined>,
+  refresh: () => unknown,
+) {
   const { t, locale } = useI18n();
   const busy = reactive(new Set<string>());
   const closing = ref<Position>();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dealR, dealRisk, dealStats, withRisk, type Deal } from "../src";
+import { dealR, dealResult, dealRisk, dealStats, withRisk, type Deal, type TradeDeal } from "../src";
 
 const base: Deal = {
   id: "1",
@@ -66,5 +66,55 @@ describe("risk and R", () => {
       deal({ id: "3", initialStopLoss: undefined }),
     ]);
     expect(stats).toMatchObject({ rTrades: 2, totalR: 0.54, averageR: 0.27 });
+  });
+
+  it("gives the same numbers as walking all newer account deals for every trade", () => {
+    // The former O(n²) implementation, kept as the reference.
+    function reference(deals: Deal[], accountDeals: Deal[], balance: number | undefined): TradeDeal[] {
+      const byTime = [...accountDeals].sort((a, b) => b.time.localeCompare(a.time));
+      return deals.map((deal) => {
+        const risk = dealRisk(deal);
+        if (risk === undefined) return deal;
+        const r = dealR(deal);
+        let before: number | undefined;
+        if (balance !== undefined) {
+          before = balance;
+          for (const d of byTime) {
+            if (d.time < deal.time) break;
+            before -= dealResult(d);
+          }
+        }
+        return {
+          ...deal,
+          risk,
+          ...(before !== undefined && before > 0 ? { riskPct: Math.round((risk / before) * 10000) / 100 } : {}),
+          ...(r !== undefined ? { r } : {}),
+        };
+      });
+    }
+    // Deterministic pseudo-random numbers, so a failure can be reproduced.
+    let seed = 42;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      return seed / 2 ** 31;
+    };
+    const cents = (max: number) => Math.round((random() - 0.5) * max * 100) / 100;
+    for (let run = 0; run < 50; run++) {
+      const accountDeals = Array.from({ length: Math.floor(random() * 200) }, (_, i) => {
+        // Few distinct times, so ties are common; some times without milliseconds.
+        const time = new Date(Date.UTC(2026, 8, 1) + Math.floor(random() * 40) * 3_600_000).toISOString();
+        return deal({
+          id: String(i),
+          time: random() < 0.2 ? time.replace(".000Z", "Z") : time,
+          pnl: cents(500),
+          commission: random() < 0.5 ? cents(5) : undefined,
+          swap: random() < 0.3 ? cents(3) : undefined,
+          initialStopLoss: random() < 0.8 ? 29164.23 : undefined,
+        });
+      });
+      const own = accountDeals.filter(() => random() < 0.5);
+      const balance = random() < 0.1 ? undefined : random() < 0.1 ? cents(100) : 10_000 + cents(2_000);
+      expect(withRisk(own, accountDeals, balance)).toStrictEqual(reference(own, accountDeals, balance));
+    }
   });
 });

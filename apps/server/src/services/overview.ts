@@ -3,15 +3,14 @@ import {
   buildOverview,
   isAdapterError,
   profileDay,
+  readLabels,
   tradingDayStart,
+  type AdapterErrorCode,
   type ChallengeProfile,
   type AccountDetail,
   type AccountSnapshot,
-  type LogLine,
   type Overview,
   type OverviewInput,
-  type RuntimeAdapter,
-  type RuntimeInstance,
 } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { AccountDirectory, AccountEntry } from "../accounts";
@@ -75,9 +74,11 @@ async function loadOverviewInput(
     loadOverrides(db, adapters.broker.id),
   ]);
   const entries = only === undefined ? allEntries : allEntries.filter((e) => e.number === only);
-  const [lastLogs, logStates, accounts] = await Promise.all([
-    lastLogLines(adapters.runtime, instances),
-    logTracker.states(instances),
+  // Logs only of the instances shown; attribution still needs all of them.
+  const shown =
+    only === undefined ? instances : instances.filter((i) => readLabels(labelPrefix, i.labels).account === only);
+  const [logs, accounts] = await Promise.all([
+    logTracker.read(shown),
     Promise.all(entries.map((entry) => snapshot(adapters, db, entry, profiles.get(entry.id), utcDayStart, now, log))),
   ]);
   const clockOffsetMs = clockOffset(now.getTime());
@@ -85,8 +86,8 @@ async function loadOverviewInput(
     time: now,
     labelPrefix,
     instances,
-    lastLogs,
-    logStates,
+    lastLogs: logs.lastLines,
+    logStates: logs.states,
     accounts,
     overrides,
     ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
@@ -141,22 +142,13 @@ async function snapshot(
       ...(challenge ? { challenge } : {}),
     };
   } catch (error) {
-    if (!isAdapterError(error)) log.error({ err: error, account: entry.number }, "Broker query failed");
-    return { ...base, error: isAdapterError(error) ? error.code : "unavailable" };
+    return { ...base, error: brokerErrorCode(error, entry.number, log) };
   }
 }
 
-async function lastLogLines(runtime: RuntimeAdapter, instances: RuntimeInstance[]): Promise<Map<string, LogLine>> {
-  const entries = await Promise.all(
-    instances.map(async (instance) => {
-      let last: LogLine | undefined;
-      try {
-        for await (const line of runtime.logs(instance.ref, { tail: 1 })) last = line;
-      } catch {
-        // A missing log is not worth failing the overview for.
-      }
-      return [instance.ref, last] as const;
-    }),
-  );
-  return new Map(entries.filter((e): e is readonly [string, LogLine] => e[1] !== undefined));
+/** What a failed broker query shows as; errors other than the adapter's own are logged. */
+export function brokerErrorCode(error: unknown, account: string, log: FastifyBaseLogger): AdapterErrorCode {
+  if (isAdapterError(error)) return error.code;
+  log.error({ err: error, account }, "Broker query failed");
+  return "unavailable";
 }

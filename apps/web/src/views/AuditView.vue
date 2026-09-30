@@ -194,14 +194,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
-  padding: var(--ww-space-8) var(--ww-space-10);
-}
-
 .head {
   display: flex;
   flex-direction: column;
@@ -210,10 +202,6 @@ onMounted(() => {
 
 .head h1,
 .intro,
-p[role="alert"] {
-  margin: 0;
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -275,10 +263,6 @@ thead th {
 }
 
 @media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
-  }
-
   .filters .field {
     flex: 1 1 100%;
   }

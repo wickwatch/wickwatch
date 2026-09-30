@@ -1,6 +1,6 @@
 import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from "node:crypto";
 
-export const MIN_PASSWORD_LENGTH = 12;
+export { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
 
 const PARAMS = { N: 2 ** 15, r: 8, p: 1 } as const;
 const KEY_LENGTH = 32;

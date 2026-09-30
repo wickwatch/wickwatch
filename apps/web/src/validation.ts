@@ -1,4 +1,6 @@
 import { computed, ref, watch, type ComputedRef, type Directive, type Ref } from "vue";
+import { INSTANCE_NAME, SAFE_NAME } from "@wickwatch/core/rules";
+import { isTimeZone } from "@wickwatch/core/trading-day";
 import { ApiError } from "./api";
 
 // Field checks shared by all forms: a check returns an i18n message or nothing. The server checks
@@ -34,14 +36,14 @@ const format =
     return pattern.test(v) ? undefined : { key };
   };
 
-/** Same as the server's minimum (apps/server/src/security/password.ts). */
-export const MIN_PASSWORD_LENGTH = 12;
+/** The server's minimum, shared through the core. */
+export { MIN_PASSWORD_LENGTH } from "@wickwatch/core/rules";
 
 export const checks = {
   required: ((value) => (isEmpty(value) ? { key: "validation.required" } : undefined)) as Check,
-  /** Also the container name and the default order label (see the server's NAME pattern). */
-  instanceName: format(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/, /[a-z0-9-]/, "validation.instanceName"),
-  version: format(/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/, /[A-Za-z0-9._-]/, "validation.version"),
+  /** Also the container name and the default order label. */
+  instanceName: format(INSTANCE_NAME, /[a-z0-9-]/, "validation.instanceName"),
+  version: format(SAFE_NAME, /[A-Za-z0-9._-]/, "validation.version"),
   username: format(/^[A-Za-z0-9._@-]+$/, /[A-Za-z0-9._@-]/, "validation.username"),
   code: format(/^\d{6,8}$/, /\d/, "validation.code"),
   accountNumber: format(/^\d+$/, /\d/, "validation.accountNumber"),
@@ -69,15 +71,8 @@ export const checks = {
       return { key: "validation.regex" };
     }
   }) as Check,
-  timeZone: ((value) => {
-    if (isEmpty(value)) return undefined;
-    try {
-      new Intl.DateTimeFormat("en", { timeZone: text(value) });
-      return undefined;
-    } catch {
-      return { key: "validation.timeZone" };
-    }
-  }) as Check,
+  timeZone: ((value) =>
+    isEmpty(value) || isTimeZone(text(value)) ? undefined : { key: "validation.timeZone" }) as Check,
   /** Numbers from `v-model.number`: an empty field is a string, a partial one too. */
   number:
     ({ min, max, integer = false }: { min?: number; max?: number; integer?: boolean }): Check =>

@@ -2,14 +2,13 @@
 import { useId } from "vue";
 
 /** Loading state: the logo symbol with its radar sweeping round; the blips light up as the beam passes. */
-withDefaults(defineProps<{ size?: number }>(), { size: 56 });
 const gradient = `sweep-${useId()}`;
 </script>
 
 <template>
   <div class="spinner" role="status">
     <!-- The logo symbol (assets/logo) in the brand colours, drawn inline so its parts can move. -->
-    <svg class="spinner__symbol" viewBox="0 0 120 120" :width="size" :height="size" aria-hidden="true">
+    <svg class="spinner__symbol" viewBox="0 0 120 120" width="56" height="56" aria-hidden="true">
       <defs>
         <linearGradient :id="gradient" x1="0.2" y1="0" x2="1" y2="0.6">
           <stop offset="0" class="spinner__beam spinner__beam--noon" />

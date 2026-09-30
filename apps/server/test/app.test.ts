@@ -69,6 +69,8 @@ describe("app", () => {
       labelPrefix: "wickwatch",
       adapters: { runtime: "demo", broker: "demo", config: "demo" },
       capabilities: { emergencyStop: true },
+      defaultPeriod: "M5",
+      algoFormats: ["algo"],
     });
   });
 

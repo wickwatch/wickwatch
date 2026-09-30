@@ -127,3 +127,8 @@ export function enumNumber(param: ParameterSchema, option: unknown): number | un
   if (at < 0) return undefined;
   return param.optionValues ? param.optionValues[at] : at;
 }
+
+/** The defaults of a schema, for the parameters that have one. */
+export function parameterDefaults(schema: ParameterSchema[]): ParameterValues {
+  return Object.fromEntries(schema.filter((p) => p.default !== undefined).map((p) => [p.name, p.default]));
+}

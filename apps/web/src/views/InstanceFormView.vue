@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { AttributionMode, ParameterIssueCode, ParameterSchema } from "@wickwatch/core";
-// A plain function without the schema library, unlike the core's main entry.
-import { validateParameters } from "@wickwatch/core/parameters";
+// Plain functions and constants without the schema library, unlike the core's main entry.
+import { parameterDefaults, validateParameters } from "@wickwatch/core/parameters";
+import { ATTRIBUTION_MODES } from "@wickwatch/core/rules";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -18,13 +19,11 @@ import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
 import { formatDateTime } from "../format";
-import { splitLabel } from "../parameter-label";
+import { groupBy } from "../group-by";
+import { parameterTitle } from "../parameter-label";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
-
-/** Same order as the core's ATTRIBUTION_MODES; the web app imports only types from the core. */
-const MODES: AttributionMode[] = ["auto", "label", "label-pattern", "account-symbol"];
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -62,11 +61,7 @@ const schema = computed<ParameterSchema[]>(() => algo.value?.parameters ?? []);
 const periods = computed(() => system.value?.periods ?? []);
 /** Values that the chosen algo version does not know; they are left out when saving. */
 const dropped = computed(() => Object.keys(values.value).filter((k) => !schema.value.some((p) => p.name === k)));
-const algoGroups = computed(() => {
-  const byName = new Map<string, AlgoRow[]>();
-  for (const a of algos.value) byName.set(a.name, [...(byName.get(a.name) ?? []), a]);
-  return [...byName.entries()];
-});
+const algoGroups = computed(() => [...groupBy(algos.value, (a) => a.name)]);
 const usesLabel = computed(() => mode.value === "label" || mode.value === "label-pattern");
 
 const form = useValidation();
@@ -104,11 +99,17 @@ const shownIssues = computed(() => {
   return result;
 });
 const formats = computed(() => system.value?.parameterFormats ?? []);
+/** The file extensions, e.g. ".cbotset". */
+const extensions = computed(() => formats.value.map((f) => `.${f}`));
 type Tone = "positive" | "negative" | "warning" | "muted";
-const fileNotice = ref<{ tone: Tone; text: string }[]>();
+interface FileLine {
+  tone: Tone;
+  text: string;
+}
+const fileNotice = ref<FileLine[]>();
 const LISTED = 8;
 /** The short name, without a description written into the label. */
-const label = (n: string) => splitLabel(schema.value.find((p) => p.name === n)?.label ?? n).title;
+const label = (n: string) => parameterTitle(schema.value, n);
 function names(list: string[]): string {
   const shown = list.slice(0, LISTED).map(label).join(", ");
   return list.length > LISTED ? t("instanceForm.andMore", { names: shown, count: list.length - LISTED }) : shown;
@@ -128,23 +129,24 @@ async function loadFile(file: File) {
       .map((i) => label(i.parameter));
     // Rejected values are listed in full with the reason: they are the ones to fix by hand.
     const rejected = parsed.issues.map((i) => `${label(i.parameter)} (${t(`parameterIssue.${i.code}`)})`).join(", ");
-    fileNotice.value = [
+    const lines: (FileLine | false)[] = [
       {
         tone: "positive",
         text: t("instanceForm.fileLoaded", { count: Object.keys(parsed.values).length, file: file.name }),
       },
-      ...(rejected ? [{ tone: "warning" as const, text: t("instanceForm.fileRejected", { names: rejected }) }] : []),
-      ...(parsed.unknown.length
-        ? [{ tone: "warning" as const, text: t("instanceForm.fileUnknown", { names: names(parsed.unknown) }) }]
-        : []),
-      ...(parsed.missing.length
-        ? [{ tone: "muted" as const, text: t("instanceForm.fileMissing", { names: names(parsed.missing) }) }]
-        : []),
+      rejected !== "" && { tone: "warning", text: t("instanceForm.fileRejected", { names: rejected }) },
+      parsed.unknown.length > 0 && {
+        tone: "warning",
+        text: t("instanceForm.fileUnknown", { names: names(parsed.unknown) }),
+      },
+      parsed.missing.length > 0 && {
+        tone: "muted",
+        text: t("instanceForm.fileMissing", { names: names(parsed.missing) }),
+      },
       // In full, like rejected values: each one needs a value before the bot can start.
-      ...(empty.length
-        ? [{ tone: "warning" as const, text: t("instanceForm.fileEmpty", { names: empty.join(", ") }) }]
-        : []),
+      empty.length > 0 && { tone: "warning", text: t("instanceForm.fileEmpty", { names: empty.join(", ") }) },
     ];
+    fileNotice.value = lines.filter((line): line is FileLine => line !== false);
   } catch (e) {
     fileNotice.value = [{ tone: "negative", text: t(errorKey(e)) }];
   }
@@ -154,14 +156,11 @@ async function loadFile(file: File) {
 const canonical = (value: string, options: string[]) =>
   options.find((o) => o === value) ?? options.find((o) => o.toLowerCase() === value.toLowerCase()) ?? value;
 
-const defaults = (params: ParameterSchema[]) =>
-  Object.fromEntries(params.filter((p) => p.default !== undefined).map((p) => [p.name, p.default]));
-
 /** Keeps the values the new algo version still knows; new parameters start with their default. */
 watch(algoId, () => {
   if (loading.value) return;
   const kept = Object.fromEntries(Object.entries(values.value).filter(([k]) => schema.value.some((p) => p.name === k)));
-  values.value = { ...defaults(schema.value), ...kept };
+  values.value = { ...parameterDefaults(schema.value), ...kept };
   issues.value = new Map();
 });
 
@@ -176,13 +175,19 @@ watch(accountId, async (id) => {
   }
 });
 
-function apply(config: InstanceConfigRow) {
+/** A saved configuration's algo (undefined if that version no longer exists) and its complete values. */
+function fromConfig(config: InstanceConfigRow) {
   const found = config.algo.id === null ? undefined : algos.value.find((a) => a.id === config.algo.id);
+  return { found, values: { ...parameterDefaults(found?.parameters ?? []), ...config.parameters } };
+}
+
+function apply(config: InstanceConfigRow) {
+  const { found, values: configValues } = fromConfig(config);
   algoId.value = found?.id;
   missingAlgo.value = found ? undefined : `${config.algo.name} ${config.algo.version}`;
   symbol.value = config.symbol;
   period.value = config.period;
-  values.value = { ...defaults(found?.parameters ?? []), ...config.parameters };
+  values.value = configValues;
   mode.value = config.attribution.mode;
   orderLabel.value = config.attribution.orderLabel ?? "";
 }
@@ -196,10 +201,10 @@ const snapshot = (): Snapshot => ({
   values: { ...values.value },
 });
 function snapshotOf(config: InstanceConfigRow): Snapshot {
-  const found = config.algo.id === null ? undefined : algos.value.find((a) => a.id === config.algo.id);
+  const { found, values } = fromConfig(config);
   return {
     fields: [found?.id, config.symbol, config.period, config.attribution.mode, config.attribution.orderLabel ?? ""],
-    values: { ...defaults(found?.parameters ?? []), ...config.parameters },
+    values,
   };
 }
 /** The configuration that was edited or duplicated, to count what the user changed since. */
@@ -235,8 +240,9 @@ onMounted(async () => {
     } else {
       accountId.value = accountRows[0]?.id;
       algoId.value = algoRows[0]?.id;
-      values.value = defaults(algoRows[0]?.parameters ?? []);
-      period.value = periods.value.find((p) => p.toLowerCase() === "m5") ?? "";
+      values.value = parameterDefaults(algoRows[0]?.parameters ?? []);
+      const preset = system.value?.defaultPeriod?.toLowerCase();
+      period.value = periods.value.find((p) => p.toLowerCase() === preset) ?? "";
     }
   } catch (e) {
     error.value = t(errorKey(e));
@@ -427,9 +433,9 @@ const algoLabel = (a: AlgoRow) =>
         <p class="muted card__hint">{{ $t("instanceForm.parametersHint") }}</p>
         <div v-if="formats.length && algoId !== undefined" class="file-load">
           <FileDrop
-            :accept="formats.map((f) => `.${f}`).join(',')"
+            :accept="extensions.join(',')"
             :title="$t('parameters.fileTitle')"
-            :hint="$t('parameters.fileHint', { formats: formats.map((f) => `.${f}`).join(', ') })"
+            :hint="$t('parameters.fileHint', { formats: extensions.join(', ') })"
             @file="loadFile"
           />
           <div v-if="fileNotice" role="status">
@@ -459,7 +465,7 @@ const algoLabel = (a: AlgoRow) =>
         <!-- All modes with their meaning at once: choosing needs the comparison. -->
         <fieldset class="modes">
           <legend class="visually-hidden">{{ $t("instanceForm.attributionMode") }}</legend>
-          <label v-for="m in MODES" :key="m" class="mode" :class="{ 'mode--chosen': mode === m }">
+          <label v-for="m in ATTRIBUTION_MODES" :key="m" class="mode" :class="{ 'mode--chosen': mode === m }">
             <input v-model="mode" type="radio" name="attribution-mode" :value="m" class="mode__radio" />
             <span class="mode__text">
               <span class="mode__name">{{ $t(`instanceForm.modes.${m}`) }}</span>
@@ -519,14 +525,6 @@ const algoLabel = (a: AlgoRow) =>
 </template>
 
 <style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  min-width: 0;
-  padding: var(--ww-space-8) var(--ww-space-10);
-}
-
 h1,
 p {
   margin: 0;
@@ -666,12 +664,6 @@ p {
   .basics,
   .modes {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .page {
-    padding: var(--ww-space-4);
   }
 }
 

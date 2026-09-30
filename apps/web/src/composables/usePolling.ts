@@ -1,7 +1,7 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
 /**
- * Loads data now and every `intervalMs`, and again when the tab becomes visible.
+ * Loads data now and every `intervalMs` while the tab is visible, and again when it becomes visible.
  * Keeps the last good data on errors and flags it as stale once it is older than two intervals.
  */
 export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
@@ -27,14 +27,22 @@ export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
         inFlight = undefined;
       }));
 
+  const visible = () => document.visibilityState === "visible";
   const onVisible = () => {
-    if (document.visibilityState === "visible") void refresh();
+    if (!visible()) return;
+    now.value = Date.now();
+    void refresh();
   };
 
   onMounted(() => {
     void refresh();
-    timer = setInterval(() => void refresh(), intervalMs);
-    clock = setInterval(() => (now.value = Date.now()), 1000);
+    // A hidden tab neither loads nor ticks; onVisible catches up when it is shown again.
+    timer = setInterval(() => {
+      if (visible()) void refresh();
+    }, intervalMs);
+    clock = setInterval(() => {
+      if (visible()) now.value = Date.now();
+    }, 1000);
     document.addEventListener("visibilitychange", onVisible);
   });
   onUnmounted(() => {

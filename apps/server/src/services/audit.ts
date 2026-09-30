@@ -1,3 +1,4 @@
+import { isAdapterError } from "@wickwatch/core";
 import type { Db } from "../db";
 
 export interface AuditEntry {
@@ -19,4 +20,24 @@ export async function audit(db: Db, entry: AuditEntry): Promise<void> {
       details: entry.details ? JSON.stringify(entry.details) : null,
     })
     .execute();
+}
+
+/**
+ * Runs an action and audits how it went: `{ ok: true }` plus `okDetails` of its result, or `{ ok: false, error }` with
+ * the adapter's error code (`internal` for any other error), which is thrown again.
+ */
+export async function auditOutcome<T>(
+  db: Db,
+  entry: Omit<AuditEntry, "details">,
+  fn: () => Promise<T>,
+  okDetails?: (result: T) => Record<string, unknown>,
+): Promise<T> {
+  try {
+    const result = await fn();
+    await audit(db, { ...entry, details: { ok: true, ...okDetails?.(result) } });
+    return result;
+  } catch (error) {
+    await audit(db, { ...entry, details: { ok: false, error: isAdapterError(error) ? error.code : "internal" } });
+    throw error;
+  }
 }

@@ -508,9 +508,9 @@
     "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures."
   },
   "algos": {
-    "intro": "Bot files (.algo), stored per version with their parameters. Old versions stay for rollbacks.",
+    "intro": "Bot files ({formats}), stored per version with their parameters. Old versions stay for rollbacks.",
     "upload": "Upload algo",
-    "file": "Algo file (.algo)",
+    "file": "Algo file ({formats})",
     "version": "Version (optional)",
     "versionHint": "Default: the bot's BotVersion parameter, else its build time.",
     "uploaded": "{name} {version} uploaded.",
@@ -522,7 +522,7 @@
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} parameters",
     "deleteConfirm": "Delete {name} {version}? The file is removed.",
-    "fileHint": "An .algo file, e.g. exported from the platform."
+    "fileHint": "A {formats} file, e.g. exported from the platform."
   },
   "instanceForm": {
     "newTitle": "New instance",
@@ -635,7 +635,7 @@
     "min": "At least {min}.",
     "max": "At most {max}.",
     "rejected": "The server did not accept this value.",
-    "algoFile": "Choose an .algo file.",
+    "algoFile": "Choose a {formats} file.",
     "chooseAccount": "Choose an account."
   },
   "parameters": {

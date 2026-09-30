@@ -1,8 +1,15 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { BrokerAdapter } from "@wickwatch/core";
+import { AlgoMetadata, type BrokerAdapter, type ParameterSchema } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
+import Value from "typebox/value";
 import type { Db } from "../db";
+
+/** The parameter schema of a stored algo; empty if its metadata is unreadable. */
+export function schemaOf(metadataJson: string): ParameterSchema[] {
+  const metadata: unknown = JSON.parse(metadataJson);
+  return Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
+}
 
 /** Which reader produces an algo's metadata; stored with each algo. */
 export const metadataReader = (broker: BrokerAdapter) => `${broker.id}:${String(broker.algoMetadataVersion ?? 0)}`;

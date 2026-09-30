@@ -1137,6 +1137,7 @@
                     "labelPrefix",
                     "adapters",
                     "capabilities",
+                    "algoFormats",
                     "parameterFormats"
                   ],
                   "properties": {
@@ -1206,6 +1207,15 @@
                       }
                     },
                     "periods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "defaultPeriod": {
+                      "type": "string"
+                    },
+                    "algoFormats": {
                       "type": "array",
                       "items": {
                         "type": "string"

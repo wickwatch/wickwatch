@@ -25,7 +25,7 @@ export function dealStats(deals: Deal[]): DealStats {
     grossLoss: round2(grossLoss),
     net: round2(sum(deals.map(dealResult))),
     ...(decided > 0 ? { winRate: wins.length / decided } : {}),
-    ...(grossLoss > 0 ? { profitFactor: Math.round((grossProfit / grossLoss) * 100) / 100 } : {}),
+    ...(grossLoss > 0 ? { profitFactor: round2(grossProfit / grossLoss) } : {}),
     ...(wins.length > 0 ? { averageWin: round2(grossProfit / wins.length) } : {}),
     ...(losses.length > 0 ? { averageLoss: round2(-grossLoss / losses.length) } : {}),
     ...(rs.length > 0 ? { averageR: round2(sum(rs) / rs.length), totalR: round2(sum(rs)), rTrades: rs.length } : {}),

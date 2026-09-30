@@ -1,4 +1,12 @@
-import type { BrokerAdapter, RuntimeAdapter, RuntimeInstance } from "@wickwatch/core";
+import {
+  emergencyStopAccount,
+  type Credentials,
+  type EmergencyStopOptions,
+  type EmergencyStopReport,
+  type InstanceStatus,
+  type RuntimeAdapter,
+  type RuntimeInstance,
+} from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "../db";
 import { audit } from "./audit";
@@ -8,6 +16,9 @@ const INTERVAL_MS = 15_000;
 const GIVE_UP_WITHIN_MS = 10 * 60_000;
 /** How far back the log is read to tell a self-stop from a stop from outside. */
 const LOG_TAIL = 15;
+
+/** Running, or about to run again: counts as meant to run. */
+export const isUp = (status: InstanceStatus) => status === "running" || status === "restarting";
 
 /** Marks a managed instance as meant to run or not; no-op for instances Wickwatch does not manage. */
 export async function setShouldRun(db: Db, names: string | string[], shouldRun: boolean): Promise<void> {
@@ -20,9 +31,17 @@ export async function setShouldRun(db: Db, names: string | string[], shouldRun: 
     .execute();
 }
 
-/** Before an emergency stop or the loss guard stops an account: its instances are no longer meant to run. */
-export async function clearShouldRunForAccount(db: Db, accountId: number): Promise<void> {
+/**
+ * Emergency stop of an account, by hand or by the loss guard. Its instances are first marked as no longer meant to run,
+ * so they are not started again after a restart; the credentials are read only after that.
+ */
+export async function stopAccount(
+  db: Db,
+  accountId: number,
+  options: Omit<EmergencyStopOptions, "credentials"> & { credentials: () => Promise<Credentials> },
+): Promise<EmergencyStopReport> {
   await db.updateTable("instances").set({ should_run: 0 }).where("account_id", "=", accountId).execute();
+  return emergencyStopAccount({ ...options, credentials: await options.credentials() });
 }
 
 /**
@@ -53,7 +72,6 @@ export class InstanceKeeper {
     private readonly opts: {
       db: Db;
       runtime: RuntimeAdapter;
-      broker: BrokerAdapter;
       log: FastifyBaseLogger;
       intervalMs?: number;
       now?: () => number;
@@ -95,7 +113,7 @@ export class InstanceKeeper {
     for (const row of rows) {
       const instance = byRef.get(row.name);
       if (!instance) continue;
-      if (instance.status === "running" || instance.status === "restarting") {
+      if (isUp(instance.status)) {
         if (!row.should_run && !this.tookOver) await setShouldRun(db, row.name, true);
         continue;
       }
@@ -111,12 +129,11 @@ export class InstanceKeeper {
     this.tookOver = true;
   }
 
+  /** The runtime must come with the broker's log events (withLogEvents), as the one from createAdapters does. */
   private async stoppedItself(ref: string): Promise<boolean> {
-    const { runtime, broker } = this.opts;
-    if (!broker.logEvent) return false;
     try {
-      for await (const line of runtime.logs(ref, { tail: LOG_TAIL })) {
-        if (broker.logEvent(line.text) === "algo_stopped") return true;
+      for await (const line of this.opts.runtime.logs(ref, { tail: LOG_TAIL })) {
+        if (line.event === "algo_stopped") return true;
       }
     } catch {
       // Without a log, treat it as interrupted.

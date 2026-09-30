@@ -3,8 +3,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type { Locale } from "../config";
 import type { Db } from "../db";
 import { summaryText } from "./alert-text";
-
-const REQUEST_TIMEOUT_MS = 10_000;
+import { postJson } from "./webhook";
 
 export interface DailySummaryOptions {
   db: Db;
@@ -131,19 +130,14 @@ export class DailySummary {
     };
   }
 
-  private async post(body: SummaryEvent): Promise<boolean> {
-    try {
-      const response = await this.fetch(this.options.webhookUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (response.ok) return true;
-      this.options.log.warn({ status: response.status }, "Alert webhook refused the daily summary");
-    } catch (error) {
-      this.options.log.warn({ reason: (error as Error).name }, "Alert webhook not reachable for the daily summary");
-    }
-    return false;
+  private post(body: SummaryEvent): Promise<boolean> {
+    return postJson({
+      fetch: this.fetch,
+      url: this.options.webhookUrl,
+      body,
+      log: this.options.log,
+      refused: "Alert webhook refused the daily summary",
+      unreachable: "Alert webhook not reachable for the daily summary",
+    });
   }
 }

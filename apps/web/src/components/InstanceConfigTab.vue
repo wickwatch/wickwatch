@@ -6,7 +6,8 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api, errorKey, type AlgoRow, type InstanceConfigRow, type ManagedInstanceDetail } from "../api";
 import { formatDateTime } from "../format";
-import { splitLabel } from "../parameter-label";
+import { isActive, isOutdated, outdatedText } from "../instance-state";
+import { parameterTitle } from "../parameter-label";
 import { isAdmin } from "../session";
 import { system } from "../system";
 import AppBanner from "./AppBanner.vue";
@@ -46,8 +47,8 @@ onMounted(async () => {
 const deployment = computed(() => props.managed?.deployment);
 const version = computed(() => props.managed?.config.version ?? 0);
 /** The container runs another configuration than the saved one. */
-const outdated = computed(() => deployment.value?.managed === true && deployment.value.configVersion !== version.value);
-const running = computed(() => deployment.value?.status === "running" || deployment.value?.status === "restarting");
+const outdated = computed(() => isOutdated(props.managed));
+const running = computed(() => isActive(deployment.value?.status));
 
 const confirmTitle = computed(() => {
   if (!deployment.value) return pending.value?.start ? t("deploy.createAndStart") : t("deploy.create");
@@ -87,7 +88,7 @@ async function deploy() {
 
 const schemaOf = (config: InstanceConfigRow): ParameterSchema[] =>
   algos.value.find((a) => a.id === config.algo.id)?.parameters ?? [];
-const show = (value: unknown) => (value === undefined ? "–" : String(value));
+const show = (value: unknown) => (value === undefined ? t("format.none") : String(value));
 
 /** The algo's parameters; empty if the algo version was deleted, then the values show as "not in the algo". */
 const schema = computed<ParameterSchema[]>(() => (props.managed ? schemaOf(props.managed.config) : []));
@@ -97,7 +98,7 @@ const incomplete = computed(() => {
   if (!props.managed || system.value?.capabilities?.requiresTextValues !== true) return [];
   return validateParameters(props.managed.config.parameters, schema.value, { requireText: true })
     .errors.filter((i) => i.code === "required")
-    .map((i) => splitLabel(schema.value.find((p) => p.name === i.parameter)?.label ?? i.parameter).title);
+    .map((i) => parameterTitle(schema.value, i.parameter));
 });
 
 const attributionText = (c: InstanceConfigRow) =>
@@ -171,11 +172,7 @@ function changes(index: number): string[] {
         <span>{{ $t("deploy.foreign") }}</span>
       </AppBanner>
       <AppBanner v-else-if="outdated" tone="warning" :title="$t('alert.level.warning')">
-        <span>{{
-          deployment.configVersion
-            ? $t("deploy.outdated", { version, running: deployment.configVersion })
-            : $t("deploy.outdatedUnknown", { version })
-        }}</span>
+        <span>{{ outdatedText($t, managed) }}</span>
         <span class="muted">{{ $t("instanceConfig.notDeployed") }}</span>
         <template v-if="isAdmin" #actions>
           <button
@@ -287,10 +284,6 @@ function changes(index: number): string[] {
 
 p {
   margin: 0;
-}
-
-.status {
-  font-weight: 600;
 }
 
 .card {

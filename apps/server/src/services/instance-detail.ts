@@ -1,19 +1,18 @@
 import {
   AdapterError,
   buildInstanceDetail,
-  isAdapterError,
   readLabels,
   type InstanceDetail,
   type InstanceDetailInput,
-  type LogLine,
 } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
-import { findAccount, type AccountDirectory } from "../accounts";
+import { findAccount, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { DealHistory } from "./deal-history";
 import type { LogTracker } from "./log-tracker";
 import { loadOverrides } from "./overrides";
+import { brokerErrorCode } from "./overview";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,13 +37,13 @@ export async function loadInstanceDetail(
   const number = readLabels(labelPrefix, instance.labels).account;
   const entry = number ? await findAccount(directory, number) : undefined;
 
-  const [lastLog, logStates, account, overrides] = await Promise.all([
-    lastLine(adapters, ref),
-    logTracker.states([instance]),
+  const [logs, account, overrides] = await Promise.all([
+    logTracker.read([instance]),
     entry ? brokerData(adapters, history, entry, from, now, range === "all", log) : Promise.resolve(undefined),
     loadOverrides(db, adapters.broker.id),
   ]);
-  const logState = logStates.get(ref);
+  const lastLog = logs.lastLines.get(ref);
+  const logState = logs.states.get(ref);
   return buildInstanceDetail({
     time: now,
     from,
@@ -62,7 +61,7 @@ export async function loadInstanceDetail(
 async function brokerData(
   { broker }: Adapters,
   history: DealHistory,
-  entry: NonNullable<Awaited<ReturnType<typeof findAccount>>>,
+  entry: AccountEntry,
   from: Date,
   now: Date,
   all: boolean,
@@ -91,17 +90,6 @@ async function brokerData(
       ...(balance !== undefined ? { balance } : {}),
     };
   } catch (error) {
-    if (!isAdapterError(error)) log.error({ err: error, account: entry.number }, "Broker query failed");
-    return { ...base, error: isAdapterError(error) ? error.code : "unavailable" };
+    return { ...base, error: brokerErrorCode(error, entry.number, log) };
   }
-}
-
-async function lastLine({ runtime }: Adapters, ref: string): Promise<LogLine | undefined> {
-  let last: LogLine | undefined;
-  try {
-    for await (const line of runtime.logs(ref, { tail: 1 })) last = line;
-  } catch {
-    // Logs are optional for the detail view.
-  }
-  return last;
 }

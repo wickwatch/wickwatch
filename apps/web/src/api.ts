@@ -59,17 +59,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-const post = <T>(path: string, body?: unknown) =>
-  request<T>(path, {
-    method: "POST",
-    ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
-  });
-
-const send = <T>(method: "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
+const send = <T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
   request<T>(path, {
     method,
     ...(body === undefined ? {} : { body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
+
+const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
 

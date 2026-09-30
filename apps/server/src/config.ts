@@ -62,7 +62,8 @@ export class ConfigError extends Error {
 }
 
 export const RESTART_POLICIES = ["on-failure", "unless-stopped", "no"] as const;
-export type CtraderCliMode = "local" | "container";
+const CTRADER_CLI_MODES = ["local", "container"] as const;
+export type CtraderCliMode = (typeof CTRADER_CLI_MODES)[number];
 export type RestartPolicy = (typeof RESTART_POLICIES)[number];
 
 const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"];
@@ -74,6 +75,18 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     const value = env[name]?.trim();
     return value === "" ? undefined : value;
   };
+  /** The value if it is in `list`; otherwise a problem "<name> must be <expected>". */
+  const oneOf = <T extends string>(
+    name: string,
+    fallback: T,
+    list: readonly T[],
+    expected = `one of ${list.join(", ")}`,
+  ): T => {
+    const value = get(name) ?? fallback;
+    if (!(list as readonly string[]).includes(value)) problems.push(`${name} must be ${expected}`);
+    // Not in the list only with a problem reported: loadConfig throws then.
+    return value as T;
+  };
 
   const port = Number(get("PORT") ?? 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) problems.push("PORT must be an integer between 1 and 65535");
@@ -81,17 +94,12 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const basePath = normaliseBasePath(get("BASE_PATH") ?? "/");
   if (basePath === undefined) problems.push("BASE_PATH must look like /bots (letters, digits, - _ . ~ and /)");
 
-  const logLevel = get("LOG_LEVEL") ?? "info";
-
-  const instanceRestartPolicy = get("INSTANCE_RESTART_POLICY") ?? "on-failure";
-  if (!(RESTART_POLICIES as readonly string[]).includes(instanceRestartPolicy)) {
-    problems.push(`INSTANCE_RESTART_POLICY must be one of ${RESTART_POLICIES.join(", ")}`);
-  }
+  const instanceRestartPolicy = oneOf("INSTANCE_RESTART_POLICY", "on-failure", RESTART_POLICIES);
   const ctraderImage = get("CTRADER_IMAGE");
   if (ctraderImage && !isPinnedImage(ctraderImage)) {
     problems.push("CTRADER_IMAGE must be pinned to a version or digest, not latest");
   }
-  if (!LOG_LEVELS.includes(logLevel)) problems.push(`LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")}`);
+  const logLevel = oneOf("LOG_LEVEL", "info", LOG_LEVELS);
 
   const masterKey = parseMasterKey(get("MASTER_KEY"), problems);
   const database = parseDatabaseUrl(get("DATABASE_URL") ?? "file:./data/wickwatch.db", cwd, problems);
@@ -101,8 +109,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     problems.push("LABEL_PREFIX must be lowercase letters and digits, separated by . or -");
   }
 
-  const defaultLocale = get("DEFAULT_LOCALE") ?? "en";
-  if (!isLocale(defaultLocale)) problems.push(`DEFAULT_LOCALE must be one of ${LOCALES.join(", ")}`);
+  const defaultLocale = oneOf("DEFAULT_LOCALE", "en", LOCALES);
 
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
@@ -129,14 +136,13 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
   const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
-  const ctraderCli = get("CTRADER_CLI") ?? "local";
-  if (ctraderCli !== "local" && ctraderCli !== "container") problems.push("CTRADER_CLI must be local or container");
+  const ctraderCli = oneOf("CTRADER_CLI", "local", CTRADER_CLI_MODES, "local or container");
   const alertCheckSeconds = integer("ALERT_CHECK_SECONDS", 60, 10, 3600);
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
   }
 
-  if (problems.length > 0 || basePath === undefined || !database || !isLocale(defaultLocale)) {
+  if (problems.length > 0 || basePath === undefined || !database) {
     throw new ConfigError(problems);
   }
 
@@ -151,10 +157,10 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     defaultLocale,
     challengeTemplatesDir: resolve(cwd, get("CHALLENGE_TEMPLATES_DIR") ?? "templates/challenges"),
     algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
-    ctraderCli: ctraderCli as CtraderCliMode,
+    ctraderCli,
     ctraderCliPath: get("CTRADER_CLI_PATH") ?? "ctrader-cli",
     ...(ctraderImage ? { ctraderImage } : {}),
-    instanceRestartPolicy: instanceRestartPolicy as RestartPolicy,
+    instanceRestartPolicy,
     accountPollSeconds,
     alertCheckSeconds,
     backup: {
@@ -177,10 +183,6 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(clockCheckUrl ? { clockCheckUrl } : {}),
     ...(summaryTime !== undefined ? { dailySummary: { time: summaryTime, timeZone: summaryZone } } : {}),
   };
-}
-
-function isLocale(value: string): value is Locale {
-  return (LOCALES as readonly string[]).includes(value);
 }
 
 function normaliseBasePath(value: string): string | undefined {
