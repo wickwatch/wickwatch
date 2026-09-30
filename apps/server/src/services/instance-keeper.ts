@@ -36,7 +36,10 @@ export async function clearShouldRunForAccount(db: Db, accountNumber: string): P
  * interruption: stopping goes through Wickwatch (stop, emergency stop, loss guard), which clears "should run" first.
  *
  * Per check, for each managed instance:
- * - running: it is meant to run (also takes over instances that ran before this was recorded);
+ * - running: at the first check after the server started, it is taken over as meant to run (instances that ran
+ *   before this was recorded, or were started while Wickwatch was down). Later checks leave "should run" alone for
+ *   running instances: a stop clears it before the container is down, and taking it over then would start the
+ *   instance right up again (seen with the loss guard);
  * - ended cleanly and its log says it stopped itself (broker adapter event `algo_stopped`): no longer meant to run;
  * - ended cleanly otherwise, while meant to run: started again, audited; if it ends again within ten minutes of an
  *   automatic start, Wickwatch gives up and records that instead of looping.
@@ -47,6 +50,8 @@ export class InstanceKeeper {
   private timer: ReturnType<typeof setInterval> | undefined;
   private running = false;
   private readonly autostartedAt = new Map<string, number>();
+  /** Running instances are taken over only once, see the class comment. */
+  private tookOver = false;
 
   constructor(
     private readonly opts: {
@@ -95,7 +100,7 @@ export class InstanceKeeper {
       const instance = byRef.get(row.name);
       if (!instance) continue;
       if (instance.status === "running" || instance.status === "restarting") {
-        if (!row.should_run) await setShouldRun(db, row.name, true);
+        if (!row.should_run && !this.tookOver) await setShouldRun(db, row.name, true);
         continue;
       }
       // Only clean ends ("stopped" with an exit code); "created" never ran, "error" is left to the restart policy.
@@ -107,6 +112,7 @@ export class InstanceKeeper {
       }
       await this.startAgain(row.name);
     }
+    this.tookOver = true;
   }
 
   private async stoppedItself(ref: string): Promise<boolean> {

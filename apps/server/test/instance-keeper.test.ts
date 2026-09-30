@@ -68,6 +68,20 @@ describe("instance keeper", () => {
     expect(started).toEqual([]);
   });
 
+  it("does not take an instance over again while Wickwatch stops it", async () => {
+    await t.db.updateTable("instances").set({ should_run: 1 }).execute();
+    const k = keeper();
+    instances = [bot("running")];
+    await k.check();
+    // A stop (here the loss guard) clears "should run" first; the container is still up during the next check.
+    await t.db.updateTable("instances").set({ should_run: 0 }).execute();
+    await k.check();
+    expect(await shouldRun()).toBe(0);
+    instances = [bot("stopped", 0)];
+    await k.check();
+    expect(started).toEqual([]);
+  });
+
   it("starts an instance again that a restart ended cleanly, and audits it", async () => {
     const k = keeper();
     instances = [bot("running")];
