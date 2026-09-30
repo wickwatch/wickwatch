@@ -1,6 +1,6 @@
 # Configuration
 
-Wickwatch is configured with environment variables only (see [`.env.example`](../.env.example)). Invalid values stop the server at start with a list of all problems. Empty values count as unset.
+Wickwatch is configured with environment variables only (see [`.env.example`](../.env.example)). Invalid values stop the server at start with a list of all problems. Empty values count as unset. `pnpm start` and `pnpm dev:server` read `.env` in the repo root; its values win over variables exported in the shell (the names of replaced ones are printed at start).
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
