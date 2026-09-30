@@ -113,12 +113,11 @@ const fileSize = (bytes: number) => {
 
 <template>
   <div class="page">
+    <!-- Title and action share a row, like the section heads on the accounts page; the intro runs below at full width. -->
     <div class="head">
-      <div>
-        <h1>{{ $t("nav.algos") }}</h1>
-        <p class="muted intro">{{ $t("algos.intro") }}</p>
-      </div>
+      <h1>{{ $t("nav.algos") }}</h1>
       <IconButton v-if="isAdmin" icon="upload" :label="$t('algos.upload')" show-label collapse @click="openUpload" />
+      <p class="muted intro">{{ $t("algos.intro") }}</p>
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
@@ -213,17 +212,18 @@ const fileSize = (bytes: number) => {
 
 <style scoped>
 .head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-4);
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--ww-space-2) var(--ww-space-4);
+  align-items: center;
 }
 
-.head > div {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-2);
+.head h1 {
+  margin: 0;
+}
+
+.head .intro {
+  grid-column: 1 / -1;
 }
 
 .buttons {
