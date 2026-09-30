@@ -3,7 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import QRCode from "qrcode";
 import Type from "typebox";
 import { type SetupState, needsSetup } from "../auth/setup";
-import { createSession, deleteSession, SESSION_COOKIE } from "../auth/sessions";
+import { createSession, deleteOtherSessions, deleteSession, SESSION_COOKIE } from "../auth/sessions";
 import type { Db } from "../db";
 import { ErrorBody } from "../plugins/errors";
 import { clearSessionCookie, setSessionCookie } from "../plugins/auth";
@@ -252,6 +252,50 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         .execute();
       pendingTotp.delete(current.id);
       await audit(db, { action: "auth.totp_enable", target: current.username, userId: current.id });
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
+    "/password",
+    {
+      config: limited,
+      schema: {
+        tags: ["auth"],
+        summary: "Change the password of the logged-in user; needs the current one",
+        description: "Other sessions of the user are logged out; this one stays.",
+        security: [{ session: [] }],
+        body: Type.Object({ current: Password, next: Password }),
+        response: { 204: Type.Null(), 400: ErrorBody, 401: ErrorBody, 403: ErrorBody, 429: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      const user = await loadUser(current.id);
+      const fail = async (code: 400 | 403, error: "invalid_password" | "weak_password") => {
+        await audit(db, {
+          action: "auth.password_change",
+          target: current.username,
+          userId: current.id,
+          details: { ok: false, error },
+        });
+        return reply.code(code).send({ error });
+      };
+      if (!(await verifyPassword(request.body.current, user.password_hash))) return fail(403, "invalid_password");
+      if (request.body.next.length < MIN_PASSWORD_LENGTH) return fail(400, "weak_password");
+      await db
+        .updateTable("users")
+        .set({ password_hash: await hashPassword(request.body.next), updated_at: new Date().toISOString() })
+        .where("id", "=", current.id)
+        .execute();
+      await deleteOtherSessions(db, current.id, request.cookies[SESSION_COOKIE]);
+      await audit(db, {
+        action: "auth.password_change",
+        target: current.username,
+        userId: current.id,
+        details: { ok: true },
+      });
       return reply.code(204).send(null);
     },
   );

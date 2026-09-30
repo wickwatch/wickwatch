@@ -318,7 +318,11 @@ const ALGO_CRASHED = new RegExp(`${PLATFORM_LINE}Error \\| Crashed in \\S+ event
  * "The connection has been lost. Reconnecting..." / "… restored." and "Error | Crashed in
  * Timer.TimerTick event with InvalidOperationException: …" (the cBot keeps running) as logged by `run` (5.9).
  */
+/** The CLI's last line when the cBot called Stop() itself; stopped from outside (SIGTERM) it says "stopped by user". */
+const ALGO_STOPPED = /^cBot stopped itself\b/;
+
 export function toLogEvent(text: string): LogEvent | undefined {
+  if (ALGO_STOPPED.test(text.trim())) return "algo_stopped";
   if (CONNECTION_LOST.test(text)) return "connection_lost";
   if (CONNECTION_UP.test(text)) return "connection_restored";
   if (ALGO_CRASHED.test(text)) return "algo_crashed";

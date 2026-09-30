@@ -335,6 +335,13 @@ describe("helpers", () => {
     expect(cliError("Connecting as a...\nInvalid credentials.").code).toBe("auth_failed");
   });
 
+  it("tells a cBot that stopped itself from one stopped from outside", () => {
+    // Recorded with ctrader-console 5.9.11: Stop() in the cBot, then SIGTERM during a Docker restart.
+    expect(toLogEvent("cBot stopped itself")).toBe("algo_stopped");
+    expect(toLogEvent("Info | CBot instance [probe, EURUSD, m1] stopped by user.")).toBeUndefined();
+    expect(toLogEvent("30/09/2026 09:27:19.133 | Info | WW-PROBE cBot stopped itself")).toBeUndefined();
+  });
+
   it("recognises connection events in the run output, but not in the cBot's own lines", () => {
     // Recorded with ctrader-console 5.9.11 while the container was cut off from the network.
     expect(toLogEvent("28/09/2026 16:34:50.272 | The connection has been lost. Reconnecting...")).toBe(

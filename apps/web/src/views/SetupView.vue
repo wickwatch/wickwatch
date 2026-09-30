@@ -7,9 +7,7 @@ import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { loadSession, session } from "../session";
-import { checks, normalizers, useValidation, vNormalize } from "../validation";
-
-const MIN_PASSWORD_LENGTH = 12;
+import { MIN_PASSWORD_LENGTH, checks, normalizers, useValidation, vNormalize } from "../validation";
 
 const router = useRouter();
 const token = ref("");

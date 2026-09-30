@@ -324,6 +324,7 @@ function toRuntimeInstance(d: ContainerDetails): RuntimeInstance {
     ...(status === "running" && Date.parse(d.State.StartedAt) > 0
       ? { startedAt: new Date(d.State.StartedAt).toISOString() }
       : {}),
+    ...(d.State.Status === "exited" ? { exitCode: d.State.ExitCode } : {}),
   };
 }
 

@@ -12,6 +12,7 @@ import type { Adapters } from "../adapters";
 import { evaluateForAccount, readProfiles } from "../challenges/store";
 import type { Db } from "../db";
 import { audit } from "./audit";
+import { clearShouldRunForAccount } from "./instance-keeper";
 
 export interface LossGuardOptions {
   db: Db;
@@ -116,6 +117,7 @@ export class LossGuardService {
     let ok = false;
     let details: Record<string, unknown>;
     try {
+      await clearShouldRunForAccount(db, entry.number);
       const report = await emergencyStopAccount({
         runtime: adapters.runtime,
         broker: adapters.broker,

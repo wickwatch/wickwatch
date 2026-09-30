@@ -22,6 +22,7 @@ import type { InstanceConfigsTable } from "../db/schema";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { audit } from "../services/audit";
+import { setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
 /** Lower case, digits and dashes: usable as a container name and host name. */
@@ -529,6 +530,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         await adapters.runtime.start(name);
         runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
       }
+      await setShouldRun(db, name, runtime.status === "running" || runtime.status === "restarting");
       await audit(db, {
         action: "instance.deploy",
         target: name,

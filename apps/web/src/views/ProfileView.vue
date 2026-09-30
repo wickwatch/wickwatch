@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { api, errorKey, type TotpSetup } from "../api";
+import AppModal from "../components/AppModal.vue";
 import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
+import IconButton from "../components/IconButton.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { currentUser, loadSession } from "../session";
-import { checks, useValidation } from "../validation";
+import { checks, MIN_PASSWORD_LENGTH, useValidation } from "../validation";
 
 const totp = ref<TotpSetup>();
 const code = ref("");
@@ -48,6 +50,48 @@ const confirmEnable = () =>
     notice.value = "profile.totpEnabledNotice";
   });
 
+// --- password, changed in the shared modal like the other edits
+const changing = ref(false);
+const pw = reactive({ current: "", next: "", repeat: "" });
+const pwForm = useValidation();
+const pwFields = {
+  current: pwForm.field(() => pw.current, checks.required),
+  next: pwForm.field(() => pw.next, checks.required, checks.minLength(MIN_PASSWORD_LENGTH)),
+  repeat: pwForm.field(
+    () => pw.repeat,
+    checks.required,
+    checks.sameAs(() => pw.next),
+  ),
+};
+const pwError = ref<string>();
+const pwDirty = computed(() => Object.values(pw).some((v) => v !== ""));
+function openPassword() {
+  Object.assign(pw, { current: "", next: "", repeat: "" });
+  pwError.value = undefined;
+  pwForm.reset();
+  changing.value = true;
+}
+function closePassword() {
+  changing.value = false;
+  Object.assign(pw, { current: "", next: "", repeat: "" });
+  pwForm.reset();
+}
+async function savePassword() {
+  if (!pwForm.validate()) return;
+  busy.value = true;
+  pwError.value = undefined;
+  notice.value = undefined;
+  try {
+    await api.changePassword(pw.current, pw.next);
+    closePassword();
+    notice.value = "profile.passwordChanged";
+  } catch (e) {
+    pwError.value = errorKey(e);
+  } finally {
+    busy.value = false;
+  }
+}
+
 const disable = () =>
   run(async () => {
     if (!disableForm.validate()) return;
@@ -62,56 +106,133 @@ const disable = () =>
 <template>
   <div class="account">
     <h1>{{ $t("profile.title") }}</h1>
-    <section v-if="currentUser" class="panel card" aria-labelledby="totp-title">
-      <dl class="facts">
-        <div>
-          <dt>{{ $t("auth.username") }}</dt>
-          <dd class="mono">{{ currentUser.username }}</dd>
-        </div>
-        <div>
-          <dt>{{ $t("profile.role") }}</dt>
-          <dd>{{ $t(`profile.roles.${currentUser.role}`) }}</dd>
-        </div>
-      </dl>
+    <p class="status" role="status" aria-live="polite">{{ notice ? $t(notice) : "" }}</p>
+    <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
 
-      <h2 id="totp-title">{{ $t("auth.totp.title") }}</h2>
-      <p>
-        <span class="pill" :class="currentUser.totpEnabled ? 'tone-positive' : 'tone-warning'">
-          {{ currentUser.totpEnabled ? $t("profile.totpOn") : $t("profile.totpOff") }}
-        </span>
-      </p>
+    <template v-if="currentUser">
+      <section class="panel card">
+        <dl class="facts">
+          <div>
+            <dt>{{ $t("auth.username") }}</dt>
+            <dd class="mono">{{ currentUser.username }}</dd>
+          </div>
+          <div>
+            <dt>{{ $t("profile.role") }}</dt>
+            <dd>{{ $t(`profile.roles.${currentUser.role}`) }}</dd>
+          </div>
+        </dl>
+      </section>
 
-      <template v-if="!currentUser.totpEnabled">
-        <p class="muted">{{ $t("auth.totp.recommended") }}</p>
-        <button v-if="!totp" type="button" class="btn btn--primary" :disabled="busy" @click="startEnable">
-          {{ $t("profile.enableTotp") }}
-        </button>
-        <form v-else class="form" novalidate @submit.prevent="confirmEnable">
-          <TotpEnroll :totp="totp" />
-          <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
-          <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("profile.confirmTotp") }}</button>
+      <section class="panel card" aria-labelledby="password-title">
+        <div class="card__head">
+          <h2 id="password-title">{{ $t("auth.password") }}</h2>
+          <IconButton icon="key" :label="$t('profile.changePassword')" show-label collapse @click="openPassword" />
+        </div>
+        <p class="muted">{{ $t("profile.passwordHint") }}</p>
+      </section>
+
+      <section class="panel card" aria-labelledby="totp-title">
+        <div class="card__head">
+          <h2 id="totp-title">{{ $t("auth.totp.title") }}</h2>
+          <span class="pill" :class="currentUser.totpEnabled ? 'tone-positive' : 'tone-warning'">
+            {{ currentUser.totpEnabled ? $t("profile.totpOn") : $t("profile.totpOff") }}
+          </span>
+        </div>
+
+        <template v-if="!currentUser.totpEnabled">
+          <p class="muted">{{ $t("auth.totp.recommended") }}</p>
+          <div>
+            <button v-if="!totp" type="button" class="btn btn--primary" :disabled="busy" @click="startEnable">
+              {{ $t("profile.enableTotp") }}
+            </button>
+          </div>
+          <form v-if="totp" class="form" novalidate @submit.prevent="confirmEnable">
+            <TotpEnroll :totp="totp" />
+            <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
+            <div>
+              <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("profile.confirmTotp") }}</button>
+            </div>
+          </form>
+        </template>
+
+        <form v-else class="form" novalidate @submit.prevent="disable">
+          <label class="field">
+            {{ $t("profile.passwordToDisable") }}
+            <input
+              v-model="password"
+              v-bind="passwordField.attrs.value"
+              class="input"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <FieldError :field="passwordField" />
+          </label>
+          <div>
+            <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("profile.disableTotp") }}</button>
+          </div>
+        </form>
+      </section>
+    </template>
+
+    <AppModal :open="changing" :title="$t('profile.changePassword')" :dirty="pwDirty" @close="closePassword">
+      <template #default="{ close }">
+        <form class="form" novalidate @submit.prevent="savePassword">
+          <!-- For password managers: the account the new password belongs to. -->
+          <input
+            class="visually-hidden"
+            type="text"
+            autocomplete="username"
+            :value="currentUser?.username"
+            tabindex="-1"
+            aria-hidden="true"
+            readonly
+          />
+          <label class="field">
+            {{ $t("profile.currentPassword") }}
+            <input
+              v-model="pw.current"
+              v-bind="pwFields.current.attrs.value"
+              class="input"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <FieldError :field="pwFields.current" />
+          </label>
+          <label class="field">
+            {{ $t("profile.newPassword") }}
+            <input
+              v-model="pw.next"
+              v-bind="pwFields.next.attrs.value"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              required
+            />
+            <FieldError :field="pwFields.next" />
+            <span class="field__hint">{{ $t("auth.setup.passwordHint", { min: MIN_PASSWORD_LENGTH }) }}</span>
+          </label>
+          <label class="field">
+            {{ $t("auth.setup.repeat") }}
+            <input
+              v-model="pw.repeat"
+              v-bind="pwFields.repeat.attrs.value"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              required
+            />
+            <FieldError :field="pwFields.repeat" />
+          </label>
+          <div class="buttons">
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="pwError" class="tone-negative" role="alert">{{ $t(pwError) }}</p>
         </form>
       </template>
-
-      <form v-else class="form" novalidate @submit.prevent="disable">
-        <label class="field">
-          {{ $t("profile.passwordToDisable") }}
-          <input
-            v-model="password"
-            v-bind="passwordField.attrs.value"
-            class="input"
-            type="password"
-            autocomplete="current-password"
-            required
-          />
-          <FieldError :field="passwordField" />
-        </label>
-        <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("profile.disableTotp") }}</button>
-      </form>
-
-      <p class="status" role="status" aria-live="polite">{{ notice ? $t(notice) : "" }}</p>
-      <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-    </section>
+    </AppModal>
   </div>
 </template>
 
@@ -133,6 +254,19 @@ const disable = () =>
 
 .card {
   padding: var(--ww-space-6);
+}
+
+.card__head {
+  display: flex;
+  gap: var(--ww-space-3);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-2);
 }
 
 h2 {

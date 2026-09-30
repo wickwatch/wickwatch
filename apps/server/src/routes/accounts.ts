@@ -8,6 +8,7 @@ import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
+import { clearShouldRunForAccount } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
 const Account = Type.Object({
@@ -415,6 +416,8 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
 
       const userId = request.user?.id;
       try {
+        // Stopped on purpose: not to be started again after a restart.
+        await clearShouldRunForAccount(db, number);
         const report = await emergencyStopAccount({
           runtime: adapters.runtime,
           broker: adapters.broker,

@@ -9,6 +9,7 @@ import { notifiedAlerts } from "./0007-notified-alerts";
 import { guardTrips } from "./0008-guard-trips";
 import { colorParameters } from "./0009-color-parameters";
 import { algoMetadataReader } from "./0010-algo-metadata-reader";
+import { instanceShouldRun } from "./0011-instance-should-run";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -23,4 +24,5 @@ export const migrations: Record<string, Migration> = {
   "0008-guard-trips": guardTrips,
   "0009-color-parameters": colorParameters,
   "0010-algo-metadata-reader": algoMetadataReader,
+  "0011-instance-should-run": instanceShouldRun,
 };

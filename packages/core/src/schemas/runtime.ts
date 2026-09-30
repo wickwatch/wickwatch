@@ -19,6 +19,8 @@ export const RuntimeInstance = Type.Object({
   restartCount: Type.Integer({ minimum: 0 }),
   /** Pinned runtime image version. */
   image: Type.Optional(Type.String()),
+  /** Exit code of the last run, for an instance that ran and ended; missing while running or before its first start. */
+  exitCode: Type.Optional(Type.Integer()),
 });
 export type RuntimeInstance = Type.Static<typeof RuntimeInstance>;
 
@@ -31,6 +33,8 @@ export const LogEvent = Type.Union([
   Type.Literal("connection_restored"),
   /** The algo threw an error but keeps running (e.g. an exception in an event handler). */
   Type.Literal("algo_crashed"),
+  /** The algo ended itself (its own decision, e.g. a daily limit), as opposed to being stopped from outside. */
+  Type.Literal("algo_stopped"),
 ]);
 export type LogEvent = Type.Static<typeof LogEvent>;
 

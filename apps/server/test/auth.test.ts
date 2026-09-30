@@ -180,6 +180,37 @@ describe("login", () => {
   });
 });
 
+describe("changing the password", () => {
+  it("needs the current password, logs out other sessions and keeps this one", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "admin", { totp: false });
+    const login = async (password: string) => post("/api/v1/auth/login", { username: "anna", password });
+    const cookie = sessionCookie(await login(PASSWORD));
+    const other = sessionCookie(await login(PASSWORD));
+    const headers = { cookie };
+
+    expect(
+      (await post("/api/v1/auth/password", { current: "wrong password!", next: "a new passphrase" }, headers)).json(),
+    ).toEqual({
+      error: "invalid_password",
+    });
+    expect((await post("/api/v1/auth/password", { current: PASSWORD, next: "short" }, headers)).json()).toEqual({
+      error: "weak_password",
+    });
+    expect(
+      (await post("/api/v1/auth/password", { current: PASSWORD, next: "a new passphrase" }, headers)).statusCode,
+    ).toBe(204);
+
+    expect((await session(cookie)).json()).toMatchObject({ user: { username: "anna" } });
+    expect((await session(other)).json()).not.toHaveProperty("user");
+    expect((await login(PASSWORD)).statusCode).toBe(401);
+    expect((await login("a new passphrase")).statusCode).toBe(200);
+    const actions = (await auditActions()).map((a) => a.action).filter((a) => a === "auth.password_change");
+    expect(actions).toHaveLength(3);
+    expect((await post("/api/v1/auth/password", { current: PASSWORD, next: "a new passphrase" })).statusCode).toBe(401);
+  });
+});
+
 describe("turning 2FA on and off", () => {
   it("enables 2FA with a confirmed code and disables it with the password", async () => {
     t = await startApp();

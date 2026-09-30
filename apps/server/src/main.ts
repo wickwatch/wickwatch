@@ -10,6 +10,7 @@ import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
 import { refreshAlgoMetadata } from "./services/algo-metadata";
+import { InstanceKeeper } from "./services/instance-keeper";
 import { LogTracker } from "./services/log-tracker";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
@@ -80,7 +81,10 @@ try {
     auditRetentionDays: config.auditRetentionDays,
     ...(config.backup.intervalHours > 0 ? { backup: config.backup } : {}),
   });
+  // Starts managed instances again that a host or Docker restart ended (see the class for the rules).
+  const keeper = new InstanceKeeper({ db, runtime: adapters.runtime, broker: adapters.broker, log: app.log });
   app.addHook("onClose", () => {
+    keeper.stop();
     poller.stop();
     notifier.stop();
     maintenance.stop();
@@ -107,6 +111,7 @@ try {
   notifier.start();
   maintenance.start();
   lossGuard.start();
+  keeper.start();
   // In the background: reading an algo can take a few seconds (the cTrader CLI may run in a helper container).
   refreshAlgoMetadata({ db, broker: adapters.broker, algosDir: config.algosDir, log: app.log }).catch(
     (error: unknown) => {

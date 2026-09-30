@@ -88,6 +88,35 @@ describe("instance actions", () => {
     expect(rows.every((r) => r.user_id !== null)).toBe(true);
   });
 
+  it("records whether a managed instance is meant to run, for starting it again after a restart", async () => {
+    const account = await t.db
+      .selectFrom("accounts")
+      .select("id")
+      .where("number", "=", "1111111")
+      .executeTakeFirstOrThrow();
+    await t.db
+      .insertInto("instances")
+      .values({ name: "alpha-ger40-a", account_id: account.id, created_by: null, created_at: "2026-09-30T00:00:00Z" })
+      .execute();
+    const shouldRun = async () =>
+      (
+        await t.db
+          .selectFrom("instances")
+          .select("should_run")
+          .where("name", "=", "alpha-ger40-a")
+          .executeTakeFirstOrThrow()
+      ).should_run;
+    await post("/api/v1/instances/alpha-ger40-a/start");
+    expect(await shouldRun()).toBe(1);
+    await post("/api/v1/instances/alpha-ger40-a/stop");
+    expect(await shouldRun()).toBe(0);
+    await post("/api/v1/instances/alpha-ger40-a/restart");
+    expect(await shouldRun()).toBe(1);
+    // An emergency stop means: do not start them again.
+    await post("/api/v1/accounts/1111111/emergency-stop", { confirm: "1111111" });
+    expect(await shouldRun()).toBe(0);
+  });
+
   it("answers 404 for unknown instances and 400 for unknown actions", async () => {
     const unknown = await post("/api/v1/instances/nope/start");
     expect(unknown.statusCode).toBe(404);

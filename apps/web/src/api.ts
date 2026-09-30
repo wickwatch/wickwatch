@@ -197,6 +197,8 @@ export const api = {
   totpSetup: () => post<TotpSetup>("auth/totp/setup"),
   totpEnable: (code: string) => post<undefined>("auth/totp/enable", { code }),
   totpDisable: (password: string) => post<undefined>("auth/totp/disable", { password }),
+  /** Logs out the user's other sessions; this one stays. */
+  changePassword: (current: string, next: string) => post<undefined>("auth/password", { current, next }),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   accountDetail: (number: string) => request<AccountDetail>(`accounts/${encodeURIComponent(number)}/detail`),

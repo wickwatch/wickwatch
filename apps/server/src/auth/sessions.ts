@@ -57,6 +57,13 @@ export async function deleteSession(db: Db, token: string): Promise<void> {
   await db.deleteFrom("sessions").where("id", "=", digest(token)).execute();
 }
 
+/** Ends every session of a user except the one with `keepToken`, e.g. after a password change. */
+export async function deleteOtherSessions(db: Db, userId: number, keepToken: string | undefined): Promise<void> {
+  let query = db.deleteFrom("sessions").where("user_id", "=", userId);
+  if (keepToken) query = query.where("id", "!=", digest(keepToken));
+  await query.execute();
+}
+
 export async function deleteExpiredSessions(db: Db, now = new Date()): Promise<void> {
   await db.deleteFrom("sessions").where("expires_at", "<=", now.toISOString()).execute();
 }

@@ -34,6 +34,9 @@ const format =
     return pattern.test(v) ? undefined : { key };
   };
 
+/** Same as the server's minimum (apps/server/src/security/password.ts). */
+export const MIN_PASSWORD_LENGTH = 12;
+
 export const checks = {
   required: ((value) => (isEmpty(value) ? { key: "validation.required" } : undefined)) as Check,
   /** Also the container name and the default order label (see the server's NAME pattern). */

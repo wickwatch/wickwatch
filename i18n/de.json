@@ -66,7 +66,12 @@
     "passwordToDisable": "Passwort (zum Abschalten von 2FA)",
     "disableTotp": "2FA abschalten",
     "totpEnabledNotice": "2FA ist an. Ab jetzt brauchst du beim Anmelden einen Code.",
-    "totpDisabledNotice": "2FA ist aus. Du meldest dich nur mit dem Passwort an."
+    "totpDisabledNotice": "2FA ist aus. Du meldest dich nur mit dem Passwort an.",
+    "changePassword": "Passwort ändern",
+    "passwordHint": "Beim Ändern wirst du überall sonst abgemeldet; diese Sitzung bleibt.",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "passwordChanged": "Passwort geändert. Andere Sitzungen sind abgemeldet."
   },
   "challenge": {
     "label": "Challenge",
