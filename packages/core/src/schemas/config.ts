@@ -4,6 +4,8 @@ export const ParameterValues = Type.Record(Type.String(), Type.Unknown());
 export type ParameterValues = Type.Static<typeof ParameterValues>;
 
 export const ParameterIssueCode = Type.Union([
+  /** Empty or missing although the runtime needs a value (see Capabilities.requiresTextValues). */
+  Type.Literal("required"),
   Type.Literal("invalid_type"),
   Type.Literal("below_min"),
   Type.Literal("above_max"),

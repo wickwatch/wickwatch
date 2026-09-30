@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { ParameterSchema } from "@wickwatch/core";
+import { validateParameters } from "@wickwatch/core/parameters";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api, errorKey, type AlgoRow, type InstanceConfigRow, type ManagedInstanceDetail } from "../api";
 import { formatDateTime } from "../format";
+import { splitLabel } from "../parameter-label";
 import { isAdmin } from "../session";
 import { system } from "../system";
 import AppBanner from "./AppBanner.vue";
@@ -90,6 +92,14 @@ const show = (value: unknown) => (value === undefined ? "–" : String(value));
 /** The algo's parameters; empty if the algo version was deleted, then the values show as "not in the algo". */
 const schema = computed<ParameterSchema[]>(() => (props.managed ? schemaOf(props.managed.config) : []));
 
+/** Parameters the runtime needs a value for but the saved version leaves empty; it cannot start like this. */
+const incomplete = computed(() => {
+  if (!props.managed || system.value?.capabilities?.requiresTextValues !== true) return [];
+  return validateParameters(props.managed.config.parameters, schema.value, { requireText: true })
+    .errors.filter((i) => i.code === "required")
+    .map((i) => splitLabel(schema.value.find((p) => p.name === i.parameter)?.label ?? i.parameter).title);
+});
+
 const attributionText = (c: InstanceConfigRow) =>
   [t(`instanceForm.modes.${c.attribution.mode}`), c.attribution.orderLabel].filter(Boolean).join(" · ");
 
@@ -127,14 +137,32 @@ function changes(index: number): string[] {
     <p v-if="notice" class="tone-positive status" role="status">{{ notice }}</p>
 
     <template v-if="managed">
+      <AppBanner v-if="incomplete.length" tone="warning" :title="$t('alert.level.warning')">
+        <span>{{ $t("instanceConfig.incomplete", { version, names: incomplete.join(", ") }) }}</span>
+        <template v-if="isAdmin" #actions>
+          <RouterLink :to="{ name: 'instance-edit', params: { ref: managed.name } }" class="btn">
+            {{ $t("instanceConfig.edit") }}
+          </RouterLink>
+        </template>
+      </AppBanner>
       <!-- Only when the container and the saved configuration differ; start and stop live in the page head. -->
       <AppBanner v-if="!deployment" tone="neutral">
         <span>{{ $t("deploy.none") }}</span>
         <template v-if="isAdmin" #actions>
-          <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: true }">
+          <button
+            type="button"
+            class="btn btn--primary"
+            :disabled="busy || incomplete.length > 0"
+            @click="pending = { start: true }"
+          >
             {{ $t("deploy.createAndStart") }}
           </button>
-          <button type="button" class="btn" :disabled="busy" @click="pending = { start: false }">
+          <button
+            type="button"
+            class="btn"
+            :disabled="busy || incomplete.length > 0"
+            @click="pending = { start: false }"
+          >
             {{ $t("deploy.create") }}
           </button>
         </template>
@@ -150,10 +178,21 @@ function changes(index: number): string[] {
         }}</span>
         <span class="muted">{{ $t("instanceConfig.notDeployed") }}</span>
         <template v-if="isAdmin" #actions>
-          <button type="button" class="btn btn--primary" :disabled="busy" @click="pending = { start: false }">
+          <button
+            type="button"
+            class="btn btn--primary"
+            :disabled="busy || incomplete.length > 0"
+            @click="pending = { start: false }"
+          >
             {{ running ? $t("deploy.applyRestart", { version }) : $t("deploy.apply", { version }) }}
           </button>
-          <button v-if="!running" type="button" class="btn" :disabled="busy" @click="pending = { start: true }">
+          <button
+            v-if="!running"
+            type="button"
+            class="btn"
+            :disabled="busy || incomplete.length > 0"
+            @click="pending = { start: true }"
+          >
             {{ $t("deploy.applyAndStart", { version }) }}
           </button>
         </template>

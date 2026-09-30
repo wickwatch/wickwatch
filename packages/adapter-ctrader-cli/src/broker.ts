@@ -96,6 +96,8 @@ export class CtraderCliBroker implements BrokerAdapter {
       partialClose: false,
       pendingOrders: true,
       emergencyStop: true,
+      // `run` refuses empty text parameters ("All custom parameters must have a value"), see docs/ADAPTERS.md.
+      requiresTextValues: true,
       parameterExport: [],
     };
   }

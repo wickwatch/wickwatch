@@ -89,10 +89,12 @@ const labelField = form.field(
   () => (mode.value === "label-pattern" ? checks.regex(orderLabel.value) : undefined),
 );
 const sent = ref(false);
+/** The runtime has no empty text value (cTrader CLI): empty text parameters are required then. */
+const validateOptions = computed(() => ({ requireText: system.value?.capabilities?.requiresTextValues === true }));
 /** Problems the server reported, else the same checks locally; empty values only once the form was sent. */
 const shownIssues = computed(() => {
   const result = new Map<string, ParameterIssueCode | "required">(issues.value);
-  for (const { parameter, code } of validateParameters(values.value, schema.value).errors) {
+  for (const { parameter, code } of validateParameters(values.value, schema.value, validateOptions.value).errors) {
     const value = values.value[parameter];
     if (result.has(parameter)) continue;
     if (value === "" || value === undefined) {
@@ -121,6 +123,9 @@ async function loadFile(file: File) {
     values.value = { ...values.value, ...parsed.values };
     if (parsed.symbol) symbol.value = canonical(parsed.symbol, symbols.value);
     if (parsed.period) period.value = canonical(parsed.period, periods.value);
+    const empty = validateParameters(values.value, schema.value, validateOptions.value)
+      .errors.filter((i) => i.code === "required")
+      .map((i) => label(i.parameter));
     // Rejected values are listed in full with the reason: they are the ones to fix by hand.
     const rejected = parsed.issues.map((i) => `${label(i.parameter)} (${t(`parameterIssue.${i.code}`)})`).join(", ");
     fileNotice.value = [
@@ -134,6 +139,10 @@ async function loadFile(file: File) {
         : []),
       ...(parsed.missing.length
         ? [{ tone: "muted" as const, text: t("instanceForm.fileMissing", { names: names(parsed.missing) }) }]
+        : []),
+      // In full, like rejected values: each one needs a value before the bot can start.
+      ...(empty.length
+        ? [{ tone: "warning" as const, text: t("instanceForm.fileEmpty", { names: empty.join(", ") }) }]
         : []),
     ];
   } catch (e) {

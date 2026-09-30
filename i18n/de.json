@@ -233,7 +233,8 @@
       "account_in_use": "Auf diesem Konto sind Instanzen eingerichtet; zuerst diese löschen.",
       "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen.",
       "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten.",
-      "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses Wickwatch lesen kann."
+      "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses Wickwatch lesen kann.",
+      "parameters_incomplete": "Diese Version kann so nicht starten: Einige Parameter brauchen erst einen Wert (siehe Konfiguration)."
     }
   },
   "parameterIssue": {
@@ -566,7 +567,8 @@
     "changes": "Keine ungespeicherten Änderungen | 1 ungespeicherte Änderung | {count} ungespeicherte Änderungen",
     "attributionHint": "Welche Trades des Kontos zu dieser Instanz zählen: für ihre Kennzahlen, das Chart und den Verlauf.",
     "commentTitle": "Versionskommentar",
-    "commentPlaceholder": "z. B. Risiko auf 1 % erhöht"
+    "commentPlaceholder": "z. B. Risiko auf 1 % erhöht",
+    "fileEmpty": "Braucht einen Wert, bevor der Bot starten kann (die Laufzeit kennt keinen leeren Text): {names}. Trag einen Wert ein, den dein Bot als „nicht gesetzt“ versteht, z. B. „-“ oder einen Wert außerhalb des gültigen Bereichs; welcher, steht in der Doku des Bots."
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -579,7 +581,9 @@
     "restore": "Wiederherstellen…",
     "deleteConfirm": "Instanz {name} mit ihrer gesamten Konfigurationshistorie löschen? Beim Broker ändert sich nichts.",
     "deleteContainer": "Sein Container wird gestoppt und entfernt.",
-    "download": "Als .{format} herunterladen"
+    "download": "Als .{format} herunterladen",
+    "incomplete": "Version {version} kann so nicht starten: Die Laufzeit braucht für jeden Text-Parameter einen Wert, und diese sind leer: {names}. Trag einen Wert ein, den dein Bot als „nicht gesetzt“ versteht, z. B. „-“ oder einen Wert außerhalb des gültigen Bereichs; welcher, steht in der Doku des Bots.",
+    "edit": "Bearbeiten"
   },
   "deploy": {
     "none": "Noch kein Container.",

@@ -3,6 +3,7 @@ import {
   AdapterError,
   enumNumber,
   validateParameters,
+  type ValidateOptions,
   valuesFromFile,
   type ConfigAdapter,
   type ParameterFile,
@@ -58,7 +59,7 @@ export class CbotsetConfigAdapter implements ConfigAdapter {
     return new TextEncoder().encode(`${BOM}${JSON.stringify(file, null, 2)}`);
   }
 
-  validate(values: ParameterValues, schema: ParameterSchema[]): ValidationResult {
-    return validateParameters(values, schema);
+  validate(values: ParameterValues, schema: ParameterSchema[], options?: ValidateOptions): ValidationResult {
+    return validateParameters(values, schema, options);
   }
 }

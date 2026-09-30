@@ -17,6 +17,22 @@ describe("validateParameters", () => {
     expect(validateParameters(valid, schema)).toEqual({ errors: [], unknown: [], missing: [] });
   });
 
+  it("requires text values when the runtime has no empty text, and only then", () => {
+    const text: ParameterSchema[] = [...schema, { name: "Token", type: "string" }, { name: "Note", type: "string" }];
+    const values = { ...valid, SessionStart: "", Token: "" };
+    // Note is missing, Token and SessionStart are empty; numbers, bools and enums are not affected.
+    expect(validateParameters(values, text, { requireText: true })).toEqual({
+      errors: [
+        { parameter: "SessionStart", code: "required" },
+        { parameter: "Token", code: "required" },
+        { parameter: "Note", code: "required" },
+      ],
+      unknown: [],
+      missing: [],
+    });
+    expect(validateParameters({ ...values, SessionStart: "08:00" }, text).errors).toEqual([]);
+  });
+
   it("reports unknown and missing parameters", () => {
     const { Mode: _, ...rest } = valid;
     expect(validateParameters({ ...rest, Extra: 1 }, schema)).toEqual({

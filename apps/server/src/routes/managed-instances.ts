@@ -141,6 +141,8 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   app,
   { adapters, accounts, db, symbols, labelPrefix, algosDir },
 ) => {
+  /** The runtime's rules for parameter values, e.g. no empty text for the cTrader CLI. */
+  const validateOptions = { requireText: adapters.broker.capabilities().requiresTextValues === true };
   const configs = () =>
     db
       .selectFrom("instance_configs")
@@ -226,7 +228,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       offered.find((s) => s === input.symbol) ?? offered.find((s) => s.toLowerCase() === input.symbol.toLowerCase());
     if (!symbol) return { ok: false, status: 400, body: { error: "invalid_symbol" } };
 
-    const result = adapters.config.validate(input.parameters, schema);
+    const result = adapters.config.validate(input.parameters, schema, validateOptions);
     if (result.errors.length || result.unknown.length) {
       return {
         ok: false,
@@ -495,6 +497,10 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           ? undefined
           : await db.selectFrom("algos").selectAll().where("id", "=", config.algo.id).executeTakeFirst();
       if (!algo) return reply.code(409).send({ error: "algo_not_found" });
+      // Versions saved before the runtime's rules were known, e.g. empty text parameters for the cTrader CLI.
+      if (adapters.config.validate(config.parameters, schemaOf(algo.metadata), validateOptions).errors.length) {
+        return reply.code(400).send({ error: "parameters_incomplete" });
+      }
 
       const launch = await adapters.broker.launch({
         credentials: await entry.credentials(),

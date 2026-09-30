@@ -1194,6 +1194,9 @@
                         "emergencyStop": {
                           "type": "boolean"
                         },
+                        "requiresTextValues": {
+                          "type": "boolean"
+                        },
                         "parameterExport": {
                           "type": "array",
                           "items": {
@@ -7737,6 +7740,12 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "required"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "invalid_type"
                                 ]
                               },
@@ -8488,6 +8497,12 @@
                           },
                           "code": {
                             "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "required"
+                                ]
+                              },
                               {
                                 "type": "string",
                                 "enum": [
@@ -9493,6 +9508,12 @@
                           },
                           "code": {
                             "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "required"
+                                ]
+                              },
                               {
                                 "type": "string",
                                 "enum": [

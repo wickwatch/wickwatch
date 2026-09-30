@@ -1,6 +1,7 @@
 import {
   AdapterError,
   validateParameters,
+  type ValidateOptions,
   valuesFromFile,
   type ConfigAdapter,
   type ParameterFile,
@@ -42,7 +43,7 @@ export class DemoConfigAdapter implements ConfigAdapter {
     return new TextEncoder().encode(`${JSON.stringify({ chart, parameters }, null, 2)}\n`);
   }
 
-  validate(values: ParameterValues, schema: ParameterSchema[]): ValidationResult {
-    return validateParameters(values, schema);
+  validate(values: ParameterValues, schema: ParameterSchema[], options?: ValidateOptions): ValidationResult {
+    return validateParameters(values, schema, options);
   }
 }

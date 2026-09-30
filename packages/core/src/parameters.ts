@@ -3,13 +3,29 @@ import type { ParameterFile, ParameterIssue, ParameterSchema, ParameterValues, V
 const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const COLOR = /^(#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[A-Za-z]+)$/;
 
+/** Parameter types whose value is text, so it can be empty. */
+const TEXT_TYPES = new Set<ParameterSchema["type"]>(["string", "symbol", "period", "time", "color"]);
+
+export interface ValidateOptions {
+  /** Empty or missing text parameters are errors ("required"), for runtimes without an empty value. */
+  requireText?: boolean;
+}
+
 /** Checks parameter values against an algo's parameter schema. Format-independent. */
-export function validateParameters(values: ParameterValues, schema: ParameterSchema[]): ValidationResult {
+export function validateParameters(
+  values: ParameterValues,
+  schema: ParameterSchema[],
+  options: ValidateOptions = {},
+): ValidationResult {
   const known = new Set(schema.map((p) => p.name));
   const errors: ParameterIssue[] = [];
   const missing: string[] = [];
 
   for (const param of schema) {
+    if (options.requireText && TEXT_TYPES.has(param.type) && (values[param.name] ?? "") === "") {
+      errors.push({ parameter: param.name, code: "required" });
+      continue;
+    }
     if (!Object.hasOwn(values, param.name)) {
       missing.push(param.name);
       continue;

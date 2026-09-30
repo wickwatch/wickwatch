@@ -20,6 +20,7 @@ import type {
   RuntimeInstance,
   ValidationResult,
 } from "./schemas";
+import type { ValidateOptions } from "./parameters";
 
 /** Broker credentials. Decrypted only in memory; never logged, never serialised. */
 export interface Credentials {
@@ -149,6 +150,6 @@ export interface ConfigAdapter {
   parse(content: Uint8Array, schema: ParameterSchema[]): ParameterFile;
   /** The file for a configuration, e.g. to open it in the platform or to back it up. */
   serialize(values: ParameterValues, schema: ParameterSchema[], chart: { symbol: string; period: string }): Uint8Array;
-  validate(values: ParameterValues, schema: ParameterSchema[]): ValidationResult;
+  validate(values: ParameterValues, schema: ParameterSchema[], options?: ValidateOptions): ValidationResult;
   exportOptimization?(values: ParameterValues, ranges: Record<string, OptimizationRange>): Promise<string>;
 }

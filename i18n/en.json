@@ -233,7 +233,8 @@
       "account_in_use": "Instances are set up on this account; delete them first.",
       "algo_in_use": "An instance uses this algo version; switch it to another version first.",
       "launch_unsupported": "This broker adapter cannot start bots.",
-      "parameter_file_invalid": "This is not a parameter file this Wickwatch can read."
+      "parameter_file_invalid": "This is not a parameter file this Wickwatch can read.",
+      "parameters_incomplete": "This version cannot start: some parameters need a value first (see the configuration)."
     }
   },
   "parameterIssue": {
@@ -566,7 +567,8 @@
     "changes": "No unsaved changes | 1 unsaved change | {count} unsaved changes",
     "attributionHint": "Which of the account's trades count for this instance: its figures, chart and history.",
     "commentTitle": "Version comment",
-    "commentPlaceholder": "e.g. risk raised to 1 %"
+    "commentPlaceholder": "e.g. risk raised to 1 %",
+    "fileEmpty": "Needs a value before the bot can start (the runtime has no empty text): {names}. Enter a value your bot reads as \"not set\", e.g. \"-\" or a value outside the valid range; the bot's documentation says which."
   },
   "instanceConfig": {
     "version": "Version {version}",
@@ -579,7 +581,9 @@
     "restore": "Restore…",
     "deleteConfirm": "Delete instance {name} with its whole configuration history? Nothing changes at the broker.",
     "deleteContainer": "Its container is stopped and removed.",
-    "download": "Download .{format}"
+    "download": "Download .{format}",
+    "incomplete": "Version {version} cannot start: the runtime needs a value for every text parameter, and these are empty: {names}. Enter a value your bot reads as \"not set\", e.g. \"-\" or a value outside the valid range; the bot's documentation says which.",
+    "edit": "Edit"
   },
   "deploy": {
     "none": "No container yet.",
