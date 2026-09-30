@@ -24,8 +24,11 @@ export const auth = fp<{ db: Db; basePath: string }>(async (app, { db, basePath 
   const publicPrefix = `${basePath}/api/v1/auth/`;
 
   app.addHook("onRequest", async (request, reply) => {
-    const path = request.url.split("?")[0] ?? "";
-    if (!path.startsWith(apiPrefix)) return;
+    // The router decodes the path before matching (/%61pi/ reaches /api/), so decide by the matched
+    // route and fall back to the raw path only when no route matched.
+    const rawPath = request.url.split("?")[0] ?? "";
+    const target = request.routeOptions.url ?? rawPath;
+    if (!target.startsWith(apiPrefix) && !rawPath.startsWith(apiPrefix)) return;
 
     if (UNSAFE_METHODS.has(request.method) && !sameOrigin(request)) {
       return reply.code(403).send({ error: "forbidden_origin" });
@@ -33,7 +36,7 @@ export const auth = fp<{ db: Db; basePath: string }>(async (app, { db, basePath 
 
     const token = request.cookies[SESSION_COOKIE];
     if (token) request.user = await findSession(db, token);
-    if (!request.user && !path.startsWith(publicPrefix)) {
+    if (!request.user && !target.startsWith(publicPrefix)) {
       return reply.code(401).send({ error: "unauthenticated" });
     }
   });
@@ -64,7 +67,9 @@ export function clearSessionCookie(reply: FastifyReply, basePath: string): void 
   void reply.clearCookie(SESSION_COOKIE, { path: `${basePath}/` });
 }
 
+export const isAdmin = (request: FastifyRequest): boolean => request.user?.role === "admin";
+
 /** preHandler for routes that change state: viewers may only read. */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-  if (request.user?.role !== "admin") await reply.code(403).send({ error: "forbidden" });
+  if (!isAdmin(request)) await reply.code(403).send({ error: "forbidden" });
 }

@@ -73,6 +73,19 @@ describe("overview API", () => {
     expect(res.statusCode).toBe(401);
     expect(res.json()).toEqual({ error: "unauthenticated" });
   });
+
+  it("requires a login for percent-encoded API paths too", async () => {
+    for (const url of [
+      "/%61pi/v1/overview",
+      "/%61pi/v1/accounts",
+      "/api/v1/%61ccounts",
+      "/%61pi/v1/managed-instances",
+    ]) {
+      expect((await t.app.inject(url)).statusCode, url).toBe(401);
+    }
+    // Public auth routes stay reachable, encoded or not.
+    expect((await t.app.inject("/%61pi/v1/auth/session")).statusCode).toBe(200);
+  });
 });
 
 describe("instance actions", () => {

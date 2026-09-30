@@ -76,6 +76,8 @@ describe("app", () => {
     const { app } = await start({ BASE_PATH: "/bots" });
     expect((await app.inject("/bots/api/openapi.json")).statusCode).toBe(401);
     expect((await app.inject("/bots/api/docs/")).statusCode).toBe(401);
+    expect((await app.inject("/bots/%61pi/openapi.json")).statusCode).toBe(401);
+    expect((await app.inject("/bots/%61pi/docs/")).statusCode).toBe(401);
 
     const cookie = await loginAs(t!, "viewer", "/bots");
     const res = await app.inject({ url: "/bots/api/openapi.json", headers: { cookie } });
