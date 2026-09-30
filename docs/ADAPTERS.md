@@ -21,7 +21,13 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 | `stats.ts` | `dealStats()`: key figures of a list of deals (win rate, profit factor, average and total R …) |
 | `money.ts` | `dealResult()` (P&L plus commission and swap), `round2()` |
 | `instance-detail.ts` | `buildInstanceDetail()`: one instance with its positions, orders, deals and figures (pure) |
+| `rules.ts` | Input rules shared by server and web: `MIN_PASSWORD_LENGTH`, `INSTANCE_NAME`, `SAFE_NAME`, `isUp()` |
+| `errors.ts` | `AdapterError`, `isAdapterError()`, `errorCode()` |
+| `json.ts`, `group-by.ts` | `isObject()`, `groupBy()` (keeps insertion order) |
+| `schemas/` | TypeBox schemas of the adapter contracts and of the API responses; the web imports them as types |
 | `testing/` | Contract test suites, exported as `@wickwatch/core/testing` |
+
+The web app imports types from `@wickwatch/core` and runtime code only through the dependency-free subpaths `parameters`, `rules`, `money`, `trading-day` and `group-by`.
 
 ## Changes from the first draft
 - Every adapter has a readonly `id`.

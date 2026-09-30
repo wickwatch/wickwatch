@@ -53,8 +53,20 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 - Applying a configuration no longer starts an instance that had crashed.
 - The loss guard's emergency stop was undone by the automatic restart of stopped instances.
 - Trading days of challenge profiles with a reset in the afternoon (e.g. 16:15 America/Chicago) were loaded from the wrong day start.
+- cTrader CLI: the emergency stop no longer fails on a fresh session that has no prices yet; positions are counted without them.
+- Deleting an instance set up in Wickwatch fails (503) when the runtime cannot be asked, instead of removing the record and leaving the container running.
+- The loss guard checks accounts in parallel, so a hanging broker session no longer delays the stop of another account.
+- Lookups by account number and id (challenge profile, trade attribution, rename, remove, "should run" after a stop) only find accounts of the active broker adapter.
+- A container killed for lack of memory counts as an error, not as stopped.
+- `CTRADER_IMAGE` on a registry with a port but without a tag (`registry:5000/image`) is refused at start as not pinned.
+- A live log closed while it was still opening no longer keeps following the container.
+- The overview no longer hands out data of a hanging broker query as current: callers share a running query only within 5 seconds.
 
 ### Security
+- API paths with percent-encoded characters (e.g. `/%61pi/v1/…`) reached the API without a login (read-only); authentication now goes by the matched route.
+- Every state-changing API route outside `/auth/` is for admins only, also one that forgets its own check; destructive actions check the confirmation in one place.
+- Instance refs in actions and the live log must be container-name characters.
+- Parameter values of instance configurations are returned to admins only (viewers see that there are values, not what they are).
 - Parameter values of instance configurations (they may hold licence keys) are stored encrypted with `MASTER_KEY`, like credentials; values stored before are encrypted once at start, so backups no longer contain them in plaintext.
 - Switching 2FA off needs a current code besides the password; the code that was just used to log in does not count again.
 - Encrypted values with a shortened authentication tag are rejected.

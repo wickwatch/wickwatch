@@ -2,7 +2,7 @@
 
 How to run your bots with Wickwatch, from the first login to a running prop challenge. Button and menu names are those of the English UI; the German UI uses the same layout. Settings for the server (adapters, paths, notifications) are in [CONFIGURATION.md](CONFIGURATION.md), deployment in [`deploy/README.md`](../deploy/README.md).
 
-Only an **admin** can change things (start, stop, set up, emergency stop). A **viewer** sees everything but acts on nothing.
+Only an **admin** can change things (start, stop, set up, emergency stop). A **viewer** sees everything except parameter values (they may hold licence keys) but acts on nothing.
 
 ## 1. First login
 
@@ -10,7 +10,7 @@ Only an **admin** can change things (start, stop, set up, emergency stop). A **v
 2. Open Wickwatch, enter the token, a user name and a password. This creates the admin.
 3. Scan the QR code with an authenticator app and enter the code, or skip two-factor authentication for now.
 
-Your user menu (top right) leads to **Profile**: set up or turn off 2FA and change the password there. Changing the password logs you out everywhere else.
+Your user menu (top right) leads to **Profile**: set up or turn off 2FA (turning it off needs your password and a current code) and change the password there. Changing the password logs you out everywhere else.
 
 ## 2. Connect a broker account
 
