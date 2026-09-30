@@ -138,6 +138,9 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     return { closed: positions.length, cancelled: orders.length };
   }
 
+  /** 1: a label with a description. Bump when the demo algos' parameters change. */
+  readonly algoMetadataVersion = 1;
+
   /** Knows the demo algos by file name (`alpha.algo`, `beta.algo`) in any folder, e.g. after an upload. */
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
     const [, name] = /(?:^|\/)([^/]+)\.algo$/.exec(algoPath) ?? [];

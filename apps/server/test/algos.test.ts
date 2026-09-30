@@ -1,8 +1,11 @@
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loginAs, startApp, type TestApp } from "./helpers";
+import { createAdapters } from "../src/adapters";
+import { loadConfig } from "../src/config";
+import { refreshAlgoMetadata } from "../src/services/algo-metadata";
+import { loginAs, MASTER_KEY, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
 let admin: string;
@@ -83,5 +86,39 @@ describe("algos", () => {
     expect(existsSync(join(algosDir, "beta", "2.1.0"))).toBe(false);
     const actions = await t.db.selectFrom("audit_log").select("action").where("action", "like", "algo.%").execute();
     expect(actions.map((a) => a.action)).toEqual(["algo.upload", "algo.delete"]);
+  });
+
+  it("reads algos again once whose metadata came from an older reader", async () => {
+    const { id } = (await upload("alpha.algo", "binary-v1")).json<AlgoBody>();
+    expect((await t.db.selectFrom("algos").select("metadata_reader").executeTakeFirstOrThrow()).metadata_reader).toBe(
+      "demo:1",
+    );
+    // As stored by an older reader: fewer parameters, no reader recorded.
+    await t.db
+      .updateTable("algos")
+      .set({ metadata: JSON.stringify({ name: "alpha", parameters: [] }), metadata_reader: null })
+      .where("id", "=", id)
+      .execute();
+    const broker = createAdapters(loadConfig({ DATABASE_URL: "file::memory:", MASTER_KEY })).broker;
+    const refresh = () => refreshAlgoMetadata({ db: t.db, broker, algosDir, log: t.app.log });
+
+    expect(await refresh()).toEqual({ refreshed: 1, failed: 0 });
+    const list = (await t.app.inject({ url: "/api/v1/algos", headers: { cookie: admin } })).json<AlgoBody[]>();
+    expect(list[0]?.parameters.map((p) => p.name)).toContain("RiskPercent");
+    // Name and version stay; nothing left to do on the next start.
+    expect(list[0]).toMatchObject({ name: "alpha", version: "1.5.0" });
+    expect(await refresh()).toEqual({ refreshed: 0, failed: 0 });
+  });
+
+  it("keeps the metadata of an algo that cannot be read and tries again later", async () => {
+    await upload("alpha.algo", "binary-v1");
+    await t.db.updateTable("algos").set({ metadata_reader: "demo:0" }).execute();
+    rmSync(join(algosDir, "alpha"), { recursive: true });
+    const broker = createAdapters(loadConfig({ DATABASE_URL: "file::memory:", MASTER_KEY })).broker;
+    const refresh = () => refreshAlgoMetadata({ db: t.db, broker, algosDir, log: t.app.log });
+    expect(await refresh()).toEqual({ refreshed: 0, failed: 1 });
+    const row = await t.db.selectFrom("algos").select(["metadata", "metadata_reader"]).executeTakeFirstOrThrow();
+    expect(row.metadata_reader).toBe("demo:0");
+    expect(row.metadata).toContain("RiskPercent");
   });
 });

@@ -248,6 +248,9 @@ export class CtraderCliBroker implements BrokerAdapter {
     return { closed: positions.length, cancelled: orders.length };
   }
 
+  /** 1: parameter groups, colours as #AARRGGBB, enum option values. Bump with every change to toAlgoMetadata. */
+  readonly algoMetadataVersion = 1;
+
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
     // The CLI takes the algo's name from the file name, so the file keeps it.
     const name = basename(algoPath);

@@ -123,6 +123,11 @@ export interface BrokerAdapter {
   cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void>;
   emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult>;
   algoMetadata(algoPath: string): Promise<AlgoMetadata>;
+  /**
+   * Version of what `algoMetadata` reads. Bump it when the reader learns more (a new field, a fixed type): the server
+   * then reads stored algos again once at start, instead of the user re-uploading them. Missing means 0.
+   */
+  readonly algoMetadataVersion?: number;
   /** How to run an algo on an account; missing when this broker cannot run bots itself. */
   launch?(input: LaunchInput): Promise<Launch>;
   /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */

@@ -10,6 +10,7 @@ import type { Db } from "../db";
 import type { AlgosTable } from "../db/schema";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
+import { metadataReader } from "../services/algo-metadata";
 import { audit } from "../services/audit";
 
 const MAX_ALGO_BYTES = 64 * 1024 * 1024;
@@ -184,6 +185,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
           build_time: metadata.buildTime ?? null,
           full_access: metadata.fullAccess ? 1 : 0,
           metadata: JSON.stringify(metadata),
+          metadata_reader: metadataReader(adapters.broker),
           uploaded_by: request.user?.id ?? null,
           uploaded_at: now,
         };

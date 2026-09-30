@@ -9,6 +9,7 @@ import { ConfigError, loadConfig } from "./config";
 import { createDatabase, migrateToLatest } from "./db";
 import { seedDemoAccounts, seedDemoChallenges } from "./demo-seed";
 import { createCipher } from "./security/cipher";
+import { refreshAlgoMetadata } from "./services/algo-metadata";
 import { LogTracker } from "./services/log-tracker";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
@@ -106,6 +107,12 @@ try {
   notifier.start();
   maintenance.start();
   lossGuard.start();
+  // In the background: reading an algo can take a few seconds (the cTrader CLI may run in a helper container).
+  refreshAlgoMetadata({ db, broker: adapters.broker, algosDir: config.algosDir, log: app.log }).catch(
+    (error: unknown) => {
+      app.log.warn({ err: error }, "Algo metadata refresh failed");
+    },
+  );
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(error.message);

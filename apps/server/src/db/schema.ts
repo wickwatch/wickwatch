@@ -104,6 +104,8 @@ export interface AlgosTable {
   full_access: number;
   /** AlgoMetadata as JSON. */
   metadata: string;
+  /** Reader that produced `metadata`, "<adapter>:<version>"; null for algos stored before it was recorded. */
+  metadata_reader: string | null;
   uploaded_by: number | null;
   uploaded_at: string;
 }

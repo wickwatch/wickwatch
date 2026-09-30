@@ -35,6 +35,7 @@ The core only knows these interfaces. Adapters translate to and from a concrete 
 - `LaunchInput.algo.parameters` is the algo's schema, so a broker can write the parameters the way its platform expects.
 - `BrokerAdapter.logEvent()` (optional) recognises platform events in a line an instance logged (`connection_lost`, `connection_restored`, `algo_crashed`). The server adds them to every `LogLine` as `event` and shows a running instance whose log last said `connection_lost` as "connection lost" (`InstanceSummary.connectionLostSince`, alert `instance_disconnected`): the container keeps running meanwhile, so its status alone does not show it. `algo_crashed` lines are counted per start (`InstanceSummary.crashes`); a crash in the last hour raises the alert `instance_crashed`.
 - `AlgoMetadata.fullAccess` tells whether the algo must be started with unrestricted access rights.
+- `BrokerAdapter.algoMetadataVersion` (optional, default 0) versions what `algoMetadata()` reads. Bump it whenever the reader extracts more or fixes a type: at the next start the server reads every stored algo again whose metadata came from another reader (`<adapter>:<version>`), keeping name and version. No re-upload, no repair migration.
 - Adapters throw `AdapterError` with one of the codes `auth_failed`, `not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. The message is for logs only and must never contain secrets.
 
 ## First implementations
