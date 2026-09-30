@@ -248,7 +248,8 @@ describe("InstanceView", () => {
     expect(cancel?.attributes("data-tooltip")).toBe("Cancel order");
     await cancel?.trigger("click");
     expect(wrapper.text()).toContain("Cancel order 320393475 (Stop Buy GER40 at 19,600)?");
-    const dialogButtons = wrapper.findAll("dialog")[1]?.findAll("button") ?? [];
+    const confirm = wrapper.findAll("dialog").find((d) => d.text().includes("Cancel order 320393475"));
+    const dialogButtons = confirm?.findAll("button") ?? [];
     // Button, dialog title and confirmation say the same.
     expect(dialogButtons.map((b) => b.text())).toEqual(["Cancel", "Cancel order"]);
     await dialogButtons[1]?.trigger("click");
@@ -274,6 +275,17 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("shows a position's details in the drawer", async () => {
+    const wrapper = await render();
+    const details = wrapper.findAll(".table-wrap td button").find((b) => b.attributes("aria-label") === "Details");
+    await details?.trigger("click");
+    const drawer = wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"));
+    expect(drawer?.props("drawer")).toBe(true);
+    expect(drawer?.props("title")).toMatch(/^Position · /);
+    expect(drawer?.text()).toContain("Held for");
+    wrapper.unmount();
+  });
+
   it("hides actions and closing positions from viewers", async () => {
     session.value = {
       setupRequired: false,
@@ -282,7 +294,10 @@ describe("InstanceView", () => {
     };
     const wrapper = await render();
     expect(wrapper.findAll(".head button")).toHaveLength(0);
-    expect(wrapper.findAll(".table-wrap button")).toHaveLength(0);
+    // Only the details, no trading actions.
+    const rowButtons = wrapper.findAll(".table-wrap td button");
+    expect(rowButtons.length).toBeGreaterThan(0);
+    expect(rowButtons.every((b) => b.attributes("aria-label") === "Details")).toBe(true);
     expect(wrapper.text()).toContain("19,412.5");
     wrapper.unmount();
   });

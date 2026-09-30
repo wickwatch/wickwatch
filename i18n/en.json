@@ -407,7 +407,27 @@
     "showLess": "Show fewer",
     "noInstance": "No instance",
     "risk": "Risk",
-    "r": "R"
+    "r": "R",
+    "details": "Details",
+    "kind": {
+      "position": "Position",
+      "order": "Order",
+      "deal": "Trade"
+    },
+    "symbol": "Symbol",
+    "exit": "Exit",
+    "initialSl": "Initial SL",
+    "closed": "Closed",
+    "held": "Held for",
+    "gross": "Gross P&L",
+    "commission": "Commission",
+    "swap": "Swap",
+    "net": "Net",
+    "label": "Label",
+    "positionId": "Position ID",
+    "id": "ID",
+    "noExpiry": "Until cancelled",
+    "riskShare": "({pct} of the balance)"
   },
   "log": {
     "filter": "Filter log",

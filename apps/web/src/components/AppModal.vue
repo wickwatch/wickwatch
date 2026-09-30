@@ -8,7 +8,13 @@ import IconButton from "./IconButton.vue";
  * returns to where it was. A sheet at the bottom on phones. With `dirty` it asks before closing, so typed input is
  * not lost by accident; the slot gets `close`, which asks the same way. Field errors stay inside the content.
  */
-const props = defineProps<{ open: boolean; title: string; dirty?: boolean }>();
+const props = defineProps<{
+  open: boolean;
+  title: string;
+  dirty?: boolean;
+  /** A panel at the right edge, full height, for details next to a table; the same sheet as the modal on phones. */
+  drawer?: boolean;
+}>();
 const emit = defineEmits<{ close: [] }>();
 const dialog = ref<HTMLDialogElement>();
 const titleId = useId();
@@ -47,7 +53,14 @@ function discard() {
 
 <template>
   <!-- tabindex: the dialog takes the focus itself when it opens. -->
-  <dialog ref="dialog" class="modal panel" :aria-labelledby="titleId" tabindex="-1" @cancel.prevent="requestClose">
+  <dialog
+    ref="dialog"
+    class="modal panel"
+    :class="{ 'modal--drawer': drawer }"
+    :aria-labelledby="titleId"
+    tabindex="-1"
+    @cancel.prevent="requestClose"
+  >
     <header class="modal__head">
       <h2 :id="titleId">{{ title }}</h2>
       <IconButton icon="close" :label="$t('modal.close')" variant="ghost" @click="requestClose" />
@@ -107,15 +120,45 @@ function discard() {
   padding: var(--ww-space-5);
 }
 
+.modal--drawer {
+  width: min(440px, 100vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  border-width: 0 0 0 1px;
+  border-radius: var(--ww-radius-xl) 0 0 var(--ww-radius-xl);
+}
+
+.modal--drawer[open] {
+  animation: drawer-in 0.2s ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal--drawer[open] {
+    animation: none;
+  }
+}
+
 /* Phones: a sheet at the bottom, as tall as its content; long content scrolls inside, the page stays visible above. */
 @media (max-width: 640px) {
   .modal {
     width: 100vw;
     max-width: 100vw;
     max-height: calc(100dvh - var(--ww-space-8));
+    height: fit-content;
     margin: auto 0 0;
     border-width: 1px 0 0;
     border-radius: var(--ww-radius-xl) var(--ww-radius-xl) 0 0;
+  }
+
+  .modal--drawer[open] {
+    animation: none;
   }
 
   .modal__body {

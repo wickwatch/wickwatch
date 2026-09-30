@@ -126,7 +126,9 @@ describe("AccountView", () => {
   it("opens the challenge profile in a modal, also from the old editor address", async () => {
     const wrapper = await open("/accounts/1111111/challenge");
     expect(router.currentRoute.value.name).toBe("account");
-    expect(wrapper.findComponent({ name: "AppModal" }).props("open")).toBe(true);
+    const shown = wrapper.findAllComponents({ name: "AppModal" }).filter((m) => m.props("open"));
+    // The challenge modal only, no trade details drawer.
+    expect(shown.map((m) => m.props("drawer"))).toEqual([false]);
     expect(wrapper.findComponent({ name: "ChallengeForm" }).exists()).toBe(true);
     wrapper.unmount();
   });

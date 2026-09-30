@@ -407,7 +407,27 @@
     "showLess": "Weniger anzeigen",
     "noInstance": "Ohne Instanz",
     "risk": "Risiko",
-    "r": "R"
+    "r": "R",
+    "details": "Details",
+    "kind": {
+      "position": "Position",
+      "order": "Order",
+      "deal": "Trade"
+    },
+    "symbol": "Symbol",
+    "exit": "Ausstieg",
+    "initialSl": "Anfangs-SL",
+    "closed": "Geschlossen",
+    "held": "Haltedauer",
+    "gross": "Brutto-P&L",
+    "commission": "Kommission",
+    "swap": "Swap",
+    "net": "Netto",
+    "label": "Label",
+    "positionId": "Positions-ID",
+    "id": "ID",
+    "noExpiry": "Bis storniert",
+    "riskShare": "({pct} der Balance)"
   },
   "log": {
     "filter": "Log filtern",

@@ -3,9 +3,11 @@ import type { AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
+import AppModal from "./AppModal.vue";
 import IconButton from "./IconButton.vue";
 import InstanceName from "./InstanceName.vue";
 import SignedValue from "./SignedValue.vue";
+import TradeDetail, { type TradeItem } from "./TradeDetail.vue";
 
 const props = defineProps<{
   kind: "positions" | "orders" | "deals";
@@ -23,7 +25,7 @@ const props = defineProps<{
   instances?: InstanceSummary[] | undefined;
 }>();
 defineEmits<{ close: [position: AccountPosition]; cancel: [order: AccountOrder]; attribution: [positionId: string] }>();
-const { locale } = useI18n();
+const { t, locale } = useI18n();
 
 const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
 /** The expiry column only when an order has one. */
@@ -37,6 +39,14 @@ const costs = (d: TradeDeal) => (d.commission ?? 0) + (d.swap ?? 0);
 /** Risk and R columns only when at least one trade knows its initial stop. */
 const withRisk = computed(() => props.deals?.some((d) => d.risk !== undefined) ?? false);
 const refOf = (name: string | undefined) => props.instances?.find((i) => i.name === name)?.ref;
+
+/** The row shown in the details drawer, with the time it was opened (for the holding time of open positions). */
+const selected = ref<{ item: TradeItem; now: number }>();
+const show = (item: TradeItem) => (selected.value = { item, now: Date.now() });
+const detailTitle = computed(() => {
+  const item = selected.value?.item;
+  return item ? `${t(`trade.kind.${item.kind}`)} · ${item.value.symbol}` : "";
+});
 </script>
 
 <template>
@@ -52,7 +62,7 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
           <th scope="col" class="num">{{ $t("trade.pnl") }}</th>
-          <th v-if="canClose || canAttribute" scope="col">
+          <th scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
         </tr>
@@ -67,8 +77,15 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <td class="mono num">{{ price(p.sl) }}</td>
           <td class="mono num">{{ price(p.tp) }}</td>
           <td class="num"><SignedValue :value="p.pnl" /></td>
-          <td v-if="canClose || canAttribute" class="num">
+          <td class="num">
             <div class="actions">
+              <IconButton
+                icon="info"
+                :label="$t('trade.details')"
+                variant="ghost"
+                small
+                @click="show({ kind: 'position', value: p })"
+              />
               <IconButton
                 v-if="canAttribute"
                 :icon="excluded ? 'restore' : 'exclude'"
@@ -104,7 +121,7 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
           <th v-if="expiring" scope="col">{{ $t("trade.expires") }}</th>
-          <th v-if="canCancel" scope="col">
+          <th scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
         </tr>
@@ -119,15 +136,25 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <td class="mono num">{{ price(o.sl) }}</td>
           <td class="mono num">{{ price(o.tp) }}</td>
           <td v-if="expiring" class="mono">{{ o.expiresAt ? formatDateTime(locale, o.expiresAt) : "–" }}</td>
-          <td v-if="canCancel" class="num">
-            <IconButton
-              icon="close"
-              :label="$t('action.cancelOrder')"
-              variant="danger"
-              small
-              :disabled="busy?.has(o.id)"
-              @click="$emit('cancel', o)"
-            />
+          <td class="num">
+            <div class="actions">
+              <IconButton
+                icon="info"
+                :label="$t('trade.details')"
+                variant="ghost"
+                small
+                @click="show({ kind: 'order', value: o })"
+              />
+              <IconButton
+                v-if="canCancel"
+                icon="close"
+                :label="$t('action.cancelOrder')"
+                variant="danger"
+                small
+                :disabled="busy?.has(o.id)"
+                @click="$emit('cancel', o)"
+              />
+            </div>
           </td>
         </tr>
       </tbody>
@@ -144,7 +171,7 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
           <th scope="col" class="num">{{ $t("trade.costs") }}</th>
           <th v-if="withRisk" scope="col" class="num">{{ $t("trade.risk") }}</th>
           <th v-if="withRisk" scope="col" class="num">{{ $t("trade.r") }}</th>
-          <th v-if="canAttribute" scope="col">
+          <th scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
         </tr>
@@ -164,15 +191,25 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
             <template v-else>{{ $t("format.none") }}</template>
           </td>
           <td v-if="withRisk" class="num"><SignedValue :value="d.r" :digits="1" unit="R" /></td>
-          <td v-if="canAttribute" class="num">
-            <IconButton
-              :icon="excluded ? 'restore' : 'exclude'"
-              :label="excluded ? $t('attribution.restore') : $t('attribution.exclude')"
-              variant="ghost"
-              small
-              :disabled="busy?.has(d.positionId)"
-              @click="$emit('attribution', d.positionId)"
-            />
+          <td class="num">
+            <div class="actions">
+              <IconButton
+                icon="info"
+                :label="$t('trade.details')"
+                variant="ghost"
+                small
+                @click="show({ kind: 'deal', value: d })"
+              />
+              <IconButton
+                v-if="canAttribute"
+                :icon="excluded ? 'restore' : 'exclude'"
+                :label="excluded ? $t('attribution.restore') : $t('attribution.exclude')"
+                variant="ghost"
+                small
+                :disabled="busy?.has(d.positionId)"
+                @click="$emit('attribution', d.positionId)"
+              />
+            </div>
           </td>
         </tr>
       </tbody>
@@ -185,6 +222,9 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
     >
       {{ showAll ? $t("trade.showLess") : $t("trade.showAll", { count: allDeals.length }) }}
     </button>
+    <AppModal :open="selected !== undefined" :title="detailTitle" drawer @close="selected = undefined">
+      <TradeDetail v-if="selected" :item="selected.item" :now="selected.now" />
+    </AppModal>
   </div>
 </template>
 
