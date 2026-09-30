@@ -113,10 +113,18 @@ const fileSize = (bytes: number) => {
 
 <template>
   <div class="page">
-    <!-- Title and action share a row, like the section heads on the accounts page; the intro runs below at full width. -->
+    <!-- Title and action share a row, the intro runs below; on phones the action goes below the intro at full width,
+         like on the instance and account pages. -->
     <div class="head">
       <h1>{{ $t("nav.algos") }}</h1>
-      <IconButton v-if="isAdmin" icon="upload" :label="$t('algos.upload')" show-label collapse @click="openUpload" />
+      <IconButton
+        v-if="isAdmin"
+        icon="upload"
+        :label="$t('algos.upload')"
+        show-label
+        class="head__action"
+        @click="openUpload"
+      />
       <p class="muted intro">{{ $t("algos.intro") }}</p>
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
@@ -214,16 +222,39 @@ const fileSize = (bytes: number) => {
 .head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title action"
+    "intro intro";
   gap: var(--ww-space-2) var(--ww-space-4);
   align-items: center;
 }
 
 .head h1 {
+  grid-area: title;
   margin: 0;
 }
 
 .head .intro {
-  grid-column: 1 / -1;
+  grid-area: intro;
+}
+
+.head__action {
+  grid-area: action;
+}
+
+@media (max-width: 640px) {
+  .head {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "intro"
+      "action";
+  }
+
+  .head__action {
+    width: 100%;
+    margin-top: var(--ww-space-2);
+  }
 }
 
 .buttons {

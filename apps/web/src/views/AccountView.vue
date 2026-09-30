@@ -116,7 +116,6 @@ const meta = computed(() => {
             :icon="account.challenge ? 'edit' : 'plus'"
             :label="account.challenge ? $t('challenge.edit') : $t('challenge.add')"
             show-label
-            collapse
             @click="editing = true"
           />
           <button
@@ -268,8 +267,8 @@ const meta = computed(() => {
 }
 
 /*
- * Name and actions share the first row, the meta line runs below at full width: on phones the actions (icons only
- * there) never drop below the meta line or squeeze it.
+ * Name and actions share the first row, the meta line runs below at full width. On phones the actions move below the
+ * meta line as a two-column grid of full buttons (see the media query), so none is left alone on a row.
  */
 .head {
   display: grid;
@@ -412,6 +411,41 @@ p[role="alert"] {
 }
 
 @media (max-width: 640px) {
+  .head {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "name"
+      "meta"
+      "actions";
+  }
+
+  .head__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: var(--ww-space-2);
+  }
+
+  .head__actions > * {
+    width: 100%;
+  }
+
+  /* A button alone on its row (one action, or the last of an odd number) takes the full width. */
+  .head__actions > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* Labels stay on one line; a long one ends in "…" (the full text stays the accessible name). */
+  .head__actions :deep(.btn),
+  .head__actions :deep(.btn__text) {
+    min-width: 0;
+  }
+
+  .head__actions :deep(.btn__text) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .page {
     padding: var(--ww-space-4);
   }

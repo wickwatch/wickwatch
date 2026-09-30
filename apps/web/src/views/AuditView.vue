@@ -278,5 +278,9 @@ thead th {
   .page {
     padding: var(--ww-space-4);
   }
+
+  .filters .field {
+    flex: 1 1 100%;
+  }
 }
 </style>

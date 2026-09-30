@@ -126,7 +126,7 @@ const disable = () =>
       <section class="panel card" aria-labelledby="password-title">
         <div class="card__head">
           <h2 id="password-title">{{ $t("auth.password") }}</h2>
-          <IconButton icon="key" :label="$t('profile.changePassword')" show-label collapse @click="openPassword" />
+          <IconButton icon="key" :label="$t('profile.changePassword')" show-label @click="openPassword" />
         </div>
         <p class="muted">{{ $t("profile.passwordHint") }}</p>
       </section>
@@ -258,6 +258,7 @@ const disable = () =>
 
 .card__head {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--ww-space-3);
   justify-content: space-between;
   align-items: center;
@@ -305,6 +306,11 @@ dd {
 @media (max-width: 640px) {
   .account {
     padding: var(--ww-space-4);
+  }
+
+  /* Section actions go below the heading at full width, with their text, like the page heads. */
+  .card__head > .btn {
+    width: 100%;
   }
 }
 </style>

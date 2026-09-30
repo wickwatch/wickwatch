@@ -221,7 +221,6 @@ const saveSecret = () =>
             icon="plus"
             :label="$t('accounts.addAccount')"
             show-label
-            collapse
             @click="openModal('account')"
           />
         </div>
@@ -283,7 +282,7 @@ const saveSecret = () =>
         <section class="panel card" aria-labelledby="logins-title">
           <div class="card__head">
             <h2 id="logins-title">{{ $t("accounts.logins") }}</h2>
-            <IconButton icon="plus" :label="$t('accounts.addLogin')" show-label collapse @click="openModal('login')" />
+            <IconButton icon="plus" :label="$t('accounts.addLogin')" show-label @click="openModal('login')" />
           </div>
           <p class="muted hint">{{ $t("accounts.loginsHint") }}</p>
           <div v-if="credentials.length" class="table-wrap">
@@ -630,6 +629,11 @@ td .actions {
 
 /* Phones: name, a compact meta line and the actions; the detail columns only on wider screens. */
 @media (max-width: 640px) {
+  /* Section actions go below the heading at full width, with their text, like the page heads. */
+  .card__head > .btn {
+    width: 100%;
+  }
+
   .wide {
     display: none;
   }

@@ -175,7 +175,8 @@
     "more": "More actions",
     "configVersion": "Configuration v{version}",
     "notCreated": "No container yet, so there are no trades and no log. Create it under Configuration.",
-    "managedLabels": "Set by Wickwatch from the configuration."
+    "managedLabels": "Set by Wickwatch from the configuration.",
+    "moreShort": "More"
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"

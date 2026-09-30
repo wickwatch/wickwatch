@@ -175,7 +175,8 @@
     "more": "Weitere Aktionen",
     "configVersion": "Konfiguration v{version}",
     "notCreated": "Noch kein Container, daher keine Trades und kein Log. Anlegen unter Konfiguration.",
-    "managedLabels": "Von Wickwatch aus der Konfiguration gesetzt."
+    "managedLabels": "Von Wickwatch aus der Konfiguration gesetzt.",
+    "moreShort": "Mehr"
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"

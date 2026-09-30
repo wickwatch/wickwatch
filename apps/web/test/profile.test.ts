@@ -22,7 +22,10 @@ afterEach(() => {
 describe("ProfileView", () => {
   it("changes the password in a modal after checking length and repetition", async () => {
     const wrapper = mount(ProfileView, { global: { plugins: [i18n] }, attachTo: document.body });
-    await wrapper.find('button[aria-label="Change password"]').trigger("click");
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Change password")
+      ?.trigger("click");
     const inputs = wrapper.findAll('dialog input[type="password"]');
     await inputs[0]?.setValue("old passphrase");
     await inputs[1]?.setValue("too short");

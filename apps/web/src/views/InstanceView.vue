@@ -195,7 +195,6 @@ async function remove() {
               icon="stop"
               :label="$t('action.stop')"
               show-label
-              collapse
               :disabled="busy"
               @click="act('stop')"
             />
@@ -204,7 +203,6 @@ async function remove() {
               icon="play"
               :label="$t('action.start')"
               show-label
-              collapse
               :disabled="busy"
               @click="act('start')"
             />
@@ -212,7 +210,6 @@ async function remove() {
               icon="restart"
               :label="$t('action.restart')"
               show-label
-              collapse
               :disabled="busy"
               @click="act('restart')"
             />
@@ -222,11 +219,12 @@ async function remove() {
               icon="edit"
               :label="$t('action.edit')"
               show-label
-              collapse
               :to="{ name: 'instance-edit', params: { ref: managed.name } }"
             />
             <MenuButton :label="$t('instance.more')" :items="moreItems" @select="onMore">
               <AppIcon name="more" />
+              <!-- On phones the button is as wide as the others and says what it is. -->
+              <span class="more-label">{{ $t("instance.moreShort") }}</span>
             </MenuButton>
           </template>
         </div>
@@ -310,8 +308,8 @@ async function remove() {
 }
 
 /*
- * Name and actions share the first row, the meta line runs below at full width: on phones the actions (icons only
- * there) never drop below the meta line or squeeze it.
+ * Name and actions share the first row, the meta line runs below at full width. On phones the actions move below the
+ * meta line as a two-column grid of full buttons (see the media query), so none is left alone on a row.
  */
 .head {
   display: grid;
@@ -412,10 +410,57 @@ p[role="alert"],
   font-weight: 700;
 }
 
+.more-label {
+  display: none;
+}
+
 @media (max-width: 640px) {
-  /* Instance names are one word in a wide font: a size smaller, so they fit next to four action icons. */
-  h1 {
-    font-size: var(--ww-size-2xl);
+  .head {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "name"
+      "meta"
+      "actions";
+  }
+
+  .head__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: var(--ww-space-2);
+  }
+
+  .head__actions > *,
+  .head__actions :deep(.menu-button > .btn) {
+    width: 100%;
+  }
+
+  /* A button alone on its row (one action, or the last of an odd number) takes the full width. */
+  .head__actions > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* Labels stay on one line; a long one ends in "…" (the full text stays the accessible name). */
+  .head__actions :deep(.btn),
+  .head__actions :deep(.btn__text) {
+    min-width: 0;
+  }
+
+  .head__actions :deep(.btn__text) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The "more" trigger looks like the buttons next to it here, not like a frameless icon. */
+  .head__actions :deep(.menu-button > .btn) {
+    border-color: var(--ww-border);
+    background: var(--ww-surface-raised);
+    color: var(--ww-text);
+    font-weight: 600;
+  }
+
+  .more-label {
+    display: inline;
   }
 
   .detail {

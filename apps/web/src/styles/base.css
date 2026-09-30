@@ -201,26 +201,6 @@ h2 {
   padding: 0;
 }
 
-/* IconButton `collapse`: text on wide screens, icon only (with tooltip) on phones. */
-.btn--collapse[data-tooltip]::after {
-  display: none;
-}
-
-@media (max-width: 640px) {
-  .btn--collapse {
-    width: var(--ww-control);
-    padding: 0;
-  }
-
-  .btn--collapse .btn__text {
-    display: none;
-  }
-
-  .btn--collapse[data-tooltip]::after {
-    display: block;
-  }
-}
-
 /* Touch: a little larger, still well above the 24 px minimum target (WCAG 2.5.8). */
 @media (pointer: coarse) {
   .btn {
