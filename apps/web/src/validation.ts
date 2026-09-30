@@ -161,7 +161,8 @@ export function useValidation() {
       "aria-invalid": shown.value ? "true" : undefined,
       "aria-describedby": shown.value ? `${id}-error` : undefined,
       onBlur: () => {
-        touched.value = true;
+        // Switching to another window or tab also blurs the field; that is not leaving it.
+        if (document.hasFocus()) touched.value = true;
       },
     }));
     const f: Field = { id, shown, error, server, attrs };

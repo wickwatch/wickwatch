@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- Switching to another window or tab no longer marks an empty form field as left (e.g. "Required" on the login page right after loading).
+
 ## 0.1.0 – 2026-09-30
 
 First release.

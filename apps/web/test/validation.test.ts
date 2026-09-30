@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref, withDirectives } from "vue";
-import { checks, normalizers, vNormalize } from "../src/validation";
+import { checks, normalizers, useValidation, vNormalize } from "../src/validation";
 
 describe("checks", () => {
   it("reports forbidden characters while typing and format problems later", () => {
@@ -55,5 +55,26 @@ describe("vNormalize", () => {
     expect(value.value).toBe("probe-demo");
     expect(input.selectionStart).toBe(3);
     expect(normalizers.digits("123 456")).toBe("123456");
+  });
+});
+
+describe("useValidation", () => {
+  const Form = defineComponent({
+    setup() {
+      const value = ref("");
+      const field = useValidation().field(() => value.value, checks.required);
+      return () => h("div", [h("input", field.attrs.value), field.shown.value ? h("p", field.shown.value.key) : null]);
+    },
+  });
+
+  it("shows a problem after leaving the field, not after switching to another window", async () => {
+    const wrapper = mount(Form);
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    await wrapper.find("input").trigger("blur");
+    expect(wrapper.find("p").exists()).toBe(false);
+    hasFocus.mockReturnValue(true);
+    await wrapper.find("input").trigger("blur");
+    expect(wrapper.find("p").text()).toBe("validation.required");
+    hasFocus.mockRestore();
   });
 });
