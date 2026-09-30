@@ -24,3 +24,18 @@ TypeScript, Node, Fastify (REST + OpenAPI, SSE), Vue 3 + Vite SPA, vue-i18n, SQL
 
 ## Scope of this repo
 Dashboard only. Real deployments (instances, parameter sets, secrets) live outside this repo; `deploy/` has generic examples.
+
+## Patterns (from the pre-release reviews)
+- Auth decisions use the matched route (`request.routeOptions.url`), never the raw `request.url`.
+- Write routes carry `preHandler: requireAdmin` (the auth plugin's hook is only a safety net); destructive ones
+  add `requireConfirmation(param)` and wrap the action in `auditOutcome`.
+- Look up accounts through the account directory (`findAccount`, `findAccountById`), not by number in SQL:
+  numbers are unique only per adapter.
+- Platform specifics (file extensions, periods, env vars) come from the adapter (`/system`, adapter settings);
+  server and web never name them.
+- Rules shared by server and web live in `@wickwatch/core/rules`, API schemas in `packages/core/src/schemas`;
+  the web imports core types only, runtime code only via dependency-free subpaths.
+- Broker CLI commands run one at a time per account: no extra broker calls on hot paths; the overview goes
+  through `OverviewLoader`.
+- Before writing a helper, check `apps/server/src/services`, `apps/web/src/composables` and `apps/web/src/format.ts`.
+- Security fixes get a regression test that fails without the fix.
