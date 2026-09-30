@@ -20,6 +20,7 @@ import { useTradeActions } from "../composables/useTradeActions";
 import { formatNumber } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
+import AppSpinner from "../components/AppSpinner.vue";
 
 /**
  * One trading account: its instances, all its open positions and pending orders (manual ones included, each with the
@@ -99,7 +100,7 @@ const meta = computed(() => {
     <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
 
     <p v-if="error && !data" class="tone-negative" role="alert">{{ $t(errorKey(error)) }}</p>
-    <p v-else-if="!data" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-else-if="!data" />
 
     <template v-if="data && account">
       <section class="head">

@@ -21,6 +21,7 @@ import { formatDateTime } from "../format";
 import { splitLabel } from "../parameter-label";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
+import AppSpinner from "../components/AppSpinner.vue";
 
 /** Same order as the core's ATTRIBUTION_MODES; the web app imports only types from the core. */
 const MODES: AttributionMode[] = ["auto", "label", "label-pattern", "account-symbol"];
@@ -301,7 +302,7 @@ const algoLabel = (a: AlgoRow) =>
       editing ? $t("instanceForm.backToConfig") : $t("instance.back")
     }}</RouterLink>
     <h1>{{ editing ? $t("instanceForm.editTitle", { name: editing }) : $t("instanceForm.newTitle") }}</h1>
-    <p v-if="loading" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-if="loading" />
 
     <form v-else class="form" novalidate @submit.prevent="save">
       <p v-if="!algos.length" class="tone-warning" role="alert">

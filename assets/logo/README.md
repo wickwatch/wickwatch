@@ -42,5 +42,6 @@ A *wick* is the thin line above and below a candlestick that shows how far price
 - Minimum size of the full symbol: 24 px. Below that, use the favicon.
 - Wordmark: Space Grotesk, "wick" Bold, "watch" Regular. The text is converted to outlines, no font needed.
 - Do not rotate, distort, recolour outside the palette or add shadows.
+- The only animation is the loading indicator in the dashboard (`apps/web/src/components/AppSpinner.vue`): the sweep turns clockwise with its leading edge bright and the blips light up as it passes; ring, ticks and candle stay still. Without motion (`prefers-reduced-motion`) it shows the plain symbol.
 
 Space Grotesk is licensed under the SIL Open Font License 1.1.

@@ -7,6 +7,7 @@ import { isAdmin } from "../session";
 import { checks, useValidation } from "../validation";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import FieldError from "./FieldError.vue";
+import AppSpinner from "./AppSpinner.vue";
 
 /** Challenge profile of an account, shown in a modal on the account page. `dirty`: inputs differ from what was loaded. */
 const props = defineProps<{ number: string }>();
@@ -191,7 +192,7 @@ const remove = () =>
 <template>
   <div class="editor">
     <p v-if="!isAdmin" class="tone-warning">{{ $t("error.api.forbidden") }}</p>
-    <p v-else-if="loading" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-else-if="loading" />
 
     <form v-else class="form" novalidate @submit.prevent="save">
       <label v-if="templates.length" class="field">

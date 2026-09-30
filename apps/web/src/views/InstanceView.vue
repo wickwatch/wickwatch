@@ -14,6 +14,7 @@ import { usePolling } from "../composables/usePolling";
 import { durationParts, formatDateTime } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
+import AppSpinner from "../components/AppSpinner.vue";
 
 /**
  * One instance: the page head with status and actions, then the tabs "Overview" (route `instance`) and
@@ -152,7 +153,7 @@ async function remove() {
     <p v-else-if="noContainer && managedLoaded && !managed" class="tone-negative" role="alert">
       {{ $t(errorKey(error)) }}
     </p>
-    <p v-else-if="!data && !managed" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-else-if="!data && !managed" />
 
     <template v-if="data || managed">
       <section class="head">

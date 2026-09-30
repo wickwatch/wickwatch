@@ -11,6 +11,7 @@ import FileDrop from "../components/FileDrop.vue";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
+import AppSpinner from "../components/AppSpinner.vue";
 
 const { t, locale } = useI18n();
 const algos = ref<AlgoRow[]>([]);
@@ -121,7 +122,7 @@ const fileSize = (bytes: number) => {
     </div>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
-    <p v-if="loading" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-if="loading" />
 
     <template v-else>
       <p v-if="!algos.length" class="muted">{{ $t("algos.none") }}</p>

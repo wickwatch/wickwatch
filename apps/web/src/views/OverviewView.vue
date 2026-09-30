@@ -13,6 +13,7 @@ import { usePolling } from "../composables/usePolling";
 import { formatRelative } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
+import AppSpinner from "../components/AppSpinner.vue";
 
 const POLL_MS = 30_000;
 
@@ -75,7 +76,7 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
       {{ $t("overview.loadFailed") }} {{ $t(errorKey(error)) }}
     </p>
 
-    <p v-if="!data && !error" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-if="!data && !error" />
 
     <template v-if="data">
       <AlertList :alerts="data.alerts" />

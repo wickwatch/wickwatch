@@ -8,6 +8,7 @@ import FieldError from "../components/FieldError.vue";
 import IconButton from "../components/IconButton.vue";
 import { isAdmin } from "../session";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
+import AppSpinner from "../components/AppSpinner.vue";
 
 const { t } = useI18n();
 const accounts = ref<AccountRow[]>([]);
@@ -209,7 +210,7 @@ const saveSecret = () =>
     <h1>{{ $t("nav.accounts") }}</h1>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
-    <p v-if="loading" class="muted">{{ $t("overview.loading") }}</p>
+    <AppSpinner v-if="loading" />
 
     <template v-else>
       <section class="panel card" aria-labelledby="accounts-title">
