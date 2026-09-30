@@ -104,6 +104,36 @@ describe("AccountsView", () => {
     expect(wrapper.find(".status").text()).toBe("Login added.");
   });
 
+  it("edits an account and changes a password in the modal, like adding", async () => {
+    session.value = {
+      setupRequired: false,
+      masterKeyConfigured: true,
+      user: { username: "a", role: "admin", totpEnabled: false },
+    };
+    const wrapper = await render();
+    const sent = (method: string) =>
+      fetchMock.mock.calls
+        .filter((c) => (c[1] as RequestInit | undefined)?.method === method)
+        .map((c) => [(c[0] as URL).pathname, JSON.parse(String((c[1] as RequestInit).body)) as unknown]);
+
+    await wrapper.find('button[aria-label="Edit: Prop A"]').trigger("click");
+    expect(wrapper.find("dialog h2").text()).toBe("Edit: Prop A");
+    await wrapper.find("dialog input").setValue("Prop A renamed");
+    await wrapper.find("dialog form").trigger("submit");
+    await flushPromises();
+    expect(sent("PATCH")[0]).toEqual([
+      expect.stringMatching(/accounts\/1$/) as unknown,
+      { displayName: "Prop A renamed", credentialId: 1 },
+    ]);
+    expect(wrapper.find("dialog form").exists()).toBe(false);
+
+    await wrapper.find('button[aria-label="Change password: Login A"]').trigger("click");
+    await wrapper.find('dialog input[type="password"]').setValue("new secret");
+    await wrapper.find("dialog form").trigger("submit");
+    await flushPromises();
+    expect(sent("PATCH")[1]).toEqual([expect.stringMatching(/credentials\/1$/) as unknown, { secret: "new secret" }]);
+  });
+
   it("shows viewers the accounts only, without actions or logins", async () => {
     session.value = {
       setupRequired: false,

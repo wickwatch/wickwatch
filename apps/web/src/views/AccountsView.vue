@@ -40,8 +40,9 @@ async function run(action: () => Promise<void>, done?: string) {
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
-/** Which add form is open in the modal; its errors stay inside the modal. */
-const modal = ref<"account" | "login">();
+/** Which form is open in the modal (add or edit); its errors stay inside the modal. */
+type ModalKind = "account" | "login" | "edit" | "password";
+const modal = ref<ModalKind>();
 const modalError = ref<string>();
 async function runInModal(action: () => Promise<boolean>, done: string) {
   busy.value = true;
@@ -58,11 +59,10 @@ async function runInModal(action: () => Promise<boolean>, done: string) {
     busy.value = false;
   }
 }
-function openModal(kind: "account" | "login") {
+function openModal(kind: ModalKind) {
   modalError.value = undefined;
   // Also here: closing blurs the field, which marks it touched after closeModal() reset it.
-  addForm.reset();
-  loginForm.reset();
+  for (const form of [addForm, loginForm, editForm, secretForm]) form.reset();
   modal.value = kind;
 }
 function closeModal() {
@@ -70,28 +70,56 @@ function closeModal() {
   offered.value = undefined;
   Object.assign(adding, { credentialId: 0, number: "", displayName: "" });
   Object.assign(newLogin, { label: "", login: "", secret: "" });
-  addForm.reset();
-  loginForm.reset();
+  Object.assign(changingSecret, { id: 0, label: "", secret: "" });
+  for (const form of [addForm, loginForm, editForm, secretForm]) form.reset();
 }
+const modalTitle = computed(() => {
+  switch (modal.value) {
+    case "login":
+      return t("accounts.addLogin");
+    case "edit":
+      return t("table.actionOn", { action: t("action.edit"), name: editing.original.displayName });
+    case "password":
+      return t("table.actionOn", { action: t("accounts.changePassword"), name: changingSecret.label });
+    default:
+      return t("accounts.addAccount");
+  }
+});
 /** Typed input that closing would lose. */
-const modalDirty = computed(() =>
-  modal.value === "account"
-    ? adding.credentialId !== 0
-    : modal.value === "login" && Object.values(newLogin).some((v) => v !== ""),
-);
+const modalDirty = computed(() => {
+  switch (modal.value) {
+    case "account":
+      return adding.credentialId !== 0;
+    case "login":
+      return Object.values(newLogin).some((v) => v !== "");
+    case "edit":
+      return (
+        editing.displayName !== editing.original.displayName || editing.credentialId !== editing.original.credentialId
+      );
+    case "password":
+      return changingSecret.secret !== "";
+    default:
+      return false;
+  }
+});
 
-// --- editing an account
-const editing = reactive({ id: 0, displayName: "", credentialId: 0 });
+// --- editing an account (name and login), in the modal like adding
+const editing = reactive({ id: 0, displayName: "", credentialId: 0, original: { displayName: "", credentialId: 0 } });
+const editForm = useValidation();
+const editNameField = editForm.field(() => editing.displayName.trim(), checks.required);
 function startEdit(a: AccountRow) {
-  Object.assign(editing, { id: a.id, displayName: a.displayName, credentialId: a.credentialId ?? 0 });
+  const values = { displayName: a.displayName, credentialId: a.credentialId ?? 0 };
+  Object.assign(editing, { id: a.id, ...values, original: values });
+  openModal("edit");
 }
 const saveEdit = () =>
-  run(async () => {
+  runInModal(async () => {
+    if (!editForm.validate()) return false;
     await api.updateAccount(editing.id, {
       displayName: editing.displayName.trim(),
       ...(editing.credentialId ? { credentialId: editing.credentialId } : {}),
     });
-    editing.id = 0;
+    return true;
   }, t("accounts.saved"));
 
 // --- removing
@@ -161,15 +189,18 @@ const addLogin = () =>
     return true;
   }, t("accounts.loginAdded"));
 
-const changingSecret = reactive({ id: 0, secret: "" });
+const changingSecret = reactive({ id: 0, label: "", secret: "" });
 const secretForm = useValidation();
 const newSecretField = secretForm.field(() => changingSecret.secret, checks.required);
+function startPasswordChange(c: CredentialRow) {
+  Object.assign(changingSecret, { id: c.id, label: c.label, secret: "" });
+  openModal("password");
+}
 const saveSecret = () =>
-  run(async () => {
-    if (!secretForm.validate()) return;
+  runInModal(async () => {
+    if (!secretForm.validate()) return false;
     await api.updateCredential(changingSecret.id, { secret: changingSecret.secret });
-    Object.assign(changingSecret, { id: 0, secret: "" });
-    secretForm.reset();
+    return true;
   }, t("accounts.passwordChanged"));
 </script>
 
@@ -199,83 +230,48 @@ const saveSecret = () =>
             <thead>
               <tr>
                 <th scope="col">{{ $t("accounts.name") }}</th>
-                <th scope="col">{{ $t("table.account") }}</th>
-                <th scope="col">{{ $t("accounts.broker") }}</th>
-                <th scope="col">{{ $t("accounts.currency") }}</th>
-                <th scope="col">{{ $t("accounts.login") }}</th>
-                <th scope="col">{{ $t("challenge.label") }}</th>
+                <th scope="col" class="wide">{{ $t("table.account") }}</th>
+                <th scope="col" class="wide">{{ $t("accounts.broker") }}</th>
+                <th scope="col" class="wide">{{ $t("accounts.currency") }}</th>
+                <th scope="col" class="wide">{{ $t("accounts.login") }}</th>
+                <th scope="col" class="wide">{{ $t("challenge.label") }}</th>
                 <th v-if="isAdmin" scope="col" class="num">{{ $t("table.actions") }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="a in accounts" :key="a.id">
-                <template v-if="editing.id === a.id">
-                  <td>
-                    <label class="visually-hidden" :for="`name-${a.id}`">{{ $t("accounts.name") }}</label>
-                    <input :id="`name-${a.id}`" v-model="editing.displayName" class="input" maxlength="100" />
-                  </td>
-                  <td class="mono">{{ a.number }}</td>
-                  <td>{{ a.broker }}</td>
-                  <td class="mono">{{ a.currency }}</td>
-                  <td>
-                    <label class="visually-hidden" :for="`login-${a.id}`">{{ $t("accounts.login") }}</label>
-                    <select :id="`login-${a.id}`" v-model="editing.credentialId" class="input">
-                      <option v-for="c in credentials" :key="c.id" :value="c.id">{{ c.label }}</option>
-                    </select>
-                  </td>
-                  <td></td>
-                  <td>
-                    <div class="actions">
-                      <IconButton
-                        icon="check"
-                        :label="$t('action.save')"
-                        variant="primary"
-                        small
-                        :disabled="busy || !editing.displayName.trim()"
-                        @click="saveEdit"
-                      />
-                      <IconButton
-                        icon="close"
-                        :label="$t('action.cancel')"
-                        variant="ghost"
-                        small
-                        @click="editing.id = 0"
-                      />
-                    </div>
-                  </td>
-                </template>
-                <template v-else>
-                  <th scope="row">
-                    <RouterLink :to="{ name: 'account', params: { number: a.number } }">{{ a.displayName }}</RouterLink>
-                  </th>
-                  <td class="mono">{{ a.number }}</td>
-                  <td>{{ a.broker }}</td>
-                  <td class="mono">{{ a.currency }}</td>
-                  <td>{{ a.credentialLabel ?? $t("format.none") }}</td>
-                  <td>
-                    <!-- Maintained on the account page. -->
-                    {{ a.hasChallenge ? $t("accounts.challengeSet") : $t("format.none") }}
-                  </td>
-                  <td v-if="isAdmin">
-                    <div class="actions">
-                      <IconButton
-                        icon="edit"
-                        :label="$t('table.actionOn', { action: $t('action.edit'), name: a.displayName })"
-                        small
-                        :disabled="busy"
-                        @click="startEdit(a)"
-                      />
-                      <IconButton
-                        icon="trash"
-                        :label="$t('table.actionOn', { action: $t('accounts.remove'), name: a.displayName })"
-                        variant="danger"
-                        small
-                        :disabled="busy"
-                        @click="removing = { kind: 'account', row: a }"
-                      />
-                    </div>
-                  </td>
-                </template>
+                <th scope="row">
+                  <RouterLink :to="{ name: 'account', params: { number: a.number } }">{{ a.displayName }}</RouterLink>
+                  <!-- Compact meta line for narrow screens, where the detail columns are hidden. -->
+                  <span class="narrow muted mono meta">{{ [a.number, a.currency].join(" · ") }}</span>
+                </th>
+                <td class="mono wide">{{ a.number }}</td>
+                <td class="wide">{{ a.broker }}</td>
+                <td class="mono wide">{{ a.currency }}</td>
+                <td class="wide">{{ a.credentialLabel ?? $t("format.none") }}</td>
+                <td class="wide">
+                  <!-- Maintained on the account page. -->
+                  {{ a.hasChallenge ? $t("accounts.challengeSet") : $t("format.none") }}
+                </td>
+                <td v-if="isAdmin">
+                  <div class="actions">
+                    <IconButton
+                      icon="edit"
+                      :label="$t('table.actionOn', { action: $t('action.edit'), name: a.displayName })"
+                      small
+                      :disabled="busy"
+                      @click="startEdit(a)"
+                    />
+                    <IconButton
+                      icon="trash"
+                      :label="$t('table.actionOn', { action: $t('accounts.remove'), name: a.displayName })"
+                      variant="danger"
+                      small
+                      :disabled="busy"
+                      @click="removing = { kind: 'account', row: a }"
+                    />
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -294,82 +290,54 @@ const saveSecret = () =>
               <thead>
                 <tr>
                   <th scope="col">{{ $t("accounts.label") }}</th>
-                  <th scope="col">{{ $t("accounts.loginName") }}</th>
+                  <th scope="col" class="wide">{{ $t("accounts.loginName") }}</th>
                   <th scope="col" class="num">{{ $t("accounts.usedBy") }}</th>
                   <th scope="col" class="num">{{ $t("table.actions") }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="c in credentials" :key="c.id">
-                  <th scope="row">{{ c.label }}</th>
-                  <td class="mono">{{ c.login }}</td>
+                  <th scope="row">
+                    {{ c.label }}
+                    <span class="narrow muted mono meta">{{ c.login }}</span>
+                  </th>
+                  <td class="mono wide">{{ c.login }}</td>
                   <td class="mono num">{{ c.accounts }}</td>
                   <td>
                     <div class="actions">
-                      <form v-if="changingSecret.id === c.id" class="inline" novalidate @submit.prevent="saveSecret">
-                        <label class="visually-hidden" :for="`secret-${c.id}`">{{ $t("accounts.newPassword") }}</label>
-                        <input
-                          :id="`secret-${c.id}`"
-                          v-model="changingSecret.secret"
-                          v-bind="newSecretField.attrs.value"
-                          class="input"
-                          type="password"
-                          autocomplete="new-password"
-                          :placeholder="$t('accounts.newPassword')"
-                          required
-                        />
-                        <FieldError :field="newSecretField" />
+                      <IconButton
+                        icon="key"
+                        :label="$t('table.actionOn', { action: $t('accounts.changePassword'), name: c.label })"
+                        small
+                        :disabled="busy"
+                        @click="startPasswordChange(c)"
+                      />
+                      <!-- The reason sits on a wrapper: a disabled button gets no focus and would fade its tooltip. -->
+                      <span
+                        v-if="c.accounts > 0"
+                        class="disabled-tip"
+                        tabindex="0"
+                        :data-tooltip="$t('accounts.loginInUse')"
+                      >
                         <IconButton
-                          type="submit"
-                          icon="check"
-                          :label="$t('action.save')"
-                          variant="primary"
-                          small
-                          :disabled="busy"
-                        />
-                        <IconButton
-                          icon="close"
-                          :label="$t('action.cancel')"
-                          variant="ghost"
-                          small
-                          @click="changingSecret.id = 0"
-                        />
-                      </form>
-                      <template v-else>
-                        <IconButton
-                          icon="key"
-                          :label="$t('table.actionOn', { action: $t('accounts.changePassword'), name: c.label })"
-                          small
-                          :disabled="busy"
-                          @click="changingSecret.id = c.id"
-                        />
-                        <!-- The reason sits on a wrapper: a disabled button gets no focus and would fade its tooltip. -->
-                        <span
-                          v-if="c.accounts > 0"
-                          class="disabled-tip"
-                          tabindex="0"
-                          :data-tooltip="$t('accounts.loginInUse')"
-                        >
-                          <IconButton
-                            icon="trash"
-                            :label="$t('table.actionOn', { action: $t('accounts.remove'), name: c.label })"
-                            variant="danger"
-                            small
-                            disabled
-                            :aria-describedby="`in-use-${c.id}`"
-                          />
-                          <span :id="`in-use-${c.id}`" class="visually-hidden">{{ $t("accounts.loginInUse") }}</span>
-                        </span>
-                        <IconButton
-                          v-else
                           icon="trash"
                           :label="$t('table.actionOn', { action: $t('accounts.remove'), name: c.label })"
                           variant="danger"
                           small
-                          :disabled="busy"
-                          @click="removing = { kind: 'credential', row: c }"
+                          disabled
+                          :aria-describedby="`in-use-${c.id}`"
                         />
-                      </template>
+                        <span :id="`in-use-${c.id}`" class="visually-hidden">{{ $t("accounts.loginInUse") }}</span>
+                      </span>
+                      <IconButton
+                        v-else
+                        icon="trash"
+                        :label="$t('table.actionOn', { action: $t('accounts.remove'), name: c.label })"
+                        variant="danger"
+                        small
+                        :disabled="busy"
+                        @click="removing = { kind: 'credential', row: c }"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -380,12 +348,7 @@ const saveSecret = () =>
       </template>
     </template>
 
-    <AppModal
-      :open="modal !== undefined"
-      :title="modal === 'login' ? $t('accounts.addLogin') : $t('accounts.addAccount')"
-      :dirty="modalDirty"
-      @close="closeModal"
-    >
+    <AppModal :open="modal !== undefined" :title="modalTitle" :dirty="modalDirty" @close="closeModal">
       <template v-if="modal === 'account'" #default="{ close }">
         <p v-if="!credentials.length" class="muted">{{ $t("accounts.needLogin") }}</p>
         <form v-else class="form" novalidate @submit.prevent="offered ? addAccount() : fetchOffered()">
@@ -442,6 +405,56 @@ const saveSecret = () =>
             <button v-else type="submit" class="btn btn--primary" :disabled="busy">
               {{ $t("accounts.addAccount") }}
             </button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+        </form>
+      </template>
+      <template v-else-if="modal === 'edit'" #default="{ close }">
+        <form class="form" novalidate @submit.prevent="saveEdit">
+          <label class="field">
+            {{ $t("accounts.name") }}
+            <input
+              v-model="editing.displayName"
+              v-bind="editNameField.attrs.value"
+              class="input"
+              maxlength="100"
+              required
+            />
+            <FieldError :field="editNameField" />
+          </label>
+          <label class="field">
+            {{ $t("accounts.login") }}
+            <select v-model="editing.credentialId" class="input">
+              <option v-for="c in credentials" :key="c.id" :value="c.id">
+                {{ $t("accounts.loginOption", { label: c.label, login: c.login }) }}
+              </option>
+            </select>
+          </label>
+          <div class="buttons">
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+            <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
+          </div>
+          <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
+        </form>
+      </template>
+      <template v-else-if="modal === 'password'" #default="{ close }">
+        <form class="form" novalidate @submit.prevent="saveSecret">
+          <label class="field">
+            {{ $t("accounts.newPassword") }}
+            <input
+              v-model="changingSecret.secret"
+              v-bind="newSecretField.attrs.value"
+              class="input"
+              type="password"
+              autocomplete="new-password"
+              required
+            />
+            <FieldError :field="newSecretField" />
+          </label>
+          <p class="field__hint">{{ $t("accounts.encrypted") }}</p>
+          <div class="buttons">
+            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="modalError" class="tone-negative" role="alert">{{ modalError }}</p>
@@ -592,7 +605,6 @@ tbody th {
 }
 
 .actions,
-.inline,
 .buttons {
   display: flex;
   flex-wrap: wrap;
@@ -600,10 +612,30 @@ tbody th {
   align-items: center;
 }
 
-td .actions,
-td .inline {
+td .actions {
   flex-wrap: nowrap;
   justify-content: flex-end;
+}
+
+.meta {
+  display: block;
+  font-size: var(--ww-size-xs);
+  font-weight: 400;
+}
+
+.narrow {
+  display: none;
+}
+
+/* Phones: name, a compact meta line and the actions; the detail columns only on wider screens. */
+@media (max-width: 640px) {
+  .wide {
+    display: none;
+  }
+
+  .narrow {
+    display: block;
+  }
 }
 
 .disabled-tip {
