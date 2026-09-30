@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import type { Deal, PendingOrder, Position } from "@wickwatch/core";
+import type { AccountOrder, AccountPosition, Deal, InstanceSummary } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatDateTime, formatNumber, formatPrice } from "../format";
 import IconButton from "./IconButton.vue";
+import InstanceName from "./InstanceName.vue";
 import SignedValue from "./SignedValue.vue";
 
 const props = defineProps<{
   kind: "positions" | "orders" | "deals";
-  positions?: Position[];
-  orders?: PendingOrder[];
+  positions?: AccountPosition[];
+  orders?: AccountOrder[];
   deals?: Deal[];
   canClose?: boolean;
   /** Offer "cancel order" on pending orders. */
@@ -18,8 +19,10 @@ const props = defineProps<{
   canAttribute?: boolean;
   excluded?: boolean;
   busy?: ReadonlySet<string>;
+  /** Adds an "Instance" column (account page): each trade's `instance`, linked to its page. */
+  instances?: InstanceSummary[] | undefined;
 }>();
-defineEmits<{ close: [position: Position]; cancel: [order: PendingOrder]; attribution: [positionId: string] }>();
+defineEmits<{ close: [position: AccountPosition]; cancel: [order: AccountOrder]; attribution: [positionId: string] }>();
 const { locale } = useI18n();
 
 const price = (value: number | undefined) => (value === undefined ? "–" : formatPrice(locale.value, value));
@@ -31,6 +34,7 @@ const showAll = ref(false);
 const allDeals = computed(() => [...(props.deals ?? [])].reverse());
 const dealRows = computed(() => (showAll.value ? allDeals.value : allDeals.value.slice(0, COLLAPSED_ROWS)));
 const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
+const refOf = (name: string | undefined) => props.instances?.find((i) => i.name === name)?.ref;
 </script>
 
 <template>
@@ -38,6 +42,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
     <table v-if="kind === 'positions'" class="table">
       <thead>
         <tr>
+          <th v-if="instances" scope="col">{{ $t("table.instance") }}</th>
           <th scope="col">{{ $t("trade.opened") }}</th>
           <th scope="col">{{ $t("trade.side") }}</th>
           <th scope="col" class="num">{{ $t("trade.lots") }}</th>
@@ -52,6 +57,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
       </thead>
       <tbody>
         <tr v-for="p in positions" :key="p.id">
+          <td v-if="instances"><InstanceName :name="p.instance" :instance-ref="refOf(p.instance)" /></td>
           <td class="mono">{{ formatDateTime(locale, p.openedAt) }}</td>
           <td>{{ $t(`trade.${p.side}`) }}</td>
           <td class="mono num">{{ formatNumber(locale, p.volume) }}</td>
@@ -89,6 +95,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
     <table v-else-if="kind === 'orders'" class="table">
       <thead>
         <tr>
+          <th v-if="instances" scope="col">{{ $t("table.instance") }}</th>
           <th scope="col">{{ $t("trade.type") }}</th>
           <th scope="col">{{ $t("trade.side") }}</th>
           <th scope="col" class="num">{{ $t("trade.lots") }}</th>
@@ -103,6 +110,7 @@ const costs = (d: Deal) => (d.commission ?? 0) + (d.swap ?? 0);
       </thead>
       <tbody>
         <tr v-for="o in orders" :key="o.id">
+          <td v-if="instances"><InstanceName :name="o.instance" :instance-ref="refOf(o.instance)" /></td>
           <td>{{ $t(`trade.orderType.${o.type}`) }}</td>
           <td>{{ $t(`trade.${o.side}`) }}</td>
           <td class="mono num">{{ formatNumber(locale, o.volume) }}</td>

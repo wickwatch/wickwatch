@@ -188,16 +188,16 @@ const saveSecret = () =>
                   </td>
                 </template>
                 <template v-else>
-                  <th scope="row">{{ a.displayName }}</th>
+                  <th scope="row">
+                    <RouterLink :to="{ name: 'account', params: { number: a.number } }">{{ a.displayName }}</RouterLink>
+                  </th>
                   <td class="mono">{{ a.number }}</td>
                   <td>{{ a.broker }}</td>
                   <td class="mono">{{ a.currency }}</td>
                   <td>{{ a.credentialLabel ?? $t("format.none") }}</td>
                   <td>
-                    <RouterLink v-if="isAdmin" :to="{ name: 'challenge', params: { number: a.number } }">
-                      {{ a.hasChallenge ? $t("accounts.challengeSet") : $t("accounts.challengeAdd") }}
-                    </RouterLink>
-                    <span v-else>{{ a.hasChallenge ? $t("accounts.challengeSet") : $t("format.none") }}</span>
+                    <!-- Maintained on the account page. -->
+                    {{ a.hasChallenge ? $t("accounts.challengeSet") : $t("format.none") }}
                   </td>
                   <td v-if="isAdmin" class="actions">
                     <button type="button" class="btn btn--small" :disabled="busy" @click="startEdit(a)">

@@ -4,7 +4,7 @@ import { clearUser, loadSession, session } from "./session";
 import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
 import AlgosView from "./views/AlgosView.vue";
-import ChallengeView from "./views/ChallengeView.vue";
+import AccountView from "./views/AccountView.vue";
 import InstanceFormView from "./views/InstanceFormView.vue";
 import InstanceView from "./views/InstanceView.vue";
 import LoginView from "./views/LoginView.vue";
@@ -26,7 +26,12 @@ export const router = createRouter({
     // Tabs of the instance page; the same component, so switching keeps its state.
     { path: "/instances/:ref/config", name: "instance-config", component: InstanceView },
     { path: "/instances/:ref/edit", name: "instance-edit", component: InstanceFormView },
-    { path: "/accounts/:number/challenge", name: "challenge", component: ChallengeView },
+    { path: "/accounts/:number", name: "account", component: AccountView },
+    // The challenge profile is edited in a modal on the account page now.
+    {
+      path: "/accounts/:number/challenge",
+      redirect: (to) => ({ name: "account", params: to.params, query: { challenge: "edit" } }),
+    },
     { path: "/login", name: "login", component: LoginView, meta: { public: true } },
     { path: "/setup", name: "setup", component: SetupView, meta: { public: true } },
     { path: "/:pathMatch(.*)*", redirect: "/" },

@@ -123,6 +123,8 @@ describe("InstanceView", () => {
     const text = wrapper.text();
     expect(text).toContain("alpha");
     expect(text).toContain("Prop A · 1111111 · GER40 · M5 · bot:1");
+    // The account Wickwatch knows links to its page.
+    expect(wrapper.find('.head a[href$="/accounts/1111111"]').text()).toBe("Prop A · 1111111");
     expect(text).toContain("100%");
     expect(text).toContain("+429.50");
     expect(text).toContain("19,412.5");

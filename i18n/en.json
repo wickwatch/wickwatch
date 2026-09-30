@@ -40,10 +40,8 @@
     "balance": "Balance",
     "equity": "Equity",
     "dayPnl": "Today's P&L",
-    "noProfile": "No challenge profile",
     "number": "Account {number}",
     "openPositions": "Open positions",
-    "noProfileHint": "No challenge profile set up.",
     "instancesActive": "{running} of {total} instance active | {running} of {total} instances active",
     "state": {
       "running": "Running",
@@ -51,7 +49,10 @@
       "stopped": "Bot stopped",
       "idle": "No instances",
       "error": "Not reachable"
-    }
+    },
+    "pendingOrders": "Pending orders",
+    "open": "Open positions: {positions} · Pending orders: {orders}",
+    "page": "Account {name}"
   },
   "profile": {
     "title": "Profile",
@@ -395,7 +396,8 @@
       "stopLimit": "Stop limit"
     },
     "showAll": "Show all {count} trades",
-    "showLess": "Show fewer"
+    "showLess": "Show fewer",
+    "noInstance": "No instance"
   },
   "log": {
     "filter": "Filter log",
@@ -424,7 +426,6 @@
     "currency": "Currency",
     "login": "Broker login",
     "challengeSet": "Profile set",
-    "challengeAdd": "Add",
     "remove": "Remove",
     "saved": "Saved.",
     "removed": "Removed.",
@@ -604,5 +605,11 @@
     "fileChoose": "Choose file",
     "fileDrop": "or drop it here",
     "describe": "Description of {name}"
+  },
+  "modal": {
+    "close": "Close",
+    "discardTitle": "Discard changes?",
+    "discardMessage": "The inputs in this window are not saved yet and would be lost.",
+    "discard": "Discard"
   }
 }

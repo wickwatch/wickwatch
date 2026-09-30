@@ -1,5 +1,5 @@
 import { Value } from "typebox/value";
-import { Overview, type EmergencyStopReport } from "@wickwatch/core";
+import { AccountDetail, Overview, type EmergencyStopReport } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
@@ -47,6 +47,21 @@ describe("overview API", () => {
     expect(overview.alerts).toContainEqual(
       expect.objectContaining({ code: "instance_error", subject: "beta-us500-own" }),
     );
+  });
+
+  it("returns one account with its instances and all positions and orders with their instance", async () => {
+    const res = await get("/api/v1/accounts/1111111/detail");
+    expect(res.statusCode).toBe(200);
+    const detail = res.json<AccountDetail>();
+    expect(Value.Errors(AccountDetail, detail)).toEqual([]);
+    expect(detail.account).toMatchObject({ number: "1111111", openPositions: 1, pendingOrders: 1 });
+    expect(detail.instances.map((i) => i.name)).toEqual(["alpha-ger40-a", "beta-nas100-a"]);
+    expect(detail.positions.map((p) => p.instance)).toEqual(["alpha-ger40-a"]);
+    expect(detail.pendingOrders.map((o) => o.instance)).toEqual(["beta-nas100-a"]);
+    // The overview counts the pending orders too.
+    const overview = (await get("/api/v1/overview")).json<Overview>();
+    expect(overview.accounts.find((a) => a.number === "1111111")?.pendingOrders).toBe(1);
+    expect((await get("/api/v1/accounts/999/detail")).statusCode).toBe(404);
   });
 
   it("returns the host status", async () => {

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { AccountSummary } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
+import { hasSomethingToStop } from "../composables/useEmergencyStop";
 import { formatNumber } from "../format";
 import ChallengeRules from "./ChallengeRules.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
-defineProps<{ account: AccountSummary; canEmergencyStop: boolean; canEdit: boolean; busy: boolean }>();
+/** Details and the challenge profile live on the account page, which the title links to. */
+defineProps<{ account: AccountSummary; canEmergencyStop: boolean; busy: boolean }>();
 defineEmits<{ emergencyStop: [account: AccountSummary] }>();
 const { locale } = useI18n();
 </script>
@@ -15,7 +17,11 @@ const { locale } = useI18n();
   <article class="card panel">
     <div class="card__head">
       <div class="card__title">
-        <h3>{{ account.displayName }}</h3>
+        <h3>
+          <RouterLink :to="{ name: 'account', params: { number: account.number } }" class="card__name">
+            {{ account.displayName }}
+          </RouterLink>
+        </h3>
         <div class="mono muted card__meta">
           {{ [$t("account.number", { number: account.number }), account.currency].filter(Boolean).join(" · ") }}
         </div>
@@ -42,20 +48,18 @@ const { locale } = useI18n();
         <dt>{{ $t("account.dayPnl") }}</dt>
         <dd><SignedValue :value="account.dayPnl" /></dd>
       </div>
+      <div>
+        <dt>{{ $t("account.openPositions") }}</dt>
+        <dd class="mono">{{ account.openPositions }}</dd>
+      </div>
+      <div v-if="account.pendingOrders !== undefined">
+        <dt>{{ $t("account.pendingOrders") }}</dt>
+        <dd class="mono">{{ account.pendingOrders }}</dd>
+      </div>
     </dl>
 
-    <div class="card__profile">
-      <ChallengeRules v-if="account.challenge" :challenge="account.challenge" />
-      <template v-else>
-        <div class="muted">{{ $t("account.noProfileHint") }}</div>
-        <div class="card__row muted">
-          <span>{{ $t("account.openPositions") }}</span>
-          <span class="mono card__value">{{ account.openPositions }}</span>
-        </div>
-      </template>
-      <RouterLink v-if="canEdit" :to="{ name: 'challenge', params: { number: account.number } }" class="card__link">
-        {{ account.challenge ? $t("challenge.edit") : $t("challenge.add") }}
-      </RouterLink>
+    <div v-if="account.challenge" class="card__profile">
+      <ChallengeRules :challenge="account.challenge" />
     </div>
 
     <div class="card__foot">
@@ -63,7 +67,7 @@ const { locale } = useI18n();
         {{ $t("account.instancesActive", account.instances, account.instances.total) }}
       </span>
       <button
-        v-if="canEmergencyStop"
+        v-if="canEmergencyStop && hasSomethingToStop(account)"
         type="button"
         class="btn btn--danger"
         :disabled="busy"
@@ -85,8 +89,7 @@ const { locale } = useI18n();
 }
 
 .card__head,
-.card__foot,
-.card__row {
+.card__foot {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -113,9 +116,10 @@ h3 {
   font-size: var(--ww-size-sm);
 }
 
+/* As many figures per line as fit: one line on a wide card, two on a narrow one. */
 .card__kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: var(--ww-space-3);
   margin: 0;
 }
@@ -139,12 +143,14 @@ dd {
   font-size: var(--ww-size-sm);
 }
 
-.card__value {
-  color: var(--ww-text);
+/* The name reads as a heading; underline only on hover, like other title links. */
+.card__name {
+  color: inherit;
+  text-decoration: none;
 }
 
-.card__link {
-  font-size: var(--ww-size-sm);
-  font-weight: 600;
+.card__name:hover,
+.card__name:focus-visible {
+  text-decoration: underline;
 }
 </style>

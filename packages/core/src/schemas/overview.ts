@@ -1,5 +1,6 @@
 import Type from "typebox";
 import { AdapterErrorCode } from "../errors";
+import { PendingOrder, Position } from "./broker";
 import { Capabilities } from "./capabilities";
 import { ChallengeEvaluation } from "./challenge";
 import { IsoTime } from "./common";
@@ -63,6 +64,8 @@ export const AccountSummary = Type.Object({
   equity: Type.Optional(Type.Number()),
   dayPnl: Type.Optional(Type.Number()),
   openPositions: Type.Integer({ minimum: 0 }),
+  /** Present when the broker supports pending orders and could be queried. */
+  pendingOrders: Type.Optional(Type.Integer({ minimum: 0 })),
   instances: Type.Object({ total: Type.Integer({ minimum: 0 }), running: Type.Integer({ minimum: 0 }) }),
   /** Present when the account has a challenge profile and the broker could be queried. */
   challenge: Type.Optional(ChallengeEvaluation),
@@ -100,6 +103,23 @@ export const Overview = Type.Object({
   alerts: Type.Array(Alert),
 });
 export type Overview = Type.Static<typeof Overview>;
+
+/** `instance` names the instance a position or order belongs to; missing for manual trades and unclear ones. */
+export const AccountPosition = Type.Object({ ...Position.properties, instance: Type.Optional(Type.String()) });
+export type AccountPosition = Type.Static<typeof AccountPosition>;
+export const AccountOrder = Type.Object({ ...PendingOrder.properties, instance: Type.Optional(Type.String()) });
+export type AccountOrder = Type.Static<typeof AccountOrder>;
+
+/** One account with its instances and all its open positions and pending orders, built by buildAccountDetail(). */
+export const AccountDetail = Type.Object({
+  time: IsoTime,
+  account: AccountSummary,
+  instances: Type.Array(InstanceSummary),
+  positions: Type.Array(AccountPosition),
+  pendingOrders: Type.Array(AccountOrder),
+  alerts: Type.Array(Alert),
+});
+export type AccountDetail = Type.Static<typeof AccountDetail>;
 
 export const EmergencyStopReport = Type.Object({
   stoppedInstances: Type.Array(Type.String()),

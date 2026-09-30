@@ -7,14 +7,19 @@ import IconButton from "./IconButton.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
-defineProps<{
-  instances: InstanceSummary[];
-  accountNames: ReadonlyMap<string, string>;
-  busy: ReadonlySet<string>;
-  now: number;
-  /** Viewers see no action buttons. */
-  canAct: boolean;
-}>();
+withDefaults(
+  defineProps<{
+    instances: InstanceSummary[];
+    accountNames: ReadonlyMap<string, string>;
+    busy: ReadonlySet<string>;
+    now: number;
+    /** Viewers see no action buttons. */
+    canAct: boolean;
+    /** Off on the account page, where every row is on that account. */
+    showAccount?: boolean;
+  }>(),
+  { showAccount: true },
+);
 defineEmits<{ action: [instance: InstanceSummary, action: InstanceAction] }>();
 
 const { t } = useI18n();
@@ -31,7 +36,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
       <thead>
         <tr>
           <th scope="col">{{ $t("table.instance") }}</th>
-          <th scope="col" class="wide">{{ $t("table.account") }}</th>
+          <th v-if="showAccount" scope="col" class="wide">{{ $t("table.account") }}</th>
           <th scope="col" class="wide">{{ $t("table.symbol") }}</th>
           <th scope="col" class="wide">{{ $t("table.period") }}</th>
           <th scope="col">{{ $t("table.status") }}</th>
@@ -53,7 +58,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
               [instance.symbol, instance.period].filter(Boolean).join(" · ")
             }}</span>
           </th>
-          <td class="wide">
+          <td v-if="showAccount" class="wide">
             {{
               instance.account
                 ? [accountNames.get(instance.account), instance.account].filter(Boolean).join(" · ")

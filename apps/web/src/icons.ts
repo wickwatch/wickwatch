@@ -45,6 +45,7 @@ export const ICONS = {
   ],
   download: [path("M12 4.5v11"), path("M7.5 11l4.5 4.5 4.5-4.5"), path("M5 19.5h14")],
   upload: [path("M12 15.5v-11"), path("M7.5 9l4.5-4.5L16.5 9"), path("M5 19.5h14")],
+  plus: [path("M12 5v14M5 12h14")],
   info: [{ tag: "circle", cx: 12, cy: 12, r: 8.5 }, path("M12 11v5.5"), path("M12 7.75v.5")],
   search: [{ tag: "circle", cx: 10.5, cy: 10.5, r: 6 }, path("M15 15l4.5 4.5")],
   trash: [

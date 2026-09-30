@@ -1,10 +1,12 @@
-import { HostStatus, Overview } from "@wickwatch/core";
+import { AccountDetail, HostStatus, Overview } from "@wickwatch/core";
+import Type from "typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { LogTracker } from "../services/log-tracker";
-import { loadOverview } from "../services/overview";
+import { ErrorBody } from "../plugins/errors";
+import { loadAccountDetail, loadOverview } from "../services/overview";
 
 export const overviewRoutes: FastifyPluginAsyncTypebox<{
   adapters: Adapters;
@@ -23,6 +25,30 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
       },
     },
     async (request) => loadOverview(adapters, accounts, db, labelPrefix, logTracker, request.log),
+  );
+
+  app.get(
+    "/accounts/:number/detail",
+    {
+      schema: {
+        tags: ["overview"],
+        summary: "One account: summary, instances, and all open positions and pending orders with their instance",
+        params: Type.Object({ number: Type.String({ minLength: 1, maxLength: 64 }) }),
+        response: { 200: AccountDetail, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const detail = await loadAccountDetail(
+        request.params.number,
+        adapters,
+        accounts,
+        db,
+        labelPrefix,
+        logTracker,
+        request.log,
+      );
+      return detail ?? reply.code(404).send({ error: "not_found" });
+    },
   );
 
   app.get(

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import type { ChallengeProfile, ChallengeRules, ChallengeTemplate, DailyLossReference } from "@wickwatch/core";
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
 import { api, ApiError, errorKey } from "../api";
-import ConfirmDialog from "../components/ConfirmDialog.vue";
-import FieldError from "../components/FieldError.vue";
 import { isAdmin } from "../session";
 import { checks, useValidation } from "../validation";
+import ConfirmDialog from "./ConfirmDialog.vue";
+import FieldError from "./FieldError.vue";
 
-const route = useRoute();
-const router = useRouter();
+/** Challenge profile of an account, shown in a modal on the account page. `dirty`: inputs differ from what was loaded. */
+const props = defineProps<{ number: string }>();
+const emit = defineEmits<{ saved: []; deleted: []; cancel: []; dirty: [dirty: boolean] }>();
 const { locale } = useI18n();
-const number = computed(() => String(route.params["number"]));
+const number = computed(() => props.number);
 
 const REFERENCES: DailyLossReference[] = [
   "balance-or-equity-at-day-start",
@@ -122,8 +122,14 @@ onMounted(async () => {
     if (!(e instanceof ApiError && e.status === 404)) error.value = errorKey(e);
   } finally {
     loading.value = false;
+    initial.value = JSON.stringify(form);
   }
 });
+
+/** The form as loaded, to know whether closing would lose input. */
+const initial = ref<string>();
+const dirty = computed(() => initial.value !== undefined && JSON.stringify(form) !== initial.value);
+watch(dirty, (d) => emit("dirty", d));
 
 async function run(action: () => Promise<void>) {
   busy.value = true;
@@ -162,25 +168,23 @@ const save = () =>
   run(async () => {
     if (!v.validate()) return;
     await api.saveChallenge(number.value, toProfile());
-    await router.push("/");
+    emit("saved");
   });
 
 const remove = () =>
   run(async () => {
     confirmDelete.value = false;
     await api.deleteChallenge(number.value);
-    await router.push("/");
+    emit("deleted");
   });
 </script>
 
 <template>
   <div class="editor">
-    <RouterLink to="/" class="back">{{ $t("instance.back") }}</RouterLink>
-    <h1>{{ $t("challenge.editorTitle", { account: number }) }}</h1>
     <p v-if="!isAdmin" class="tone-warning">{{ $t("error.api.forbidden") }}</p>
     <p v-else-if="loading" class="muted">{{ $t("overview.loading") }}</p>
 
-    <form v-else class="form panel" novalidate @submit.prevent="save">
+    <form v-else class="form" novalidate @submit.prevent="save">
       <label v-if="templates.length" class="field">
         {{ $t("challenge.template") }}
         <select v-model="form.templateId" class="input" @change="applyTemplate">
@@ -379,7 +383,7 @@ const remove = () =>
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <div class="actions">
         <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
-        <RouterLink to="/" class="btn btn--ghost">{{ $t("action.cancel") }}</RouterLink>
+        <button type="button" class="btn btn--ghost" @click="emit('cancel')">{{ $t("action.cancel") }}</button>
         <button
           v-if="exists"
           type="button"
@@ -404,24 +408,11 @@ const remove = () =>
 </template>
 
 <style scoped>
-.editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ww-space-5);
-  max-width: 720px;
-  padding: var(--ww-space-6) var(--ww-space-10) var(--ww-space-10);
-}
-
-.back {
-  align-self: flex-start;
-  font-size: var(--ww-size-sm);
-}
-
+.editor,
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-5);
-  padding: var(--ww-space-6);
 }
 
 fieldset {
@@ -458,16 +449,6 @@ p[role="alert"] {
 
 .actions__delete {
   margin-left: auto;
-}
-
-@media (max-width: 640px) {
-  .editor {
-    padding: var(--ww-space-4);
-  }
-
-  .form {
-    padding: var(--ww-space-4);
-  }
 }
 
 .check {

@@ -1260,6 +1260,10 @@
                             "type": "integer",
                             "minimum": 0
                           },
+                          "pendingOrders": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
                           "instances": {
                             "type": "object",
                             "required": [
@@ -1754,6 +1758,857 @@
             }
           },
           "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/{number}/detail": {
+      "get": {
+        "summary": "One account: summary, instances, and all open positions and pending orders with their instance",
+        "tags": [
+          "overview"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "time",
+                    "account",
+                    "instances",
+                    "positions",
+                    "pendingOrders",
+                    "alerts"
+                  ],
+                  "properties": {
+                    "time": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "account": {
+                      "type": "object",
+                      "required": [
+                        "number",
+                        "displayName",
+                        "state",
+                        "openPositions",
+                        "instances"
+                      ],
+                      "properties": {
+                        "number": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "broker": {
+                          "type": "string"
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "credentialLabel": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "running"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "attention"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "stopped"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "idle"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "error"
+                              ]
+                            }
+                          ]
+                        },
+                        "error": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "auth_failed"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "not_found"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unsupported"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "invalid_input"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "timeout"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unavailable"
+                              ]
+                            }
+                          ]
+                        },
+                        "balance": {
+                          "type": "number"
+                        },
+                        "equity": {
+                          "type": "number"
+                        },
+                        "dayPnl": {
+                          "type": "number"
+                        },
+                        "openPositions": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "pendingOrders": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "instances": {
+                          "type": "object",
+                          "required": [
+                            "total",
+                            "running"
+                          ],
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "running": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          }
+                        },
+                        "challenge": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "day",
+                            "status",
+                            "rules",
+                            "tradingDayStart"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "phase": {
+                              "type": "string"
+                            },
+                            "day": {
+                              "type": "integer",
+                              "minimum": 1
+                            },
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "running"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "warning"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "breached"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "passed"
+                                  ]
+                                }
+                              ]
+                            },
+                            "rules": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "status",
+                                  "value",
+                                  "limit",
+                                  "usage",
+                                  "unit"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "profitTarget"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "dailyLoss"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "maxLoss"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "tradingDays"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "duration"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "status": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "ok"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "warning"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "danger"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "breached"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "open"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "reached"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "number"
+                                  },
+                                  "limit": {
+                                    "type": "number"
+                                  },
+                                  "usage": {
+                                    "type": "number"
+                                  },
+                                  "unit": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "percent"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "days"
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "approximate": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            },
+                            "tradingDayStart": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "Z$"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "instances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "ref",
+                          "name",
+                          "status",
+                          "restartCount",
+                          "openPositions",
+                          "dayPnl"
+                        ],
+                        "properties": {
+                          "ref": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "account": {
+                            "type": "string"
+                          },
+                          "symbol": {
+                            "type": "string"
+                          },
+                          "period": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "running"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "restarting"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "unknown"
+                                ]
+                              }
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
+                          "restartCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "openPositions": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "dayPnl": {
+                            "type": "number"
+                          },
+                          "lastLog": {
+                            "type": "object",
+                            "required": [
+                              "time",
+                              "text"
+                            ],
+                            "properties": {
+                              "time": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "Z$"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "level": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "info"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "warn"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "error"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "event": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "connection_lost"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "connection_restored"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "algo_crashed"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "setup": {
+                                "type": "object",
+                                "additionalProperties": {}
+                              }
+                            }
+                          },
+                          "connectionLostSince": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
+                          "crashes": {
+                            "type": "object",
+                            "required": [
+                              "count",
+                              "lastAt",
+                              "lastText"
+                            ],
+                            "properties": {
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1
+                              },
+                              "lastAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "Z$"
+                              },
+                              "lastText": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "positions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "symbol",
+                          "side",
+                          "volume",
+                          "entry",
+                          "pnl",
+                          "openedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "entry": {
+                            "type": "number"
+                          },
+                          "sl": {
+                            "type": "number"
+                          },
+                          "tp": {
+                            "type": "number"
+                          },
+                          "pnl": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
+                          "instance": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "pendingOrders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "symbol",
+                          "type",
+                          "side",
+                          "volume",
+                          "price"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "symbol": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stop"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stopLimit"
+                                ]
+                              }
+                            ]
+                          },
+                          "side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "buy"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "sell"
+                                ]
+                              }
+                            ]
+                          },
+                          "volume": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "price": {
+                            "type": "number"
+                          },
+                          "sl": {
+                            "type": "number"
+                          },
+                          "tp": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
+                          "instance": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "alerts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "level",
+                          "code",
+                          "subject",
+                          "params"
+                        ],
+                        "properties": {
+                          "level": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "warning"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "info"
+                                ]
+                              }
+                            ]
+                          },
+                          "code": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_disconnected"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_crashed"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "account_error"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_breached"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_passed"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_guard"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "attribution_ambiguous"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "attribution_invalid"
+                                ]
+                              }
+                            ]
+                          },
+                          "subject": {
+                            "type": "string"
+                          },
+                          "params": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
             "description": "Default Response",
             "content": {
               "application/json": {

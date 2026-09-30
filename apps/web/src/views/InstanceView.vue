@@ -66,15 +66,19 @@ const runningVersion = computed(() => {
   return d?.managed ? d.configVersion : undefined;
 });
 
+/** An account Wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
+const knownAccount = computed(() => {
+  const a = data.value?.account ?? managed.value?.account;
+  return a ? { number: a.number, label: `${a.displayName} · ${a.number}` } : undefined;
+});
 const meta = computed(() => {
   const d = data.value;
   const m = managed.value;
   if (d) {
     const i = d.instance;
-    const account = d.account ? `${d.account.displayName} · ${d.account.number}` : i.account;
-    return [account, i.symbol, i.period, i.image].filter(Boolean).join(" · ");
+    return [knownAccount.value ? undefined : i.account, i.symbol, i.period, i.image].filter(Boolean).join(" · ");
   }
-  if (m) return [`${m.account.displayName} · ${m.account.number}`, m.config.symbol, m.config.period].join(" · ");
+  if (m) return [m.config.symbol, m.config.period].join(" · ");
   return "";
 });
 
@@ -162,7 +166,11 @@ async function remove() {
             />
           </div>
           <p class="muted">
-            {{ meta }}
+            <RouterLink v-if="knownAccount" :to="{ name: 'account', params: { number: knownAccount.number } }">{{
+              knownAccount.label
+            }}</RouterLink>
+            <template v-if="knownAccount && meta"> · {{ meta }}</template>
+            <template v-else>{{ meta }}</template>
             <template v-if="runningVersion">
               · {{ $t("instance.configVersion", { version: runningVersion }) }}</template
             >

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { InstanceDetail, PendingOrder, Position } from "@wickwatch/core";
-import { computed, reactive, ref } from "vue";
+import type { InstanceDetail } from "@wickwatch/core";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
-import { formatPrice } from "../format";
+import { useTradeActions } from "../composables/useTradeActions";
 import { isAdmin } from "../session";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import KpiTiles from "./KpiTiles.vue";
@@ -19,7 +19,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** The "Overview" tab of an instance: figures, chart, live log and trades. */
 const props = defineProps<{ data: InstanceDetail; days: Range }>();
 const emit = defineEmits<{ "update:days": [days: Range]; refresh: [] }>();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 /** "All" only when the instance traded before the longest range. */
 const ranges = computed<Range[]>(() => {
@@ -28,10 +28,12 @@ const ranges = computed<Range[]>(() => {
   return older || props.days === "all" ? [...RANGES, "all"] : [...RANGES];
 });
 
-const busy = reactive(new Set<string>());
 const notice = ref<{ tone: "positive" | "negative"; text: string }>();
-const closing = ref<Position>();
-const cancelling = ref<PendingOrder>();
+const { busy, closing, cancelling, closeMessage, cancelMessage, closePosition, cancelOrder } = useTradeActions(
+  () => props.data.account?.number,
+  notice,
+  () => emit("refresh"),
+);
 
 /** Removes a position (and its deals) from this instance, or restores it. */
 async function toggleAttribution(positionId: string, restore: boolean) {
@@ -48,40 +50,6 @@ async function toggleAttribution(positionId: string, restore: boolean) {
     notice.value = { tone: "negative", text: t(errorKey(e)) };
   } finally {
     busy.delete(positionId);
-    emit("refresh");
-  }
-}
-
-async function cancelOrder() {
-  const order = cancelling.value;
-  const account = props.data.account?.number;
-  cancelling.value = undefined;
-  if (!order || !account) return;
-  busy.add(order.id);
-  try {
-    await api.cancelOrder(account, order.id);
-    notice.value = { tone: "positive", text: t("instance.orderCancelled", { id: order.id }) };
-  } catch (e) {
-    notice.value = { tone: "negative", text: t("instance.cancelFailed", { id: order.id, reason: t(errorKey(e)) }) };
-  } finally {
-    busy.delete(order.id);
-    emit("refresh");
-  }
-}
-
-async function closePosition() {
-  const position = closing.value;
-  const account = props.data.account?.number;
-  closing.value = undefined;
-  if (!position || !account) return;
-  busy.add(position.id);
-  try {
-    await api.closePosition(account, position.id);
-    notice.value = { tone: "positive", text: t("instance.positionClosed", { id: position.id }) };
-  } catch (e) {
-    notice.value = { tone: "negative", text: t("instance.closeFailed", { id: position.id, reason: t(errorKey(e)) }) };
-  } finally {
-    busy.delete(position.id);
     emit("refresh");
   }
 }
@@ -205,7 +173,7 @@ async function closePosition() {
     <ConfirmDialog
       :open="closing !== undefined"
       :title="$t('instance.closeTitle')"
-      :message="closing ? $t('instance.closeConfirm', { id: closing.id, symbol: closing.symbol }) : ''"
+      :message="closeMessage"
       :confirm-label="$t('action.closePosition')"
       @confirm="closePosition"
       @cancel="closing = undefined"
@@ -213,17 +181,7 @@ async function closePosition() {
     <ConfirmDialog
       :open="cancelling !== undefined"
       :title="$t('instance.cancelTitle')"
-      :message="
-        cancelling
-          ? $t('instance.cancelConfirm', {
-              id: cancelling.id,
-              type: $t(`trade.orderType.${cancelling.type}`),
-              side: $t(`trade.${cancelling.side}`),
-              symbol: cancelling.symbol,
-              price: formatPrice(locale, cancelling.price),
-            })
-          : ''
-      "
+      :message="cancelMessage"
       :confirm-label="$t('action.cancelOrder')"
       @confirm="cancelOrder"
       @cancel="cancelling = undefined"

@@ -40,10 +40,8 @@
     "balance": "Balance",
     "equity": "Equity",
     "dayPnl": "Tages-P&L",
-    "noProfile": "Kein Challenge-Profil",
     "number": "Konto {number}",
     "openPositions": "Offene Positionen",
-    "noProfileHint": "Kein Challenge-Profil hinterlegt.",
     "instancesActive": "{running} von {total} Instanz aktiv | {running} von {total} Instanzen aktiv",
     "state": {
       "running": "Läuft",
@@ -51,7 +49,10 @@
       "stopped": "Bot gestoppt",
       "idle": "Keine Instanzen",
       "error": "Nicht erreichbar"
-    }
+    },
+    "pendingOrders": "Pending Orders",
+    "open": "Offene Positionen: {positions} · Pending Orders: {orders}",
+    "page": "Konto {name}"
   },
   "profile": {
     "title": "Profil",
@@ -395,7 +396,8 @@
       "stopLimit": "Stop-Limit"
     },
     "showAll": "Alle {count} Trades anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "noInstance": "Ohne Instanz"
   },
   "log": {
     "filter": "Log filtern",
@@ -424,7 +426,6 @@
     "currency": "Währung",
     "login": "Broker-Login",
     "challengeSet": "Profil hinterlegt",
-    "challengeAdd": "Hinzufügen",
     "remove": "Entfernen",
     "saved": "Gespeichert.",
     "removed": "Entfernt.",
@@ -604,5 +605,11 @@
     "fileChoose": "Datei wählen",
     "fileDrop": "oder hierher ziehen",
     "describe": "Beschreibung zu {name}"
+  },
+  "modal": {
+    "close": "Schließen",
+    "discardTitle": "Änderungen verwerfen?",
+    "discardMessage": "Die Eingaben in diesem Fenster sind noch nicht gespeichert und gingen verloren.",
+    "discard": "Verwerfen"
   }
 }

@@ -2,6 +2,7 @@ import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type Attributor, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
 import type {
+  AccountDetail,
   AccountStats,
   AccountSummary,
   Alert,
@@ -11,6 +12,7 @@ import type {
   InstanceLogState,
   LogLine,
   Overview,
+  PendingOrder,
   Position,
   RuntimeInstance,
 } from "./schemas";
@@ -24,7 +26,8 @@ export interface AccountSnapshot {
   broker?: string;
   currency?: string;
   /** Broker data; missing when the query failed. */
-  data?: { stats: AccountStats; positions: Position[]; dealsToday: Deal[] };
+  /** `pendingOrders` only when the broker supports them. */
+  data?: { stats: AccountStats; positions: Position[]; dealsToday: Deal[]; pendingOrders?: PendingOrder[] };
   error?: AdapterErrorCode;
   challenge?: ChallengeEvaluation;
   /** The loss guard stopped the account in the current trading day. */
@@ -109,6 +112,7 @@ export function buildOverview(input: OverviewInput): Overview {
       displayName: account.displayName,
       state: accountState(account, own.length, running),
       openPositions: data?.positions.length ?? 0,
+      ...(data?.pendingOrders ? { pendingOrders: data.pendingOrders.length } : {}),
       instances: { total: own.length, running },
       ...(account.credentialLabel ? { credentialLabel: account.credentialLabel } : {}),
       ...(account.broker ? { broker: account.broker } : {}),
@@ -132,6 +136,32 @@ export function buildOverview(input: OverviewInput): Overview {
     alerts: alerts(instances, input.accounts, attributor, input.time),
   };
 }
+
+/**
+ * One account for its own page: its summary and instances as in the overview, plus every open position and pending
+ * order with the instance it belongs to (same attribution as everywhere). Undefined if the account is not in `input`.
+ */
+export function buildAccountDetail(input: OverviewInput, number: string): AccountDetail | undefined {
+  const overview = buildOverview(input);
+  const account = overview.accounts.find((a) => a.number === number);
+  if (!account) return undefined;
+  const data = input.accounts.find((a) => a.number === number)?.data;
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
+  const owner = (item: TradeItem) => attributor.owner(number, item);
+  const instances = overview.instances.filter((i) => i.account === number);
+  const names = new Set([number, ...instances.map((i) => i.name)]);
+  return {
+    time: overview.time,
+    account,
+    instances,
+    positions: (data?.positions ?? []).map((p) => withInstance(p, owner(positionItem(p)))),
+    pendingOrders: (data?.pendingOrders ?? []).map((o) => withInstance(o, owner({ label: o.label, symbol: o.symbol }))),
+    alerts: overview.alerts.filter((a) => names.has(a.subject)),
+  };
+}
+
+const withInstance = <T extends object>(item: T, instance: string | undefined): T & { instance?: string } =>
+  instance ? { ...item, instance } : item;
 
 function accountState(account: AccountSnapshot, total: number, running: number): AccountSummary["state"] {
   if (account.error) return "error";

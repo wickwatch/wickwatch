@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, useId, watch } from "vue";
 
 const props = defineProps<{ open: boolean; title: string; message: string; confirmLabel: string }>();
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
 const dialog = ref<HTMLDialogElement>();
+const titleId = useId();
 
 watch(
   () => props.open,
@@ -16,8 +17,8 @@ watch(
 
 <template>
   <!-- Native modal dialog: focus trap and Escape come from the browser. Cancel has focus by default. -->
-  <dialog ref="dialog" class="dialog panel" aria-labelledby="confirm-title" @cancel.prevent="emit('cancel')">
-    <h2 id="confirm-title">{{ title }}</h2>
+  <dialog ref="dialog" class="dialog panel" :aria-labelledby="titleId" @cancel.prevent="emit('cancel')">
+    <h2 :id="titleId">{{ title }}</h2>
     <p>{{ message }}</p>
     <div class="dialog__actions">
       <button type="button" class="btn" autofocus @click="emit('cancel')">{{ $t("action.cancel") }}</button>

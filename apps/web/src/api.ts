@@ -4,6 +4,7 @@ import type {
   ParameterIssue,
   ParameterSchema,
   ParameterValues,
+  AccountDetail,
   ChallengeProfile,
   ChallengeTemplate,
   EmergencyStopReport,
@@ -198,6 +199,7 @@ export const api = {
   totpDisable: (password: string) => post<undefined>("auth/totp/disable", { password }),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
+  accountDetail: (number: string) => request<AccountDetail>(`accounts/${encodeURIComponent(number)}/detail`),
   host: () => request<HostStatus>("host"),
   instanceAction: (ref: string, action: InstanceAction) =>
     post<undefined>(`instances/${encodeURIComponent(ref)}/${action}`),

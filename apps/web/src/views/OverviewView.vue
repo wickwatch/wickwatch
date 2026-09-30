@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AccountSummary, InstanceSummary } from "@wickwatch/core";
+import type { InstanceSummary } from "@wickwatch/core";
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey, type InstanceAction, type ManagedInstanceRow } from "../api";
@@ -7,6 +7,7 @@ import AccountCard from "../components/AccountCard.vue";
 import AlertList from "../components/AlertList.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import InstanceTable from "../components/InstanceTable.vue";
+import { useEmergencyStop } from "../composables/useEmergencyStop";
 import { usePolling } from "../composables/usePolling";
 import { formatRelative } from "../format";
 import { isAdmin } from "../session";
@@ -21,7 +22,6 @@ const busy = reactive(new Set<string>());
 const notice = ref<{ tone: "positive" | "negative"; text: string }>();
 const filterAccount = ref("");
 const onlyRunning = ref(false);
-const confirming = ref<AccountSummary>();
 
 const accountNames = computed(() => new Map(data.value?.accounts.map((a) => [a.number, a.displayName]) ?? []));
 const instances = computed(() =>
@@ -30,6 +30,7 @@ const instances = computed(() =>
       (!filterAccount.value || i.account === filterAccount.value) && (!onlyRunning.value || i.status === "running"),
   ),
 );
+const { confirming, running, message, stop } = useEmergencyStop(notice, refresh);
 const canEmergencyStop = computed(() => isAdmin.value && (system.value?.capabilities.emergencyStop ?? false));
 const managed = ref<ManagedInstanceRow[]>([]);
 onMounted(() => {
@@ -56,34 +57,6 @@ async function runAction(instance: InstanceSummary, action: InstanceAction) {
     };
   } finally {
     busy.delete(instance.ref);
-    await refresh();
-  }
-}
-
-async function emergencyStop() {
-  const account = confirming.value;
-  confirming.value = undefined;
-  if (!account) return;
-  busy.add(account.number);
-  try {
-    const report = await api.emergencyStop(account.number);
-    const done = t("emergencyStop.done", {
-      account: account.number,
-      instances: report.stoppedInstances.length,
-      closed: report.closed,
-      cancelled: report.cancelled,
-    });
-    const partial = report.failedInstances.length
-      ? ` ${t("emergencyStop.partial", { names: report.failedInstances.join(", ") })}`
-      : "";
-    notice.value = { tone: partial ? "negative" : "positive", text: done + partial };
-  } catch (e) {
-    notice.value = {
-      tone: "negative",
-      text: t("emergencyStop.failed", { account: account.number, reason: t(errorKey(e)) }),
-    };
-  } finally {
-    busy.delete(account.number);
     await refresh();
   }
 }
@@ -126,8 +99,7 @@ async function emergencyStop() {
             :key="account.number"
             :account="account"
             :can-emergency-stop="canEmergencyStop"
-            :can-edit="isAdmin"
-            :busy="busy.has(account.number)"
+            :busy="running === account.number"
             @emergency-stop="confirming = $event"
           />
         </div>
@@ -198,11 +170,9 @@ async function emergencyStop() {
     <ConfirmDialog
       :open="confirming !== undefined"
       :title="$t('emergencyStop.title')"
-      :message="
-        confirming ? $t('confirm.emergencyStop', { account: `${confirming.displayName} · ${confirming.number}` }) : ''
-      "
+      :message="message"
       :confirm-label="$t('emergencyStop.confirmAction')"
-      @confirm="emergencyStop"
+      @confirm="stop"
       @cancel="confirming = undefined"
     />
   </div>

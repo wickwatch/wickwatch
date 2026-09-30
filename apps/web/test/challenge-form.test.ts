@@ -2,9 +2,8 @@ import type { ChallengeProfile } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, setLocale } from "../src/i18n";
-import { router } from "../src/router";
+import ChallengeForm from "../src/components/ChallengeForm.vue";
 import { session } from "../src/session";
-import ChallengeView from "../src/views/ChallengeView.vue";
 
 const saved: ChallengeProfile = {
   name: "Challenge",
@@ -16,7 +15,7 @@ const saved: ChallengeProfile = {
 };
 let puts: unknown[];
 
-beforeEach(async () => {
+beforeEach(() => {
   setLocale("en", false);
   session.value = {
     setupRequired: false,
@@ -35,15 +34,14 @@ beforeEach(async () => {
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
     }),
   );
-  await router.push({ name: "challenge", params: { number: "1111111" } });
 });
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("ChallengeView protection", () => {
+describe("ChallengeForm", () => {
   it("is off by default and saves the guard only when switched on", async () => {
-    const wrapper = mount(ChallengeView, { global: { plugins: [i18n, router] } });
+    const wrapper = mount(ChallengeForm, { props: { number: "1111111" }, global: { plugins: [i18n] } });
     await flushPromises();
     const box = wrapper.find('input[type="checkbox"]');
     expect((box.element as HTMLInputElement).checked).toBe(false);
@@ -65,5 +63,16 @@ describe("ChallengeView protection", () => {
     await wrapper.find("form").trigger("submit");
     await flushPromises();
     expect(puts[1]).toMatchObject({ guard: { usagePct: 80 } });
+  });
+
+  it("tells whether inputs changed, and reports a save instead of navigating", async () => {
+    const wrapper = mount(ChallengeForm, { props: { number: "1111111" }, global: { plugins: [i18n] } });
+    await flushPromises();
+    expect(wrapper.emitted("dirty")).toBeUndefined();
+    await wrapper.find('input[type="checkbox"]').setValue(true);
+    expect(wrapper.emitted("dirty")?.at(-1)).toEqual([true]);
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(wrapper.emitted("saved")).toHaveLength(1);
   });
 });
