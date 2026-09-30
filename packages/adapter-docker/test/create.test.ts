@@ -71,6 +71,16 @@ describe("creating instances", () => {
     expect(docker.containers.get("bot-new")?.details.State.Status).toBe("running");
   });
 
+  it("leaves a crashed instance stopped after replacing it", async () => {
+    const { docker, adapter } = setup();
+    await adapter.create(spec());
+    const state = docker.containers.get("bot-new")?.details.State;
+    // Exited with code 1, e.g. the runtime refused the parameters.
+    Object.assign(state ?? {}, { Status: "exited", ExitCode: 1 });
+    const updated = await adapter.update("bot-new", spec({ command: ["run", "v2"] }));
+    expect(updated.status).toBe("stopped");
+  });
+
   it("never replaces or removes containers it did not create", async () => {
     const { adapter } = setup();
     await expect(adapter.update("compose-bot", spec({ name: "compose-bot" }))).rejects.toMatchObject({

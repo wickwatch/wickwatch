@@ -100,7 +100,9 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     this.check(spec);
     if (spec.name !== ref) throw new AdapterError("invalid_input", "An instance cannot be renamed");
     const { handle, details } = await this.owned(ref);
-    const wasRunning = toStatus(details.State) !== "stopped";
+    // Only a container that runs (or is being restarted) runs again; a crashed one ("error") stays down, so applying a
+    // fixed configuration does not start the bot by itself.
+    const wasRunning = details.State.Restarting || details.State.Status === "running";
     await this.ensureImage(spec.image);
     const next = `${ref}-next-${String(this.now().getTime())}`;
     await this.build(spec, next);
