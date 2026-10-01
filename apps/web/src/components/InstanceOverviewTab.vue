@@ -206,7 +206,6 @@ async function toggleAttribution(positionId: string, restore: boolean) {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: var(--ww-space-5);
-  align-items: start;
 }
 
 .card {

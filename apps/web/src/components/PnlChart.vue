@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Deal } from "@wickwatch/core";
 import { dealResult, round2 } from "@wickwatch/core/money";
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { CURVES, chartCurve, smoothPath, steppedPath } from "../chart-path";
 import { formatDateTime, formatNumber, formatSigned } from "../format";
@@ -9,17 +9,26 @@ import { formatDateTime, formatNumber, formatSigned } from "../format";
 const props = defineProps<{ deals: Deal[]; from: string; to: string; currency?: string | undefined }>();
 const { t, locale } = useI18n();
 
-const HEIGHT = 220;
+/** The plot fills the height its card gets (next to the log), never less than this. */
+const MIN_HEIGHT = 220;
 const PAD = { top: 12, right: 16, bottom: 28, left: 64 };
 
-const container = ref<HTMLDivElement>();
+const plot = ref<HTMLDivElement>();
 const width = ref(720);
+const height = ref(MIN_HEIGHT);
 let observer: ResizeObserver | undefined;
 onMounted(() => {
   observer = new ResizeObserver(([entry]) => {
-    if (entry) width.value = Math.max(280, Math.round(entry.contentRect.width));
+    if (!entry) return;
+    width.value = Math.max(280, Math.round(entry.contentRect.width));
+    height.value = Math.max(MIN_HEIGHT, Math.round(entry.contentRect.height));
   });
-  if (container.value) observer.observe(container.value);
+  if (plot.value) observer.observe(plot.value);
+});
+// The plot only exists while there are trades.
+watch(plot, (element, previous) => {
+  if (previous) observer?.unobserve(previous);
+  if (element) observer?.observe(element);
 });
 onUnmounted(() => observer?.disconnect());
 
@@ -46,7 +55,7 @@ const scale = computed(() => {
   const x0 = Date.parse(props.from);
   const x1 = Date.parse(props.to);
   const innerW = width.value - PAD.left - PAD.right;
-  const innerH = HEIGHT - PAD.top - PAD.bottom;
+  const innerH = height.value - PAD.top - PAD.bottom;
   const x = (time: number) => PAD.left + ((time - x0) / (x1 - x0 || 1)) * innerW;
   const y = (value: number) => PAD.top + (1 - (value - min) / (max - min || 1)) * innerH;
   const yTicks: number[] = [];
@@ -126,7 +135,7 @@ const summary = computed(() => {
 </script>
 
 <template>
-  <div ref="container" class="chart">
+  <div class="chart">
     <p v-if="!points.length" class="muted chart__empty">{{ $t("chart.noTrades") }}</p>
     <template v-else>
       <div class="curve" role="group" :aria-label="$t('chart.curve')">
@@ -141,62 +150,64 @@ const summary = computed(() => {
           {{ $t(`chart.curves.${c}`) }}
         </button>
       </div>
-      <svg
-        :width="width"
-        :height="HEIGHT"
-        :viewBox="`0 0 ${width} ${HEIGHT}`"
-        role="img"
-        :aria-label="summary"
-        tabindex="0"
-        @pointermove="onPointer"
-        @pointerleave="active = undefined"
-        @keydown="onKey"
-        @blur="active = undefined"
-      >
-        <g class="grid">
-          <line
-            v-for="tick in scale.yTicks"
-            :key="`y${tick}`"
-            :x1="PAD.left"
-            :x2="width - PAD.right"
-            :y1="scale.y(tick)"
-            :y2="scale.y(tick)"
-            :class="{ grid__zero: tick === 0 }"
-          />
-        </g>
-        <g class="axis">
-          <text
-            v-for="tick in scale.yTicks"
-            :key="`yl${tick}`"
-            :x="PAD.left - 8"
-            :y="scale.y(tick) + 4"
-            text-anchor="end"
-          >
-            {{ formatNumber(locale, tick, 0) }}
-          </text>
-          <text
-            v-for="(tick, i) in scale.xTicks"
-            :key="`x${tick}`"
-            :x="scale.x(tick)"
-            :y="HEIGHT - 8"
-            :text-anchor="i === 0 ? 'start' : i === scale.xTicks.length - 1 ? 'end' : 'middle'"
-          >
-            {{ formatDateTime(locale, new Date(tick).toISOString(), "date") }}
-          </text>
-        </g>
-        <path class="area" :d="areaPath" />
-        <path class="line" :d="linePath" />
-        <g v-if="activePoint">
-          <line
-            class="crosshair"
-            :x1="scale.x(activePoint.time)"
-            :x2="scale.x(activePoint.time)"
-            :y1="PAD.top"
-            :y2="HEIGHT - PAD.bottom"
-          />
-          <circle class="marker" :cx="scale.x(activePoint.time)" :cy="scale.y(activePoint.value)" r="4" />
-        </g>
-      </svg>
+      <div ref="plot" class="plot">
+        <svg
+          :width="width"
+          :height="height"
+          :viewBox="`0 0 ${width} ${height}`"
+          role="img"
+          :aria-label="summary"
+          tabindex="0"
+          @pointermove="onPointer"
+          @pointerleave="active = undefined"
+          @keydown="onKey"
+          @blur="active = undefined"
+        >
+          <g class="grid">
+            <line
+              v-for="tick in scale.yTicks"
+              :key="`y${tick}`"
+              :x1="PAD.left"
+              :x2="width - PAD.right"
+              :y1="scale.y(tick)"
+              :y2="scale.y(tick)"
+              :class="{ grid__zero: tick === 0 }"
+            />
+          </g>
+          <g class="axis">
+            <text
+              v-for="tick in scale.yTicks"
+              :key="`yl${tick}`"
+              :x="PAD.left - 8"
+              :y="scale.y(tick) + 4"
+              text-anchor="end"
+            >
+              {{ formatNumber(locale, tick, 0) }}
+            </text>
+            <text
+              v-for="(tick, i) in scale.xTicks"
+              :key="`x${tick}`"
+              :x="scale.x(tick)"
+              :y="height - 8"
+              :text-anchor="i === 0 ? 'start' : i === scale.xTicks.length - 1 ? 'end' : 'middle'"
+            >
+              {{ formatDateTime(locale, new Date(tick).toISOString(), "date") }}
+            </text>
+          </g>
+          <path class="area" :d="areaPath" />
+          <path class="line" :d="linePath" />
+          <g v-if="activePoint">
+            <line
+              class="crosshair"
+              :x1="scale.x(activePoint.time)"
+              :x2="scale.x(activePoint.time)"
+              :y1="PAD.top"
+              :y2="height - PAD.bottom"
+            />
+            <circle class="marker" :cx="scale.x(activePoint.time)" :cy="scale.y(activePoint.value)" r="4" />
+          </g>
+        </svg>
+      </div>
       <div
         v-if="activePoint"
         class="tooltip panel"
@@ -217,8 +228,12 @@ const summary = computed(() => {
 </template>
 
 <style scoped>
+/* Grows in a flex column (the P&L card), so the plot can take the height the log next to it gives the row. */
 .chart {
   position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   min-width: 0;
 }
 
@@ -235,7 +250,16 @@ const summary = computed(() => {
   margin-bottom: var(--ww-space-2);
 }
 
+/* The svg sits on top, so its own height never holds the card open when the row gets lower. */
+.plot {
+  position: relative;
+  flex: 1;
+  min-height: 220px; /* MIN_HEIGHT */
+}
+
 svg {
+  position: absolute;
+  inset: 0 auto auto 0;
   display: block;
   touch-action: pan-y;
 }
