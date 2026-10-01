@@ -218,13 +218,16 @@ Pin the new version in `compose.yml`, then:
 
 ```bash
 cd /opt/wickwatch
+docker compose pull wickwatch    # while the old version still runs
 docker compose stop wickwatch
-sudo cp -p data/wickwatch.db data/backups/before-update.db
-docker compose pull wickwatch
+sudo cp -p data/wickwatch.db data/backups/before-update-<version>.db
 docker compose up -d wickwatch
 docker compose logs --tail 30 wickwatch
+curl -s https://bots.example.com/healthz   # {"status":"ok","version":"<version>"}
 ```
 
-- Database migrations run at start. They only go forward: to go back to the old version, restore the copy (see [Backups and restore](../docs/CONFIGURATION.md#backups-and-restore)).
+wickwatch is down only between `stop` and `up`, about 15 seconds.
+
+- Database migrations run at start; the log names each one it applies. They only go forward: to go back to the old version, restore the copy (see [Backups and restore](../docs/CONFIGURATION.md#backups-and-restore)).
 - Bots keep running while wickwatch is stopped; it takes them over again at start.
 - Read [`CHANGELOG.md`](../CHANGELOG.md) before updating. A new `CTRADER_IMAGE` is a separate change: set it in `.env`, then apply each instance again from the dashboard.
