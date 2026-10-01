@@ -98,6 +98,15 @@ const shownIssues = computed(() => {
   }
   return result;
 });
+/** Required values still empty, for the "only missing" filter; known from the start, not only once sent. */
+const missing = computed(
+  () =>
+    new Set(
+      validateParameters(values.value, schema.value, validateOptions.value)
+        .errors.filter((i) => i.code === "required")
+        .map((i) => i.parameter),
+    ),
+);
 const formats = computed(() => system.value?.parameterFormats ?? []);
 /** The file extensions, e.g. ".cbotset". */
 const extensions = computed(() => formats.value.map((f) => `.${f}`));
@@ -454,6 +463,7 @@ const algoLabel = (a: Algo) =>
           mode="edit"
           :schema="schema"
           :issues="shownIssues"
+          :missing="missing"
           symbols-list="symbols-list"
           periods-list="periods-list"
         />

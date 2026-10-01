@@ -1,6 +1,7 @@
 import type { ParameterSchema } from "@wickwatch/core";
 import { mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
+import ParameterField from "../src/components/ParameterField.vue";
 import ParameterList from "../src/components/ParameterList.vue";
 import { i18n, setLocale } from "../src/i18n";
 
@@ -18,6 +19,7 @@ const mountList = (props: {
   mode: "view" | "edit" | "schema";
   values?: Record<string, unknown>;
   schema?: ParameterSchema[];
+  missing?: ReadonlySet<string>;
 }) => mount(ParameterList, { props: { schema, ...props }, global: { plugins: [i18n] }, attachTo: document.body });
 const open = (w: ReturnType<typeof mountList>) =>
   w.findAll(".group__toggle").map((b) => [b.find(".group__title").text(), b.attributes("aria-expanded")]);
@@ -66,6 +68,29 @@ describe("ParameterList", () => {
     expect(wrapper.emitted("update:values")?.at(-1)).toEqual([
       { RiskPercent: 0.5, StopLoss: 40, EntryMode: "Breakout" },
     ]);
+    wrapper.unmount();
+  });
+
+  it("filters the required values still missing and keeps a field while it is being filled in", async () => {
+    const wrapper = mountList({ mode: "edit", values: { RiskPercent: 0.5, StopLoss: 40, EntryMode: "Breakout" } });
+    const missingButton = () => wrapper.findAll("button").find((b) => b.text().startsWith("Only missing"));
+    const fields = () => wrapper.findAllComponents(ParameterField).map((f) => f.props("param").name);
+    // Nothing missing: no button.
+    expect(missingButton()).toBeUndefined();
+
+    await wrapper.setProps({ missing: new Set(["StopLoss", "EntryMode"]) });
+    expect(missingButton()?.text()).toBe("Only missing 2");
+    await missingButton()?.trigger("click");
+    expect(missingButton()?.attributes("aria-pressed")).toBe("true");
+    expect(fields()).toEqual(["StopLoss", "EntryMode"]);
+
+    // Filled in: the count goes down, the field stays until the filter is switched off.
+    await wrapper.setProps({ missing: new Set<string>() });
+    expect(missingButton()?.text()).toBe("Only missing");
+    expect(fields()).toEqual(["StopLoss", "EntryMode"]);
+    await missingButton()?.trigger("click");
+    expect(missingButton()).toBeUndefined();
+    expect(fields()).toEqual(["RiskPercent", "StopLoss", "EntryMode"]);
     wrapper.unmount();
   });
 

@@ -659,6 +659,8 @@
     "search": "Parameter suchen",
     "searchPlaceholder": "Name oder Bezeichnung",
     "onlyChanged": "Nur geänderte",
+    "onlyMissing": "Nur fehlende",
+    "onlyMissingHint": "Pflichtwerte, die noch leer sind: ohne sie startet der Bot nicht",
     "count": "1 Parameter | {count} Parameter",
     "changedCount": "{count} geändert",
     "issueCount": "1 Fehler | {count} Fehler",

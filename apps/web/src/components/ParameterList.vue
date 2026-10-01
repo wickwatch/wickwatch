@@ -11,7 +11,8 @@ import ParameterName from "./ParameterName.vue";
 
 /**
  * The parameters of an algo, grouped by the algo's parameter groups (collapsible, all closed at first), with search and
- * an "only changed" filter. The same list everywhere (BRAND.md, "Consistency"):
+ * the filters "only changed" and, while editing, "only missing" (required values still empty). The same list
+ * everywhere (BRAND.md, "Consistency"):
  * - `view`: the values of a configuration, changed ones marked;
  * - `edit`: inputs for `values` (v-model), with reset per value and for all;
  * - `schema`: an algo's parameters with type, default and range, no values.
@@ -22,6 +23,8 @@ const props = defineProps<{
   mode: "view" | "edit" | "schema";
   values?: Record<string, unknown> | undefined;
   issues?: ReadonlyMap<string, ParameterIssueCode | "required"> | undefined;
+  /** Edit only: required parameters still without a value, known before the form is sent. */
+  missing?: ReadonlySet<string> | undefined;
   symbolsList?: string | undefined;
   periodsList?: string | undefined;
 }>();
@@ -62,12 +65,24 @@ const groups = computed<Group[]>(() => {
 });
 
 const query = ref("");
-const onlyChanged = ref(false);
-const filtering = computed(() => query.value.trim() !== "" || onlyChanged.value);
+const filter = ref<"changed" | "missing">();
+/**
+ * The parameters missing when "only missing" was switched on. A field filled in meanwhile stays in the list until the
+ * filter is switched off, so typing into it does not make it disappear.
+ */
+const missingShown = ref<ReadonlySet<string>>(new Set());
+const missingCount = computed(() => props.missing?.size ?? 0);
+function toggleFilter(kind: "changed" | "missing") {
+  filter.value = filter.value === kind ? undefined : kind;
+  if (filter.value === "missing") missingShown.value = new Set(props.missing);
+}
+const filtering = computed(() => query.value.trim() !== "" || filter.value !== undefined);
 const matches = (p: ParameterSchema) => {
   const q = query.value.trim().toLowerCase();
   if (q && !p.name.toLowerCase().includes(q) && !(p.label ?? "").toLowerCase().includes(q)) return false;
-  return !onlyChanged.value || isChanged(p);
+  if (filter.value === "changed") return isChanged(p);
+  if (filter.value === "missing") return missingShown.value.has(p.name);
+  return true;
 };
 const visible = (g: Group) => g.params.filter(matches);
 const shownGroups = computed(() => groups.value.filter((g) => visible(g).length));
@@ -127,11 +142,22 @@ const range = (p: ParameterSchema) =>
         v-if="mode !== 'schema'"
         type="button"
         class="btn btn--ghost"
-        :aria-pressed="onlyChanged"
-        @click="onlyChanged = !onlyChanged"
+        :aria-pressed="filter === 'changed'"
+        @click="toggleFilter('changed')"
       >
         {{ $t("parameters.onlyChanged") }}
         <span v-if="changedCount" class="params__count">{{ changedCount }}</span>
+      </button>
+      <button
+        v-if="mode === 'edit' && (missingCount || filter === 'missing')"
+        type="button"
+        class="btn btn--ghost"
+        :aria-pressed="filter === 'missing'"
+        :data-tooltip="$t('parameters.onlyMissingHint')"
+        @click="toggleFilter('missing')"
+      >
+        {{ $t("parameters.onlyMissing") }}
+        <span v-if="missingCount" class="params__count params__count--negative">{{ missingCount }}</span>
       </button>
       <button
         v-if="mode === 'edit'"
@@ -268,6 +294,11 @@ const range = (p: ParameterSchema) =>
   color: var(--ww-warning);
   font-size: var(--ww-size-xs);
   font-weight: 700;
+}
+
+.params__count--negative {
+  background: var(--ww-negative-bg);
+  color: var(--ww-negative);
 }
 
 .params__reset {

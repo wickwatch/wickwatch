@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Parameter form: the filter "Only missing" next to "Only changed" lists the required values that are still empty, with their count (cTrader: text parameters).
+
 ## 0.1.1 – 2026-10-01
 
 ### Added

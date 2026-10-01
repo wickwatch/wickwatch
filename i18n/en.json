@@ -659,6 +659,8 @@
     "search": "Search parameters",
     "searchPlaceholder": "Name or label",
     "onlyChanged": "Only changed",
+    "onlyMissing": "Only missing",
+    "onlyMissingHint": "Required values that are still empty: the bot cannot start without them",
     "count": "1 parameter | {count} parameters",
     "changedCount": "{count} changed",
     "issueCount": "1 error | {count} errors",
