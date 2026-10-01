@@ -89,6 +89,23 @@ describe("buildOverview", () => {
     ]);
   });
 
+  it("raises no alert for an instance stopped on purpose, not even for a lost connection in its log", () => {
+    const result = buildOverview({
+      time,
+      labelPrefix: "ww",
+      instances: [instance("gamma", "111", "stopped"), instance("delta", "111", "stopped")],
+      lastLogs: new Map(),
+      logStates: new Map([["ww-gamma", { connectionLostSince: "2026-09-25T11:58:00.000Z" }]]),
+      accounts: [],
+      stoppedByUser: new Set(["ww-gamma"]),
+    });
+    expect(result.instances.map((i) => [i.name, i.stoppedByUser])).toEqual([
+      ["gamma", true],
+      ["delta", undefined],
+    ]);
+    expect(result.alerts).toEqual([{ level: "warning", code: "instance_stopped", subject: "delta", params: {} }]);
+  });
+
   it("marks running instances that lost their broker connection and raises a warning", () => {
     const since = "2026-09-25T11:58:00.000Z";
     const result = buildOverview({

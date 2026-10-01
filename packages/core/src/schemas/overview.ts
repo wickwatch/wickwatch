@@ -48,6 +48,8 @@ export const InstanceSummary = Type.Object({
   connectionLostSince: Type.Optional(IsoTime),
   /** Errors the algo threw since the instance started, while it kept running. */
   crashes: Type.Optional(AlgoCrashes),
+  /** Stopped on purpose through wickwatch (stop, emergency stop, loss guard); its being stopped is no alert. */
+  stoppedByUser: Type.Optional(Type.Boolean()),
 });
 export type InstanceSummary = Type.Static<typeof InstanceSummary>;
 

@@ -1831,6 +1831,9 @@
                                 "type": "string"
                               }
                             }
+                          },
+                          "stoppedByUser": {
+                            "type": "boolean"
                           }
                         }
                       }
@@ -2522,6 +2525,9 @@
                                 "type": "string"
                               }
                             }
+                          },
+                          "stoppedByUser": {
+                            "type": "boolean"
                           }
                         }
                       }
@@ -3189,6 +3195,9 @@
                                   "type": "string"
                                 }
                               }
+                            },
+                            "stoppedByUser": {
+                              "type": "boolean"
                             }
                           }
                         },

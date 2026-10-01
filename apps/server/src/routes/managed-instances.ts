@@ -523,7 +523,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
             await adapters.runtime.start(name);
             runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
           }
-          await setShouldRun(db, name, isUp(runtime.status));
+          await setShouldRun(db, name, isUp(runtime.status), true);
           return { runtime, started, image: launched.image };
         },
         ({ started, image }) => ({ version: config.version, replaced, started, image }),

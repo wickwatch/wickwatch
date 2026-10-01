@@ -45,6 +45,8 @@ export interface OverviewInput {
   overrides?: AttributionOverrides;
   /** Measured offset of the server clock (ms), when the server checks it. */
   clockOffsetMs?: number;
+  /** Runtime refs of instances stopped on purpose through wickwatch. */
+  stoppedByUser?: ReadonlySet<string>;
 }
 
 const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
@@ -99,7 +101,7 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
   const instances = input.instances.map((instance) => {
     const account = readLabels(input.labelPrefix, instance.labels).account;
     const data = account ? byNumber.get(account)?.data : undefined;
-    return summarizeInstance(
+    const summary = summarizeInstance(
       instance,
       input.labelPrefix,
       data,
@@ -107,6 +109,7 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
       attributor,
       input.logStates?.get(instance.ref),
     );
+    return input.stoppedByUser?.has(instance.ref) ? { ...summary, stoppedByUser: true } : summary;
   });
 
   const accounts = input.accounts.map((account): AccountSummary => {
@@ -236,7 +239,8 @@ function alerts(
       const params = { restarts: i.restartCount, detail: i.lastLog?.text ?? "" };
       result.push({ level: "error", code: "instance_error", subject: i.name, params });
     } else if (i.status === "stopped") {
-      result.push({ level: "warning", code: "instance_stopped", subject: i.name, params: {} });
+      // Stopped through wickwatch on purpose: the user knows (and the loss guard has an alert of its own).
+      if (!i.stoppedByUser) result.push({ level: "warning", code: "instance_stopped", subject: i.name, params: {} });
     } else if (i.connectionLostSince) {
       const params = { since: i.connectionLostSince };
       result.push({ level: "warning", code: "instance_disconnected", subject: i.name, params });

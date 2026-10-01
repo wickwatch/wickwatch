@@ -17,27 +17,41 @@ const GIVE_UP_WITHIN_MS = 10 * 60_000;
 /** How far back the log is read to tell a self-stop from a stop from outside. */
 const LOG_TAIL = 15;
 
-/** Marks a managed instance as meant to run or not; no-op for instances wickwatch does not manage. */
-export async function setShouldRun(db: Db, names: string | string[], shouldRun: boolean): Promise<void> {
+/**
+ * Marks a managed instance as meant to run or not; no-op for instances wickwatch does not manage. `byUser`: the user
+ * stopped it (or chose not to start it), so its being stopped raises no alert. Any other stop, e.g. a bot that stopped
+ * itself, and every start clear that again.
+ */
+export async function setShouldRun(
+  db: Db,
+  names: string | string[],
+  shouldRun: boolean,
+  byUser = false,
+): Promise<void> {
   const list = Array.isArray(names) ? names : [names];
   if (!list.length) return;
   await db
     .updateTable("instances")
-    .set({ should_run: shouldRun ? 1 : 0 })
+    .set({ should_run: shouldRun ? 1 : 0, stopped_by_user: !shouldRun && byUser ? 1 : 0 })
     .where("name", "in", list)
     .execute();
 }
 
 /**
  * Emergency stop of an account, by hand or by the loss guard. Its instances are first marked as no longer meant to run,
- * so they are not started again after a restart; the credentials are read only after that.
+ * so they are not started again after a restart; the credentials are read only after that. They count as stopped on
+ * purpose: the user knows, and the loss guard raises an alert of its own.
  */
 export async function stopAccount(
   db: Db,
   entry: AccountEntry,
   options: Omit<EmergencyStopOptions, "credentials" | "account">,
 ): Promise<EmergencyStopReport> {
-  await db.updateTable("instances").set({ should_run: 0 }).where("account_id", "=", entry.id).execute();
+  await db
+    .updateTable("instances")
+    .set({ should_run: 0, stopped_by_user: 1 })
+    .where("account_id", "=", entry.id)
+    .execute();
   return emergencyStopAccount({ ...options, account: entry.number, credentials: await entry.credentials() });
 }
 

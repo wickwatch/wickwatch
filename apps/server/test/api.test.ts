@@ -111,23 +111,32 @@ describe("instance actions", () => {
       .insertInto("instances")
       .values({ name: "alpha-ger40-a", account_id: account.id, created_by: null, created_at: "2026-09-30T00:00:00Z" })
       .execute();
-    const shouldRun = async () =>
-      (
-        await t.db
-          .selectFrom("instances")
-          .select("should_run")
-          .where("name", "=", "alpha-ger40-a")
-          .executeTakeFirstOrThrow()
-      ).should_run;
+    // [should_run, stopped_by_user]
+    const state = async () => {
+      const row = await t.db
+        .selectFrom("instances")
+        .select(["should_run", "stopped_by_user"])
+        .where("name", "=", "alpha-ger40-a")
+        .executeTakeFirstOrThrow();
+      return [row.should_run, row.stopped_by_user];
+    };
+    const stoppedAlert = async () => {
+      const overview = (await get("/api/v1/overview")).json<Overview>();
+      const alpha = overview.instances.find((i) => i.ref === "alpha-ger40-a");
+      expect(alpha).toMatchObject({ status: "stopped", stoppedByUser: true });
+      return overview.alerts.some((a) => a.code === "instance_stopped" && a.subject === alpha?.name);
+    };
     await post("/api/v1/instances/alpha-ger40-a/start");
-    expect(await shouldRun()).toBe(1);
+    expect(await state()).toEqual([1, 0]);
+    // Stopped by the user: not to be started again, and no alert about it.
     await post("/api/v1/instances/alpha-ger40-a/stop");
-    expect(await shouldRun()).toBe(0);
+    expect(await state()).toEqual([0, 1]);
+    expect(await stoppedAlert()).toBe(false);
     await post("/api/v1/instances/alpha-ger40-a/restart");
-    expect(await shouldRun()).toBe(1);
-    // An emergency stop means: do not start them again.
+    expect(await state()).toEqual([1, 0]);
+    // An emergency stop means: do not start them again; the user (or the loss guard's own alert) knows why.
     await post("/api/v1/accounts/1111111/emergency-stop", { confirm: "1111111" });
-    expect(await shouldRun()).toBe(0);
+    expect(await state()).toEqual([0, 1]);
   });
 
   it("answers 404 for unknown instances and 400 for unknown actions", async () => {

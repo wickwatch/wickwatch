@@ -120,6 +120,8 @@ export interface InstancesTable {
   created_at: string;
   /** 1 while the instance is meant to run (started through wickwatch, or seen running). */
   should_run: Generated<number>;
+  /** 1 while it is stopped on purpose through wickwatch, so its stop raises no alert. */
+  stopped_by_user: Generated<number>;
 }
 
 export interface InstanceConfigsTable {

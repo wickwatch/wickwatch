@@ -92,7 +92,12 @@ export class OverviewLoader {
 
   private async input(now: Date, only?: string): Promise<OverviewInput> {
     const { adapters, db, labelPrefix } = this.options;
-    const [fetched, overrides] = await Promise.all([this.fetch(now, only), loadOverrides(db, adapters.broker.id)]);
+    const [fetched, overrides, stopped] = await Promise.all([
+      this.fetch(now, only),
+      loadOverrides(db, adapters.broker.id),
+      // Managed instances are named after their runtime ref.
+      db.selectFrom("instances").select("name").where("stopped_by_user", "=", 1).execute(),
+    ]);
     const accounts = await Promise.all(fetched.accounts.map((account) => snapshot(db, account, now)));
     const clockOffsetMs = clockOffset(now.getTime());
     return {
@@ -103,6 +108,7 @@ export class OverviewLoader {
       logStates: fetched.logs.states,
       accounts,
       overrides,
+      stoppedByUser: new Set(stopped.map((row) => row.name)),
       ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
     };
   }

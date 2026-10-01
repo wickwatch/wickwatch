@@ -6,6 +6,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Changed
 - Notifications for a resolved alert say what is fine again ("Resolved: ger40-demo is running again") instead of repeating the alert, and "Closed: … was removed" when the instance or account was deleted.
+- An instance stopped on purpose through wickwatch (stop, emergency stop, loss guard, a version applied without starting) raises no "is stopped" alert any more; a bot that stopped itself still does.
 
 ### Fixed
 - Switching to another window or tab no longer marks an empty form field as left (e.g. "Required" on the login page right after loading).

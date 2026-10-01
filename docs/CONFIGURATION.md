@@ -68,7 +68,7 @@ Logs: bot containers created by wickwatch rotate their logs (json-file, 5 × 10 
 
 ## Notifications
 
-wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`: stopped or failed instances, a lost broker connection, bots that threw errors in their event handlers, unreachable accounts (e.g. a failed login), challenge limits, a breached or passed challenge, the loss guard having stopped an account, and attribution problems. Nobody has to have the dashboard open.
+wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`: stopped or failed instances (not the ones stopped on purpose through wickwatch: stop, emergency stop, loss guard, or a version applied without starting; a bot that stopped itself still counts), a lost broker connection, bots that threw errors in their event handlers, unreachable accounts (e.g. a failed login), challenge limits, a breached or passed challenge, the loss guard having stopped an account, and attribution problems. Nobody has to have the dashboard open.
 
 `ALERT_WEBHOOK_URL` gets one `POST` per change, as JSON:
 

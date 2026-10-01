@@ -134,7 +134,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       const { ref, action } = request.params;
       await auditOutcome(db, { action: `instance.${action}`, target: ref, userId: request.user?.id }, async () => {
         // Before stopping, so the instance keeper does not see it ended while still "meant to run".
-        if (action === "stop") await setShouldRun(db, ref, false);
+        if (action === "stop") await setShouldRun(db, ref, false, true);
         await adapters.runtime[action](ref);
         if (action !== "stop") await setShouldRun(db, ref, true);
       });
