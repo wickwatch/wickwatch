@@ -45,7 +45,7 @@ const groups = computed(() => [...groupBy(algos.value, (a) => a.name)]);
 async function load() {
   algos.value = await api.algos();
 }
-const { busy, error, notice, run } = useAsyncAction({ reload: load });
+const { busy, running, error, notice, run } = useAsyncAction({ reload: load });
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
@@ -85,6 +85,7 @@ const confirmRemove = () => {
   if (algo)
     void run(() => api.deleteAlgo(algo.id), {
       done: () => t("algos.deleted", { name: algo.name, version: algo.version }),
+      as: `remove-${algo.id}`,
     });
 };
 </script>
@@ -136,6 +137,7 @@ const confirmRemove = () => {
               type="button"
               class="btn btn--danger btn--small"
               :disabled="busy"
+              :aria-busy="running === `remove-${a.id}`"
               @click="removing = a"
             >
               {{ $t("action.delete") }}
@@ -178,7 +180,9 @@ const confirmRemove = () => {
             <span class="field__hint">{{ $t("algos.versionHint") }}</span>
           </label>
           <div class="buttons">
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("algos.upload") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
+              {{ $t("algos.upload") }}
+            </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="uploadError" class="tone-negative" role="alert">{{ $t(uploadError) }}</p>

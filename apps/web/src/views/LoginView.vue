@@ -99,7 +99,9 @@ async function submit() {
         required
       />
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-      <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.login.submit") }}</button>
+      <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
+        {{ $t("auth.login.submit") }}
+      </button>
     </form>
   </AuthCard>
 </template>

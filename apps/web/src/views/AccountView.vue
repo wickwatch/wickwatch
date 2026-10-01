@@ -109,6 +109,7 @@ const meta = computed(() => {
             type="button"
             class="btn btn--danger"
             :disabled="running === account.number"
+            :aria-busy="running === account.number"
             @click="confirming = account"
           >
             {{ $t("action.emergencyStop") }}

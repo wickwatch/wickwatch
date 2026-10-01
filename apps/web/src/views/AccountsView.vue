@@ -22,7 +22,7 @@ async function load() {
   accounts.value = a;
   credentials.value = c;
 }
-const { busy, error, notice, run } = useAsyncAction({ reload: load });
+const { busy, running, error, notice, run } = useAsyncAction({ reload: load });
 
 onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
 
@@ -120,6 +120,7 @@ const confirmRemove = () => {
   if (!r) return;
   void run(() => (r.kind === "account" ? api.deleteAccount(r.row.id) : api.deleteCredential(r.row.id)), {
     done: () => t("accounts.removed"),
+    as: `remove-${r.kind}-${r.row.id}`,
   });
 };
 
@@ -260,6 +261,7 @@ const saveSecret = () =>
                       variant="danger"
                       small
                       :disabled="busy"
+                      :aria-busy="running === `remove-account-${a.id}`"
                       @click="removing = { kind: 'account', row: a }"
                     />
                   </div>
@@ -328,6 +330,7 @@ const saveSecret = () =>
                         variant="danger"
                         small
                         :disabled="busy"
+                        :aria-busy="running === `remove-credential-${c.id}`"
                         @click="removing = { kind: 'credential', row: c }"
                       />
                     </div>
@@ -391,10 +394,10 @@ const saveSecret = () =>
             </label>
           </template>
           <div class="buttons">
-            <button v-if="!offered" type="submit" class="btn" :disabled="busy">
+            <button v-if="!offered" type="submit" class="btn" :disabled="busy" :aria-busy="busy">
               {{ $t("accounts.fetchOffered") }}
             </button>
-            <button v-else type="submit" class="btn btn--primary" :disabled="busy">
+            <button v-else type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
               {{ $t("accounts.addAccount") }}
             </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
@@ -424,7 +427,9 @@ const saveSecret = () =>
             </select>
           </label>
           <div class="buttons">
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
+              {{ $t("action.save") }}
+            </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
@@ -446,7 +451,9 @@ const saveSecret = () =>
           </label>
           <p class="field__hint">{{ $t("accounts.encrypted") }}</p>
           <div class="buttons">
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
+              {{ $t("action.save") }}
+            </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>
@@ -490,7 +497,9 @@ const saveSecret = () =>
           </div>
           <p class="field__hint">{{ $t("accounts.encrypted") }}</p>
           <div class="buttons">
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("accounts.addLogin") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
+              {{ $t("accounts.addLogin") }}
+            </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="modalError" class="tone-negative" role="alert">{{ $t(modalError) }}</p>

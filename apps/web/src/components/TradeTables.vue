@@ -2,6 +2,7 @@
 import type { AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import type { TradeAction } from "../composables/useTradeActions";
 import { formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
 import AppModal from "./AppModal.vue";
 import IconButton from "./IconButton.vue";
@@ -20,7 +21,7 @@ const props = defineProps<{
   /** Offer "not from this bot" (or "restore" when `excluded`). */
   canAttribute?: boolean;
   excluded?: boolean;
-  busy?: ReadonlySet<string>;
+  busy?: ReadonlyMap<string, TradeAction>;
   /** Adds an "Instance" column (account page): each trade's `instance`, linked to its page. */
   instances?: InstanceSummary[] | undefined;
 }>();
@@ -94,6 +95,7 @@ const detailTitle = computed(() => {
                 variant="ghost"
                 small
                 :disabled="busy?.has(p.id)"
+                :aria-busy="busy?.get(p.id) === 'attribution'"
                 @click="$emit('attribution', p.id)"
               />
               <IconButton
@@ -103,6 +105,7 @@ const detailTitle = computed(() => {
                 variant="danger"
                 small
                 :disabled="busy?.has(p.id)"
+                :aria-busy="busy?.get(p.id) === 'close'"
                 @click="$emit('close', p)"
               />
             </div>
@@ -155,6 +158,7 @@ const detailTitle = computed(() => {
                 variant="danger"
                 small
                 :disabled="busy?.has(o.id)"
+                :aria-busy="busy?.get(o.id) === 'cancel'"
                 @click="$emit('cancel', o)"
               />
             </div>
@@ -210,6 +214,7 @@ const detailTitle = computed(() => {
                 variant="ghost"
                 small
                 :disabled="busy?.has(d.positionId)"
+                :aria-busy="busy?.get(d.positionId) === 'attribution'"
                 @click="$emit('attribution', d.positionId)"
               />
             </div>

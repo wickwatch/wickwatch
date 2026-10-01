@@ -18,7 +18,7 @@ const password = ref("");
 const repeat = ref("");
 const code = ref("");
 const totp = ref<TotpSetup>();
-const { busy, error, run } = useAsyncAction();
+const { busy, running, error, run } = useAsyncAction();
 
 const step1 = useValidation();
 const fields = {
@@ -43,17 +43,20 @@ const next = () =>
 
 /** Step 2: with a code 2FA is enabled; without, it is skipped. */
 const finish = (withCode: boolean) =>
-  run(async () => {
-    if (withCode && !step2.validate()) return;
-    await api.setup({
-      token: token.value.trim(),
-      username: username.value,
-      password: password.value,
-      ...(withCode ? { code: code.value } : {}),
-    });
-    await loadSession();
-    await router.replace("/");
-  });
+  run(
+    async () => {
+      if (withCode && !step2.validate()) return;
+      await api.setup({
+        token: token.value.trim(),
+        username: username.value,
+        password: password.value,
+        ...(withCode ? { code: code.value } : {}),
+      });
+      await loadSession();
+      await router.replace("/");
+    },
+    { as: withCode ? "withCode" : "withoutCode" },
+  );
 </script>
 
 <template>
@@ -119,7 +122,7 @@ const finish = (withCode: boolean) =>
         <FieldError :field="fields.repeat" />
       </label>
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-      <button type="submit" class="btn btn--primary" :disabled="busy">
+      <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
         {{ $t("auth.setup.next") }}
       </button>
     </form>
@@ -130,8 +133,16 @@ const finish = (withCode: boolean) =>
       <TotpEnroll :totp="totp" />
       <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
-      <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("auth.setup.finishWithTotp") }}</button>
-      <button type="button" class="btn btn--ghost" :disabled="busy" @click="finish(false)">
+      <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'withCode'">
+        {{ $t("auth.setup.finishWithTotp") }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--ghost"
+        :disabled="busy"
+        :aria-busy="running === 'withoutCode'"
+        @click="finish(false)"
+      >
         {{ $t("auth.setup.skipTotp") }}
       </button>
     </form>

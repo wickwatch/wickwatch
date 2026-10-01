@@ -188,6 +188,7 @@ async function remove() {
               :label="$t('action.stop')"
               show-label
               :disabled="busy.has(instanceRef)"
+              :aria-busy="busy.get(instanceRef) === 'stop'"
               @click="act('stop')"
             />
             <IconButton
@@ -196,6 +197,7 @@ async function remove() {
               :label="$t('action.start')"
               show-label
               :disabled="busy.has(instanceRef)"
+              :aria-busy="busy.get(instanceRef) === 'start'"
               @click="act('start')"
             />
             <IconButton
@@ -203,6 +205,7 @@ async function remove() {
               :label="$t('action.restart')"
               show-label
               :disabled="busy.has(instanceRef)"
+              :aria-busy="busy.get(instanceRef) === 'restart'"
               @click="act('restart')"
             />
           </template>

@@ -26,7 +26,7 @@ const TIME_ZONES = typeof Intl.supportedValuesOf === "function" ? Intl.supported
 const templates = ref<ChallengeTemplate[]>([]);
 const exists = ref(false);
 const loading = ref(true);
-const { busy, error, run } = useAsyncAction();
+const { busy, running, error, run } = useAsyncAction();
 const confirmDelete = ref(false);
 
 /** Flat form state; empty numbers mean "rule not used". */
@@ -163,18 +163,24 @@ const fields = {
 };
 
 const save = () =>
-  run(async () => {
-    if (!v.validate()) return;
-    await api.saveChallenge(props.number, toProfile());
-    emit("saved");
-  });
+  run(
+    async () => {
+      if (!v.validate()) return;
+      await api.saveChallenge(props.number, toProfile());
+      emit("saved");
+    },
+    { as: "save" },
+  );
 
 const remove = () =>
-  run(async () => {
-    confirmDelete.value = false;
-    await api.deleteChallenge(props.number);
-    emit("deleted");
-  });
+  run(
+    async () => {
+      confirmDelete.value = false;
+      await api.deleteChallenge(props.number);
+      emit("deleted");
+    },
+    { as: "delete" },
+  );
 </script>
 
 <template>
@@ -383,13 +389,16 @@ const remove = () =>
 
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <div class="actions">
-        <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+        <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'save'">
+          {{ $t("action.save") }}
+        </button>
         <button type="button" class="btn btn--ghost" @click="emit('cancel')">{{ $t("action.cancel") }}</button>
         <button
           v-if="exists"
           type="button"
           class="btn btn--danger actions__delete"
           :disabled="busy"
+          :aria-busy="running === 'delete'"
           @click="confirmDelete = true"
         >
           {{ $t("challenge.delete") }}

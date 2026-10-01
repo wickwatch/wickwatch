@@ -201,6 +201,42 @@ p[role="alert"] {
   cursor: not-allowed;
 }
 
+/*
+ * The button whose action is running (`aria-busy="true"`, set with `disabled`): a spinner in place of its icon, or
+ * before its text, and not faded like the others, so it is clear what is being worked on.
+ */
+.btn[aria-busy="true"] {
+  opacity: 1;
+  cursor: progress;
+}
+
+.btn[aria-busy="true"] > svg {
+  display: none;
+}
+
+.btn[aria-busy="true"]::before {
+  content: "";
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-busy 0.8s linear infinite;
+}
+
+@keyframes btn-busy {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn[aria-busy="true"]::before {
+    animation: none;
+  }
+}
+
 .btn--ghost {
   background: transparent;
   color: var(--ww-text-muted);

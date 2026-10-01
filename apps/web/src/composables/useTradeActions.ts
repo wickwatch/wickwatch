@@ -5,9 +5,12 @@ import { api, errorKey } from "../api";
 import { formatPrice } from "../format";
 import type { Notice } from "./notice";
 
+/** What runs on a position or order; its button spins. */
+export type TradeAction = "close" | "cancel" | "attribution";
+
 /**
  * Closing a position and cancelling an order after confirmation, the same on the instance and the account page.
- * `busy` holds the ids being worked on; `account` is the account number the trades are on.
+ * `busy` maps the ids being worked on to the running action; `account` is the account number the trades are on.
  */
 export function useTradeActions(
   account: () => string | undefined,
@@ -15,7 +18,7 @@ export function useTradeActions(
   refresh: () => unknown,
 ) {
   const { t, locale } = useI18n();
-  const busy = reactive(new Set<string>());
+  const busy = reactive(new Map<string, TradeAction>());
   const closing = ref<Position>();
   const cancelling = ref<PendingOrder>();
 
@@ -40,7 +43,7 @@ export function useTradeActions(
     const number = account();
     closing.value = undefined;
     if (!position || !number) return;
-    busy.add(position.id);
+    busy.set(position.id, "close");
     try {
       await api.closePosition(number, position.id);
       notice.value = { tone: "positive", text: t("instance.positionClosed", { id: position.id }) };
@@ -57,7 +60,7 @@ export function useTradeActions(
     const number = account();
     cancelling.value = undefined;
     if (!order || !number) return;
-    busy.add(order.id);
+    busy.set(order.id, "cancel");
     try {
       await api.cancelOrder(number, order.id);
       notice.value = { tone: "positive", text: t("instance.orderCancelled", { id: order.id }) };

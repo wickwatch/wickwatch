@@ -6,14 +6,14 @@ import type { Notice } from "./notice";
 
 /**
  * Start, stop and restart, the same in the instance tables (overview, account page) and on the instance page. `busy`
- * holds the refs of the instances being worked on; a failure goes to `notice`.
+ * maps the refs of the instances being worked on to the running action (its button spins); a failure goes to `notice`.
  */
 export function useInstanceActions(notice: Ref<Notice | undefined>, refresh: () => Promise<unknown>) {
   const { t } = useI18n();
-  const busy = reactive(new Set<string>());
+  const busy = reactive(new Map<string, InstanceAction>());
 
   async function runAction(instance: Pick<InstanceSummary, "ref" | "name">, action: InstanceAction) {
-    busy.add(instance.ref);
+    busy.set(instance.ref, action);
     notice.value = undefined;
     try {
       await api.instanceAction(instance.ref, action);

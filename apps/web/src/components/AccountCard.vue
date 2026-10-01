@@ -71,6 +71,7 @@ const { locale } = useI18n();
         type="button"
         class="btn btn--danger"
         :disabled="busy"
+        :aria-busy="busy"
         @click="$emit('emergencyStop', account)"
       >
         {{ $t("action.emergencyStop") }}

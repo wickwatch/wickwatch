@@ -12,7 +12,7 @@ withDefaults(
   defineProps<{
     instances: InstanceSummary[];
     accountNames: ReadonlyMap<string, string>;
-    busy: ReadonlySet<string>;
+    busy: ReadonlyMap<string, InstanceAction>;
     now: number;
     /** Viewers see no action buttons. */
     canAct: boolean;
@@ -83,6 +83,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
                 :label="$t('table.actionOn', { action: $t('action.stop'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
+                :aria-busy="busy.get(instance.ref) === 'stop'"
                 @click="$emit('action', instance, 'stop')"
               />
               <IconButton
@@ -91,6 +92,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
                 :label="$t('table.actionOn', { action: $t('action.start'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
+                :aria-busy="busy.get(instance.ref) === 'start'"
                 @click="$emit('action', instance, 'start')"
               />
               <IconButton
@@ -99,6 +101,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
                 :label="$t('table.actionOn', { action: $t('action.restart'), name: instance.name })"
                 small
                 :disabled="busy.has(instance.ref)"
+                :aria-busy="busy.get(instance.ref) === 'restart'"
                 @click="$emit('action', instance, 'restart')"
               />
             </div>

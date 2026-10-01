@@ -134,6 +134,42 @@ describe("AccountsView", () => {
     expect(sent("PATCH")[1]).toEqual([expect.stringMatching(/credentials\/1$/) as unknown, { secret: "new secret" }]);
   });
 
+  it("shows a spinner on the button whose broker call runs, and only there", async () => {
+    session.value = {
+      setupRequired: false,
+      masterKeyConfigured: true,
+      user: { username: "a", role: "admin", totpEnabled: false },
+    };
+    const wrapper = await render();
+    // The broker answers only when the test says so.
+    let answer: (response: Response) => void = () => undefined;
+    const fallback = fetchMock.getMockImplementation() as (input: URL) => Promise<Response>;
+    fetchMock.mockImplementation((input: URL) =>
+      input.pathname.endsWith("/broker-accounts")
+        ? new Promise<Response>((resolve) => {
+            answer = resolve;
+          })
+        : fallback(input),
+    );
+    await wrapper
+      .findAll("button")
+      .find((b) => b.text() === "Add account")
+      ?.trigger("click");
+    await wrapper.find("dialog select").setValue("1");
+    await wrapper.find("dialog form").trigger("submit");
+    await flushPromises();
+    const fetchButton = () => wrapper.findAll("dialog button").find((b) => b.text() === "Get accounts from the broker");
+    expect(fetchButton()?.attributes("aria-busy")).toBe("true");
+    expect(fetchButton()?.attributes("disabled")).toBeDefined();
+    // Elsewhere on the page nothing spins.
+    expect(wrapper.findAll('[aria-busy="true"]')).toHaveLength(1);
+
+    answer(new Response(JSON.stringify([{ number: "2222222", name: "Prop B" }]), { status: 200 }));
+    await flushPromises();
+    expect(wrapper.findAll('[aria-busy="true"]')).toHaveLength(0);
+    expect(wrapper.find("dialog").text()).toContain("2222222");
+  });
+
   it("shows viewers the accounts only, without actions or logins", async () => {
     session.value = {
       setupRequired: false,

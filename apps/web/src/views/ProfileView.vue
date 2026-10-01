@@ -16,12 +16,15 @@ const totp = ref<TotpSetup>();
 const code = ref("");
 const password = ref("");
 const { t } = useI18n();
-const { busy, error, notice, run } = useAsyncAction();
+const { busy, running, error, notice, run } = useAsyncAction();
 
 const startEnable = () =>
-  run(async () => {
-    totp.value = await api.totpSetup();
-  });
+  run(
+    async () => {
+      totp.value = await api.totpSetup();
+    },
+    { as: "totp" },
+  );
 
 const enableForm = useValidation();
 const codeField = enableForm.field(() => code.value, checks.required, checks.code);
@@ -40,7 +43,7 @@ const confirmEnable = () =>
       enableForm.reset();
       await loadSession();
     },
-    { done: () => t("profile.totpEnabledNotice") },
+    { done: () => t("profile.totpEnabledNotice"), as: "totp" },
   );
 
 // --- password, changed in the shared modal like the other edits
@@ -76,7 +79,7 @@ function savePassword() {
       await api.changePassword(pw.current, pw.next);
       closePassword();
     },
-    { done: () => t("profile.passwordChanged"), error: pwError },
+    { done: () => t("profile.passwordChanged"), error: pwError, as: "password" },
   );
 }
 
@@ -96,7 +99,7 @@ const disable = () =>
       disableForm.reset();
       await loadSession();
     },
-    { done: () => t("profile.totpDisabledNotice") },
+    { done: () => t("profile.totpDisabledNotice"), as: "totp" },
   );
 </script>
 
@@ -139,7 +142,14 @@ const disable = () =>
         <template v-if="!currentUser.totpEnabled">
           <p class="muted">{{ $t("auth.totp.recommended") }}</p>
           <div>
-            <button v-if="!totp" type="button" class="btn btn--primary" :disabled="busy" @click="startEnable">
+            <button
+              v-if="!totp"
+              type="button"
+              class="btn btn--primary"
+              :disabled="busy"
+              :aria-busy="running === 'totp'"
+              @click="startEnable"
+            >
               {{ $t("profile.enableTotp") }}
             </button>
           </div>
@@ -147,7 +157,9 @@ const disable = () =>
             <TotpEnroll :totp="totp" />
             <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
             <div>
-              <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("profile.confirmTotp") }}</button>
+              <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'totp'">
+                {{ $t("profile.confirmTotp") }}
+              </button>
             </div>
           </form>
         </template>
@@ -167,7 +179,9 @@ const disable = () =>
           </label>
           <CodeInput v-model="disableCode" :label="$t('auth.code')" :field="disableCodeField" required />
           <div>
-            <button type="submit" class="btn btn--danger" :disabled="busy">{{ $t("profile.disableTotp") }}</button>
+            <button type="submit" class="btn btn--danger" :disabled="busy" :aria-busy="running === 'totp'">
+              {{ $t("profile.disableTotp") }}
+            </button>
           </div>
         </form>
       </section>
@@ -224,7 +238,9 @@ const disable = () =>
             <FieldError :field="pwFields.repeat" />
           </label>
           <div class="buttons">
-            <button type="submit" class="btn btn--primary" :disabled="busy">{{ $t("action.save") }}</button>
+            <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'password'">
+              {{ $t("action.save") }}
+            </button>
             <button type="button" class="btn btn--ghost" @click="close()">{{ $t("action.cancel") }}</button>
           </div>
           <p v-if="pwError" class="tone-negative" role="alert">{{ $t(pwError) }}</p>

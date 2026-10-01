@@ -67,6 +67,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 - Page and section heads: title and actions in one row on wide screens, the intro or meta line below at full width. On phones the actions go below the heading and its text, with their labels: one action at full width, several in two equal columns (a lone last one at full width), long labels end in "…".
 - Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from an info button in the row.
 - Loading states show the spinner (`AppSpinner`: the logo symbol with its radar turning; the plain symbol with reduced motion), not a "Loading …" text. Screen readers still get the text.
+- A button whose action runs shows a small spinner in place of its icon (or before its text) with `aria-busy="true"`; the other buttons of the view are only disabled. Only the clicked button spins (`running` from `useAsyncAction`, the action per row in the row composables).
 - Optional detail (the rules of a challenge on an account card, parameter groups) folds away behind a disclosure with a chevron; it opens by itself when something needs attention.
 - If a shared component exists (icon button, menu, modal and drawer, spinner, file drop zone, parameter list, trade tables, status badge, banner), use it; no local look-alikes.
 - Deviate only for a good reason, and say why in a code comment where the deviation lives.

@@ -28,7 +28,7 @@ const emit = defineEmits<{ changed: [] }>();
 const { t, locale } = useI18n();
 const route = useRoute();
 
-const { busy, error, notice, run } = useAsyncAction();
+const { busy, running: deploying, error, notice, run } = useAsyncAction();
 /** Deploy action waiting for confirmation. */
 const pending = ref<{ start: boolean }>();
 const algos = ref<Algo[]>([]);
@@ -74,6 +74,7 @@ async function deploy() {
   if (!name) return;
   await run(() => api.deployInstance(name, start), {
     done: (result) => t("deploy.done", { version: result.configVersion, status: t(`status.${result.status}`) }),
+    as: start ? "start" : "deploy",
   });
   emit("changed");
 }
@@ -150,6 +151,7 @@ function changes(index: number): string[] {
             type="button"
             class="btn btn--primary"
             :disabled="busy || incomplete.length > 0"
+            :aria-busy="deploying === 'start'"
             @click="pending = { start: true }"
           >
             {{ $t("deploy.createAndStart") }}
@@ -158,6 +160,7 @@ function changes(index: number): string[] {
             type="button"
             class="btn"
             :disabled="busy || incomplete.length > 0"
+            :aria-busy="deploying === 'deploy'"
             @click="pending = { start: false }"
           >
             {{ $t("deploy.create") }}
@@ -175,6 +178,7 @@ function changes(index: number): string[] {
             type="button"
             class="btn btn--primary"
             :disabled="busy || incomplete.length > 0"
+            :aria-busy="deploying === 'deploy'"
             @click="pending = { start: false }"
           >
             {{ running ? $t("deploy.applyRestart", { version }) : $t("deploy.apply", { version }) }}
@@ -184,6 +188,7 @@ function changes(index: number): string[] {
             type="button"
             class="btn"
             :disabled="busy || incomplete.length > 0"
+            :aria-busy="deploying === 'start'"
             @click="pending = { start: true }"
           >
             {{ $t("deploy.applyAndStart", { version }) }}

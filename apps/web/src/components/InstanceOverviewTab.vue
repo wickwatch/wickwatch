@@ -41,7 +41,7 @@ const { busy, closing, cancelling, closeMessage, cancelMessage, closePosition, c
 async function toggleAttribution(positionId: string, restore: boolean) {
   const account = props.data.account?.number;
   if (!account) return;
-  busy.add(positionId);
+  busy.set(positionId, "attribution");
   notice.value = undefined;
   try {
     if (restore) await api.clearAttribution(account, positionId);
