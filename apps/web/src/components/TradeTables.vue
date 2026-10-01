@@ -45,6 +45,25 @@ const refOf = (name: string | undefined) => props.instances?.find((i) => i.name 
 /** The row shown in the details drawer, with the time it was opened (for the holding time of open positions). */
 const selected = ref<{ item: TradeItem; now: number }>();
 const show = (item: TradeItem) => (selected.value = { item, now: Date.now() });
+/** The rows of this table in its order, for stepping through them in the drawer. */
+const rows = computed<TradeItem[]>(() => {
+  if (props.kind === "positions") return (props.positions ?? []).map((value) => ({ kind: "position", value }));
+  if (props.kind === "orders") return (props.orders ?? []).map((value) => ({ kind: "order", value }));
+  return allDeals.value.map((value) => ({ kind: "deal", value }));
+});
+/** By id: the lists are replaced on every refresh. -1 once the entry is gone (a closed position). */
+const index = computed(() => {
+  const id = selected.value?.item.value.id;
+  return id === undefined ? -1 : rows.value.findIndex((row) => row.value.id === id);
+});
+const nav = computed(() => ({
+  prev: index.value > 0,
+  next: index.value >= 0 && index.value < rows.value.length - 1,
+}));
+const step = (by: number) => {
+  const item = rows.value[index.value + by];
+  if (index.value >= 0 && item) show(item);
+};
 const detailTitle = computed(() => {
   const item = selected.value?.item;
   return item ? `${t(`trade.kind.${item.kind}`)} · ${item.value.symbol}` : "";
@@ -230,7 +249,15 @@ const detailTitle = computed(() => {
     >
       {{ showAll ? $t("trade.showLess") : $t("trade.showAll", { count: allDeals.length }) }}
     </button>
-    <AppModal :open="selected !== undefined" :title="detailTitle" drawer @close="selected = undefined">
+    <AppModal
+      :open="selected !== undefined"
+      :title="detailTitle"
+      drawer
+      :nav="nav"
+      @close="selected = undefined"
+      @prev="step(-1)"
+      @next="step(1)"
+    >
       <TradeDetail v-if="selected" :item="selected.item" :now="selected.now" />
     </AppModal>
   </div>

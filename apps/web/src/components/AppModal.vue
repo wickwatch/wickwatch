@@ -16,8 +16,10 @@ const props = defineProps<{
   drawer?: boolean;
   /** Almost the whole window, for content that needs room (the log); its content fills the height and scrolls itself. */
   full?: boolean;
+  /** Arrows to the previous and next entry (a drawer over a table), also on the up and down keys; which way is open. */
+  nav?: { prev: boolean; next: boolean } | undefined;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; prev: []; next: [] }>();
 const dialog = ref<HTMLDialogElement>();
 const titleId = useId();
 const asking = ref(false);
@@ -47,6 +49,20 @@ function requestClose() {
   if (props.dirty) asking.value = true;
   else emit("close");
 }
+/** Up and down step through the entries, unless the focus is in a field or the discard question is open. */
+function onKey(event: KeyboardEvent) {
+  if (!props.nav || asking.value || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const target = event.target;
+  if (target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))
+    return;
+  if (event.key === "ArrowUp" && props.nav.prev) {
+    event.preventDefault();
+    emit("prev");
+  } else if (event.key === "ArrowDown" && props.nav.next) {
+    event.preventDefault();
+    emit("next");
+  }
+}
 function discard() {
   asking.value = false;
   emit("close");
@@ -62,10 +78,29 @@ function discard() {
     :aria-labelledby="titleId"
     tabindex="-1"
     @cancel.prevent="requestClose"
+    @keydown="onKey"
   >
     <header class="modal__head">
       <h2 :id="titleId">{{ title }}</h2>
-      <IconButton icon="close" :label="$t('modal.close')" variant="ghost" @click="requestClose" />
+      <div class="modal__actions">
+        <template v-if="nav">
+          <IconButton
+            icon="chevronUp"
+            :label="$t('modal.previous')"
+            variant="ghost"
+            :disabled="!nav.prev"
+            @click="emit('prev')"
+          />
+          <IconButton
+            icon="chevronDown"
+            :label="$t('modal.next')"
+            variant="ghost"
+            :disabled="!nav.next"
+            @click="emit('next')"
+          />
+        </template>
+        <IconButton icon="close" :label="$t('modal.close')" variant="ghost" @click="requestClose" />
+      </div>
     </header>
     <div class="modal__body">
       <!-- `close` asks first like the X, for a cancel button in the content. -->
@@ -115,6 +150,12 @@ function discard() {
 .modal__head h2 {
   margin: 0;
   font-size: var(--ww-size-lg);
+}
+
+.modal__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--ww-space-1);
 }
 
 .modal__body {

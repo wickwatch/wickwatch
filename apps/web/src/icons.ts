@@ -26,6 +26,7 @@ export const ICONS = {
   ],
   user: [{ tag: "circle", cx: 12, cy: 8, r: 4 }, path("M4.5 20a7.5 7.5 0 0 1 15 0")],
   chevronDown: [path("M6 9l6 6 6-6")],
+  chevronUp: [path("M6 15l6-6 6 6")],
   /** Server time in order / slightly off / wrong: the shape differs, not only the colour. */
   clock: [{ tag: "circle", cx: 12, cy: 12, r: 8.5 }, path("M12 7.5V12l3 2")],
   clockWarning: [{ tag: "circle", cx: 12, cy: 12, r: 8.5 }, path("M12 7.5v5.5"), path("M12 16.5h.01")],

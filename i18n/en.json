@@ -687,6 +687,8 @@
   },
   "modal": {
     "close": "Close",
+    "previous": "Previous entry",
+    "next": "Next entry",
     "discardTitle": "Discard changes?",
     "discardMessage": "The inputs in this window are not saved yet and would be lost.",
     "discard": "Discard"

@@ -312,6 +312,38 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("steps through the trades in the drawer, by arrow and by key", async () => {
+    const twoDeals: InstanceDetail = {
+      ...detail,
+      deals: [detail.deals[0]!, { ...detail.deals[0]!, id: "d2", time: "2026-09-25T10:00:00.000Z" }],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) =>
+        Promise.resolve(
+          input.pathname.includes("/managed-instances/")
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : new Response(JSON.stringify(twoDeals), { status: 200 }),
+        ),
+      ),
+    );
+    const wrapper = await render();
+    const history = wrapper.find("section[aria-labelledby=history-title]");
+    // The newest trade is the first row.
+    await history.find("tbody td button[aria-label=Details]").trigger("click");
+    const drawer = () => wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"))!;
+    const shownId = () => drawer().findAll("dd").at(-1)?.text();
+    const arrow = (label: string) => drawer().find(`.modal__head button[aria-label="${label}"]`);
+    expect(shownId()).toBe("d2");
+    expect(arrow("Previous entry").attributes("disabled")).toBeDefined();
+    await arrow("Next entry").trigger("click");
+    expect(shownId()).toBe("d1");
+    expect(arrow("Next entry").attributes("disabled")).toBeDefined();
+    await drawer().find("dialog").trigger("keydown", { key: "ArrowUp" });
+    expect(shownId()).toBe("d2");
+    wrapper.unmount();
+  });
+
   it("hides actions and closing positions from viewers", async () => {
     session.value = {
       setupRequired: false,

@@ -687,6 +687,8 @@
   },
   "modal": {
     "close": "Schließen",
+    "previous": "Vorheriger Eintrag",
+    "next": "Nächster Eintrag",
     "discardTitle": "Änderungen verwerfen?",
     "discardMessage": "Die Eingaben in diesem Fenster sind noch nicht gespeichert und gingen verloren.",
     "discard": "Verwerfen"

@@ -65,7 +65,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 ## Consistency
 - The same kind of action behaves the same everywhere. Adding something (account, login, algo, challenge profile) is a button that opens a modal.
 - Page and section heads: title and actions in one row on wide screens, the intro or meta line below at full width. On phones the actions go below the heading and its text, with their labels: one action at full width, several in two equal columns (a lone last one at full width), long labels end in "…".
-- Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from an info button in the row.
+- Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from an info button in the row; arrows in its head (and the up and down keys) step to the previous and next row.
 - Loading states show the spinner (`AppSpinner`: the logo symbol with its radar turning; the plain symbol with reduced motion), not a "Loading …" text. Screen readers still get the text.
 - A button whose action runs shows a small spinner in place of its icon (or before its text) with `aria-busy="true"`; the other buttons of the view are only disabled. Only the clicked button spins (`running` from `useAsyncAction`, the action per row in the row composables).
 - Optional detail (the rules of a challenge on an account card, parameter groups) folds away behind a disclosure with a chevron; it opens by itself when something needs attention.
