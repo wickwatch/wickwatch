@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import type { InstanceSummary } from "@wickwatch/core";
 import { isUp } from "@wickwatch/core/rules";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { InstanceAction } from "../api";
 import { accountLabel, durationParts } from "../format";
+import { useLogStream } from "../composables/useLogStream";
 import IconButton from "./IconButton.vue";
+import LogDialog from "./LogDialog.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     instances: InstanceSummary[];
     accountNames: ReadonlyMap<string, string>;
     busy: ReadonlyMap<string, InstanceAction>;
     now: number;
-    /** Viewers see no action buttons. */
+    /** Viewers see no start, stop and restart; the log is open to them. */
     canAct: boolean;
     /** Off on the account page, where every row is on that account. */
     showAccount?: boolean;
@@ -29,6 +32,13 @@ const uptime = (instance: InstanceSummary, now: number) => {
   const { key, params } = durationParts(instance.startedAt, now);
   return t(key, params);
 };
+
+/** The instance whose log is open in the larger view; its status comes from the rows as they update. */
+const logRef = ref<string>();
+const logInstance = computed(() => props.instances.find((i) => i.ref === logRef.value));
+const log = useLogStream(() =>
+  logInstance.value ? { ref: logInstance.value.ref, running: isUp(logInstance.value.status) } : undefined,
+);
 </script>
 
 <template>
@@ -45,7 +55,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <th scope="col" class="wide num">{{ $t("table.positions") }}</th>
           <th scope="col" class="num">{{ $t("table.dayPnl") }}</th>
           <th scope="col" class="wide">{{ $t("table.lastLog") }}</th>
-          <th v-if="canAct" scope="col" class="num">{{ $t("table.actions") }}</th>
+          <th scope="col" class="num">{{ $t("table.actions") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -75,40 +85,56 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <td class="wide log mono" :class="instance.lastLog?.level ? `log--${instance.lastLog.level}` : ''">
             <span :title="instance.lastLog?.text">{{ instance.lastLog?.text ?? "" }}</span>
           </td>
-          <td v-if="canAct">
+          <td>
             <div class="actions">
               <IconButton
-                v-if="isUp(instance.status)"
-                icon="stop"
-                :label="$t('table.actionOn', { action: $t('action.stop'), name: instance.name })"
+                icon="terminal"
+                :label="$t('table.actionOn', { action: $t('log.show'), name: instance.name })"
                 small
-                :disabled="busy.has(instance.ref)"
-                :aria-busy="busy.get(instance.ref) === 'stop'"
-                @click="$emit('action', instance, 'stop')"
+                @click="logRef = instance.ref"
               />
-              <IconButton
-                v-else
-                icon="play"
-                :label="$t('table.actionOn', { action: $t('action.start'), name: instance.name })"
-                small
-                :disabled="busy.has(instance.ref)"
-                :aria-busy="busy.get(instance.ref) === 'start'"
-                @click="$emit('action', instance, 'start')"
-              />
-              <IconButton
-                class="wide"
-                icon="restart"
-                :label="$t('table.actionOn', { action: $t('action.restart'), name: instance.name })"
-                small
-                :disabled="busy.has(instance.ref)"
-                :aria-busy="busy.get(instance.ref) === 'restart'"
-                @click="$emit('action', instance, 'restart')"
-              />
+              <template v-if="canAct">
+                <IconButton
+                  v-if="isUp(instance.status)"
+                  icon="stop"
+                  :label="$t('table.actionOn', { action: $t('action.stop'), name: instance.name })"
+                  small
+                  :disabled="busy.has(instance.ref)"
+                  :aria-busy="busy.get(instance.ref) === 'stop'"
+                  @click="$emit('action', instance, 'stop')"
+                />
+                <IconButton
+                  v-else
+                  icon="play"
+                  :label="$t('table.actionOn', { action: $t('action.start'), name: instance.name })"
+                  small
+                  :disabled="busy.has(instance.ref)"
+                  :aria-busy="busy.get(instance.ref) === 'start'"
+                  @click="$emit('action', instance, 'start')"
+                />
+                <IconButton
+                  class="wide"
+                  icon="restart"
+                  :label="$t('table.actionOn', { action: $t('action.restart'), name: instance.name })"
+                  small
+                  :disabled="busy.has(instance.ref)"
+                  :aria-busy="busy.get(instance.ref) === 'restart'"
+                  @click="$emit('action', instance, 'restart')"
+                />
+              </template>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
+    <LogDialog
+      :open="logInstance !== undefined"
+      :title="logInstance ? $t('table.actionOn', { action: $t('instance.liveLog'), name: logInstance.name }) : ''"
+      :instance-ref="logInstance?.ref ?? ''"
+      :lines="log.lines.value"
+      :state="log.state.value"
+      @close="logRef = undefined"
+    />
   </div>
 </template>
 

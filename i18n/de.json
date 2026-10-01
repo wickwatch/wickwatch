@@ -486,7 +486,8 @@
     },
     "search": "Log durchsuchen",
     "searchPlaceholder": "Text suchen",
-    "matches": "Keine passende Zeile | 1 passende Zeile | {count} passende Zeilen"
+    "matches": "Keine passende Zeile | 1 passende Zeile | {count} passende Zeilen",
+    "show": "Log anzeigen"
   },
   "accounts": {
     "accounts": "Eingerichtete Konten",

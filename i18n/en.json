@@ -486,7 +486,8 @@
     },
     "search": "Search log",
     "searchPlaceholder": "Search text",
-    "matches": "No matching line | 1 matching line | {count} matching lines"
+    "matches": "No matching line | 1 matching line | {count} matching lines",
+    "show": "Show log"
   },
   "accounts": {
     "accounts": "Configured accounts",

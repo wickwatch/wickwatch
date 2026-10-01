@@ -55,6 +55,8 @@ export const ICONS = {
     path("M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"),
   ],
   download: [path("M12 4.5v11"), path("M7.5 11l4.5 4.5 4.5-4.5"), path("M5 19.5h14")],
+  /** A prompt and a line of output: the log of an instance. */
+  terminal: [path("M5 7l4.5 4.5L5 16"), path("M12 17h7")],
   /** Four corners pointing out: show larger. */
   expand: [path("M4.5 9.5v-5h5"), path("M19.5 9.5v-5h-5"), path("M4.5 14.5v5h5"), path("M19.5 14.5v5h-5")],
   upload: [path("M12 15.5v-11"), path("M7.5 9l4.5-4.5L16.5 9"), path("M5 19.5h14")],

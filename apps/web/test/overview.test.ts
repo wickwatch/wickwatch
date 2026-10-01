@@ -131,7 +131,7 @@ describe("OverviewView", () => {
     wrapper.unmount();
   });
 
-  it("hides actions and the emergency stop from viewers", async () => {
+  it("hides start, stop, restart and the emergency stop from viewers, but offers the log", async () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
@@ -141,7 +141,39 @@ describe("OverviewView", () => {
     const labels = wrapper.findAll("button").map((b) => b.text());
     expect(labels).not.toContain("Stop");
     expect(labels).not.toContain("Emergency stop");
-    expect(wrapper.text()).not.toContain("Actions");
+    const actions = wrapper.findAll("tbody button").map((b) => b.attributes("aria-label") ?? "");
+    expect(actions.length).toBeGreaterThan(0);
+    expect(actions.every((label) => label.startsWith("Show log: "))).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("opens the log of a row in the larger view and closes its stream with it", async () => {
+    const streams: { url: string; closed: boolean }[] = [];
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        static readonly CLOSED = 2;
+        readonly stream: { url: string; closed: boolean };
+        constructor(url: URL) {
+          this.stream = { url: String(url), closed: false };
+          streams.push(this.stream);
+        }
+        addEventListener() {}
+        close() {
+          this.stream.closed = true;
+        }
+      },
+    );
+    const wrapper = await render();
+    expect(streams).toEqual([]);
+
+    await wrapper.find('button[aria-label="Show log: alpha"]').trigger("click");
+    const dialog = wrapper.findAll("dialog").find((d) => d.find("h2").text() === "Live log: alpha")!;
+    expect(dialog.find("input[type=search]").exists()).toBe(true);
+    expect(streams).toEqual([{ url: "http://localhost/api/v1/instances/alpha/logs/stream?tail=1000", closed: false }]);
+
+    await dialog.find('button[aria-label="Close"]').trigger("click");
+    expect(streams[0]?.closed).toBe(true);
     wrapper.unmount();
   });
 
@@ -160,7 +192,9 @@ describe("OverviewView", () => {
       .findAll("button")
       .find((b) => b.text() === "Emergency stop")!
       .trigger("click");
-    const dialog = wrapper.find("dialog");
+    const dialog = wrapper
+      .findAll("dialog")
+      .find((d) => d.findAll("button").some((b) => b.text() === "Stop and close everything"))!;
     expect(dialog.text()).toContain("Stop all instances on account Prop A · 1111111");
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("emergency-stop"))).toBe(false);
 
