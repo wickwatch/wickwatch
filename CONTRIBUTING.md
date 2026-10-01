@@ -47,7 +47,7 @@ Every commit must be signed off to certify that you wrote the code or have the r
 git commit -s -m "feat: add demo adapter"
 ```
 
-This adds `Signed-off-by: Your Name <you@example.com>`. See https://developercertificate.org.
+This adds `Signed-off-by: Your Name <you@example.com>`. See https://developercertificate.org. Only Dependabot's dependency updates are exempt; they are reviewed before merging.
 
 ## Guidelines
 - English for code, comments, commits (Conventional Commits) and docs.
