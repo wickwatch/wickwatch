@@ -3,7 +3,7 @@ import type { InstanceSummary } from "@wickwatch/core";
 import { isUp } from "@wickwatch/core/rules";
 import { useI18n } from "vue-i18n";
 import type { InstanceAction } from "../api";
-import { durationParts } from "../format";
+import { accountLabel, durationParts } from "../format";
 import IconButton from "./IconButton.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
@@ -62,7 +62,7 @@ const uptime = (instance: InstanceSummary, now: number) => {
           <td v-if="showAccount" class="wide">
             {{
               instance.account
-                ? [accountNames.get(instance.account), instance.account].filter(Boolean).join(" · ")
+                ? accountLabel({ displayName: accountNames.get(instance.account), number: instance.account })
                 : $t("format.none")
             }}
           </td>

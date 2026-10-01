@@ -2,6 +2,7 @@ import type { AccountSummary } from "@wickwatch/core";
 import { computed, ref, type Ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
+import { accountLabel } from "../format";
 import type { Notice } from "./notice";
 
 /**
@@ -18,9 +19,7 @@ export function useEmergencyStop(notice: Ref<Notice | undefined>, refresh: () =>
   /** Account number while its stop runs. */
   const running = ref<string>();
   const message = computed(() =>
-    confirming.value
-      ? t("confirm.emergencyStop", { account: `${confirming.value.displayName} · ${confirming.value.number}` })
-      : "",
+    confirming.value ? t("confirm.emergencyStop", { account: accountLabel(confirming.value) }) : "",
   );
 
   async function stop() {

@@ -19,7 +19,7 @@ import { api, ApiError, errorKey } from "../api";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
-import { formatDateTime } from "../format";
+import { accountLabel, formatDateTime } from "../format";
 import { parameterTitle } from "../parameter-label";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
@@ -368,7 +368,7 @@ const algoLabel = (a: Algo) =>
                   required
                   :disabled="editing !== undefined"
                 >
-                  <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.displayName }} · {{ a.number }}</option>
+                  <option v-for="a in accounts" :key="a.id" :value="a.id">{{ accountLabel(a) }}</option>
                 </select>
                 <FieldError :field="accountField" />
               </label>

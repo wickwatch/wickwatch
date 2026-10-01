@@ -13,7 +13,7 @@ import type { Notice } from "../composables/notice";
 import { useEmergencyStop } from "../composables/useEmergencyStop";
 import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
-import { formatRelative } from "../format";
+import { accountLabel, formatRelative } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
 import AppSpinner from "../components/AppSpinner.vue";
@@ -111,7 +111,7 @@ const instanceLabel = computed(() => `${system.value?.labelPrefix ?? DEFAULT_LAB
               <select v-model="filterAccount" class="btn">
                 <option value="">{{ $t("overview.allAccounts") }}</option>
                 <option v-for="a in data.accounts" :key="a.number" :value="a.number">
-                  {{ a.displayName }} · {{ a.number }}
+                  {{ accountLabel(a) }}
                 </option>
               </select>
             </label>
@@ -148,7 +148,7 @@ const instanceLabel = computed(() => `${system.value?.labelPrefix ?? DEFAULT_LAB
               <span class="muted">
                 {{
                   [
-                    `${m.account.displayName} · ${m.account.number}`,
+                    accountLabel(m.account),
                     `${m.config.algo.name} ${m.config.algo.version}`,
                     `${m.config.symbol} ${m.config.period}`,
                     $t("instanceConfig.version", { version: m.config.version }),

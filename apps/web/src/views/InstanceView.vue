@@ -16,7 +16,7 @@ import StatusBadge from "../components/StatusBadge.vue";
 import type { Notice } from "../composables/notice";
 import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
-import { durationParts, formatDateTime } from "../format";
+import { accountLabel, durationParts, formatDateTime } from "../format";
 import { isOutdated, outdatedText } from "../instance-state";
 import { isAdmin } from "../session";
 import { system } from "../system";
@@ -78,7 +78,7 @@ const outdated = computed(() => (isOutdated(managed.value) ? managed.value : und
 /** An account wickwatch knows gets a link to its page; one only seen in the labels stays plain text. */
 const knownAccount = computed(() => {
   const a = data.value?.account ?? managed.value?.account;
-  return a ? { number: a.number, label: `${a.displayName} · ${a.number}` } : undefined;
+  return a ? { number: a.number, label: accountLabel(a) } : undefined;
 });
 const meta = computed(() => {
   const d = data.value;

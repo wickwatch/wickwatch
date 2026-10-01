@@ -114,3 +114,12 @@ export function durationParts(sinceIso: string, now: number): DurationParts {
   if (h > 0) return { key: "format.hoursMinutes", params: { h, m } };
   return { key: "format.minutes", params: { m } };
 }
+
+/**
+ * "Name · number" for an account. Without a name of its own (it is saved with the number as name) only the number, not
+ * "7012345 · 7012345".
+ */
+export function accountLabel(account: { displayName?: string | undefined; number: string }): string {
+  const name = account.displayName?.trim();
+  return name && name !== account.number ? `${name} · ${account.number}` : account.number;
+}

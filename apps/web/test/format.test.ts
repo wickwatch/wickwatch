@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountLabel,
   durationParts,
   formatDateTime,
   formatDecimal,
@@ -11,6 +12,13 @@ import {
 } from "../src/format";
 
 describe("format", () => {
+  it("names an account once: only the number when it has no name of its own", () => {
+    expect(accountLabel({ displayName: "Prop A", number: "1111111" })).toBe("Prop A · 1111111");
+    expect(accountLabel({ displayName: "7012345", number: "7012345" })).toBe("7012345");
+    expect(accountLabel({ displayName: " ", number: "7012345" })).toBe("7012345");
+    expect(accountLabel({ number: "7012345" })).toBe("7012345");
+  });
+
   it("shows dates with the year, except the short day on chart axes", () => {
     const iso = "2026-09-30T02:47:00Z";
     expect(formatDateTime("de", iso)).toMatch(/^30\.09\.2026, \d\d:47$/);
