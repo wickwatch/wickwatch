@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Notifications for a resolved alert say what is fine again ("Resolved: ger40-demo is running again") instead of repeating the alert, and "Closed: … was removed" when the instance or account was deleted.
+
 ### Fixed
 - Switching to another window or tab no longer marks an empty form field as left (e.g. "Required" on the login page right after loading).
 

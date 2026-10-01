@@ -25,8 +25,15 @@ function formatTime(locale: Locale, iso: string): string {
   return `${text} UTC`;
 }
 
+/**
+ * How an alert went away: `recovered` when the problem is gone (alerts with an own text say what is fine again, e.g.
+ * "is running again"), `resolved` when it is gone without that being known (it turned into another alert), `removed`
+ * when its instance or account no longer exists.
+ */
+export type Resolution = "recovered" | "resolved" | "removed";
+
 /** The alert as one line of text, with its level in words: colour never carries meaning alone. */
-export function alertText(alert: Alert, locale: Locale, resolved = false): string {
+export function alertText(alert: Alert, locale: Locale, resolution?: Resolution): string {
   const t = (key: string) => lookup(locale, key) ?? lookup("en", key) ?? key;
   const { reason, rule, since, last } = alert.params;
   const params = {
@@ -37,8 +44,13 @@ export function alertText(alert: Alert, locale: Locale, resolved = false): strin
     ...(since !== undefined ? { since: formatTime(locale, String(since)) } : {}),
     ...(last !== undefined ? { last: formatTime(locale, String(last)) } : {}),
   };
-  const message = fill(t(`alert.${alert.code}`), params);
-  return resolved ? fill(t("alert.resolved"), { message }) : `${t(`alert.level.${alert.level}`)}: ${message}`;
+  if (resolution === "removed") {
+    return fill(t(alert.code.startsWith("instance_") ? "alert.removed.instance" : "alert.removed.account"), params);
+  }
+  const key = `alert.recovered.${alert.code}`;
+  const recovered = resolution === "recovered" ? (lookup(locale, key) ?? lookup("en", key)) : undefined;
+  const message = fill(recovered ?? t(`alert.${alert.code}`), params);
+  return resolution ? fill(t("alert.resolved"), { message }) : `${t(`alert.level.${alert.level}`)}: ${message}`;
 }
 
 const money = (locale: Locale, value: number, sign = false) =>

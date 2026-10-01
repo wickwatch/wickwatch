@@ -21,7 +21,16 @@ const loginFailed: Alert = {
   subject: "5902789",
   params: { reason: "auth_failed" },
 };
-const overview = (alerts: Alert[]): Overview => ({ time: NOW.toISOString(), accounts: [], instances: [], alerts });
+const stopped: Alert = { level: "warning", code: "instance_stopped", subject: "alpha", params: {} };
+
+/** Names of the instances and numbers of the accounts that exist; a resolved alert of a missing one was removed. */
+let present: { instances: string[]; accounts: string[] };
+const overview = (alerts: Alert[]): Overview => ({
+  time: NOW.toISOString(),
+  accounts: present.accounts.map((number) => ({ number })) as unknown as Overview["accounts"],
+  instances: present.instances.map((name) => ({ name })) as unknown as Overview["instances"],
+  alerts,
+});
 
 let db: Db;
 let alerts: Alert[];
@@ -51,6 +60,7 @@ beforeEach(async () => {
   db = createDatabase({ client: "sqlite", filename: ":memory:" });
   await migrateToLatest(db);
   alerts = [];
+  present = { instances: ["alpha"], accounts: ["5902789"] };
   fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 204 })));
   log = { warn: vi.fn() };
 });
@@ -85,9 +95,37 @@ describe("AlertNotifier", () => {
         event: "alert_resolved",
         code: "instance_disconnected",
         subject: "alpha",
-        text: "Resolved: alpha: connection to the broker lost since 9/28/26, 4:34 PM UTC",
+        text: "Resolved: alpha is connected to the broker again",
       }),
     ]);
+  });
+
+  it("says what went away instead of what was wrong", async () => {
+    const n = notifier();
+    alerts = [disconnected, loginFailed];
+    await n.check();
+
+    // Disconnected turns into stopped: not a recovery, so the old text, and the new alert.
+    alerts = [stopped, loginFailed];
+    await n.check();
+    expect(
+      posted()
+        .slice(2)
+        .map((e) => e.text),
+    ).toEqual([
+      "Warning: alpha is stopped",
+      "Resolved: alpha: connection to the broker lost since 9/28/26, 4:34 PM UTC",
+    ]);
+
+    // The instance is deleted and the account removed.
+    present = { instances: [], accounts: [] };
+    alerts = [];
+    await n.check();
+    expect(
+      posted()
+        .slice(4)
+        .map((e) => e.text),
+    ).toEqual(["Closed: account 5902789 was removed", "Closed: alpha was removed"]);
   });
 
   it("does not repeat alerts after a restart", async () => {
@@ -154,5 +192,19 @@ describe("alertText", () => {
         "en",
       ),
     ).toBe("Error: alpha: the bot threw an error 3 times since its start, last at 9/28/26, 4:29 PM UTC");
+  });
+
+  it("names what is fine again, and falls back to the alert where nothing is known", () => {
+    expect(alertText(stopped, "de", "recovered")).toBe("Behoben: alpha läuft wieder");
+    const limit: Alert = {
+      level: "warning",
+      code: "challenge_limit",
+      subject: "1",
+      params: { rule: "dailyLoss", used: 85 },
+    };
+    expect(alertText(limit, "de", "recovered")).toBe("Behoben: Konto 1: Tagesverlust wieder unter der Warnschwelle");
+    const breached: Alert = { level: "error", code: "challenge_breached", subject: "1", params: { rule: "dailyLoss" } };
+    expect(alertText(breached, "en", "recovered")).toBe("Resolved: Account 1: challenge rule breached – Daily loss");
+    expect(alertText(stopped, "de", "removed")).toBe("Erledigt: alpha wurde entfernt");
   });
 });

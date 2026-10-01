@@ -86,7 +86,7 @@ wickwatch checks the same alerts the overview shows every `ALERT_CHECK_SECONDS`:
 }
 ```
 
-- `event` is `alert_raised` or `alert_resolved` (then `text` starts with "Resolved:").
+- `event` is `alert_raised` or `alert_resolved`. A resolved alert says what is fine again where that is known ("Resolved: ger40-demo is connected to the broker again"), otherwise it repeats the alert ("Resolved: …", e.g. when a lost connection turned into a stopped bot, which is then raised as its own alert). When the instance or account no longer exists, `text` starts with "Closed:" ("Closed: ger40-demo was removed").
 - `instance` is set for instance alerts (`instance_*`), neither for host alerts (`host_clock`), `account` (the account number) for all others.
 - `text` is in `DEFAULT_LOCALE` with times in UTC. It is also sent as `content`, so services that only read one of the two fields show the message as it is.
 - Alerts already sent are stored in the database: a restart does not send them again. If the webhook does not answer with 2xx, the next check tries again.

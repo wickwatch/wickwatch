@@ -318,6 +318,18 @@
       "info": "Info"
     },
     "resolved": "Behoben: {message}",
+    "recovered": {
+      "instance_stopped": "{subject} läuft wieder",
+      "instance_error": "{subject} läuft wieder",
+      "instance_disconnected": "{subject} ist wieder mit dem Broker verbunden",
+      "account_error": "Konto {subject} ist wieder erreichbar",
+      "challenge_limit": "Konto {subject}: {rule} wieder unter der Warnschwelle",
+      "host_clock": "Die Server-Uhr geht wieder richtig"
+    },
+    "removed": {
+      "instance": "Erledigt: {subject} wurde entfernt",
+      "account": "Erledigt: Konto {subject} wurde entfernt"
+    },
     "instance_error": "{subject}: Fehler, {restarts} Neustarts",
     "instance_stopped": "{subject} ist gestoppt",
     "instance_disconnected": "{subject}: Verbindung zum Broker seit {since} unterbrochen",

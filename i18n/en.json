@@ -318,6 +318,18 @@
       "info": "Info"
     },
     "resolved": "Resolved: {message}",
+    "recovered": {
+      "instance_stopped": "{subject} is running again",
+      "instance_error": "{subject} is running again",
+      "instance_disconnected": "{subject} is connected to the broker again",
+      "account_error": "Account {subject} is reachable again",
+      "challenge_limit": "Account {subject}: {rule} is below the warning level again",
+      "host_clock": "Server clock is in sync again"
+    },
+    "removed": {
+      "instance": "Closed: {subject} was removed",
+      "account": "Closed: account {subject} was removed"
+    },
     "instance_error": "{subject}: error, {restarts} restarts",
     "instance_stopped": "{subject} is stopped",
     "instance_disconnected": "{subject}: connection to the broker lost since {since}",

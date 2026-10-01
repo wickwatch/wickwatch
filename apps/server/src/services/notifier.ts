@@ -2,7 +2,7 @@ import type { Alert, Overview } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { Locale } from "../config";
 import type { Db } from "../db";
-import { alertText } from "./alert-text";
+import { alertText, type Resolution } from "./alert-text";
 import { postJson, REQUEST_TIMEOUT_MS } from "./webhook";
 
 export interface NotifierOptions {
@@ -36,6 +36,27 @@ export interface AlertEvent {
 }
 
 const keyOf = (alert: Pick<Alert, "code" | "subject">) => `${alert.code}:${alert.subject}`;
+
+const INSTANCE_STATES: Alert["code"][] = ["instance_stopped", "instance_error", "instance_disconnected"];
+/** Alerts an alert can turn into: when one of them is raised for the same subject, the first one did not recover. */
+const SUCCESSORS: Partial<Record<Alert["code"], Alert["code"][]>> = {
+  instance_stopped: INSTANCE_STATES,
+  instance_error: INSTANCE_STATES,
+  instance_disconnected: INSTANCE_STATES,
+  challenge_limit: ["challenge_breached"],
+};
+
+/** How a gone alert went away, judged from the overview it is missing from. */
+function resolutionOf(alert: Alert, overview: Overview): Resolution {
+  if (alert.code.startsWith("instance_")) {
+    if (!overview.instances.some((i) => i.name === alert.subject)) return "removed";
+  } else if (!alert.code.startsWith("host_") && !overview.accounts.some((a) => a.number === alert.subject)) {
+    return "removed";
+  }
+  const successors = SUCCESSORS[alert.code] ?? [];
+  const turned = overview.alerts.some((a) => a.subject === alert.subject && successors.includes(a.code));
+  return turned ? "resolved" : "recovered";
+}
 
 /**
  * Checks the alerts of the overview (default every 60 s) and posts the ones that are new or gone
@@ -71,7 +92,7 @@ export class AlertNotifier {
     this.running = true;
     try {
       const overview = await this.options.load();
-      if (this.options.webhookUrl) await this.notify(this.options.webhookUrl, overview.alerts);
+      if (this.options.webhookUrl) await this.notify(this.options.webhookUrl, overview);
       if (this.options.heartbeatUrl) await this.heartbeat(this.options.heartbeatUrl);
     } catch (error) {
       this.options.log.warn({ err: error }, "Alert check failed");
@@ -80,15 +101,16 @@ export class AlertNotifier {
     }
   }
 
-  private async notify(url: URL, alerts: Alert[]): Promise<void> {
+  private async notify(url: URL, overview: Overview): Promise<void> {
     const { db } = this.options;
     const sent = await db.selectFrom("notified_alerts").selectAll().execute();
-    const current = new Map(alerts.map((a) => [keyOf(a), a]));
+    const current = new Map(overview.alerts.map((a) => [keyOf(a), a]));
     const time = this.now().toISOString();
 
     for (const [key, alert] of current) {
       if (sent.some((row) => row.key === key)) continue;
-      if (!(await this.post(url, this.event("alert_raised", alert, time)))) continue;
+      const text = alertText(alert, this.options.locale);
+      if (!(await this.post(url, this.event("alert_raised", alert, time, text)))) continue;
       await db
         .insertInto("notified_alerts")
         .values({
@@ -109,13 +131,13 @@ export class AlertNotifier {
         subject: row.subject,
         params: JSON.parse(row.params) as Alert["params"],
       } as Alert;
-      if (!(await this.post(url, this.event("alert_resolved", alert, time)))) continue;
+      const text = alertText(alert, this.options.locale, resolutionOf(alert, overview));
+      if (!(await this.post(url, this.event("alert_resolved", alert, time, text)))) continue;
       await db.deleteFrom("notified_alerts").where("key", "=", row.key).execute();
     }
   }
 
-  private event(event: AlertEvent["event"], alert: Alert, time: string): AlertEvent {
-    const text = alertText(alert, this.options.locale, event === "alert_resolved");
+  private event(event: AlertEvent["event"], alert: Alert, time: string, text: string): AlertEvent {
     // Host alerts are about the server itself, neither an instance nor an account.
     const about = alert.code.startsWith("instance_")
       ? { instance: alert.subject }
