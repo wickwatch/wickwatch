@@ -4,8 +4,24 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.1.2 – 2026-10-01
+
 ### Added
 - Parameter form: the filter "Only missing" next to "Only changed" lists the required values that are still empty, with their count (cTrader: text parameters).
+- Larger log view with a search that marks the matches; both log views keep 1000 lines (was 500).
+- Log download as a text file for the last 24 hours, the last 7 days or everything the runtime still has (`GET /instances/:ref/logs/download`), open to viewers like the live log.
+- The instance table (overview, account page) opens a row's log, also for viewers.
+- The trade details drawer steps to the previous and next trade with its arrows or the up and down keys.
+- Action buttons show a spinner while their action runs.
+
+### Changed
+- P&L chart and live log sit side by side at the same height.
+- The repository and the Docker image are public: `deploy/INSTALL.md` no longer needs a GHCR login, and the README starts the published image.
+
+### Fixed
+- Following the live log no longer stops once the buffer is full.
+- An account without a name shows its number once instead of "number · number".
+- While a dialog is open the page behind it no longer scrolls.
 
 ## 0.1.1 – 2026-10-01
 

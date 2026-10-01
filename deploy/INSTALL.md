@@ -39,14 +39,8 @@ getent hosts bots.example.com; curl -s -4 https://ifconfig.me; echo
 Pull a pinned wickwatch version (never `latest` in production) and the cTrader image your bots run with (`CTRADER_IMAGE`):
 
 ```bash
-docker pull ghcr.io/wickwatch/wickwatch:0.1.1
+docker pull ghcr.io/wickwatch/wickwatch:0.1.2
 docker pull ghcr.io/spotware/ctrader-console:5.9.11
-```
-
-If the image is not public, log in to GHCR first with a personal access token (classic) that has only `read:packages`; GHCR does not accept fine-grained tokens. `read -rs` keeps the token out of the shell history:
-
-```bash
-read -rs GHCR_TOKEN && echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin; unset GHCR_TOKEN
 ```
 
 ## 3. Folders and compose files
@@ -66,7 +60,7 @@ Write `compose.yml`: [`compose.standalone.yml`](compose.standalone.yml) and [`co
 ```yaml
 services:
   wickwatch:
-    image: ghcr.io/wickwatch/wickwatch:0.1.1
+    image: ghcr.io/wickwatch/wickwatch:0.1.2
     restart: unless-stopped
     env_file: .env
     environment:
