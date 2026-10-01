@@ -1,5 +1,7 @@
 # Deployment examples
 
+A complete install on a Linux server, step by step: [`INSTALL.md`](INSTALL.md).
+
 Pick one:
 
 | File | When |

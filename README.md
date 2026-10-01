@@ -29,7 +29,7 @@ Then:
 2. Open http://localhost:3000, enter the token, a user name and a password.
 3. Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator) and enter the code, or skip two-factor authentication and set it up later under *Profile*. The overview with demo data opens.
 
-How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
+How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md), step by step on a Linux server: [`deploy/INSTALL.md`](deploy/INSTALL.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
 
 ## Features
 - **Overview:** accounts with balance, equity, today's P&L, open positions and pending orders; all instances with status, uptime, positions, today's P&L and the last log line; alerts for stopped, crashed or disconnected bots, broker errors and challenge limits.
