@@ -476,7 +476,17 @@
     "level": {
       "warn": "WARN",
       "error": "ERROR"
-    }
+    },
+    "expand": "Show larger",
+    "download": "Download log",
+    "periods": {
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days",
+      "all": "Everything"
+    },
+    "search": "Search log",
+    "searchPlaceholder": "Search text",
+    "matches": "No matching line | 1 matching line | {count} matching lines"
   },
   "accounts": {
     "accounts": "Configured accounts",

@@ -1,32 +1,36 @@
 <script setup lang="ts">
-import type { LogLine } from "@wickwatch/core";
-import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import type { LogLine, LogPeriod } from "@wickwatch/core";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api } from "../api";
-import { formatDateTime } from "../format";
+import { api, downloadFile } from "../api";
+import AppIcon from "./AppIcon.vue";
+import AppModal from "./AppModal.vue";
+import IconButton from "./IconButton.vue";
+import LogView, { type LogState } from "./LogView.vue";
+import MenuButton, { type MenuItem } from "./MenuButton.vue";
 
-/** `running`: the container runs. A stopped container sends its last lines and then ends the stream. */
+/**
+ * The live log of an instance, with a larger view and a download. One stream feeds both views.
+ * `running`: the container runs. A stopped container sends its last lines and then ends the stream.
+ */
 const props = defineProps<{ instanceRef: string; running: boolean }>();
-const { locale } = useI18n();
+const { t } = useI18n();
 
-const MAX_LINES = 500;
-type Filter = "all" | "problems" | "setups";
-type State = "connecting" | "live" | "reconnecting" | "stopped";
+/** As many as the server replays on connect; older lines are in the download. */
+const MAX_LINES = 1000;
+const PERIODS: LogPeriod[] = ["24h", "7d", "all"];
 
 /** `seq` numbers the lines as they arrive: a stable key while old lines are dropped at the top. */
 const lines = ref<(LogLine & { seq: number })[]>([]);
 let seq = 0;
-const filter = ref<Filter>("all");
-const follow = ref(true);
-const state = ref<State>("connecting");
-const box = ref<HTMLDivElement>();
+const state = ref<LogState>("connecting");
 let source: EventSource | undefined;
 
 function connect(ref: string) {
   source?.close();
   lines.value = [];
   state.value = "connecting";
-  source = new EventSource(api.logStreamUrl(ref));
+  source = new EventSource(api.logStreamUrl(ref, MAX_LINES));
   source.addEventListener("open", () => {
     // The server replays the tail on every (re)connect.
     lines.value = [];
@@ -52,149 +56,40 @@ watch(
   },
 );
 /** The container state wins over the connection state: a stopped container has no live log. */
-const shown = computed<State>(() => (props.running ? state.value : "stopped"));
+const shown = computed<LogState>(() => (props.running ? state.value : "stopped"));
 onUnmounted(() => source?.close());
 
-const visible = computed(() =>
-  lines.value.filter((l) =>
-    filter.value === "problems"
-      ? l.level === "warn" || l.level === "error"
-      : filter.value === "setups"
-        ? !!l.setup
-        : true,
-  ),
-);
-
-watch(
-  () => visible.value.length,
-  async () => {
-    if (!follow.value) return;
-    await nextTick();
-    box.value?.scrollTo({ top: box.value.scrollHeight });
-  },
-);
+const expanded = ref(false);
+const downloads = computed<MenuItem[]>(() => PERIODS.map((p) => ({ id: p, label: t(`log.periods.${p}`) })));
+const download = (period: string) => downloadFile(api.logDownloadUrl(props.instanceRef, period as LogPeriod));
 </script>
 
 <template>
-  <div class="log">
-    <div class="log__bar">
-      <div class="log__filters" role="group" :aria-label="$t('log.filter')">
-        <button
-          v-for="f in ['all', 'problems', 'setups'] as const"
-          :key="f"
-          type="button"
-          class="btn btn--ghost btn--small"
-          :aria-pressed="filter === f"
-          @click="filter = f"
-        >
-          {{ $t(`log.filters.${f}`) }}
-        </button>
-      </div>
-      <label class="log__follow">
-        <input v-model="follow" type="checkbox" />
-        {{ $t("log.follow") }}
-      </label>
-      <span
-        class="log__state"
-        :class="shown === 'live' ? 'tone-positive' : shown === 'stopped' ? 'tone-muted' : 'tone-warning'"
-        role="status"
-      >
-        {{ $t(`log.state.${shown}`) }}
-      </span>
-    </div>
-    <div ref="box" class="log__lines mono" tabindex="0" :aria-label="$t('instance.liveLog')">
-      <p v-if="!visible.length" class="muted">{{ $t("log.empty") }}</p>
-      <!-- Bot output is shown as is, never translated. -->
-      <div
-        v-for="line in visible"
-        :key="line.seq"
-        class="log__line"
-        :class="line.level ? `log__line--${line.level}` : ''"
-      >
-        <time :datetime="line.time">{{ formatDateTime(locale, line.time, "time") }}</time>
-        <span v-if="line.level === 'warn' || line.level === 'error'" class="log__level">{{
-          $t(`log.level.${line.level}`)
-        }}</span>
-        <span class="log__text">{{ line.text }}</span>
-      </div>
-    </div>
+  <div class="log-panel">
+    <LogView :lines="lines" :state="shown">
+      <template #actions>
+        <MenuButton :label="$t('log.download')" :items="downloads" @select="download">
+          <AppIcon name="download" />
+        </MenuButton>
+        <IconButton icon="expand" :label="$t('log.expand')" variant="ghost" @click="expanded = true" />
+      </template>
+    </LogView>
+    <AppModal :open="expanded" :title="$t('instance.liveLog')" full @close="expanded = false">
+      <LogView :lines="lines" :state="shown" large>
+        <template #actions>
+          <MenuButton :label="$t('log.download')" :items="downloads" @select="download">
+            <AppIcon name="download" />
+          </MenuButton>
+        </template>
+      </LogView>
+    </AppModal>
   </div>
 </template>
 
 <style scoped>
-.log {
+.log-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--ww-space-3);
   min-width: 0;
-}
-
-.log__bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: center;
-}
-
-.log__filters {
-  display: flex;
-  gap: var(--ww-space-1);
-}
-
-.log__follow {
-  display: flex;
-  gap: var(--ww-space-1);
-  align-items: center;
-  font-size: var(--ww-size-sm);
-}
-
-.log__state {
-  margin-left: auto;
-  font-size: var(--ww-size-xs);
-  font-weight: 600;
-}
-
-.log__lines {
-  height: 360px;
-  overflow: auto;
-  padding: var(--ww-space-3);
-  border-radius: var(--ww-radius-md);
-  background: var(--ww-inset);
-  font-size: var(--ww-size-xs);
-  line-height: 1.6;
-}
-
-.log__lines p {
-  margin: 0;
-}
-
-.log__line {
-  display: flex;
-  gap: var(--ww-space-2);
-}
-
-.log__line time {
-  flex: none;
-  color: var(--ww-text-muted);
-}
-
-.log__level {
-  flex: none;
-  font-weight: 600;
-}
-
-.log__text {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.log__line--warn .log__level,
-.log__line--warn .log__text {
-  color: var(--ww-warning);
-}
-
-.log__line--error .log__level,
-.log__line--error .log__text {
-  color: var(--ww-negative);
 }
 </style>

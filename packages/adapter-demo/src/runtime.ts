@@ -16,6 +16,8 @@ import { fromDemoCommand, type DemoInstance, type DemoWorld } from "./world";
 
 const LOG_STEP_MS = 5 * 60 * 1000;
 const MAX_TAIL = 1000;
+/** How far back the made-up log goes for a download of everything: a week. */
+const HISTORY_SLOTS = (7 * 24 * 60 * 60 * 1000) / LOG_STEP_MS;
 const GIB = 1024 ** 3;
 
 export class DemoRuntimeAdapter implements RuntimeAdapter {
@@ -74,7 +76,7 @@ export class DemoRuntimeAdapter implements RuntimeAdapter {
 
   async *logs(ref: string, opts: LogOptions = {}): AsyncIterable<LogLine> {
     const instance = this.world.instance(ref);
-    const tail = Math.min(opts.tail ?? 100, MAX_TAIL);
+    const tail = opts.tail === "all" ? HISTORY_SLOTS : Math.min(opts.tail ?? 100, MAX_TAIL);
     const last = Math.floor(this.world.now().getTime() / LOG_STEP_MS);
     let first = last - tail + 1;
     if (opts.since) first = Math.max(first, Math.ceil(Date.parse(opts.since) / LOG_STEP_MS));

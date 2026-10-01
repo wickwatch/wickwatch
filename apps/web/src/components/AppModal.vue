@@ -14,6 +14,8 @@ const props = defineProps<{
   dirty?: boolean;
   /** A panel at the right edge, full height, for details next to a table; the same sheet as the modal on phones. */
   drawer?: boolean;
+  /** Almost the whole window, for content that needs room (the log); its content fills the height and scrolls itself. */
+  full?: boolean;
 }>();
 const emit = defineEmits<{ close: [] }>();
 const dialog = ref<HTMLDialogElement>();
@@ -56,7 +58,7 @@ function discard() {
   <dialog
     ref="dialog"
     class="modal panel"
-    :class="{ 'modal--drawer': drawer }"
+    :class="{ 'modal--drawer': drawer, 'modal--full': full }"
     :aria-labelledby="titleId"
     tabindex="-1"
     @cancel.prevent="requestClose"
@@ -120,6 +122,20 @@ function discard() {
   padding: var(--ww-space-5);
 }
 
+.modal--full {
+  width: calc(100vw - 64px);
+  max-width: none;
+  height: calc(100dvh - 64px);
+}
+
+.modal--full .modal__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal--drawer {
   width: min(440px, 100vw);
   height: 100dvh;
@@ -159,6 +175,10 @@ function discard() {
 
   .modal--drawer[open] {
     animation: none;
+  }
+
+  .modal--full {
+    height: calc(100dvh - var(--ww-space-8));
   }
 
   .modal__body {

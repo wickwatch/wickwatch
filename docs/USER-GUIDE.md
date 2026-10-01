@@ -55,7 +55,7 @@ If a version cannot start, e.g. because of empty text parameters, the Configurat
 The **Overview** tab of an instance shows:
 
 - key figures and the realised P&L curve of closed trades (7, 30 or 90 days, or all since the first trade);
-- the **live log**, with the filters **Warnings & errors** and **Setups**;
+- the **live log**, with the filters **Warnings & errors** and **Setups**. **Show larger** opens it almost full screen with a search; the download button saves the log of the last 24 hours, the last 7 days or everything the container still has as a text file (one line per log line: UTC time, then the text as the bot wrote it);
 - **Open positions**, **Pending orders** and the **History** of closed trades, with risk in % of the balance and the result in R when the stop the position opened with is known;
 - an info button in every row that opens the **details panel**: entry and exit, initial stop, opening and closing time with the holding time, gross result, commission, swap, net, risk and R, label and IDs.
 

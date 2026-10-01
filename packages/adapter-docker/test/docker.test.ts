@@ -78,6 +78,14 @@ describe("DockerRuntimeAdapter", () => {
     });
   });
 
+  it("caps a tail, but sends Docker no tail for all lines", async () => {
+    const { adapter, docker } = setup();
+    await collect(adapter.logs("bot-b", { tail: 5000 }));
+    const lines = await collect(adapter.logs("bot-b", { tail: "all" }));
+    expect(lines).toHaveLength(2);
+    expect(docker.containers.get("bot-b")?.logRequests).toEqual([{ tail: 1000, follow: false }, { follow: false }]);
+  });
+
   it("follows logs until the signal aborts and closes the stream", async () => {
     const { adapter, docker } = setup();
     const controller = new AbortController();

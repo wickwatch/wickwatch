@@ -3,7 +3,7 @@ import { isUp } from "@wickwatch/core/rules";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
-import { ApiError, api, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
+import { ApiError, api, downloadFile, errorKey, type InstanceAction, type ManagedInstanceDetail } from "../api";
 import AppBanner from "../components/AppBanner.vue";
 import AppIcon from "../components/AppIcon.vue";
 import AppSpinner from "../components/AppSpinner.vue";
@@ -123,12 +123,7 @@ function onMore(id: string) {
   if (!m) return;
   if (id === "duplicate") void router.push({ name: "instance-new", query: { from: m.name } });
   else if (id === "delete") deleting.value = true;
-  else if (id === "download") {
-    const link = document.createElement("a");
-    link.href = api.parameterFileUrl(m.name, m.config.version);
-    link.download = "";
-    link.click();
-  }
+  else if (id === "download") downloadFile(api.parameterFileUrl(m.name, m.config.version));
 }
 
 async function remove() {

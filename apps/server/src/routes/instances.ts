@@ -1,4 +1,5 @@
-import { errorCode, InstanceDetail } from "@wickwatch/core";
+import { Readable } from "node:stream";
+import { errorCode, InstanceDetail, LogPeriod, type LogLine } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { AccountDirectory } from "../accounts";
@@ -19,6 +20,10 @@ const Action = Type.Union([Type.Literal("start"), Type.Literal("stop"), Type.Lit
  */
 const Ref = Type.String({ minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]*$" });
 const KEEP_ALIVE_MS = 15_000;
+const HOUR_MS = 60 * 60 * 1000;
+const PERIOD_MS = { "24h": 24 * HOUR_MS, "7d": 7 * 24 * HOUR_MS } as const;
+/** A download line: the UTC time, then the text as the instance wrote it. */
+const fileLine = (line: LogLine) => `${line.time} ${line.text}\n`;
 
 export interface InstanceRouteOptions {
   adapters: Adapters;
@@ -116,6 +121,50 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         clearInterval(ping);
         res.end();
       }
+    },
+  );
+
+  app.get(
+    "/instances/:ref/logs/download",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "The log as a text file",
+        description:
+          "One line per log line: the UTC time, then the text as the instance wrote it. `period` limits it to the last " +
+          "24 hours or 7 days; `all` is everything the runtime still has. Streamed, so a long log never sits in memory.",
+        params: Type.Object({ ref: Ref }),
+        querystring: Type.Object({ period: Type.Optional(LogPeriod) }),
+        response: { 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { ref } = request.params;
+      if (!(await adapters.runtime.list()).some((i) => i.ref === ref)) {
+        return reply.code(404).send({ error: "not_found" });
+      }
+      const period = request.query.period ?? "24h";
+      const now = new Date();
+      const since = period === "all" ? undefined : new Date(now.getTime() - PERIOD_MS[period]).toISOString();
+      const lines = adapters.runtime.logs(ref, { tail: "all", ...(since ? { since } : {}) })[Symbol.asyncIterator]();
+      // Read the first line before answering: a runtime that fails answers with its error, not a cut-off file.
+      const first = await lines.next();
+      async function* text() {
+        try {
+          for (let next = first; !next.done; next = await lines.next()) yield fileLine(next.value);
+        } finally {
+          await lines.return?.();
+        }
+      }
+      // The ref holds only file name characters (see Ref).
+      const stamp = now.toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "-");
+      return (
+        reply
+          .type("text/plain; charset=utf-8")
+          .header("content-disposition", `attachment; filename="${ref}-${stamp}.log"`)
+          // No response schema for 200 on purpose, as for the parameter file: the text goes out as it is.
+          .send(Readable.from(text()) as never)
+      );
     },
   );
 

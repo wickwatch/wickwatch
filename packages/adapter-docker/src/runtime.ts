@@ -144,7 +144,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   async *logs(ref: string, opts: LogOptions = {}): AsyncIterable<LogLine> {
     const { handle, details } = await this.managed(ref);
     const request = {
-      tail: Math.min(opts.tail ?? 100, MAX_TAIL),
+      ...(opts.tail === "all" ? {} : { tail: Math.min(opts.tail ?? 100, MAX_TAIL) }),
       follow: opts.follow ?? false,
       ...(opts.since ? { since: Math.floor(Date.parse(opts.since) / 1000) } : {}),
     };

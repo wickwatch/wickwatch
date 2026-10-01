@@ -30,7 +30,11 @@ export interface Credentials {
 
 export interface LogOptions {
   since?: IsoTime;
-  tail?: number;
+  /**
+   * The last lines to send first; the adapter may cap a number (live views). `"all"` sends every line since `since`
+   * (or since the instance began), for a download: the caller streams them on and never holds them all.
+   */
+  tail?: number | "all";
   /** Keep the iterator open and yield new lines until `signal` aborts. */
   follow?: boolean;
   signal?: AbortSignal;

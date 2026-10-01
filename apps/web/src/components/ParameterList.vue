@@ -126,7 +126,7 @@ const range = (p: ParameterSchema) =>
 <template>
   <div class="params">
     <div class="params__bar">
-      <label class="params__search">
+      <label class="search">
         <span class="visually-hidden">{{ $t("parameters.search") }}</span>
         <AppIcon name="search" :size="16" />
         <input
@@ -264,26 +264,6 @@ const range = (p: ParameterSchema) =>
   flex-wrap: wrap;
   gap: var(--ww-space-2);
   align-items: center;
-}
-
-.params__search {
-  position: relative;
-  display: flex;
-  flex: 1 1 240px;
-  max-width: 360px;
-  align-items: center;
-  color: var(--ww-text-muted);
-}
-
-.params__search .icon {
-  position: absolute;
-  left: var(--ww-space-3);
-  pointer-events: none;
-}
-
-.params__search .input {
-  width: 100%;
-  padding-left: calc(var(--ww-space-3) + 16px + var(--ww-space-2));
 }
 
 .params__count {

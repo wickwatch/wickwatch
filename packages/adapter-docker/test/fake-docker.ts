@@ -221,7 +221,9 @@ export class FakeDocker implements DockerClient {
         Promise.resolve().then(() => {
           const c = get();
           c.logRequests.push(request);
-          const data = Buffer.concat(c.lines.slice(-request.tail).map((l) => frame(`${l}\n`)));
+          const data = Buffer.concat(
+            (request.tail === undefined ? c.lines : c.lines.slice(-request.tail)).map((l) => frame(`${l}\n`)),
+          );
           if (!request.follow) return data;
           const stream = new PassThrough();
           stream.write(data);

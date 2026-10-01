@@ -476,7 +476,17 @@
     "level": {
       "warn": "WARN",
       "error": "FEHLER"
-    }
+    },
+    "expand": "Größer anzeigen",
+    "download": "Log herunterladen",
+    "periods": {
+      "24h": "Letzte 24 Stunden",
+      "7d": "Letzte 7 Tage",
+      "all": "Alles"
+    },
+    "search": "Log durchsuchen",
+    "searchPlaceholder": "Text suchen",
+    "matches": "Keine passende Zeile | 1 passende Zeile | {count} passende Zeilen"
   },
   "accounts": {
     "accounts": "Eingerichtete Konten",

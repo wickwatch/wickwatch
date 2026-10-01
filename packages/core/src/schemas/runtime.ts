@@ -48,6 +48,10 @@ export const LogLine = Type.Object({
 });
 export type LogLine = Type.Static<typeof LogLine>;
 
+/** How far back a log download goes: the last 24 hours, the last 7 days, or all the runtime still has. */
+export const LogPeriod = Type.Union([Type.Literal("24h"), Type.Literal("7d"), Type.Literal("all")], { default: "24h" });
+export type LogPeriod = Type.Static<typeof LogPeriod>;
+
 export const HostStatus = Type.Object({
   /** CPU load as a fraction, 0..1. */
   cpu: Type.Number({ minimum: 0, maximum: 1 }),

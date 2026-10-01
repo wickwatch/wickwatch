@@ -46,6 +46,16 @@ export function describeRuntimeAdapter(name: string, options: RuntimeContractOpt
       expect(times).toEqual([...times].sort((a, b) => a - b));
     });
 
+    it("sends all log lines on request (downloads), in chronological order", async () => {
+      const [first] = await adapter.list();
+      if (!first) return;
+      const lines: LogLine[] = [];
+      for await (const line of adapter.logs(first.ref, { tail: "all" })) lines.push(line);
+      expectSchema(Type.Array(LogLine), lines);
+      const times = lines.map((l) => Date.parse(l.time));
+      expect(times).toEqual([...times].sort((a, b) => a - b));
+    });
+
     it("ends a followed log stream when the signal aborts", async () => {
       const [first] = await adapter.list();
       if (!first) return;

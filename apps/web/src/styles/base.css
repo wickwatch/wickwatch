@@ -5,6 +5,16 @@
   box-sizing: border-box;
 }
 
+/* The space of the scrollbar stays, so locking the page below does not shift it sideways. */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* While a dialog is open (modal, drawer, confirmation) the page behind it stays still; scrolling stays in the dialog. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   background: var(--ww-bg);
@@ -377,6 +387,27 @@ p[role="alert"] {
   color: var(--ww-text);
   font: inherit;
   font-size: var(--ww-size-md);
+}
+
+/* A search field with a magnifier inside (parameters, log): `<label class="search">` around icon and input. */
+.search {
+  position: relative;
+  display: flex;
+  flex: 1 1 240px;
+  max-width: 360px;
+  align-items: center;
+  color: var(--ww-text-muted);
+}
+
+.search .icon {
+  position: absolute;
+  left: var(--ww-space-3);
+  pointer-events: none;
+}
+
+.search .input {
+  width: 100%;
+  padding-left: calc(var(--ww-space-3) + 16px + var(--ww-space-2));
 }
 
 @media (pointer: coarse) {

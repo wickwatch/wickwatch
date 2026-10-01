@@ -3898,6 +3898,105 @@
         }
       }
     },
+    "/api/v1/instances/{ref}/logs/download": {
+      "get": {
+        "summary": "The log as a text file",
+        "tags": [
+          "instances"
+        ],
+        "description": "One line per log line: the UTC time, then the text as the instance wrote it. `period` limits it to the last 24 hours or 7 days; `all` is everything the runtime still has. Streamed, so a long log never sits in memory.",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "24h"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "7d"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "all"
+                  ]
+                }
+              ],
+              "default": "24h"
+            },
+            "in": "query",
+            "name": "period",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/instances/{ref}/{action}": {
       "post": {
         "summary": "Start, stop or restart an instance",

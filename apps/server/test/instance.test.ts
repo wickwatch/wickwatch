@@ -87,6 +87,41 @@ describe("live log stream", () => {
   });
 });
 
+describe("log download", () => {
+  const download = (query = "", cookie = admin) => get(`/api/v1/instances/alpha-ger40-a/logs/download${query}`, cookie);
+  const times = (body: string) =>
+    body
+      .trimEnd()
+      .split("\n")
+      .map((line) => Date.parse(line.slice(0, line.indexOf(" "))));
+
+  it("sends the last 24 hours as a text file, one UTC time and text per line", async () => {
+    const res = await download();
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/plain; charset=utf-8");
+    expect(res.headers["content-disposition"]).toMatch(/^attachment; filename="alpha-ger40-a-\d{8}-\d{4}\.log"$/);
+    expect(
+      res.body
+        .trimEnd()
+        .split("\n")
+        .every((line) => /^\d{4}-\d\d-\d\dT[\d:.]+Z \S/.test(line)),
+    ).toBe(true);
+    const day = times(res.body);
+    expect(day.every((time) => time >= Date.now() - DAY_MS - 60_000)).toBe(true);
+    // More than the live view's tail of 1000 lines would allow, the whole week.
+    const week = times((await download("?period=7d")).body);
+    expect(week.length).toBeGreaterThan(day.length);
+    expect(week.length).toBeGreaterThan(1000);
+  });
+
+  it("is open to viewers like the live log, needs a login and a known instance", async () => {
+    expect((await download("", await loginAs(t, "viewer"))).statusCode).toBe(200);
+    expect((await t.app.inject("/api/v1/instances/alpha-ger40-a/logs/download")).statusCode).toBe(401);
+    expect((await get("/api/v1/instances/nope/logs/download")).statusCode).toBe(404);
+    expect((await download("?period=1y")).statusCode).toBe(400);
+  });
+});
+
 describe("close position", () => {
   const close = (id: string, confirm: string, cookie = admin) =>
     t.app.inject({

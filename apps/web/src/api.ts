@@ -16,6 +16,7 @@ import type {
   HostStatus,
   InstanceDetail,
   InstanceStatus,
+  LogPeriod,
   Overview,
   SystemInfo,
 } from "@wickwatch/core";
@@ -124,6 +125,9 @@ export const api = {
   /** URL for an EventSource with the live log (history first, then new lines). */
   logStreamUrl: (ref: string, tail = 200) =>
     url(`instances/${encodeURIComponent(ref)}/logs/stream?tail=${String(tail)}`),
+  /** The log as a text file; `period` is how far back. */
+  logDownloadUrl: (ref: string, period: LogPeriod) =>
+    url(`instances/${encodeURIComponent(ref)}/logs/download?period=${period}`).toString(),
   closePosition: (account: string, positionId: string) =>
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,
@@ -218,3 +222,11 @@ export const errorKey = (error: unknown): string =>
       ? `error.adapter.${error.code}`
       : `error.api.${error.code}`
     : "error.api.internal";
+
+/** Starts the download of a file the server sends as an attachment (parameter file, log), as a download link would. */
+export function downloadFile(href: string) {
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = "";
+  link.click();
+}

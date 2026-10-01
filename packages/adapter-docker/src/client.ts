@@ -21,7 +21,8 @@ export interface ContainerDetails {
 }
 
 export interface LogRequest {
-  tail: number;
+  /** Without it Docker sends every line. */
+  tail?: number;
   since?: number;
   follow: boolean;
 }
@@ -169,7 +170,7 @@ function wrap(docker: Docker): DockerClient {
             stdout: true,
             stderr: true,
             timestamps: true,
-            tail,
+            ...(tail === undefined ? {} : { tail }),
             ...(since === undefined ? {} : { since }),
           };
           return follow ? c.logs({ ...base, follow: true }) : c.logs({ ...base, follow: false });
