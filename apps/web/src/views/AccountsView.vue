@@ -126,6 +126,8 @@ const confirmRemove = () => {
 // --- adding an account from the broker's list
 const adding = reactive({ credentialId: 0, number: "", displayName: "" });
 const selectable = (o: OfferedAccount) => !o.added && o.active !== false;
+// Selectable accounts first, then already added ones, inactive ones last; the broker's order within each group.
+const offeredRank = (o: OfferedAccount) => (selectable(o) ? 0 : o.active === false ? 2 : 1);
 const choose = (o: OfferedAccount) => {
   adding.number = o.number;
   adding.displayName = o.name ?? "";
@@ -140,7 +142,7 @@ const accountChoice = addForm.field(
 const fetchOffered = () =>
   runInModal(async () => {
     if (!addForm.validate()) return false;
-    offered.value = await api.brokerAccounts(adding.credentialId);
+    offered.value = (await api.brokerAccounts(adding.credentialId)).sort((a, b) => offeredRank(a) - offeredRank(b));
     const first = offered.value.find(selectable);
     adding.number = first?.number ?? "";
     adding.displayName = first?.name ?? "";
