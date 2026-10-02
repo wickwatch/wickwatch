@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.2.0 – 2026-10-02
+
 ### Added
 - API tokens for scripts and external clients (user menu → *API tokens*, admins): sent as `Authorization: Bearer <token>`, stored only as a hash and shown once, with a role (viewer or admin) and an optional lifetime; deletable, with the last use shown. A token acts as its creator with at most its role and cannot reach the login, password, 2FA or token endpoints; the audit log names the token an action came through. The password change can delete the user's tokens along with it, and `ALERT_WEBHOOK_URL` gets an `api_token_created` notice for every new token. Creating a token asks for the password and, with 2FA on, a code; `API_TOKENS_REQUIRE_2FA=on` (default off) allows it only to users with 2FA.
 - Read-only MCP endpoint at `<base>/mcp` (Model Context Protocol, Streamable HTTP) for AI clients with an API token: overview, alerts, accounts with challenge status, instances with deals and key figures, logs, host status, and the audit log for admin tokens. See `docs/MCP.md`; `MCP=off` switches it off.
