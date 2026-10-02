@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.4.0 – 2026-10-02
+
 ### Added
 - Account size check: on the Algos page, name the parameter an algo calculates positions with as its account size (e.g. a starting capital). The instance form marks a value more than 25 % off the account's challenge start balance (else its balance at the start of the trading day) and asks before saving, **Apply template…** warns before saving the version, and the Configuration tab shows a warning while it stays. Set per algo for all its versions, audit-logged as `algo.settings`. API: `GET /api/v1/algo-settings`, `PUT /api/v1/algo-settings/:name`; accounts carry the size they are checked against (`accountSize`), instance details the check (`accountSizeCheck`); both come from the database, without a broker query.
 - Home-screen icons for iPhone and Android: a web manifest (`manifest.webmanifest`), the Apple touch icon, a 192 px icon and a maskable 512 px icon for Android's adaptive shapes; "Add to Home Screen" opens wickwatch without the browser bar.
