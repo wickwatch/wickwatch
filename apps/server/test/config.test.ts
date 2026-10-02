@@ -37,6 +37,8 @@ describe("loadConfig", () => {
       clockCheckUrl: new URL("https://www.cloudflare.com/cdn-cgi/trace"),
       sourceUrl: new URL("https://github.com/wickwatch/wickwatch"),
       supportUrl: new URL("https://ko-fi.com/mmohrx"),
+      mcp: true,
+      apiTokensRequire2fa: false,
     });
   });
 
@@ -48,6 +50,10 @@ describe("loadConfig", () => {
     expect(load({}).supportUrl?.href).toBe("https://ko-fi.com/mmohrx");
     expect(load({ SUPPORT_URL: "off" }).supportUrl).toBeUndefined();
     expect(() => load({ SUPPORT_URL: "ko-fi" })).toThrow(/SUPPORT_URL/);
+    expect(load({ MCP: "OFF" }).mcp).toBe(false);
+    expect(() => load({ MCP: "no" })).toThrow(/MCP must be on or off/);
+    expect(load({ API_TOKENS_REQUIRE_2FA: "ON" }).apiTokensRequire2fa).toBe(true);
+    expect(() => load({ API_TOKENS_REQUIRE_2FA: "yes" })).toThrow(/API_TOKENS_REQUIRE_2FA must be on or off/);
     const webhook = { ALERT_WEBHOOK_URL: "https://hooks.example/x" };
     expect(
       load({ ...webhook, DAILY_SUMMARY_TIME: "21:30", DAILY_SUMMARY_TIMEZONE: "Europe/Berlin" }).dailySummary,

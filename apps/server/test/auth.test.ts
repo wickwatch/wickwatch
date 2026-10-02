@@ -51,14 +51,14 @@ describe("first-run setup", () => {
       password: PASSWORD,
       code: currentCode(secret),
     });
-    expect(res.json()).toEqual({ username: "admin", role: "admin", totpEnabled: true });
+    expect(res.json()).toEqual({ username: "admin", role: "admin", totpEnabled: true, apiTokens: 0 });
 
     const cookie = sessionCookie(res);
     expect(res.cookies[0]).toMatchObject({ httpOnly: true, sameSite: "Strict", path: "/" });
     expect((await session(cookie)).json()).toEqual({
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "admin", role: "admin", totpEnabled: true },
+      user: { username: "admin", role: "admin", totpEnabled: true, apiTokens: 0 },
     });
     expect((await post("/api/v1/auth/setup/totp", { token: SETUP_TOKEN, username: "x" })).json()).toEqual({
       error: "setup_done",
@@ -72,7 +72,7 @@ describe("first-run setup", () => {
   it("can skip 2FA", async () => {
     t = await startApp();
     const res = await post("/api/v1/auth/setup", { token: SETUP_TOKEN, username: "admin", password: PASSWORD });
-    expect(res.json()).toEqual({ username: "admin", role: "admin", totpEnabled: false });
+    expect(res.json()).toEqual({ username: "admin", role: "admin", totpEnabled: false, apiTokens: 0 });
     const row = await t.db.selectFrom("users").select("totp_secret").executeTakeFirstOrThrow();
     expect(row.totp_secret).toBeNull();
     expect((await auditActions())[0]).toEqual({ action: "auth.setup", details: { totp: false } });
@@ -111,7 +111,7 @@ describe("login", () => {
     t = await startApp();
     await createUser(t, "anna", "viewer", { totp: false });
     const res = await post("/api/v1/auth/login", { username: "anna", password: PASSWORD });
-    expect(res.json()).toEqual({ username: "anna", role: "viewer", totpEnabled: false });
+    expect(res.json()).toEqual({ username: "anna", role: "viewer", totpEnabled: false, apiTokens: 0 });
     const cookie = sessionCookie(res);
 
     expect((await t.app.inject({ url: "/api/v1/overview", headers: { cookie } })).statusCode).toBe(200);
@@ -133,7 +133,7 @@ describe("login", () => {
     expect(wrongPassword.json()).toEqual({ error: "invalid_credentials" });
 
     const ok = await post("/api/v1/auth/login", { username: "anna", password: PASSWORD, code: currentCode(secret) });
-    expect(ok.json()).toEqual({ username: "anna", role: "admin", totpEnabled: true });
+    expect(ok.json()).toEqual({ username: "anna", role: "admin", totpEnabled: true, apiTokens: 0 });
   });
 
   it("gives the same answer for unknown user, wrong password and wrong code", async () => {
@@ -284,7 +284,7 @@ describe("admin-only writes", () => {
   it("keeps a state-changing route without its own guard for admins", async () => {
     t = await startApp();
     const probe = Fastify({ logger: false });
-    await probe.register(auth, { db: t.db, basePath: "" });
+    await probe.register(auth, { db: t.db, basePath: "", mcp: true });
     probe.post("/api/v1/probe", () => ({ ok: true }));
     probe.post("/api/v1/auth/probe", () => ({ ok: true }));
     probe.get("/api/v1/probe", () => ({ ok: true }));

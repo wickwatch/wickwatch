@@ -13,6 +13,7 @@ import { web } from "./plugins/web";
 import { loadChallengeTemplates } from "./challenges/templates";
 import { accountRoutes } from "./routes/accounts";
 import { algoRoutes } from "./routes/algos";
+import { apiTokenRoutes } from "./routes/api-tokens";
 import { auditRoutes } from "./routes/audit";
 import { challengeRoutes } from "./routes/challenges";
 import { authRoutes } from "./routes/auth";
@@ -20,12 +21,14 @@ import { credentialRoutes } from "./routes/credentials";
 import { healthRoutes } from "./routes/health";
 import { instanceRoutes } from "./routes/instances";
 import { managedInstanceRoutes } from "./routes/managed-instances";
+import { mcpRoutes } from "./routes/mcp";
 import { overviewRoutes } from "./routes/overview";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
 import { LogTracker } from "./services/log-tracker";
 import { OverviewLoader } from "./services/overview";
+import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
 
 declare module "fastify" {
@@ -82,7 +85,7 @@ export async function buildApp({
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
-  await app.register(auth, { db, basePath });
+  await app.register(auth, { db, basePath, mcp: config.mcp });
   await app.register(openapi, { basePath, version });
 
   // Health is also reachable at the root, for proxies that strip or ignore the base path.
@@ -106,6 +109,16 @@ export async function buildApp({
   });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
   await app.register(auditRoutes, { db, prefix: api });
+  const notify = config.alertWebhookUrl
+    ? createSecurityNotifier({ webhookUrl: config.alertWebhookUrl, locale: config.defaultLocale, log: app.log })
+    : undefined;
+  await app.register(apiTokenRoutes, {
+    db,
+    cipher,
+    notify,
+    require2fa: config.apiTokensRequire2fa,
+    prefix: api,
+  });
   await app.register(managedInstanceRoutes, {
     adapters,
     accounts,
@@ -116,6 +129,20 @@ export async function buildApp({
     algosDir: config.algosDir,
     prefix: api,
   });
+  // Off with MCP=off: then there is no route, and <base>/mcp answers 404 like any unknown path.
+  if (config.mcp) {
+    await app.register(mcpRoutes, {
+      path: `${basePath}/mcp`,
+      version,
+      adapters,
+      accounts,
+      db,
+      overview,
+      labelPrefix,
+      logTracker,
+      history,
+    });
+  }
   await app.register(web, { basePath, distDir: config.webDistDir });
 
   app.addHook("onClose", async () => {

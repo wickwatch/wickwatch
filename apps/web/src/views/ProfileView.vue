@@ -9,7 +9,7 @@ import FieldError from "../components/FieldError.vue";
 import IconButton from "../components/IconButton.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
-import { currentUser, loadSession } from "../session";
+import { currentUser, isAdmin, loadSession } from "../session";
 import { checks, useValidation } from "../validation";
 
 const totp = ref<TotpSetup>();
@@ -49,6 +49,9 @@ const confirmEnable = () =>
 // --- password, changed in the shared modal like the other edits
 const changing = ref(false);
 const pw = reactive({ current: "", next: "", repeat: "" });
+/** Also delete the user's API tokens, e.g. when the password may have leaked; off by default. */
+const deleteTokens = ref(false);
+const tokenCount = computed(() => currentUser.value?.apiTokens ?? 0);
 const pwForm = useValidation();
 const pwFields = {
   current: pwForm.field(() => pw.current, checks.required),
@@ -63,6 +66,7 @@ const pwError = ref<string>();
 const pwDirty = computed(() => Object.values(pw).some((v) => v !== ""));
 function openPassword() {
   Object.assign(pw, { current: "", next: "", repeat: "" });
+  deleteTokens.value = false;
   pwError.value = undefined;
   pwForm.reset();
   changing.value = true;
@@ -74,12 +78,26 @@ function closePassword() {
 }
 function savePassword() {
   if (!pwForm.validate()) return;
+  const deleting = deleteTokens.value && tokenCount.value > 0;
   void run(
     async () => {
-      await api.changePassword(pw.current, pw.next);
+      await api.changePassword(pw.current, pw.next, deleting);
       closePassword();
+      const kept = deleting ? 0 : tokenCount.value;
+      await loadSession();
+      return kept;
     },
-    { done: () => t("profile.passwordChanged"), error: pwError, as: "password" },
+    {
+      // Tokens that stay valid are named, so a password changed after a leak does not leave them forgotten.
+      done: (kept) =>
+        deleting
+          ? t("profile.passwordChangedTokensDeleted")
+          : kept > 0
+            ? t("profile.passwordChangedTokensKept", { count: kept }, kept)
+            : t("profile.passwordChanged"),
+      error: pwError,
+      as: "password",
+    },
   );
 }
 
@@ -237,6 +255,16 @@ const disable = () =>
             />
             <FieldError :field="pwFields.repeat" />
           </label>
+          <div v-if="tokenCount > 0" class="field">
+            <label class="check">
+              <input v-model="deleteTokens" type="checkbox" />
+              {{ $t("profile.deleteTokens", { count: tokenCount }, tokenCount) }}
+            </label>
+            <span class="field__hint">
+              {{ $t("profile.deleteTokensHint") }}
+              <RouterLink v-if="isAdmin" :to="{ name: 'api-tokens' }">{{ $t("profile.showTokens") }}</RouterLink>
+            </span>
+          </div>
           <div class="buttons">
             <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'password'">
               {{ $t("action.save") }}
@@ -306,6 +334,17 @@ dt {
 
 dd {
   margin: var(--ww-space-1) 0 0;
+}
+
+.check {
+  display: flex;
+  gap: var(--ww-space-2);
+  align-items: center;
+  font-size: var(--ww-size-sm);
+}
+
+.check input {
+  accent-color: var(--ww-accent);
 }
 
 @media (max-width: 640px) {

@@ -15,13 +15,18 @@ const { t } = useI18n();
 const userInitials = computed(() => (currentUser.value ? initials(currentUser.value.username) : ""));
 const userItems = computed<MenuItem[]>(() => [
   { id: "profile", label: t("profile.title"), icon: "user" },
-  ...(isAdmin.value ? [{ id: "audit", label: t("audit.title"), icon: "list" as const }] : []),
+  ...(isAdmin.value
+    ? [
+        { id: "audit", label: t("audit.title"), icon: "list" as const },
+        { id: "api-tokens", label: t("apiTokens.title"), icon: "key" as const },
+      ]
+    : []),
   { id: "logout", label: t("auth.logout"), icon: "logout", separated: true },
 ]);
 
 function onUserMenu(id: string) {
   if (id === "profile") void router.push({ name: "profile" });
-  else if (id === "audit") void router.push({ name: "audit" });
+  else if (id === "audit" || id === "api-tokens") void router.push({ name: id });
   else if (id === "logout") void logout();
 }
 

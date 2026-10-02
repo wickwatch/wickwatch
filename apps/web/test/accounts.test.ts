@@ -52,7 +52,7 @@ describe("AccountsView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "a", role: "admin", totpEnabled: false },
+      user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     expect(wrapper.text()).toContain("Prop A");
@@ -72,7 +72,7 @@ describe("AccountsView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "a", role: "admin", totpEnabled: false },
+      user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     // "Add login" is a button that opens the form in a modal.
@@ -108,7 +108,7 @@ describe("AccountsView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "a", role: "admin", totpEnabled: false },
+      user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     const sent = (method: string) =>
@@ -138,7 +138,7 @@ describe("AccountsView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "a", role: "admin", totpEnabled: false },
+      user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     // The broker answers only when the test says so.
@@ -174,7 +174,7 @@ describe("AccountsView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "v", role: "viewer", totpEnabled: false },
+      user: { username: "v", role: "viewer", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     expect(wrapper.text()).toContain("Prop A");

@@ -3,7 +3,7 @@
   "info": {
     "title": "wickwatch API",
     "version": "0.1.2",
-    "description": "REST API of wickwatch.\n\n**Authentication:** log in with `POST /api/v1/auth/login` (password and TOTP code); the server sets the\n`ww_session` cookie (HttpOnly, SameSite=Strict). All other endpoints except `/healthz` and\n`/api/v1/auth/*` need it. Viewers may call GET endpoints only; state changes need the `admin` role.\nState-changing requests with an `Origin` header from another site are rejected.\n\n**Errors** are JSON `{ \"error\": \"<code>\" }`. Codes of the broker/runtime adapters: `auth_failed`,\n`not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. Others: `unauthenticated`,\n`forbidden`, `forbidden_origin`, `rate_limited`, `internal` and endpoint-specific codes.\n\n**Time** values are ISO 8601 in UTC; money is in the account currency.",
+    "description": "REST API of wickwatch.\n\n**Authentication:** log in with `POST /api/v1/auth/login` (password and TOTP code); the server sets the\n`ww_session` cookie (HttpOnly, SameSite=Strict). All other endpoints except `/healthz` and\n`/api/v1/auth/*` need it, or an API token as `Authorization: Bearer <token>` (admins create tokens in the web\napp under *API tokens*). A token acts as the user who created it, with at most the token's role; it does not reach\n`/api/v1/auth/*` or the token endpoints. Viewers may call GET endpoints only; state changes need the `admin` role.\nState-changing requests with an `Origin` header from another site are rejected.\n\n**MCP:** `POST /mcp` is a read-only Model Context Protocol endpoint (Streamable HTTP, stateless) for AI clients;\nit takes an API token only.\n\n**Errors** are JSON `{ \"error\": \"<code>\" }`. Codes of the broker/runtime adapters: `auth_failed`,\n`not_found`, `unsupported`, `invalid_input`, `timeout`, `unavailable`. Others: `unauthenticated`,\n`forbidden`, `forbidden_origin`, `rate_limited`, `internal` and endpoint-specific codes.\n\n**Time** values are ISO 8601 in UTC; money is in the account currency.",
     "license": {
       "name": "AGPL-3.0-only",
       "url": "https://www.gnu.org/licenses/agpl-3.0.html"
@@ -15,6 +15,10 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "ww_session"
+      },
+      "token": {
+        "type": "http",
+        "scheme": "bearer"
       }
     },
     "schemas": {}
@@ -131,7 +135,8 @@
                       "required": [
                         "username",
                         "role",
-                        "totpEnabled"
+                        "totpEnabled",
+                        "apiTokens"
                       ],
                       "properties": {
                         "username": {
@@ -155,6 +160,10 @@
                         },
                         "totpEnabled": {
                           "type": "boolean"
+                        },
+                        "apiTokens": {
+                          "type": "integer",
+                          "minimum": 0
                         }
                       }
                     }
@@ -386,7 +395,8 @@
                   "required": [
                     "username",
                     "role",
-                    "totpEnabled"
+                    "totpEnabled",
+                    "apiTokens"
                   ],
                   "properties": {
                     "username": {
@@ -410,6 +420,10 @@
                     },
                     "totpEnabled": {
                       "type": "boolean"
+                    },
+                    "apiTokens": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   }
                 }
@@ -571,7 +585,8 @@
                   "required": [
                     "username",
                     "role",
-                    "totpEnabled"
+                    "totpEnabled",
+                    "apiTokens"
                   ],
                   "properties": {
                     "username": {
@@ -595,6 +610,10 @@
                     },
                     "totpEnabled": {
                       "type": "boolean"
+                    },
+                    "apiTokens": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   }
                 }
@@ -892,7 +911,7 @@
         "tags": [
           "auth"
         ],
-        "description": "Other sessions of the user are logged out; this one stays.",
+        "description": "Other sessions of the user are logged out; this one stays. API tokens stay valid unless `deleteApiTokens` is true: then the user's tokens are deleted too, e.g. when the password may have leaked.",
         "requestBody": {
           "required": true,
           "content": {
@@ -911,6 +930,9 @@
                   "next": {
                     "type": "string",
                     "maxLength": 256
+                  },
+                  "deleteApiTokens": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -1171,6 +1193,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -1188,7 +1213,9 @@
                     "capabilities",
                     "algoFormats",
                     "parameterFormats",
-                    "sourceUrl"
+                    "sourceUrl",
+                    "mcp",
+                    "apiTokensRequire2fa"
                   ],
                   "properties": {
                     "version": {
@@ -1282,6 +1309,12 @@
                     },
                     "supportUrl": {
                       "type": "string"
+                    },
+                    "mcp": {
+                      "type": "boolean"
+                    },
+                    "apiTokensRequire2fa": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -1321,6 +1354,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -2016,6 +2052,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -2873,6 +2912,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -2994,6 +3036,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -3850,6 +3895,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -3949,6 +3997,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4046,6 +4097,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4191,6 +4245,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4316,6 +4373,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4466,6 +4526,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4608,6 +4671,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4720,6 +4786,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -4898,6 +4967,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5025,6 +5097,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5253,6 +5328,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5459,6 +5537,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5571,6 +5652,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5680,6 +5764,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -5863,6 +5950,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -6049,6 +6139,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -6148,6 +6241,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -6259,6 +6355,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -6438,6 +6537,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -6665,6 +6767,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -7071,6 +7176,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -7349,6 +7457,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -7430,6 +7541,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -7637,6 +7751,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -7895,6 +8012,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -8099,6 +8219,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -8250,6 +8373,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -8283,6 +8409,21 @@
                           },
                           "user": {
                             "type": "string"
+                          },
+                          "token": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
                           },
                           "action": {
                             "type": "string"
@@ -8356,6 +8497,446 @@
         }
       }
     },
+    "/api/v1/api-tokens": {
+      "get": {
+        "summary": "API tokens, newest first (admins, with a session)",
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "prefix",
+                      "role",
+                      "user",
+                      "createdAt",
+                      "expired"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "prefix": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "admin"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "viewer"
+                            ]
+                          }
+                        ]
+                      },
+                      "user": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "Z$"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "Z$"
+                      },
+                      "expired": {
+                        "type": "boolean"
+                      },
+                      "lastUsedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "Z$"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an API token; the answer holds the token, which is not shown again",
+        "tags": [
+          "auth"
+        ],
+        "description": "Send it as `Authorization: Bearer <token>`. A request with it acts as the creating user, with at most the token's role. Without `expiresInDays` it does not expire. Needs the user's password and, with 2FA on, a current code, so a session left open cannot mint lasting access: wrong password 403 `invalid_password`, missing code 401 `totp_required`, wrong or used code 401 `invalid_credentials`. With API_TOKENS_REQUIRE_2FA=on a user without 2FA gets 403 `totp_needed`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "role",
+                  "password"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "\\S"
+                  },
+                  "role": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "admin"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "viewer"
+                        ]
+                      }
+                    ]
+                  },
+                  "expiresInDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
+                  },
+                  "password": {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "prefix",
+                    "role",
+                    "user",
+                    "createdAt",
+                    "expired",
+                    "token"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "prefix": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "admin"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "viewer"
+                          ]
+                        }
+                      ]
+                    },
+                    "user": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "expired": {
+                      "type": "boolean"
+                    },
+                    "lastUsedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-tokens/{id}": {
+      "delete": {
+        "summary": "Delete an API token; requests with it fail from now on",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/managed-instances": {
       "get": {
         "summary": "Instances set up in wickwatch, with their current configuration",
@@ -8366,6 +8947,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -8654,6 +9238,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -9050,6 +9637,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -9182,6 +9772,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -9533,6 +10126,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -9729,6 +10325,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {
@@ -10138,6 +10737,9 @@
         "security": [
           {
             "session": []
+          },
+          {
+            "token": []
           }
         ],
         "responses": {

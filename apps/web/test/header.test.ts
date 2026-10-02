@@ -12,7 +12,7 @@ beforeEach(() => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "Martin M.", role: "admin", totpEnabled: true },
+    user: { username: "Martin M.", role: "admin", totpEnabled: true, apiTokens: 0 },
   };
   vi.stubGlobal(
     "fetch",
@@ -47,7 +47,7 @@ describe("initials", () => {
 });
 
 describe("AppHeader", () => {
-  it("shows the user with initials and role; the menu offers profile, the audit log (admins) and logout", async () => {
+  it("shows the user with initials and role; the menu offers profile, audit log and API tokens (admins) and logout", async () => {
     const wrapper = await render();
     const trigger = wrapper.find(".user-menu button");
     expect(trigger.find(".user__avatar").text()).toBe("MM");
@@ -60,8 +60,8 @@ describe("AppHeader", () => {
     const menu = wrapper.find('.user-menu [role="menu"]');
     expect(menu.text()).toContain("Signed in as Martin M.");
     const items = menu.findAll('[role="menuitem"]');
-    // Admins also get the audit log.
-    expect(items.map((i) => i.text())).toEqual(["Profile", "Audit log", "Log out"]);
+    // Admins also get the audit log and the API tokens.
+    expect(items.map((i) => i.text())).toEqual(["Profile", "Audit log", "API tokens", "Log out"]);
     expect(menu.find('[role="separator"]').exists()).toBe(true);
 
     await items[0]!.trigger("click");

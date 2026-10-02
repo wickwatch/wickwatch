@@ -25,12 +25,14 @@ wickwatch is configured with environment variables only (see [`.env.example`](..
 | `ALGOS_DIR` | `data/algos` | Where uploaded algo files are stored, one folder per name and version (`<name>/<version>/<name>.algo`). Keep it on a persistent volume. |
 | `CHALLENGE_TEMPLATES_DIR` | `templates/challenges` | Directory with challenge templates (`*.json`, see its README). |
 | `WEB_DIST_DIR` | next to the server | Directory of the built web app. Only needed when running the server outside the image. |
-| `ALERT_WEBHOOK_URL` | – | Receives a JSON `POST` whenever an alert appears or goes away, see [Notifications](#notifications). May contain a token; it is never logged. |
+| `ALERT_WEBHOOK_URL` | – | Receives a JSON `POST` whenever an alert appears or goes away, and when an API token is created, see [Notifications](#notifications). May contain a token; it is never logged. |
 | `HEARTBEAT_URL` | – | Called with `GET` after every successful alert check, e.g. a Healthchecks.io ping URL. When the calls stop, that service reports the whole server as down. |
 | `ALERT_CHECK_SECONDS` | `60` | How often alerts are checked for the two URLs above (10–3600). |
 | `DAILY_SUMMARY_TIME` | – | Local time of day (`HH:MM`) for a daily summary to `ALERT_WEBHOOK_URL`, see [Notifications](#notifications). Off when unset; needs `ALERT_WEBHOOK_URL`. |
 | `DAILY_SUMMARY_TIMEZONE` | `UTC` | IANA time zone of `DAILY_SUMMARY_TIME`, e.g. `Europe/Berlin`. |
 | `CLOCK_CHECK_URL` | `https://www.cloudflare.com/cdn-cgi/trace` | Time reference for the hourly clock check with `RUNTIME_ADAPTER=docker` (a container cannot see whether the host syncs its clock): an answer with a `ts=<unix time>` line or a `Date` header. The header shows it as an icon (up to 1 s fine, up to 2 s worth watching, beyond that an alert). `off` switches it off; the icon is then not shown. |
+| `MCP` | `on` | The read-only MCP endpoint at `<base>/mcp` for AI clients with an API token, see [MCP.md](MCP.md). `off` switches it off: `/mcp` then answers 404, and API tokens still work for the REST API. |
+| `API_TOKENS_REQUIRE_2FA` | `off` | `on`: only users with 2FA switched on may create API tokens (their creation always asks for the password, and the code when 2FA is on). Existing tokens stay valid. |
 | `SOURCE_URL` | `https://github.com/wickwatch/wickwatch` | Source code link in the footer. wickwatch is AGPL-3.0: if you run a changed version for others, point this at its source. |
 | `SUPPORT_URL` | `https://ko-fi.com/mmohrx` | "Support the project" link in the footer; `off` hides it. |
 | `BACKUP_INTERVAL_HOURS` | `24` | How often the database is backed up (`VACUUM INTO`, consistent while running); `0` turns backups off. A start writes one right away when the last is older. |
@@ -110,6 +112,19 @@ With `DAILY_SUMMARY_TIME`, the same URL gets one summary a day (from that time o
 ```
 
 `text` has one line per account, the challenge rules under it, and the number of open alerts. Today's P&L is the UTC day, as on the dashboard.
+
+When someone creates an API token, the same URL gets a notice at once, so access nobody meant to give shows up (sent once; the audit log keeps the record). It never holds the token itself:
+
+```json
+{
+  "event": "api_token_created",
+  "time": "2026-10-02T09:15:00.000Z",
+  "user": "admin",
+  "token": { "id": 3, "name": "claude", "role": "viewer", "expiresAt": "2026-12-31T09:15:00.000Z" },
+  "text": "Security: admin created the API token claude with the role Viewer; it expires 12/31/26, 9:15 AM UTC.",
+  "content": "…"
+}
+```
 
 Examples:
 

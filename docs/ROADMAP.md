@@ -34,8 +34,8 @@ Added along the way:
 - Schedules (holidays, weekends, news pauses), exposure across accounts, canary rollout of algo versions.
 - Trade journal, statistics across instances, bots, symbols and accounts.
 - OIDC login, role management UI.
-- API tokens (hashed, revocable, with expiry and role) for scripts and external clients.
-- Read-only MCP endpoint (`<base>/mcp`) on top of the core services: instances, accounts and challenge status, logs, alerts, audit log, host status. No write actions, since bot logs reach the model as untrusted text.
+- [x] API tokens (hashed, revocable, with expiry and role) for scripts and external clients.
+- [x] Read-only MCP endpoint (`<base>/mcp`) on top of the core services: instances, accounts and challenge status, logs, alerts, audit log, host status. No write actions, since bot logs reach the model as untrusted text.
 
 ## Phase 3
 - Analysis by setup features that bots log (`WW-SETUP`, see [BOT-CONTRACT.md](BOT-CONTRACT.md)).

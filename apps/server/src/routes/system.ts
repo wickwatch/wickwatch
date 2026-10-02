@@ -21,6 +21,8 @@ export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters:
       algoFormats: adapters.broker.algoFormats(),
       parameterFormats: adapters.config.formats(),
       sourceUrl: config.sourceUrl.href,
+      mcp: config.mcp,
+      apiTokensRequire2fa: config.apiTokensRequire2fa,
       ...(config.supportUrl ? { supportUrl: config.supportUrl.href } : {}),
     }),
   );

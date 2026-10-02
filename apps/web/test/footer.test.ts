@@ -21,6 +21,8 @@ const info = (extra: Partial<SystemInfo> = {}): SystemInfo => ({
   algoFormats: ["algo"],
   parameterFormats: [],
   sourceUrl: "https://github.com/wickwatch/wickwatch",
+  mcp: true,
+  apiTokensRequire2fa: false,
   ...extra,
 });
 

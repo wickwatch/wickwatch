@@ -90,8 +90,16 @@ When the host or Docker restarts, wickwatch starts the instances it set up again
 
 ## 10. Audit log
 
-Admins find the **Audit log** in the user menu: every login, change and trading action with time, user, target and result, and what wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).
+Admins find the **Audit log** in the user menu: every login, change and trading action with time, user (and the API token, when it came through one), target and result, and what wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).
 
 ## 11. Alerts and notifications
 
 Alerts show at the top of the Overview: stopped or crashed bots (a bot you stopped yourself, by emergency stop or the protection is no alert; one that stopped itself is), a lost broker connection, accounts that cannot be reached, challenge limits, a breached or passed challenge, the protection having acted, attribution problems, and a server clock that is off. The clock icon in the header shows whether the server time is right: green up to 1 s off, yellow up to 2 s, red beyond (then also an alert), a question mark when it could not be checked lately; the tooltip says how far off it is. With `ALERT_WEBHOOK_URL` and `DAILY_SUMMARY_TIME` you also get one summary a day per account (balance, equity, today's P&L, positions, instances, challenge). With `ALERT_WEBHOOK_URL` and `HEARTBEAT_URL` they also reach you without the dashboard open, e.g. on Telegram ([CONFIGURATION.md](CONFIGURATION.md#notifications)).
+
+## 12. API tokens and MCP
+
+Admins find **API tokens** in the user menu. A token lets a script or an AI client use wickwatch without a login: send it as `Authorization: Bearer <token>`. Give it a name (what uses it), a role and a lifetime (30, 90 or 365 days, or never), and confirm with your password and, with 2FA on, a code. With `API_TOKENS_REQUIRE_2FA=on` only users with 2FA can create tokens. The token is shown once, right after it was created; copy it then. The list keeps only its first characters, who created it, when it expires and when it was last used. Delete a token to cut off whatever uses it.
+
+A request with a token acts as the user who created it (the audit log shows that user and the token), with at most the token's role: a **viewer** token only reads, whatever its user may do. If the user is no admin any more, an admin token only reads too. A token cannot change passwords or 2FA, and cannot list, create or delete tokens. It needs no 2FA code and stays valid when you change your password; when you change it because it may have leaked, tick **Also delete my API tokens** in the dialog. With `ALERT_WEBHOOK_URL` set, every new token is reported there ([CONFIGURATION.md](CONFIGURATION.md#notifications)).
+
+The same page shows the address of the **MCP endpoint** (`<your wickwatch>/mcp`): AI clients that speak the Model Context Protocol read accounts, instances, logs and alerts there, read-only, and a viewer token is enough. Setup, the tools and troubleshooting: [MCP.md](MCP.md).

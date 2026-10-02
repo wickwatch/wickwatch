@@ -8,7 +8,7 @@ import Type from "typebox";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { AlgosTable } from "../db/schema";
-import { requireAdmin } from "../plugins/auth";
+import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { metadataReader, schemaOf } from "../services/algo-metadata";
 import { audit } from "../services/audit";
@@ -179,7 +179,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
           action: "algo.upload",
           target: `${name} ${version}`,
           details: { sha256 },
-          userId: request.user?.id,
+          ...actor(request),
         });
         return await reply.code(201).send(toAlgo({ id, ...row }));
       } finally {
@@ -212,7 +212,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       if (current) return reply.code(409).send({ error: "algo_in_use" });
       await db.deleteFrom("algos").where("id", "=", row.id).execute();
       await rm(dirname(join(algosDir, row.file_path)), { recursive: true, force: true });
-      await audit(db, { action: "algo.delete", target: `${row.name} ${row.version}`, userId: request.user?.id });
+      await audit(db, { action: "algo.delete", target: `${row.name} ${row.version}`, ...actor(request) });
       return reply.code(204).send(null);
     },
   );

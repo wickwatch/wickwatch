@@ -20,7 +20,7 @@ beforeEach(() => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "a", role: "admin", totpEnabled: false },
+    user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
   };
   puts = [];
   vi.stubGlobal(

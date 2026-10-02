@@ -10,3 +10,4 @@ export * from "./account";
 export * from "./algo";
 export * from "./managed-instance";
 export * from "./audit";
+export * from "./api-token";

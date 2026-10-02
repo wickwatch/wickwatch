@@ -59,7 +59,7 @@ beforeEach(() => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "admin", role: "admin", totpEnabled: true },
+    user: { username: "admin", role: "admin", totpEnabled: true, apiTokens: 0 },
   };
   system.value = {
     version: "test",
@@ -77,6 +77,8 @@ beforeEach(() => {
     algoFormats: ["algo"],
     parameterFormats: [],
     sourceUrl: "https://github.com/wickwatch/wickwatch",
+    mcp: true,
+    apiTokensRequire2fa: false,
   };
   fetchMock = vi.fn((input: URL) => {
     const path = input.pathname;
@@ -135,7 +137,7 @@ describe("OverviewView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "anna", role: "viewer", totpEnabled: false },
+      user: { username: "anna", role: "viewer", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     const labels = wrapper.findAll("button").map((b) => b.text());

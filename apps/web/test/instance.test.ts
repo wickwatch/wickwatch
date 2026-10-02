@@ -83,7 +83,7 @@ beforeEach(async () => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "admin", role: "admin", totpEnabled: false },
+    user: { username: "admin", role: "admin", totpEnabled: false, apiTokens: 0 },
   };
   vi.stubGlobal("EventSource", FakeEventSource);
   vi.stubGlobal(
@@ -348,7 +348,7 @@ describe("InstanceView", () => {
     session.value = {
       setupRequired: false,
       masterKeyConfigured: true,
-      user: { username: "anna", role: "viewer", totpEnabled: false },
+      user: { username: "anna", role: "viewer", totpEnabled: false, apiTokens: 0 },
     };
     const wrapper = await render();
     expect(wrapper.findAll(".head button")).toHaveLength(0);

@@ -64,7 +64,7 @@ beforeEach(() => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "a", role: "admin", totpEnabled: false },
+    user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
   };
   response = () => undefined;
   fetchMock = vi.fn((input: URL, init?: RequestInit) => {
@@ -223,6 +223,8 @@ describe("InstanceFormView", () => {
       algoFormats: ["algo"],
       parameterFormats: ["cbotset"],
       sourceUrl: "https://github.com/wickwatch/wickwatch",
+      mcp: true,
+      apiTokensRequire2fa: false,
     };
     response = (url, init) =>
       init?.method === "POST" && url.pathname.endsWith("/parameter-file")
@@ -389,6 +391,8 @@ describe("InstanceView configuration tab", () => {
       algoFormats: ["algo"],
       parameterFormats: ["cbotset"],
       sourceUrl: "https://github.com/wickwatch/wickwatch",
+      mcp: true,
+      apiTokensRequire2fa: false,
     };
     const withLicence = [
       {
@@ -428,7 +432,7 @@ describe("InstanceView configuration tab", () => {
       session.value = {
         setupRequired: false,
         masterKeyConfigured: true,
-        user: { username: "v", role: "viewer", totpEnabled: false },
+        user: { username: "v", role: "viewer", totpEnabled: false, apiTokens: 0 },
       };
       const hide = (c: ManagedInstanceDetail["config"]) => ({ ...c, parameters: {} });
       serve({ ...detail, config: hide(detail.config), history: detail.history.map(hide) });

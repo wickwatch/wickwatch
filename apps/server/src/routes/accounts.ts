@@ -4,7 +4,7 @@ import Type from "typebox";
 import { decryptCredential, findAccount, findAccountById, findAccountId, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { requireAdmin, requireConfirmation } from "../plugins/auth";
+import { actor, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit, auditOutcome } from "../services/audit";
@@ -138,7 +138,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         updated_at: now,
       };
       const { id } = await db.insertInto("accounts").values(row).returning("id").executeTakeFirstOrThrow();
-      await audit(db, { action: "account.create", target: number, userId: request.user?.id });
+      await audit(db, { action: "account.create", target: number, ...actor(request) });
       return reply.code(201).send(await loadAccount(id));
     },
   );
@@ -182,7 +182,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         action: "account.update",
         target: account.number,
         details: { changed: Object.keys(request.body) },
-        userId: request.user?.id,
+        ...actor(request),
       });
       return loadAccount(id);
     },
@@ -209,7 +209,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         .executeTakeFirst();
       if (used) return reply.code(409).send({ error: "account_in_use" });
       await db.deleteFrom("accounts").where("id", "=", request.params.id).execute();
-      await audit(db, { action: "account.delete", target: account.number, userId: request.user?.id });
+      await audit(db, { action: "account.delete", target: account.number, ...actor(request) });
       return reply.code(204).send(null);
     },
   );
@@ -251,7 +251,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
 
       await auditOutcome(
         db,
-        { action: "position.close", target: `${number}/${positionId}`, userId: request.user?.id },
+        { action: "position.close", target: `${number}/${positionId}`, ...actor(request) },
         async () => adapters.broker.closePosition(await account.credentials(), number, positionId),
       );
       return reply.code(204).send(null);
@@ -276,10 +276,8 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const account = await findAccount(accounts, number);
       if (!account) return reply.code(404).send({ error: "not_found" });
 
-      await auditOutcome(
-        db,
-        { action: "order.cancel", target: `${number}/${orderId}`, userId: request.user?.id },
-        async () => adapters.broker.cancelOrder(await account.credentials(), number, orderId),
+      await auditOutcome(db, { action: "order.cancel", target: `${number}/${orderId}`, ...actor(request) }, async () =>
+        adapters.broker.cancelOrder(await account.credentials(), number, orderId),
       );
       return reply.code(204).send(null);
     },
@@ -316,7 +314,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         action: "attribution.set",
         target: `${number}/${positionId}`,
         details: { instance: request.body.instance },
-        userId: request.user?.id,
+        ...actor(request),
       });
       return reply.code(204).send(null);
     },
@@ -342,7 +340,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
         .where("account_id", "=", id)
         .where("position_id", "=", positionId)
         .execute();
-      await audit(db, { action: "attribution.clear", target: `${number}/${positionId}`, userId: request.user?.id });
+      await audit(db, { action: "attribution.clear", target: `${number}/${positionId}`, ...actor(request) });
       return reply.code(204).send(null);
     },
   );
@@ -375,7 +373,7 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
 
       return auditOutcome(
         db,
-        { action: "account.emergency_stop", target: number, userId: request.user?.id },
+        { action: "account.emergency_stop", target: number, ...actor(request) },
         () => stopAccount(db, account, { runtime: adapters.runtime, broker: adapters.broker, labelPrefix }),
         (report) => report,
       );

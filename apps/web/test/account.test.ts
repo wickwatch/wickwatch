@@ -56,7 +56,7 @@ beforeEach(() => {
   session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "a", role: "admin", totpEnabled: false },
+    user: { username: "a", role: "admin", totpEnabled: false, apiTokens: 0 },
   };
   system.value = {
     version: "test",
@@ -74,6 +74,8 @@ beforeEach(() => {
     algoFormats: ["algo"],
     parameterFormats: [],
     sourceUrl: "https://github.com/wickwatch/wickwatch",
+    mcp: true,
+    apiTokensRequire2fa: false,
   };
   body = detail();
   vi.stubGlobal(

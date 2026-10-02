@@ -37,7 +37,8 @@
     "save": "Save",
     "saveAndStart": "Save & start",
     "cancel": "Cancel",
-    "cancelOrder": "Cancel order"
+    "cancelOrder": "Cancel order",
+    "done": "Done"
   },
   "account": {
     "balance": "Balance",
@@ -76,7 +77,12 @@
     "passwordHint": "Changing it logs you out everywhere else; this session stays.",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "passwordChanged": "Password changed. Other sessions are logged out."
+    "passwordChanged": "Password changed. Other sessions are logged out.",
+    "deleteTokens": "Also delete my API token | Also delete my {count} API tokens",
+    "deleteTokensHint": "Tokens stay valid after a password change. Delete them if the password may have leaked; scripts and AI clients using them lose access.",
+    "showTokens": "Show API tokens",
+    "passwordChangedTokensKept": "Password changed. Other sessions are logged out; your API token still works. | Password changed. Other sessions are logged out; your {count} API tokens still work.",
+    "passwordChangedTokensDeleted": "Password changed. Other sessions are logged out and your API tokens are deleted."
   },
   "challenge": {
     "label": "Challenge",
@@ -241,7 +247,9 @@
       "algo_in_use": "An instance uses this algo version; switch it to another version first.",
       "launch_unsupported": "This broker adapter cannot start bots.",
       "parameter_file_invalid": "This is not a parameter file this wickwatch can read.",
-      "parameters_incomplete": "This version cannot start: some parameters need a value first (see the configuration)."
+      "parameters_incomplete": "This version cannot start: some parameters need a value first (see the configuration).",
+      "session_required": "This works only when logged in, not with an API token.",
+      "totp_needed": "Creating API tokens needs 2FA. Set it up in your profile first."
     }
   },
   "parameterIssue": {
@@ -709,6 +717,7 @@
     "time": "Time",
     "user": "User",
     "system": "wickwatch",
+    "viaToken": "via token {name}",
     "result": "Result",
     "ok": "OK",
     "failed": "Failed",
@@ -747,7 +756,9 @@
       "position_close": "Position closed",
       "instance_start": "Started",
       "instance_stop": "Stopped",
-      "instance_restart": "Restarted"
+      "instance_restart": "Restarted",
+      "api_token_create": "API token created",
+      "api_token_delete": "API token deleted"
     },
     "groups": {
       "account": "Accounts",
@@ -758,13 +769,56 @@
       "credential": "Broker logins",
       "instance": "Instances",
       "order": "Orders",
-      "position": "Positions"
+      "position": "Positions",
+      "api_token": "API tokens"
     },
     "period": "Time range",
     "periods": {
       "all": "All",
       "today": "Today",
       "days": "Last {days} days"
+    }
+  },
+  "apiTokens": {
+    "title": "API tokens",
+    "intro": "Tokens for scripts and AI clients (MCP). A request with a token acts as the user who created it, with at most the token's role. Tokens cannot change passwords, 2FA or tokens.",
+    "create": "Create token",
+    "created": "Token {name} created.",
+    "deleted": "Token {name} deleted. Requests with it now fail.",
+    "deleteConfirm": "Delete the token {name}? Scripts and clients using it lose access.",
+    "none": "No tokens yet.",
+    "name": "Name",
+    "nameHint": "What uses it, e.g. the AI client or script.",
+    "token": "Token",
+    "prefix": "{prefix}…",
+    "user": "Created by",
+    "createdAt": "Created",
+    "expiresAt": "Expires",
+    "expiry": "Valid for",
+    "days": "{days} days",
+    "never": "Never",
+    "expired": "Expired",
+    "lastUsed": "Last used",
+    "unused": "Not used yet",
+    "roleHint": "Viewer is enough for MCP clients and monitoring: they only read.",
+    "password": "Your password",
+    "confirmHint": "A token gives lasting access, so creating one asks for your password again (and the code, with 2FA on).",
+    "needs2fa": "Creating tokens needs 2FA on this server (API_TOKENS_REQUIRE_2FA).",
+    "setUp2fa": "Set up 2FA in your profile",
+    "copyNow": "Copy the token now. It is not shown again; only its first characters stay in the list.",
+    "copy": "Copy token",
+    "copied": "Copied",
+    "mcpTitle": "MCP endpoint",
+    "mcpIntro": "AI clients that speak the Model Context Protocol read accounts, instances, logs and alerts here. It is read-only; log text written by bots reaches the model as untrusted data.",
+    "mcpOn": "On",
+    "mcpOff": "Off",
+    "mcpOffHint": "Switched off on the server (MCP=off). API tokens still work for the REST API.",
+    "mcpUrl": "Address (Streamable HTTP)",
+    "mcpHeader": "Header",
+    "mcpHeaderValue": "Authorization: Bearer <token>",
+    "notice": {
+      "created": "Security: {user} created the API token {name} with the role {role}; it expires {expires}.",
+      "createdNoExpiry": "Security: {user} created the API token {name} with the role {role}; it does not expire."
     }
   },
   "summary": {

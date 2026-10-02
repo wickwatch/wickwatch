@@ -37,7 +37,8 @@
     "save": "Speichern",
     "saveAndStart": "Speichern & starten",
     "cancel": "Abbrechen",
-    "cancelOrder": "Order stornieren"
+    "cancelOrder": "Order stornieren",
+    "done": "Fertig"
   },
   "account": {
     "balance": "Balance",
@@ -76,7 +77,12 @@
     "passwordHint": "Beim Ändern wirst du überall sonst abgemeldet; diese Sitzung bleibt.",
     "currentPassword": "Aktuelles Passwort",
     "newPassword": "Neues Passwort",
-    "passwordChanged": "Passwort geändert. Andere Sitzungen sind abgemeldet."
+    "passwordChanged": "Passwort geändert. Andere Sitzungen sind abgemeldet.",
+    "deleteTokens": "Auch mein API-Token löschen | Auch meine {count} API-Tokens löschen",
+    "deleteTokensHint": "Tokens bleiben nach einem Passwortwechsel gültig. Lösche sie, wenn das Passwort bekannt geworden sein könnte; Skripte und KI-Clients, die sie nutzen, verlieren den Zugriff.",
+    "showTokens": "API-Tokens anzeigen",
+    "passwordChangedTokensKept": "Passwort geändert. Andere Sitzungen sind abgemeldet; dein API-Token gilt weiter. | Passwort geändert. Andere Sitzungen sind abgemeldet; deine {count} API-Tokens gelten weiter.",
+    "passwordChangedTokensDeleted": "Passwort geändert. Andere Sitzungen sind abgemeldet und deine API-Tokens gelöscht."
   },
   "challenge": {
     "label": "Challenge",
@@ -241,7 +247,9 @@
       "algo_in_use": "Eine Instanz nutzt diese Algo-Version; zuerst auf eine andere Version umstellen.",
       "launch_unsupported": "Dieser Broker-Adapter kann keine Bots starten.",
       "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses wickwatch lesen kann.",
-      "parameters_incomplete": "Diese Version kann so nicht starten: Einige Parameter brauchen erst einen Wert (siehe Konfiguration)."
+      "parameters_incomplete": "Diese Version kann so nicht starten: Einige Parameter brauchen erst einen Wert (siehe Konfiguration).",
+      "session_required": "Das geht nur angemeldet, nicht mit einem API-Token.",
+      "totp_needed": "API-Tokens anlegen geht nur mit 2FA. Richte sie zuerst im Profil ein."
     }
   },
   "parameterIssue": {
@@ -709,6 +717,7 @@
     "time": "Zeit",
     "user": "Nutzer",
     "system": "wickwatch",
+    "viaToken": "über Token {name}",
     "result": "Ergebnis",
     "ok": "OK",
     "failed": "Fehlgeschlagen",
@@ -747,7 +756,9 @@
       "position_close": "Position geschlossen",
       "instance_start": "Gestartet",
       "instance_stop": "Gestoppt",
-      "instance_restart": "Neu gestartet"
+      "instance_restart": "Neu gestartet",
+      "api_token_create": "API-Token angelegt",
+      "api_token_delete": "API-Token gelöscht"
     },
     "groups": {
       "account": "Konten",
@@ -758,13 +769,56 @@
       "credential": "Broker-Logins",
       "instance": "Instanzen",
       "order": "Orders",
-      "position": "Positionen"
+      "position": "Positionen",
+      "api_token": "API-Tokens"
     },
     "period": "Zeitraum",
     "periods": {
       "all": "Alle",
       "today": "Heute",
       "days": "Letzte {days} Tage"
+    }
+  },
+  "apiTokens": {
+    "title": "API-Tokens",
+    "intro": "Tokens für Skripte und KI-Clients (MCP). Eine Anfrage mit Token handelt als der Nutzer, der es angelegt hat, mit höchstens der Rolle des Tokens. Passwörter, 2FA und Tokens lassen sich damit nicht ändern.",
+    "create": "Token anlegen",
+    "created": "Token {name} angelegt.",
+    "deleted": "Token {name} gelöscht. Anfragen damit schlagen ab jetzt fehl.",
+    "deleteConfirm": "Token {name} löschen? Skripte und Clients, die es nutzen, verlieren den Zugriff.",
+    "none": "Noch keine Tokens.",
+    "name": "Name",
+    "nameHint": "Wofür es ist, z. B. der KI-Client oder das Skript.",
+    "token": "Token",
+    "prefix": "{prefix}…",
+    "user": "Angelegt von",
+    "createdAt": "Angelegt",
+    "expiresAt": "Läuft ab",
+    "expiry": "Gültig für",
+    "days": "{days} Tage",
+    "never": "Nie",
+    "expired": "Abgelaufen",
+    "lastUsed": "Zuletzt genutzt",
+    "unused": "Noch nicht genutzt",
+    "roleHint": "„Nur lesen“ reicht für MCP-Clients und Monitoring: Sie lesen nur.",
+    "password": "Dein Passwort",
+    "confirmHint": "Ein Token gibt dauerhaften Zugang, deshalb fragt das Anlegen noch einmal nach deinem Passwort (und dem Code, wenn 2FA an ist).",
+    "needs2fa": "Tokens anlegen geht auf diesem Server nur mit 2FA (API_TOKENS_REQUIRE_2FA).",
+    "setUp2fa": "2FA im Profil einrichten",
+    "copyNow": "Kopiere das Token jetzt. Es wird nicht noch einmal angezeigt; in der Liste bleiben nur die ersten Zeichen.",
+    "copy": "Token kopieren",
+    "copied": "Kopiert",
+    "mcpTitle": "MCP-Endpunkt",
+    "mcpIntro": "KI-Clients, die das Model Context Protocol sprechen, lesen hier Konten, Instanzen, Logs und Warnungen. Er ist nur lesend; Log-Text der Bots erreicht das Modell als nicht vertrauenswürdige Daten.",
+    "mcpOn": "An",
+    "mcpOff": "Aus",
+    "mcpOffHint": "Auf dem Server ausgeschaltet (MCP=off). API-Tokens funktionieren weiter für die REST-API.",
+    "mcpUrl": "Adresse (Streamable HTTP)",
+    "mcpHeader": "Header",
+    "mcpHeaderValue": "Authorization: Bearer <Token>",
+    "notice": {
+      "created": "Sicherheit: {user} hat das API-Token {name} mit der Rolle {role} angelegt; es läuft ab am {expires}.",
+      "createdNoExpiry": "Sicherheit: {user} hat das API-Token {name} mit der Rolle {role} angelegt; es läuft nicht ab."
     }
   },
   "summary": {

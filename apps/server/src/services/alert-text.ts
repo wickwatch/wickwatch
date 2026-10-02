@@ -1,4 +1,4 @@
-import type { Alert, Overview, RuleResult } from "@wickwatch/core";
+import type { Alert, ApiToken, Overview, RuleResult } from "@wickwatch/core";
 import de from "../../../../i18n/de.json" with { type: "json" };
 import en from "../../../../i18n/en.json" with { type: "json" };
 import type { Locale } from "../config";
@@ -23,6 +23,15 @@ function formatTime(locale: Locale, iso: string): string {
     new Date(iso),
   );
   return `${text} UTC`;
+}
+
+/** A new API token as one line, for ALERT_WEBHOOK_URL. */
+export function apiTokenCreatedText(locale: Locale, token: ApiToken): string {
+  const t = (key: string) => lookup(locale, key) ?? lookup("en", key) ?? key;
+  const params = { user: token.user, name: token.name, role: t(`profile.roles.${token.role}`) };
+  return token.expiresAt
+    ? fill(t("apiTokens.notice.created"), { ...params, expires: formatTime(locale, token.expiresAt) })
+    : fill(t("apiTokens.notice.createdNoExpiry"), params);
 }
 
 /**
