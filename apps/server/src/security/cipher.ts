@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 /** What a value is used for; bound into the ciphertext so values cannot be swapped between fields. */
-export type Purpose = "credential-secret" | "totp-secret" | "instance-parameters";
+export type Purpose = "credential-secret" | "totp-secret" | "instance-parameters" | "template-parameters";
 
 export interface Cipher {
   encrypt(plaintext: string, purpose: Purpose): string;

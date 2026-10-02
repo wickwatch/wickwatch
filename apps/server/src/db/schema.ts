@@ -161,6 +161,20 @@ export interface InstanceConfigsTable {
   created_at: string;
 }
 
+export interface ParameterTemplatesTable {
+  id: Generated<number>;
+  algo_name: string;
+  name: string;
+  /** ParameterValues as JSON, encrypted with the master key. */
+  parameters: string;
+  /** ParameterTemplateSource as JSON. */
+  source: string | null;
+  created_by: number | null;
+  created_at: string;
+  updated_by: number | null;
+  updated_at: string;
+}
+
 /** An alert sent to ALERT_WEBHOOK_URL that has not been resolved yet. */
 export interface DailySummariesTable {
   /** YYYY-MM-DD in DAILY_SUMMARY_TIMEZONE. */
@@ -206,6 +220,7 @@ export interface Database {
   algos: AlgosTable;
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;
+  parameter_templates: ParameterTemplatesTable;
   notified_alerts: NotifiedAlertsTable;
   daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;

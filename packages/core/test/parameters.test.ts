@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateParameters, type ParameterSchema } from "../src";
+import { applyTemplate, validateParameters, type ParameterSchema } from "../src";
 
 const schema: ParameterSchema[] = [
   { name: "Risk", type: "double", min: 0.1, max: 2 },
@@ -66,5 +66,26 @@ describe("validateParameters", () => {
       { parameter: "LineColor", code: "invalid_format" },
     ]);
     expect(validateParameters({ LineColor: { A: 255 } }, schema).errors[0]?.code).toBe("invalid_type");
+  });
+});
+
+describe("applyTemplate", () => {
+  it("takes the template's values that fit and keeps the current ones elsewhere", () => {
+    const current = { ...valid, Lookback: 50 };
+    const template = { Risk: 1, Lookback: 50, UseFilter: false, Mode: "Turbo", Retired: 3 };
+    expect(applyTemplate(current, template, schema)).toEqual({
+      values: { ...valid, Risk: 1, Lookback: 50, UseFilter: false },
+      changed: ["Risk", "UseFilter"],
+      rejected: [{ parameter: "Mode", code: "invalid_option" }],
+      unknown: ["Retired"],
+      kept: ["SessionStart", "Symbol"],
+    });
+  });
+
+  it("rejects empty text where the runtime needs a value", () => {
+    const result = applyTemplate(valid, { Symbol: "" }, schema, { requireText: true });
+    expect(result.rejected).toEqual([{ parameter: "Symbol", code: "required" }]);
+    expect(result.values["Symbol"]).toBe("EURUSD");
+    expect(applyTemplate(valid, { Symbol: "" }, schema).values["Symbol"]).toBe("");
   });
 });

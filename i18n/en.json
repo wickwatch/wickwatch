@@ -249,7 +249,9 @@
       "parameter_file_invalid": "This is not a parameter file this wickwatch can read.",
       "parameters_incomplete": "This version cannot start: some parameters need a value first (see the configuration).",
       "session_required": "This works only when logged in, not with an API token.",
-      "totp_needed": "Creating API tokens needs 2FA. Set it up in your profile first."
+      "totp_needed": "Creating API tokens needs 2FA. Set it up in your profile first.",
+      "parameter_template_exists": "This algo already has a template with this name.",
+      "parameter_template_not_found": "This parameter template no longer exists."
     }
   },
   "parameterIssue": {
@@ -693,6 +695,54 @@
     "fileHint": "A {formats} file, e.g. exported from the platform. It fills the form; nothing is saved until you press \"Save\".",
     "describe": "Description of {name}"
   },
+  "templates": {
+    "title": "Parameter templates",
+    "intro": "Named parameter values of this algo, to use on any of its instances, e.g. on another account or timeframe. Save one from a configuration version or from a file.",
+    "noVersion": "No version of this algo is uploaded; its templates stay until you delete them.",
+    "count": "1 value | {count} values",
+    "sourceInstance": "from {instance} v{version}",
+    "sourceFile": "from {file}",
+    "updated": "changed {time}",
+    "name": "Name",
+    "nameHint": "Templates belong to the algo ({algo}), not to one instance: use them on any account or timeframe. Only parameter values are kept, not symbol or timeframe.",
+    "replaceHint": "The template {name} exists: its values are replaced.",
+    "create": "Save template",
+    "replace": "Replace template",
+    "save": "Save as template…",
+    "saveTitle": "Save version {version} as a template",
+    "saved": "Template {name} saved.",
+    "replaced": "Template {name} replaced.",
+    "apply": "Apply template…",
+    "applyTitle": "Apply a template",
+    "choose": "Template",
+    "choosePlaceholder": "Please choose a template…",
+    "chooseHint": "A template sets parameter values saved for this algo. You then see every value it changes and choose which to take; they are saved as a new version, and the bot keeps running as it is until you apply it.",
+    "none": "No templates for {algo} yet. Save one with \"Save as template…\" on a version below, or from a file on the Algos page.",
+    "changes": "1 value changes | {count} values change",
+    "changesHint": "Untick a value to keep the current one, e.g. a licence key that belongs to this account.",
+    "change": "{from} → {to}",
+    "noChanges": "The template matches the current values; there is nothing to save.",
+    "rejected": "Not taken, they do not fit this algo version: {names}",
+    "unknown": "Not taken, the algo does not know them: {names}",
+    "kept": "Not in the template, the current value stays: {names}",
+    "applyHint": "Saved as a new version. The bot keeps running with its configuration until you apply the version.",
+    "saveVersion": "Save as version {version}",
+    "applied": "Version {version} saved from the template. Apply it to use it in the bot.",
+    "appliedComment": "From template \"{name}\"",
+    "loadTitle": "Load parameters from a template",
+    "loadPlaceholder": "Please choose a template…",
+    "loaded": "Template {name}: no value changed. | Template {name}: 1 value changed. | Template {name}: {count} values changed.",
+    "fromFile": "Template from file…",
+    "fromFileTitle": "New template for {algo}",
+    "fileHint": "A {formats} file, e.g. exported from the platform. Its parameter values become the template; symbol and timeframe are not kept.",
+    "fromFileSaved": "Template {name} saved with {count} values.",
+    "fromFileSkipped": "1 value from the file did not fit the algo and was left out. | {count} values from the file did not fit the algo and were left out.",
+    "rename": "Rename",
+    "renameTitle": "Rename template",
+    "renamed": "Template renamed to {name}.",
+    "deleted": "Template {name} deleted.",
+    "deleteConfirm": "Delete the template {name}? Configurations saved from it stay as they are."
+  },
   "modal": {
     "close": "Close",
     "previous": "Previous entry",
@@ -758,7 +808,10 @@
       "instance_stop": "Stopped",
       "instance_restart": "Restarted",
       "api_token_create": "API token created",
-      "api_token_delete": "API token deleted"
+      "api_token_delete": "API token deleted",
+      "parameter_template_create": "Parameter template saved",
+      "parameter_template_update": "Parameter template changed",
+      "parameter_template_delete": "Parameter template deleted"
     },
     "groups": {
       "account": "Accounts",
@@ -770,7 +823,8 @@
       "instance": "Instances",
       "order": "Orders",
       "position": "Positions",
-      "api_token": "API tokens"
+      "api_token": "API tokens",
+      "parameter_template": "Parameter templates"
     },
     "period": "Time range",
     "periods": {

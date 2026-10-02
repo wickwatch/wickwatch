@@ -1,3 +1,4 @@
+import type { ParameterValues } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "../db";
 import type { Cipher } from "../security/cipher";
@@ -8,6 +9,10 @@ export const latestConfigIds = (db: Db) =>
     .selectFrom("instance_configs")
     .select((eb) => eb.fn.max("id").as("id"))
     .groupBy("instance_id");
+
+/** JSON with sorted keys, so equal parameter sets compare equal. */
+export const canonicalParameters = (values: ParameterValues) =>
+  JSON.stringify(Object.fromEntries(Object.entries(values).sort(([a], [b]) => a.localeCompare(b))));
 
 // Parameter values may hold licence keys, so `instance_configs.parameters` is encrypted with the master key.
 // Rows written before that hold the JSON object itself, recognisable by its `{`.

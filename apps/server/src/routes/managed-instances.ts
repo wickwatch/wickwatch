@@ -29,7 +29,12 @@ import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
 import { audit, auditOutcome } from "../services/audit";
-import { decryptParameters, encryptParameters, latestConfigIds } from "../services/instance-configs";
+import {
+  canonicalParameters,
+  decryptParameters,
+  encryptParameters,
+  latestConfigIds,
+} from "../services/instance-configs";
 import { setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
@@ -69,13 +74,9 @@ function toConfig(row: ConfigRow, cipher: Cipher | undefined): InstanceConfig {
 /** For viewers: parameter values may hold licence keys. */
 const withoutParameters = (config: InstanceConfig): InstanceConfig => ({ ...config, parameters: {} });
 
-/** JSON with sorted keys, so equal parameter sets compare equal. */
-const canonical = (values: ParameterValues) =>
-  JSON.stringify(Object.fromEntries(Object.entries(values).sort(([a], [b]) => a.localeCompare(b))));
-
 /** `row.parameters` is the canonical JSON, encrypted only when stored. */
 type Checked =
-  | { ok: true; row: Omit<ConfigRow, "version" | "created_by" | "created_at"> }
+  | { ok: true; row: Omit<ConfigRow, "version" | "created_by" | "created_at">; template?: string }
   | { ok: false; status: 400 | 404; body: ConfigErrorBody };
 
 export interface ManagedInstanceRouteOptions {
@@ -164,6 +165,19 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     if (!algo) return { ok: false, status: 404, body: { error: "algo_not_found" } };
     const schema = schemaOf(algo.metadata);
 
+    let template: string | undefined;
+    if (input.template !== undefined) {
+      const found = await db
+        .selectFrom("parameter_templates")
+        .select(["name", "algo_name"])
+        .where("id", "=", input.template)
+        .executeTakeFirst();
+      if (found?.algo_name !== algo.name) {
+        return { ok: false, status: 404, body: { error: "parameter_template_not_found" } };
+      }
+      template = found.name;
+    }
+
     const periods = adapters.broker.periods?.();
     const period = periods
       ? periods.find((p) => p.toLowerCase() === input.period.toLowerCase())
@@ -202,7 +216,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         symbol,
         period,
         // Complete: missing parameters get the algo's default, so a version never depends on defaults.
-        parameters: canonical({
+        parameters: canonicalParameters({
           ...parameterDefaults(schema),
           ...input.parameters,
         }),
@@ -211,6 +225,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         order_label: mode === "label" || mode === "label-pattern" ? (orderLabel ?? null) : null,
         comment: input.comment?.trim() || null,
       },
+      ...(template !== undefined ? { template } : {}),
     };
   }
 
@@ -365,7 +380,11 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       await audit(db, {
         action: "instance.create",
         target: name,
-        details: { account: entry.number, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
+        details: {
+          account: entry.number,
+          algo: `${checked.row.algo_name} ${checked.row.algo_version}`,
+          ...(checked.template !== undefined ? { template: checked.template } : {}),
+        },
         ...actor(request),
       });
       const [created] = await load(name);
@@ -407,7 +426,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         current.algo.id === checked.row.algo_id &&
         current.symbol === checked.row.symbol &&
         current.period === checked.row.period &&
-        canonical(current.parameters) === checked.row.parameters &&
+        canonicalParameters(current.parameters) === checked.row.parameters &&
         current.attribution.mode === checked.row.attribution &&
         (current.attribution.orderLabel ?? null) === checked.row.order_label;
       if (unchanged) return reply.code(409).send({ error: "config_unchanged" });
@@ -427,7 +446,11 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       await audit(db, {
         action: "instance.config",
         target: instance.name,
-        details: { version, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
+        details: {
+          version,
+          algo: `${checked.row.algo_name} ${checked.row.algo_version}`,
+          ...(checked.template !== undefined ? { template: checked.template } : {}),
+        },
         ...actor(request),
       });
       const [updated] = await load(instance.name);
