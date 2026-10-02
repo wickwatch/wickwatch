@@ -1,4 +1,4 @@
-import type { Algo } from "@wickwatch/core";
+import type { Algo, ParameterTemplate } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, setLocale } from "../src/i18n";
@@ -33,16 +33,20 @@ const algos: Algo[] = [
   },
 ];
 
+let templates: ParameterTemplate[] = [];
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
+  templates = [];
   setLocale("en", false);
-  fetchMock = vi.fn((_input: URL, init?: RequestInit) =>
+  fetchMock = vi.fn((input: URL, init?: RequestInit) =>
     Promise.resolve(
-      init?.method === "POST"
-        ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
-        : init?.method === "DELETE"
-          ? new Response(null, { status: 204 })
-          : new Response(JSON.stringify(algos), { status: 200 }),
+      input.pathname.endsWith("/parameter-templates") && !init?.method
+        ? new Response(JSON.stringify(templates), { status: 200 })
+        : init?.method === "POST"
+          ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
+          : init?.method === "DELETE"
+            ? new Response(null, { status: 204 })
+            : new Response(JSON.stringify(algos), { status: 200 }),
     ),
   );
   vi.stubGlobal("fetch", fetchMock);
@@ -74,7 +78,7 @@ describe("AlgosView", () => {
   it("groups versions by algo and shows parameters and the full-access marker", async () => {
     asRole("viewer");
     const wrapper = await render();
-    expect(wrapper.findAll("section h2").map((h) => h.text())).toEqual(["SampleBot"]);
+    expect(wrapper.findAll("section > h2").map((h) => h.text())).toEqual(["SampleBot"]);
     expect(wrapper.text()).toContain("1.1.0");
     expect(wrapper.text()).toContain("Needs full access");
     expect(wrapper.text()).toContain("2 parameters");
@@ -110,11 +114,13 @@ describe("AlgosView", () => {
 
   it("closes the modal after a successful upload and opens it empty again", async () => {
     asRole("admin");
-    fetchMock.mockImplementation((_input: URL, init?: RequestInit) =>
+    fetchMock.mockImplementation((input: URL, init?: RequestInit) =>
       Promise.resolve(
         init?.method === "POST"
           ? new Response(JSON.stringify(algos[0]), { status: 201 })
-          : new Response(JSON.stringify(algos), { status: 200 }),
+          : new Response(JSON.stringify(input.pathname.endsWith("/parameter-templates") ? [] : algos), {
+              status: 200,
+            }),
       ),
     );
     const wrapper = await render();
@@ -140,7 +146,7 @@ describe("AlgosView", () => {
       .filter((b) => b.text() === "Delete")[1]
       ?.trigger("click");
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
-    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" }).find((d) => d.props("title") === "Delete");
+    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" }).find((d) => d.props("open") === true);
     await dialog?.vm.$emit("confirm");
     await flushPromises();
     const del = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "DELETE") as [URL];

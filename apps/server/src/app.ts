@@ -23,6 +23,7 @@ import { instanceRoutes } from "./routes/instances";
 import { managedInstanceRoutes } from "./routes/managed-instances";
 import { mcpRoutes } from "./routes/mcp";
 import { overviewRoutes } from "./routes/overview";
+import { parameterTemplateRoutes } from "./routes/parameter-templates";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
@@ -108,6 +109,7 @@ export async function buildApp({
     prefix: api,
   });
   await app.register(algoRoutes, { db, adapters, algosDir: config.algosDir, prefix: api });
+  await app.register(parameterTemplateRoutes, { db, cipher, prefix: api });
   await app.register(auditRoutes, { db, prefix: api });
   const notify = config.alertWebhookUrl
     ? createSecurityNotifier({ webhookUrl: config.alertWebhookUrl, locale: config.defaultLocale, log: app.log })

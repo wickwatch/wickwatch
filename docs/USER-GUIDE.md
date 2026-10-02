@@ -32,6 +32,7 @@ An instance is one bot on one account, symbol and timeframe. **Overview → New 
 - **Basics:** the instance name (lower-case letters, digits and dashes; it is also the container name and the default order label), the account, the algo version, symbol and timeframe (both from the broker).
 - **Parameters:** the form comes from the algo. Groups are folded; **Search parameters** and **Only changed** help with long lists. A changed value is marked, and the reset button next to it restores the default.
 - **Load parameters from a file:** drop a `.cbotset` (e.g. exported from cTrader) to fill the form, including symbol and timeframe. wickwatch lists what it did not take and why. Nothing is saved until you press **Save**.
+- **Load parameters from a template:** pick one of the algo's parameter templates (see [Parameter templates](#parameter-templates)) to fill the form the same way. Symbol and timeframe stay as they are.
 - **Text parameters need a value (cTrader):** the cTrader CLI cannot start a bot while a text parameter is empty. Such fields are marked, and a loaded file lists them. Enter a value your bot reads as "not set" (e.g. `-`, or a value outside the valid range); the bot's documentation says which.
 - **Trade attribution:** how wickwatch knows which trades belong to this bot. **Automatic** is right almost always; see [BOT-CONTRACT.md](BOT-CONTRACT.md) for the other modes.
 - **Comment:** optional; it shows in the version history.
@@ -49,6 +50,16 @@ Open the instance, tab **Configuration**:
 - **Duplicate** (menu in the page head) starts a new instance with the same settings. **Delete** removes the instance with its history and its container; nothing changes at the broker.
 
 If a version cannot start, e.g. because of empty text parameters, the Configuration tab says so and applying is blocked until you fix it with **Edit**.
+
+### Parameter templates
+
+A template is a named set of parameter values of an algo, e.g. "Conservative" and "Aggressive", or the settings for a news day. It belongs to the algo, not to an instance, so the same template works for every instance of that algo, on any account and timeframe. It holds parameter values only, not symbol or timeframe.
+
+- **Save as template…** on any version in the history saves its values under a name. Using the name of an existing template of the algo replaces that template's values.
+- **Apply template…** (Configuration tab, next to the current configuration) shows every value the template changes, as "current → template". Untick a value to keep the current one, e.g. a licence key that belongs to this account. Values that do not fit the current algo version (out of range, an unknown option) or that the algo does not know are listed and left out; parameters the template does not set keep their current value. **Save as version N** saves a new version with the comment "From template …"; apply it as usual (see above) to use it in the bot.
+- **Algos page:** each algo lists its templates with the number of values, where they came from and when they were changed. **Template from file…** makes one from a `.cbotset`; templates can be renamed and deleted there. Deleting a template changes no configuration saved from it.
+
+Like configurations, template values are encrypted on the server and visible to admins only, since they may hold licence keys. Saving, changing, deleting and applying a template is in the audit log.
 
 ## 6. Watch an instance
 

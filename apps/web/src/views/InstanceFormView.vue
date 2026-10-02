@@ -7,10 +7,11 @@ import type {
   InstanceConfigInput,
   ParameterIssueCode,
   ParameterSchema,
+  ParameterTemplate,
 } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
 // Plain functions and constants without the schema library, unlike the core's main entry.
-import { parameterDefaults, validateParameters } from "@wickwatch/core/parameters";
+import { applyTemplate, parameterDefaults, validateParameters } from "@wickwatch/core/parameters";
 import { ATTRIBUTION_MODES } from "@wickwatch/core/rules";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -161,6 +162,43 @@ async function loadFile(file: File) {
   }
 }
 
+/** The parameter templates of the chosen algo; one loaded into the form is named when saving. */
+const templates = ref<ParameterTemplate[]>([]);
+const templateId = ref<number>();
+watch(
+  () => algo.value?.name,
+  async (algoName) => {
+    // Another algo (not only another version of it): a loaded template no longer applies.
+    templates.value = [];
+    templateId.value = undefined;
+    if (algoName === undefined) return;
+    try {
+      templates.value = await api.parameterTemplates(algoName);
+    } catch (e) {
+      fileNotice.value = [{ tone: "negative", text: t(errorKey(e)) }];
+    }
+  },
+  { immediate: true },
+);
+
+/** Takes a template's values into the form as a file would; only what fits this algo version, the rest is listed. */
+function loadTemplate(id: number) {
+  const tpl = templates.value.find((x) => x.id === id);
+  if (!tpl) return;
+  const result = applyTemplate(values.value, tpl.parameters, schema.value, validateOptions.value);
+  values.value = result.values;
+  templateId.value = tpl.id;
+  if (!comment.value.trim()) comment.value = t("templates.appliedComment", { name: tpl.name });
+  const rejected = result.rejected.map((i) => `${label(i.parameter)} (${t(`parameterIssue.${i.code}`)})`).join(", ");
+  const lines: (FileLine | false)[] = [
+    { tone: "positive", text: t("templates.loaded", { name: tpl.name }, result.changed.length) },
+    rejected !== "" && { tone: "warning", text: t("templates.rejected", { names: rejected }) },
+    result.unknown.length > 0 && { tone: "warning", text: t("templates.unknown", { names: names(result.unknown) }) },
+    result.kept.length > 0 && { tone: "muted", text: t("templates.kept", { names: names(result.kept) }) },
+  ];
+  fileNotice.value = lines.filter((line): line is FileLine => line !== false);
+}
+
 /** The broker's spelling, e.g. `US100.cash` for `us100.CASH`. */
 const canonical = (value: string, options: string[]) =>
   options.find((o) => o === value) ?? options.find((o) => o.toLowerCase() === value.toLowerCase()) ?? value;
@@ -282,6 +320,7 @@ async function save() {
     parameters: Object.fromEntries(Object.entries(values.value).filter(([k]) => !dropped.value.includes(k))),
     attribution: { mode: mode.value, ...(usesLabel.value && orderLabel.value ? { orderLabel: orderLabel.value } : {}) },
     ...(comment.value.trim() ? { comment: comment.value.trim() } : {}),
+    ...(templateId.value !== undefined ? { template: templateId.value } : {}),
   };
   try {
     const saved = editing.value
@@ -440,8 +479,20 @@ const algoLabel = (a: Algo) =>
       <section class="panel card" aria-labelledby="params-title">
         <h2 id="params-title">{{ $t("instanceForm.parameters") }}</h2>
         <p class="muted card__hint">{{ $t("instanceForm.parametersHint") }}</p>
-        <div v-if="formats.length && algoId !== undefined" class="file-load">
+        <div v-if="(formats.length || templates.length) && algoId !== undefined" class="file-load">
+          <label v-if="templates.length" class="field template-load">
+            {{ $t("templates.loadTitle") }}
+            <select
+              class="input"
+              :value="templateId ?? ''"
+              @change="loadTemplate(Number(($event.target as HTMLSelectElement).value))"
+            >
+              <option value="" disabled>{{ $t("templates.loadPlaceholder") }}</option>
+              <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
+            </select>
+          </label>
           <FileDrop
+            v-if="formats.length"
             :accept="extensions.join(',')"
             :title="$t('parameters.fileTitle')"
             :hint="$t('parameters.fileHint', { formats: extensions.join(', ') })"
@@ -681,6 +732,10 @@ p {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-2);
+}
+
+.template-load {
+  max-width: 480px;
 }
 
 .file-load__line {

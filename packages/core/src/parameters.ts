@@ -132,3 +132,47 @@ export function enumNumber(param: ParameterSchema, option: unknown): number | un
 export function parameterDefaults(schema: ParameterSchema[]): ParameterValues {
   return Object.fromEntries(schema.filter((p) => p.default !== undefined).map((p) => [p.name, p.default]));
 }
+
+export interface TemplateResult {
+  /** The values to save: the template's where they fit the algo, the current ones elsewhere. */
+  values: ParameterValues;
+  /** Parameters whose value the template changes. */
+  changed: string[];
+  /** Template values that do not fit this algo version (e.g. out of range); the current value stays. */
+  rejected: ParameterIssue[];
+  /** Template values the algo does not know; left out. */
+  unknown: string[];
+  /** Algo parameters the template does not set (e.g. added in a newer version); the current value stays. */
+  kept: string[];
+}
+
+/**
+ * Applies a parameter template to an instance's current values. Only what fits the algo's schema is taken, so a
+ * template saved with another version of the algo never breaks a configuration; the rest is reported.
+ */
+export function applyTemplate(
+  current: ParameterValues,
+  template: ParameterValues,
+  schema: ParameterSchema[],
+  options: ValidateOptions = {},
+): TemplateResult {
+  const values: ParameterValues = { ...current };
+  const changed: string[] = [];
+  const rejected: ParameterIssue[] = [];
+  const kept: string[] = [];
+  for (const param of schema) {
+    if (!Object.hasOwn(template, param.name)) {
+      kept.push(param.name);
+      continue;
+    }
+    const value = template[param.name];
+    const code = validateParameters({ [param.name]: value }, [param], options).errors[0]?.code;
+    if (code) rejected.push({ parameter: param.name, code });
+    else {
+      if (current[param.name] !== value) changed.push(param.name);
+      values[param.name] = value;
+    }
+  }
+  const known = new Set(schema.map((p) => p.name));
+  return { values, changed, rejected, unknown: Object.keys(template).filter((n) => !known.has(n)), kept };
+}

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Algo, InstanceConfig, ParameterSchema } from "@wickwatch/core";
+import type { Algo, InstanceConfig, ParameterSchema, ParameterTemplate } from "@wickwatch/core";
 import { validateParameters } from "@wickwatch/core/parameters";
 import { isUp } from "@wickwatch/core/rules";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api, errorKey, type ManagedInstanceDetail } from "../api";
@@ -14,7 +14,10 @@ import { isAdmin } from "../session";
 import { system } from "../system";
 import AppBanner from "./AppBanner.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
+import IconButton from "./IconButton.vue";
 import ParameterList from "./ParameterList.vue";
+import TemplateApplyDialog from "./TemplateApplyDialog.vue";
+import TemplateSaveDialog from "./TemplateSaveDialog.vue";
 
 /**
  * The "Configuration" tab of an instance. `managed` is set when wickwatch keeps the configuration; otherwise only the
@@ -43,6 +46,33 @@ onMounted(async () => {
     error.value = errorKey(e);
   }
 });
+
+/** The parameter templates of the instance's algo; admins only, viewers get no values to apply. */
+const templates = ref<ParameterTemplate[]>([]);
+const algoName = computed(() => props.managed?.config.algo.name);
+async function loadTemplates() {
+  if (!isAdmin.value || algoName.value === undefined) return;
+  try {
+    templates.value = await api.parameterTemplates(algoName.value);
+  } catch (e) {
+    error.value = errorKey(e);
+  }
+}
+watch(algoName, loadTemplates, { immediate: true });
+const applying = ref(false);
+/** The version being saved as a template. */
+const templateFrom = ref<InstanceConfig>();
+
+function applied(savedVersion: number) {
+  applying.value = false;
+  notice.value = t("templates.applied", { version: savedVersion });
+  emit("changed");
+}
+function templateSaved(message: string) {
+  templateFrom.value = undefined;
+  notice.value = message;
+  void loadTemplates();
+}
 
 const deployment = computed(() => props.managed?.deployment);
 const version = computed(() => props.managed?.config.version ?? 0);
@@ -197,7 +227,16 @@ function changes(index: number): string[] {
       </AppBanner>
 
       <section class="panel card" aria-labelledby="current-title">
-        <h2 id="current-title">{{ $t("instanceConfig.current") }}</h2>
+        <div class="card__head">
+          <h2 id="current-title">{{ $t("instanceConfig.current") }}</h2>
+          <IconButton
+            v-if="isAdmin && managed.config.algo.id !== null"
+            icon="template"
+            :label="$t('templates.apply')"
+            show-label
+            @click="applying = true"
+          />
+        </div>
         <dl class="facts">
           <dt>{{ $t("instanceForm.algo") }}</dt>
           <dd class="mono">
@@ -235,6 +274,15 @@ function changes(index: number): string[] {
               >
                 {{ $t("instanceConfig.download", { format }) }}
               </a>
+              <button
+                v-if="isAdmin"
+                type="button"
+                class="btn btn--ghost btn--small"
+                :class="{ history__first: !format }"
+                @click="templateFrom = h"
+              >
+                {{ $t("templates.save") }}
+              </button>
               <RouterLink
                 v-if="isAdmin && i > 0"
                 :to="{ name: 'instance-edit', params: { ref: managed.name }, query: { version: String(h.version) } }"
@@ -273,6 +321,27 @@ function changes(index: number): string[] {
       @confirm="deploy"
       @cancel="pending = undefined"
     />
+    <!-- After the deploy confirmation, which stays the first dialog of the tab. -->
+    <template v-if="managed && isAdmin">
+      <TemplateApplyDialog
+        :open="applying"
+        :instance="managed"
+        :schema="schema"
+        :templates="templates"
+        @close="applying = false"
+        @saved="applied"
+      />
+      <TemplateSaveDialog
+        :open="templateFrom !== undefined"
+        :title="$t('templates.saveTitle', { version: templateFrom?.version ?? 0 })"
+        :algo-name="templateFrom?.algo.name ?? ''"
+        :parameters="templateFrom?.parameters ?? {}"
+        :source="templateFrom ? { kind: 'instance', instance: managed.name, version: templateFrom.version } : undefined"
+        :templates="templates"
+        @close="templateFrom = undefined"
+        @saved="templateSaved"
+      />
+    </template>
   </div>
 </template>
 
@@ -298,6 +367,25 @@ p {
 
 .card__hint {
   font-size: var(--ww-size-xs);
+}
+
+/* Title and action in one row; on phones the action goes below at full width (BRAND.md, "Consistency"). */
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card__head h2 {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .card__head .btn {
+    width: 100%;
+  }
 }
 
 .facts {
@@ -348,7 +436,8 @@ p {
   font-size: var(--ww-size-xs);
 }
 
-.history__download {
+.history__download,
+.history__first {
   margin-left: auto;
 }
 

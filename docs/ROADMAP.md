@@ -27,6 +27,7 @@ Added along the way:
 - Account page with all bots, positions and orders of an account.
 - Risk in % and R per trade from the initial stop loss; a details panel per position, order and trade.
 - Password change in the profile.
+- Parameter templates: named parameter values of an algo, saved from a configuration version or a parameter file and applied to any of its instances.
 
 ## Phase 2
 - Backtests and optimisation runs started from an instance, backtest vs. live comparison, `.optset` export.

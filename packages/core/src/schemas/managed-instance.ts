@@ -21,6 +21,8 @@ export const InstanceConfigInput = Type.Object({
   parameters: ParameterValues,
   attribution: Attribution,
   comment: Type.Optional(Type.String({ maxLength: 500 })),
+  /** The parameter template the values were taken from; named in the audit log. */
+  template: Type.Optional(Type.Integer()),
 });
 export type InstanceConfigInput = Type.Static<typeof InstanceConfigInput>;
 

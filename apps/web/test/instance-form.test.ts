@@ -476,7 +476,10 @@ describe("InstanceView configuration tab", () => {
       .find((b) => b.text() === "Delete")
       ?.trigger("click");
     expect(fetchMock.mock.calls.some((c) => (c[1] as RequestInit | undefined)?.method === "DELETE")).toBe(false);
-    await wrapper.findAllComponents({ name: "ConfirmDialog" })[1]?.vm.$emit("confirm");
+    await wrapper
+      .findAllComponents({ name: "ConfirmDialog" })
+      .find((d) => d.props("open") === true)
+      ?.vm.$emit("confirm");
     await flushPromises();
     const del = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "DELETE");
     expect(JSON.parse(String((del?.[1] as RequestInit).body))).toEqual({ confirm: "alpha-ger40" });

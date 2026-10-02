@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Algo } from "@wickwatch/core";
+import type { Algo, ParameterTemplate } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { api } from "../api";
+import AlgoTemplates from "../components/AlgoTemplates.vue";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
@@ -19,6 +20,7 @@ import AppSpinner from "../components/AppSpinner.vue";
 
 const { t, locale } = useI18n();
 const algos = ref<Algo[]>([]);
+const templates = ref<ParameterTemplate[]>([]);
 const loading = ref(true);
 const file = ref<File>();
 const version = ref("");
@@ -39,11 +41,19 @@ const fileField = form.field(
 );
 const versionField = form.field(() => version.value, checks.version);
 
-/** Newest version first within each algo. */
-const groups = computed(() => [...groupBy(algos.value, (a) => a.name)]);
+/**
+ * Newest version first within each algo, with its parameter templates. Templates outlive the versions they were saved
+ * with, so an algo without versions still shows them.
+ */
+const groups = computed(() => {
+  const versions = groupBy(algos.value, (a) => a.name);
+  const byAlgo = groupBy(templates.value, (tpl) => tpl.algoName);
+  const names = [...new Set([...versions.keys(), ...byAlgo.keys()])].sort((a, b) => a.localeCompare(b));
+  return names.map((name) => ({ name, versions: versions.get(name) ?? [], templates: byAlgo.get(name) ?? [] }));
+});
 
 async function load() {
-  algos.value = await api.algos();
+  [algos.value, templates.value] = await Promise.all([api.algos(), api.parameterTemplates()]);
 }
 const { busy, running, error, notice, run } = useAsyncAction({ reload: load });
 
@@ -78,6 +88,9 @@ function upload() {
     { done: (a) => t("algos.uploaded", { name: a.name, version: a.version }), error: uploadError },
   );
 }
+
+/** A template was added, renamed or deleted: show what happened and fetch the lists again. */
+const templatesChanged = (message: string) => void run(async () => undefined, { done: () => message });
 
 const confirmRemove = () => {
   const algo = removing.value;
@@ -114,7 +127,7 @@ const confirmRemove = () => {
       <section v-if="!algos.length" class="panel card">
         <p class="muted">{{ $t("algos.none") }}</p>
       </section>
-      <section v-for="[name, versions] in groups" :key="name" class="panel card" :aria-label="name">
+      <section v-for="{ name, versions, templates: own } in groups" :key="name" class="panel card" :aria-label="name">
         <h2 class="mono">{{ name }}</h2>
         <div v-for="a in versions" :key="a.id" class="version">
           <div class="version__head">
@@ -150,6 +163,7 @@ const confirmRemove = () => {
             <ParameterList mode="schema" :schema="a.parameters" class="algo-params" />
           </details>
         </div>
+        <AlgoTemplates :algo-name="name" :newest="versions[0]" :templates="own" @changed="templatesChanged" />
       </section>
     </template>
 

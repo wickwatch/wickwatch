@@ -10,6 +10,9 @@ import type {
   OfferedAccount,
   ParameterFile,
   ParameterIssue,
+  ParameterTemplate,
+  ParameterTemplateInput,
+  ParameterTemplateUpdate,
   AccountDetail,
   ChallengeProfile,
   ChallengeTemplate,
@@ -187,6 +190,15 @@ export const api = {
   /** Download link for a configuration version as a parameter file (admins). */
   parameterFileUrl: (name: string, version: number) =>
     url(`managed-instances/${encodeURIComponent(name)}/parameter-file?version=${String(version)}`).toString(),
+  /** Values only for admins. */
+  parameterTemplates: (algoName?: string) =>
+    request<ParameterTemplate[]>(
+      `parameter-templates${algoName === undefined ? "" : `?algo=${encodeURIComponent(algoName)}`}`,
+    ),
+  createParameterTemplate: (body: ParameterTemplateInput) => post<ParameterTemplate>("parameter-templates", body),
+  updateParameterTemplate: (id: number, body: ParameterTemplateUpdate) =>
+    send<ParameterTemplate>("PATCH", `parameter-templates/${String(id)}`, body),
+  deleteParameterTemplate: (id: number) => send<undefined>("DELETE", `parameter-templates/${String(id)}`),
   managedInstances: () => request<ManagedInstance[]>("managed-instances"),
   managedInstance: (name: string) => request<ManagedInstanceDetail>(`managed-instances/${encodeURIComponent(name)}`),
   createManagedInstance: (body: { name: string; accountId: number; config: InstanceConfigInput }) =>

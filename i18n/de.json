@@ -249,7 +249,9 @@
       "parameter_file_invalid": "Das ist keine Parameterdatei, die dieses wickwatch lesen kann.",
       "parameters_incomplete": "Diese Version kann so nicht starten: Einige Parameter brauchen erst einen Wert (siehe Konfiguration).",
       "session_required": "Das geht nur angemeldet, nicht mit einem API-Token.",
-      "totp_needed": "API-Tokens anlegen geht nur mit 2FA. Richte sie zuerst im Profil ein."
+      "totp_needed": "API-Tokens anlegen geht nur mit 2FA. Richte sie zuerst im Profil ein.",
+      "parameter_template_exists": "Dieser Algo hat schon eine Vorlage mit diesem Namen.",
+      "parameter_template_not_found": "Diese Parametervorlage gibt es nicht mehr."
     }
   },
   "parameterIssue": {
@@ -693,6 +695,54 @@
     "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Sie füllt das Formular; gespeichert wird erst mit „Speichern“.",
     "describe": "Beschreibung zu {name}"
   },
+  "templates": {
+    "title": "Parametervorlagen",
+    "intro": "Benannte Parameterwerte dieses Algos, für jede seiner Instanzen, z. B. auf einem anderen Konto oder Timeframe. Speichere eine aus einer Konfigurationsversion oder aus einer Datei.",
+    "noVersion": "Von diesem Algo ist keine Version hochgeladen; seine Vorlagen bleiben, bis du sie löschst.",
+    "count": "1 Wert | {count} Werte",
+    "sourceInstance": "aus {instance} v{version}",
+    "sourceFile": "aus {file}",
+    "updated": "geändert {time}",
+    "name": "Name",
+    "nameHint": "Vorlagen gehören zum Algo ({algo}), nicht zu einer Instanz: Du kannst sie auf jedem Konto und Timeframe nutzen. Gespeichert werden nur die Parameterwerte, nicht Symbol oder Timeframe.",
+    "replaceHint": "Die Vorlage {name} gibt es schon: Ihre Werte werden ersetzt.",
+    "create": "Vorlage speichern",
+    "replace": "Vorlage ersetzen",
+    "save": "Als Vorlage speichern…",
+    "saveTitle": "Version {version} als Vorlage speichern",
+    "saved": "Vorlage {name} gespeichert.",
+    "replaced": "Vorlage {name} ersetzt.",
+    "apply": "Vorlage anwenden…",
+    "applyTitle": "Vorlage anwenden",
+    "choose": "Vorlage",
+    "choosePlaceholder": "Bitte eine Vorlage auswählen…",
+    "chooseHint": "Eine Vorlage setzt Parameterwerte, die für diesen Algo gespeichert sind. Danach siehst du jeden Wert, den sie ändert, und wählst, welche übernommen werden; gespeichert wird eine neue Version, der Bot läuft unverändert weiter, bis du sie übernimmst.",
+    "none": "Für {algo} gibt es noch keine Vorlage. Speichere eine mit „Als Vorlage speichern…“ an einer Version unten oder auf der Algos-Seite aus einer Datei.",
+    "changes": "1 Wert ändert sich | {count} Werte ändern sich",
+    "changesHint": "Nimm den Haken weg, um den aktuellen Wert zu behalten, z. B. einen Lizenzschlüssel, der zu diesem Konto gehört.",
+    "change": "{from} → {to}",
+    "noChanges": "Die Vorlage stimmt mit den aktuellen Werten überein; es gibt nichts zu speichern.",
+    "rejected": "Nicht übernommen, passen nicht zu dieser Algo-Version: {names}",
+    "unknown": "Nicht übernommen, der Algo kennt sie nicht: {names}",
+    "kept": "Nicht in der Vorlage, der aktuelle Wert bleibt: {names}",
+    "applyHint": "Wird als neue Version gespeichert. Der Bot läuft mit seiner Konfiguration weiter, bis du die Version übernimmst.",
+    "saveVersion": "Als Version {version} speichern",
+    "applied": "Version {version} aus der Vorlage gespeichert. Übernimm sie, damit der Bot sie nutzt.",
+    "appliedComment": "Aus Vorlage „{name}“",
+    "loadTitle": "Parameter aus Vorlage laden",
+    "loadPlaceholder": "Bitte eine Vorlage auswählen…",
+    "loaded": "Vorlage {name}: kein Wert geändert. | Vorlage {name}: 1 Wert geändert. | Vorlage {name}: {count} Werte geändert.",
+    "fromFile": "Vorlage aus Datei…",
+    "fromFileTitle": "Neue Vorlage für {algo}",
+    "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Ihre Parameterwerte werden zur Vorlage; Symbol und Timeframe werden nicht übernommen.",
+    "fromFileSaved": "Vorlage {name} mit {count} Werten gespeichert.",
+    "fromFileSkipped": "1 Wert aus der Datei passte nicht zum Algo und wurde weggelassen. | {count} Werte aus der Datei passten nicht zum Algo und wurden weggelassen.",
+    "rename": "Umbenennen",
+    "renameTitle": "Vorlage umbenennen",
+    "renamed": "Vorlage in {name} umbenannt.",
+    "deleted": "Vorlage {name} gelöscht.",
+    "deleteConfirm": "Vorlage {name} löschen? Konfigurationen, die aus ihr gespeichert wurden, bleiben wie sie sind."
+  },
   "modal": {
     "close": "Schließen",
     "previous": "Vorheriger Eintrag",
@@ -758,7 +808,10 @@
       "instance_stop": "Gestoppt",
       "instance_restart": "Neu gestartet",
       "api_token_create": "API-Token angelegt",
-      "api_token_delete": "API-Token gelöscht"
+      "api_token_delete": "API-Token gelöscht",
+      "parameter_template_create": "Parametervorlage gespeichert",
+      "parameter_template_update": "Parametervorlage geändert",
+      "parameter_template_delete": "Parametervorlage gelöscht"
     },
     "groups": {
       "account": "Konten",
@@ -770,7 +823,8 @@
       "instance": "Instanzen",
       "order": "Orders",
       "position": "Positionen",
-      "api_token": "API-Tokens"
+      "api_token": "API-Tokens",
+      "parameter_template": "Parametervorlagen"
     },
     "period": "Zeitraum",
     "periods": {
