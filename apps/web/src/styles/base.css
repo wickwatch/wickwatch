@@ -192,6 +192,15 @@ p[role="alert"] {
   white-space: pre-line;
 }
 
+/* Set by tooltip.ts inside an element that cuts off what sticks out (a table that scrolls sideways): on the window. */
+[data-tooltip][data-tooltip-fixed]::after {
+  position: fixed;
+  top: var(--tooltip-top);
+  right: auto;
+  bottom: auto;
+  left: var(--tooltip-left);
+}
+
 [data-tooltip]:hover::after,
 [data-tooltip]:focus-visible::after {
   opacity: 1;

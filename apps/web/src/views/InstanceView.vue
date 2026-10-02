@@ -12,6 +12,7 @@ import IconButton from "../components/IconButton.vue";
 import InstanceConfigTab from "../components/InstanceConfigTab.vue";
 import InstanceOverviewTab, { type Range } from "../components/InstanceOverviewTab.vue";
 import MenuButton, { type MenuItem } from "../components/MenuButton.vue";
+import MarketBadge from "../components/MarketBadge.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import type { Notice } from "../composables/notice";
 import { useInstanceActions } from "../composables/useInstanceActions";
@@ -160,6 +161,7 @@ async function remove() {
               :connection-lost="!!data?.instance.connectionLostSince"
               :not-created="!data && !!managed && !managed.deployment"
             />
+            <MarketBadge v-if="data?.instance.marketHours" :hours="data.instance.marketHours" :now="now" />
           </div>
           <p class="muted head__meta">
             <RouterLink v-if="knownAccount" :to="{ name: 'account', params: { number: knownAccount.number } }">{{

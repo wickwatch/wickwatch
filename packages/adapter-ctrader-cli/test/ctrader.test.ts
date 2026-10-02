@@ -103,6 +103,17 @@ describe("CtraderCliBroker", () => {
     expect(shells).toHaveLength(1);
   });
 
+  it("reads the weekly sessions of a symbol in UTC, through the account's shell session", async () => {
+    const hours = await broker.marketHours(c, "1111111", "US30.cash");
+    // Mon 01:05 Moscow time (UTC+3) is Sun 22:05 UTC.
+    expect(hours.alwaysOpen).toBe(false);
+    expect(hours.sessions[0]).toEqual({ start: 22 * 3600 + 300, end: 86400 + 20 * 3600 + 3000 });
+    expect(hours.sessions).toHaveLength(5);
+    expect(await broker.marketHours(c, "1111111", "BTCUSD")).toEqual({ alwaysOpen: true, sessions: [] });
+    await expect(broker.marketHours(c, "1111111", "NOPE")).rejects.toThrow();
+    await expect(broker.marketHours(c, "1111111", "US30 yes")).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
   it("warms the session up, so the first deals query is not empty; asks one day more, filters, adds stop and opening", async () => {
     const deals = await broker.deals(c, "1111111", "2026-09-23T00:00:00.000Z", "2026-09-25T08:59:59.000Z");
     expect(deals).toEqual([

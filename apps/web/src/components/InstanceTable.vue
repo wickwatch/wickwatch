@@ -8,6 +8,7 @@ import { accountLabel, durationParts } from "../format";
 import { useLogStream } from "../composables/useLogStream";
 import IconButton from "./IconButton.vue";
 import LogDialog from "./LogDialog.vue";
+import MarketBadge from "./MarketBadge.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
 
@@ -51,6 +52,7 @@ const log = useLogStream(() =>
           <th scope="col" class="wide">{{ $t("table.symbol") }}</th>
           <th scope="col" class="wide">{{ $t("table.period") }}</th>
           <th scope="col">{{ $t("table.status") }}</th>
+          <th scope="col" class="wide">{{ $t("table.market") }}</th>
           <th scope="col" class="wide">{{ $t("table.uptime") }}</th>
           <th scope="col" class="wide num">{{ $t("table.positions") }}</th>
           <th scope="col" class="num">{{ $t("table.dayPnl") }}</th>
@@ -68,6 +70,8 @@ const log = useLogStream(() =>
             <span class="narrow muted mono meta">{{
               [instance.symbol, instance.period].filter(Boolean).join(" · ")
             }}</span>
+            <!-- The market column is hidden there too; its badge moves under the name. -->
+            <MarketBadge v-if="instance.marketHours" class="narrow" :hours="instance.marketHours" :now="now" short />
           </th>
           <td v-if="showAccount" class="wide">
             {{
@@ -79,6 +83,10 @@ const log = useLogStream(() =>
           <td class="wide mono">{{ instance.symbol ?? $t("format.none") }}</td>
           <td class="wide mono">{{ instance.period ?? $t("format.none") }}</td>
           <td><StatusBadge :instance="instance.status" :connection-lost="!!instance.connectionLostSince" /></td>
+          <td class="wide">
+            <MarketBadge v-if="instance.marketHours" :hours="instance.marketHours" :now="now" short />
+            <span v-else class="muted">{{ $t("format.none") }}</span>
+          </td>
           <td class="wide mono muted">{{ uptime(instance, now) }}</td>
           <td class="wide mono num">{{ instance.openPositions }}</td>
           <td class="num"><SignedValue :value="instance.dayPnl" /></td>

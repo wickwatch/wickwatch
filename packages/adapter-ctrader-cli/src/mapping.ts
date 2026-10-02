@@ -1,11 +1,14 @@
 import {
   AdapterError,
   isObject,
+  isTimeZone,
+  sessionsToUtc,
   type AccountStats,
   type AlgoMetadata,
   type BrokerAccount,
   type Deal,
   type LogEvent,
+  type MarketHours,
   type ParameterSchema,
   type ParameterValues,
   type PendingOrder,
@@ -69,6 +72,47 @@ export function toBrokerAccounts(batch: unknown, active: unknown): BrokerAccount
 export function toSymbols(data: unknown): string[] {
   if (!Array.isArray(data)) throw new AdapterError("unavailable", "Unexpected cTrader CLI symbols format");
   return data.filter(isObject).flatMap((s) => (str(s["Name"]) ? [str(s["Name"]) as string] : []));
+}
+
+/**
+ * Windows time zone ids the CLI names its sessions in, as IANA zones. Only zones of brokers seen so far; another one
+ * leaves the market hours unknown instead of guessed. An IANA name is taken as it is.
+ */
+const WINDOWS_ZONES: Record<string, string> = {
+  UTC: "UTC",
+  "Russian Standard Time": "Europe/Moscow",
+  "GMT Standard Time": "Europe/London",
+  "W. Europe Standard Time": "Europe/Berlin",
+  "Central Europe Standard Time": "Europe/Budapest",
+  "Romance Standard Time": "Europe/Paris",
+  "GTB Standard Time": "Europe/Bucharest",
+  "E. Europe Standard Time": "Europe/Chisinau",
+  "FLE Standard Time": "Europe/Kiev",
+  "Israel Standard Time": "Asia/Jerusalem",
+  "Eastern Standard Time": "America/New_York",
+};
+
+function ianaZone(name: string): string | undefined {
+  const zone = WINDOWS_ZONES[name] ?? name;
+  return isTimeZone(zone) ? zone : undefined;
+}
+
+/**
+ * `sessions <symbol>`: `{ timeZone, marketIsAlwaysOpen, sessions: [{ startSecond, endSecond }] }`, the seconds counted
+ * from Sunday 00:00 in `timeZone` (a Windows id such as "Russian Standard Time").
+ */
+export function toMarketHours(data: unknown, now: Date): MarketHours {
+  if (!isObject(data)) throw new AdapterError("unavailable", "Unexpected cTrader CLI sessions format");
+  if (data["marketIsAlwaysOpen"] === true) return { alwaysOpen: true, sessions: [] };
+  const zone = ianaZone(str(data["timeZone"]) ?? "");
+  if (!zone) throw new AdapterError("unavailable", `Unknown time zone of the sessions: ${String(data["timeZone"])}`);
+  const sessions = list(data, "sessions").map((s) => {
+    const start = num(s["startSecond"]);
+    const end = num(s["endSecond"]);
+    if (start === undefined || end === undefined || end <= start) throw unexpected("session", s);
+    return { start, end };
+  });
+  return { alwaysOpen: false, sessions: sessionsToUtc(sessions, zone, now) };
 }
 
 export function toAccountStats(data: unknown, time: Date): AccountStats {

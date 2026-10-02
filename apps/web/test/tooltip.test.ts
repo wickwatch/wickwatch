@@ -3,11 +3,11 @@ import { placeTooltips } from "../src/tooltip";
 
 placeTooltips();
 
-function tip(right: number, top = 400) {
+function tip(right: number, top = 400, parent: HTMLElement = document.body) {
   const el = document.createElement("button");
   el.dataset["tooltip"] = "A long description";
-  el.getBoundingClientRect = () => ({ right, top }) as DOMRect;
-  document.body.append(el);
+  el.getBoundingClientRect = () => ({ left: right - 30, right, top, bottom: top + 30 }) as DOMRect;
+  parent.append(el);
   return el;
 }
 
@@ -36,5 +36,55 @@ describe("placeTooltips", () => {
     const lower = tip(900, 200);
     lower.dispatchEvent(new Event("pointerover", { bubbles: true }));
     expect(lower.dataset["tooltipSide"]).toBeUndefined();
+  });
+});
+
+describe("placeTooltips inside an element that clips", () => {
+  const styles = (overflow: string) =>
+    vi.spyOn(window, "getComputedStyle").mockImplementation(
+      (el, pseudo) =>
+        (pseudo
+          ? { width: "200px", height: "80px" }
+          : {
+              overflowX: (el as HTMLElement).classList.contains("wrap") ? overflow : "visible",
+              overflowY: "visible",
+            }) as unknown as CSSStyleDeclaration,
+    );
+
+  it("places the tooltip on the window, so a table that scrolls sideways does not cut it off", () => {
+    styles("auto");
+    const wrap = document.createElement("div");
+    wrap.className = "wrap";
+    document.body.append(wrap);
+    const button = tip(900, 400, wrap);
+    button.dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(button.dataset["tooltipFixed"]).toBe("");
+    // Above the button, flush with its right edge.
+    expect(button.style.getPropertyValue("--tooltip-top")).toBe("314px");
+    expect(button.style.getPropertyValue("--tooltip-left")).toBe("700px");
+
+    // No room above: below it.
+    const high = tip(900, 50, wrap);
+    high.dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(high.style.getPropertyValue("--tooltip-top")).toBe("86px");
+  });
+
+  it("leaves tooltips outside such an element and in dialogs as they are", () => {
+    styles("visible");
+    const wrap = document.createElement("div");
+    wrap.className = "wrap";
+    document.body.append(wrap);
+    const free = tip(900, 400, wrap);
+    free.dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(free.dataset["tooltipFixed"]).toBeUndefined();
+
+    vi.restoreAllMocks();
+    styles("auto");
+    const dialog = document.createElement("dialog");
+    dialog.className = "wrap";
+    document.body.append(dialog);
+    const inDialog = tip(900, 400, dialog);
+    inDialog.dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(inDialog.dataset["tooltipFixed"]).toBeUndefined();
   });
 });

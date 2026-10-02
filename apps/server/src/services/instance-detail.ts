@@ -12,17 +12,24 @@ import type { Db } from "../db";
 import { brokerErrorCode } from "./broker-error";
 import type { DealHistory } from "./deal-history";
 import type { LogTracker } from "./log-tracker";
+import type { MarketHoursCache } from "./market-hours";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** What loading an instance's detail needs; built once, used by the REST route and the MCP tool. */
+export interface InstanceDetailDeps {
+  adapters: Adapters;
+  accounts: AccountDirectory;
+  db: Db;
+  labelPrefix: string;
+  logTracker: LogTracker;
+  history: DealHistory;
+  marketHours?: MarketHoursCache;
+}
+
 export async function loadInstanceDetail(
-  adapters: Adapters,
-  directory: AccountDirectory,
-  db: Db,
-  labelPrefix: string,
-  logTracker: LogTracker,
-  history: DealHistory,
+  { adapters, accounts: directory, db, labelPrefix, logTracker, history, marketHours }: InstanceDetailDeps,
   ref: string,
   /** Days back, or everything since the instance's first deal. */
   range: number | "all",
@@ -44,7 +51,7 @@ export async function loadInstanceDetail(
   ]);
   const lastLog = logs.lastLines.get(ref);
   const logState = logs.states.get(ref);
-  return buildInstanceDetail({
+  const detail = buildInstanceDetail({
     time: now,
     from,
     fromFirstTrade: range === "all",
@@ -56,6 +63,9 @@ export async function loadInstanceDetail(
     ...(logState ? { logState } : {}),
     ...(account ? { account } : {}),
   });
+  if (!marketHours || !entry) return detail;
+  const [withHours = detail.instance] = marketHours.attach([detail.instance], [entry]);
+  return { ...detail, instance: withHours };
 }
 
 async function brokerData(

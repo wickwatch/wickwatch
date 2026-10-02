@@ -1870,6 +1870,38 @@
                           },
                           "stoppedByUser": {
                             "type": "boolean"
+                          },
+                          "marketHours": {
+                            "type": "object",
+                            "required": [
+                              "alwaysOpen",
+                              "sessions"
+                            ],
+                            "properties": {
+                              "alwaysOpen": {
+                                "type": "boolean"
+                              },
+                              "sessions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "properties": {
+                                    "start": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "end": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  }
+                                }
+                              }
+                            }
                           }
                         }
                       }
@@ -2567,6 +2599,38 @@
                           },
                           "stoppedByUser": {
                             "type": "boolean"
+                          },
+                          "marketHours": {
+                            "type": "object",
+                            "required": [
+                              "alwaysOpen",
+                              "sessions"
+                            ],
+                            "properties": {
+                              "alwaysOpen": {
+                                "type": "boolean"
+                              },
+                              "sessions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "properties": {
+                                    "start": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    },
+                                    "end": {
+                                      "type": "integer",
+                                      "minimum": 0
+                                    }
+                                  }
+                                }
+                              }
+                            }
                           }
                         }
                       }
@@ -3243,6 +3307,38 @@
                             },
                             "stoppedByUser": {
                               "type": "boolean"
+                            },
+                            "marketHours": {
+                              "type": "object",
+                              "required": [
+                                "alwaysOpen",
+                                "sessions"
+                              ],
+                              "properties": {
+                                "alwaysOpen": {
+                                  "type": "boolean"
+                                },
+                                "sessions": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": [
+                                      "start",
+                                      "end"
+                                    ],
+                                    "properties": {
+                                      "start": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      },
+                                      "end": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              }
                             }
                           }
                         },

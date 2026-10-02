@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts",
     "./parameters": "./src/parameters.ts",
+    "./market-hours": "./src/market-hours.ts",
     "./rules": "./src/rules.ts",
     "./group-by": "./src/group-by.ts",
     "./money": "./src/money.ts",

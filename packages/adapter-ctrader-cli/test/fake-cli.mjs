@@ -306,7 +306,22 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         ? { from: rest[0], to: rest[1], orders: historyOrders }
         : { requested: 1, returned: 0, available: 0, lookbackDays: 30, orders: [] },
     );
-  else if (cmd === "symbol") out(`Error: Symbol not found: ${rest[0]}\n`);
+  else if (cmd === "sessions" && rest[0] === "BTCUSD")
+    json({ symbolName: "BTCUSD", timeZone: "Russian Standard Time", marketIsAlwaysOpen: true, sessions: [] });
+  else if (cmd === "sessions" && rest[0] === "US30.cash")
+    // As recorded at FTMO (5.9.11): Mon–Fri 01:05–23:50 Moscow time, seconds from Sunday 00:00 there.
+    json({
+      symbolName: "US30.cash",
+      timeZone: "Russian Standard Time",
+      marketIsAlwaysOpen: false,
+      sessions: [1, 2, 3, 4, 5].map((d) => ({
+        start: `${["Mon", "Tue", "Wed", "Thu", "Fri"][d - 1]} 01:05:00`,
+        end: `${["Mon", "Tue", "Wed", "Thu", "Fri"][d - 1]} 23:50:00`,
+        startSecond: d * 86400 + 3900,
+        endSecond: d * 86400 + 85800,
+      })),
+    });
+  else if (cmd === "symbol" || cmd === "sessions") out(`Error: Symbol not found: ${rest[0]}\n`);
   else out(`Error: Unknown command: ${cmd}\n`);
   out("\n> ");
 });

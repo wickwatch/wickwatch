@@ -92,6 +92,16 @@ export const ParameterType = Type.Union([
 ]);
 export type ParameterType = Type.Static<typeof ParameterType>;
 
+/**
+ * When a symbol can be traded, by the broker's weekly schedule: sessions in seconds from Sunday 00:00 UTC, `end` after
+ * `start` (beyond the week for a session over its end). Holidays are not in it.
+ */
+export const MarketHours = Type.Object({
+  alwaysOpen: Type.Boolean(),
+  sessions: Type.Array(Type.Object({ start: Type.Integer({ minimum: 0 }), end: Type.Integer({ minimum: 0 }) })),
+});
+export type MarketHours = Type.Static<typeof MarketHours>;
+
 export const ParameterSchema = Type.Object({
   name: Type.String({ minLength: 1 }),
   type: ParameterType,

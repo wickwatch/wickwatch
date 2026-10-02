@@ -28,6 +28,7 @@ import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
 import { LogTracker } from "./services/log-tracker";
+import { MarketHoursCache } from "./services/market-hours";
 import { OverviewLoader } from "./services/overview";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
@@ -36,6 +37,8 @@ declare module "fastify" {
   interface FastifyInstance {
     /** Shared by the routes, the notifier and the daily summary, so concurrent loads query runtime and broker once. */
     overview: OverviewLoader;
+    /** Trading hours of the instances' symbols, asked in the background. */
+    marketHours: MarketHoursCache;
   }
 }
 
@@ -81,8 +84,18 @@ export async function buildApp({
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
   const logTracker = new LogTracker(adapters.runtime);
-  const overview = new OverviewLoader({ adapters, directory: accounts, db, labelPrefix, logTracker, log: app.log });
+  const marketHours = new MarketHoursCache({ adapters, log: app.log });
+  const overview = new OverviewLoader({
+    adapters,
+    directory: accounts,
+    db,
+    labelPrefix,
+    logTracker,
+    log: app.log,
+    marketHours,
+  });
   app.decorate("overview", overview);
+  app.decorate("marketHours", marketHours);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -97,7 +110,16 @@ export async function buildApp({
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
   await app.register(overviewRoutes, { adapters, overview, prefix: api });
-  await app.register(instanceRoutes, { adapters, accounts, db, labelPrefix, logTracker, history, prefix: api });
+  await app.register(instanceRoutes, {
+    adapters,
+    accounts,
+    db,
+    labelPrefix,
+    logTracker,
+    history,
+    marketHours,
+    prefix: api,
+  });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
   await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
@@ -143,6 +165,7 @@ export async function buildApp({
       labelPrefix,
       logTracker,
       history,
+      marketHours,
     });
   }
   await app.register(web, { basePath, distDir: config.webDistDir });

@@ -11,6 +11,7 @@ import type {
   Labels,
   LogEvent,
   LogLine,
+  MarketHours,
   OptimizationRange,
   ParameterFile,
   ParameterSchema,
@@ -147,6 +148,11 @@ export interface BrokerAdapter {
   logEvent?(text: string): LogEvent | undefined;
   /** Hides secrets the platform prints in an instance's log, e.g. a licence key among the parameters at start. */
   redactLog?(text: string): string;
+  /**
+   * When a symbol can be traded on an account, by the broker's weekly schedule. Missing when the broker cannot tell;
+   * the server asks at most once a day per account and symbol.
+   */
+  marketHours?(c: Credentials, account: string, symbol: string): Promise<MarketHours>;
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
 }

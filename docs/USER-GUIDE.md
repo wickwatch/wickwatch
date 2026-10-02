@@ -65,6 +65,8 @@ Like configurations, template values are encrypted on the server and visible to 
 
 ## 6. Watch an instance
 
+The instance tables (overview, account page) have a **Market** column: **Open**, **Closing soon** (the last 30 minutes) or **Closed** for the symbol of each instance; on the instance page the same badge stands next to the status ("Market open"). Hovering the badge, or tapping it, lists the trading hours in your local time and when the market opens or closes next, e.g. "Mon–Fri 00:05–22:50". The hours are the broker's weekly schedule, fetched once a day; holidays are not in it. So "Running" with "Closed" explains a bot that does not trade.
+
 The **Overview** tab of an instance shows:
 
 - key figures and the realised P&L curve of closed trades (7, 30 or 90 days, or all since the first trade);

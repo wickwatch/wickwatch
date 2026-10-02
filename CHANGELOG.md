@@ -6,6 +6,10 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Added
 - Account size check: on the Algos page, name the parameter an algo calculates positions with as its account size (e.g. a starting capital). The instance form marks a value more than 25 % off the account's challenge start balance (else its balance at the start of the trading day) and asks before saving, **Apply template…** warns before saving the version, and the Configuration tab shows a warning while it stays. Set per algo for all its versions, audit-logged as `algo.settings`. API: `GET /api/v1/algo-settings`, `PUT /api/v1/algo-settings/:name`; accounts carry the size they are checked against (`accountSize`), instance details the check (`accountSizeCheck`); both come from the database, without a broker query.
+- Market hours: the instance tables (overview, account page) get a **Market** column (Open, Closing soon in the last 30 minutes, Closed) for the symbol of each instance, the instance page the same badge next to the status. Hovering or tapping the badge shows the weekly trading hours in local time and the next opening or closing. From the broker's weekly schedule, without holidays; wickwatch asks at most once a day per account and symbol, in the background. cTrader: `sessions <symbol>` in the account's shell session. Adapter API: optional `BrokerAdapter.marketHours()`, `InstanceSummary.marketHours`.
+
+### Fixed
+- Tooltips in tables (e.g. the trade info buttons) were cut off at the table's edge; inside an element that clips they are now placed on the window.
 - Parameter templates can be edited: **Edit** on the Algos page opens name and values in the instance form's parameter list. Parameters the template does not set stay out unless changed; values the newest algo version no longer knows are kept. Replaces the rename dialog. API: `GET /api/v1/parameter-templates/:id`.
 
 ## 0.3.1 – 2026-10-02

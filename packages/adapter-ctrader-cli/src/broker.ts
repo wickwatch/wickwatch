@@ -13,6 +13,7 @@ import {
   type Launch,
   type LaunchInput,
   type LogEvent,
+  type MarketHours,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
@@ -24,6 +25,7 @@ import {
   toAlgoMetadata,
   toBrokerAccounts,
   toDeals,
+  toMarketHours,
   toOpenings,
   checkParameterNames,
   redactStartupTable,
@@ -190,6 +192,12 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   async symbols(c: Credentials, account: string): Promise<string[]> {
     return toSymbols(extractJson(await this.batch(c, ["symbols", `--account=${account}`])));
+  }
+
+  /** `sessions <symbol>` in the account's shell session: the weekly schedule, without holidays. */
+  async marketHours(c: Credentials, account: string, symbol: string): Promise<MarketHours> {
+    if (!/^[A-Za-z0-9._#&-]{1,40}$/.test(symbol)) throw new AdapterError("invalid_input", `Invalid symbol ${symbol}`);
+    return toMarketHours(extractJson(await this.pool.run(c, account, `sessions ${symbol}`)), new Date());
   }
 
   async stats(c: Credentials, account: string): Promise<AccountStats> {

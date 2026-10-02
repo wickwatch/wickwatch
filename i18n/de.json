@@ -24,6 +24,24 @@
     "connectionLost": "Verbindung verloren",
     "notCreated": "Kein Container"
   },
+  "market": {
+    "open": "Markt offen",
+    "closingSoon": "Markt schließt bald",
+    "closed": "Markt geschlossen",
+    "hoursTitle": "Handelszeiten (Ortszeit)",
+    "range": "{from}–{to}",
+    "overnight": "{from} – {to} Folgetag",
+    "closesIn": "Schließt in {minutes} min",
+    "closesAt": "Schließt {time}",
+    "opensAt": "Öffnet {time}",
+    "alwaysOpen": "Laut Broker durchgehend geöffnet.",
+    "source": "Laut Wochenplan des Brokers, ohne Feiertage.",
+    "short": {
+      "open": "Offen",
+      "closingSoon": "Schließt bald",
+      "closed": "Geschlossen"
+    }
+  },
   "action": {
     "start": "Start",
     "stop": "Stop",
@@ -314,6 +332,7 @@
     "symbol": "Symbol",
     "period": "TF",
     "status": "Status",
+    "market": "Markt",
     "uptime": "Uptime",
     "positions": "Pos.",
     "dayPnl": "Tages-P&L",

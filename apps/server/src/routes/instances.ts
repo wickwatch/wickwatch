@@ -12,6 +12,7 @@ import { setShouldRun } from "../services/instance-keeper";
 import type { DealHistory } from "../services/deal-history";
 import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
+import type { MarketHoursCache } from "../services/market-hours";
 
 const Action = Type.Union([Type.Literal("start"), Type.Literal("stop"), Type.Literal("restart")]);
 /**
@@ -32,11 +33,12 @@ export interface InstanceRouteOptions {
   labelPrefix: string;
   logTracker: LogTracker;
   history: DealHistory;
+  marketHours: MarketHoursCache;
 }
 
 export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, labelPrefix, logTracker, history },
+  { adapters, accounts, db, labelPrefix, logTracker, history, marketHours },
 ) => {
   app.get(
     "/instances/:ref",
@@ -56,12 +58,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
     },
     async (request) =>
       loadInstanceDetail(
-        adapters,
-        accounts,
-        db,
-        labelPrefix,
-        logTracker,
-        history,
+        { adapters, accounts, db, labelPrefix, logTracker, history, marketHours },
         request.params.ref,
         request.query.all ? "all" : (request.query.days ?? 30),
         request.log,

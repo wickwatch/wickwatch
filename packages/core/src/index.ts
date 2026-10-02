@@ -6,6 +6,7 @@ export * from "./json";
 export * from "./group-by";
 export * from "./labels";
 export * from "./parameters";
+export * from "./market-hours";
 export * from "./setup-log";
 export * from "./overview";
 export * from "./operations";

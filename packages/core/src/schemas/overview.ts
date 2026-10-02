@@ -1,6 +1,6 @@
 import Type from "typebox";
 import { AdapterErrorCode } from "../errors";
-import { PendingOrder, Position } from "./broker";
+import { MarketHours, PendingOrder, Position } from "./broker";
 import { Capabilities } from "./capabilities";
 import { ChallengeEvaluation } from "./challenge";
 import { IsoTime } from "./common";
@@ -50,6 +50,8 @@ export const InstanceSummary = Type.Object({
   crashes: Type.Optional(AlgoCrashes),
   /** Stopped on purpose through wickwatch (stop, emergency stop, loss guard); its being stopped is no alert. */
   stoppedByUser: Type.Optional(Type.Boolean()),
+  /** When its symbol can be traded; missing while unknown or when the broker adapter cannot tell. */
+  marketHours: Type.Optional(MarketHours),
 });
 export type InstanceSummary = Type.Static<typeof InstanceSummary>;
 

@@ -10,6 +10,7 @@ import {
   type AdapterErrorCode,
   type ChallengeProfile,
   type Deal,
+  type InstanceSummary,
   type Overview,
   type OverviewInput,
   type PendingOrder,
@@ -25,6 +26,7 @@ import { brokerErrorCode } from "./broker-error";
 import { clockOffset } from "./clock-check";
 import type { LogTracker } from "./log-tracker";
 import { guardTripToday } from "./loss-guard";
+import type { MarketHoursCache } from "./market-hours";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,6 +44,8 @@ export interface OverviewLoaderOptions {
   logTracker: LogTracker;
   /** For failed broker queries. */
   log: FastifyBaseLogger;
+  /** Adds the trading hours of the instances' symbols, where known. */
+  marketHours?: MarketHoursCache;
 }
 
 /** What runtime and broker answered in one load, as of `time`. */
@@ -79,7 +83,9 @@ export class OverviewLoader {
 
   /** Runtime and broker are queried in parallel; failures per account become alerts. */
   async overview(now = new Date()): Promise<Overview> {
-    return buildOverview(await this.input(now));
+    const { input, entries } = await this.input(now);
+    const overview = buildOverview(input);
+    return { ...overview, instances: this.withHours(overview.instances, entries) };
   }
 
   /**
@@ -87,10 +93,17 @@ export class OverviewLoader {
    * if wickwatch does not know the account.
    */
   async accountDetail(number: string, now = new Date()): Promise<AccountDetail | undefined> {
-    return buildAccountDetail(await this.input(now, number), number);
+    const { input, entries } = await this.input(now, number);
+    const detail = buildAccountDetail(input, number);
+    return detail && { ...detail, instances: this.withHours(detail.instances, entries) };
   }
 
-  private async input(now: Date, only?: string): Promise<OverviewInput> {
+  private withHours(instances: InstanceSummary[], entries: AccountEntry[]): InstanceSummary[] {
+    return this.options.marketHours?.attach(instances, entries) ?? instances;
+  }
+
+  /** The input of the overview, and the accounts it was loaded for. */
+  private async input(now: Date, only?: string): Promise<{ input: OverviewInput; entries: AccountEntry[] }> {
     const { adapters, db, labelPrefix } = this.options;
     const [fetched, overrides, stopped] = await Promise.all([
       this.fetch(now, only),
@@ -100,7 +113,7 @@ export class OverviewLoader {
     ]);
     const accounts = await Promise.all(fetched.accounts.map((account) => snapshot(db, account, now)));
     const clockOffsetMs = clockOffset(now.getTime());
-    return {
+    const input: OverviewInput = {
       time: now,
       labelPrefix,
       instances: fetched.instances,
@@ -111,6 +124,7 @@ export class OverviewLoader {
       stoppedByUser: new Set(stopped.map((row) => row.name)),
       ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
     };
+    return { input, entries: fetched.accounts.map((a) => a.entry) };
   }
 
   /**

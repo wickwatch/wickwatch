@@ -14,6 +14,7 @@ import {
   type IsoTime,
   type Launch,
   type LaunchInput,
+  type MarketHours,
   type PendingOrder,
   type Position,
 } from "@wickwatch/core";
@@ -77,6 +78,21 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     authenticate(c);
     this.world.account(account);
     return Object.keys(SYMBOLS);
+  }
+
+  /** Index and metal CFD hours of a typical broker: Sun 22:00 – Fri 21:00 UTC with a daily break at 21:00. */
+  async marketHours(c: Credentials, account: string, symbol: string): Promise<MarketHours> {
+    authenticate(c);
+    this.world.account(account);
+    if (!Object.hasOwn(SYMBOLS, symbol)) throw new AdapterError("not_found", `Unknown symbol ${symbol}`);
+    const hour = 3600;
+    return {
+      alwaysOpen: false,
+      sessions: [0, 1, 2, 3, 4].map((day) => ({
+        start: day * 24 * hour + 22 * hour,
+        end: (day + 1) * 24 * hour + 21 * hour,
+      })),
+    };
   }
 
   async stats(c: Credentials, account: string): Promise<AccountStats> {

@@ -44,7 +44,8 @@ const dateTimeCache = new Map<string, Intl.DateTimeFormat>();
 export function formatDateTime(
   locale: string,
   iso: string,
-  style: "datetime" | "time" | "date" | "day" = "datetime",
+  /** `clock`: hours and minutes; `weekday`: the short day name. */
+  style: "datetime" | "time" | "clock" | "weekday" | "date" | "day" = "datetime",
 ): string {
   const key = `${locale}|${style}`;
   let format = dateTimeCache.get(key);
@@ -52,11 +53,15 @@ export function formatDateTime(
     const options: Intl.DateTimeFormatOptions =
       style === "time"
         ? { hour: "2-digit", minute: "2-digit", second: "2-digit" }
-        : style === "date"
-          ? { day: "2-digit", month: "2-digit" }
-          : style === "day"
-            ? { day: "2-digit", month: "2-digit", year: "numeric" }
-            : { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
+        : style === "clock"
+          ? { hour: "2-digit", minute: "2-digit" }
+          : style === "weekday"
+            ? { weekday: "short" }
+            : style === "date"
+              ? { day: "2-digit", month: "2-digit" }
+              : style === "day"
+                ? { day: "2-digit", month: "2-digit", year: "numeric" }
+                : { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" };
     dateTimeCache.set(key, (format = new Intl.DateTimeFormat(locale, options)));
   }
   return format.format(new Date(iso));

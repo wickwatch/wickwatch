@@ -56,6 +56,7 @@ All tools only read and give the same data as the REST API for the token's role.
 | `crashes` | Errors the algo threw since it started, while it kept running: count, time and log line of the latest. |
 | `stoppedByUser` | Stopped on purpose through wickwatch (stop, emergency stop, loss guard); such a stop raises no alert. |
 | `restartCount` | How often the runtime restarted it. |
+| `marketHours` | When its symbol can be traded, by the broker's weekly schedule: sessions in seconds from Sunday 00:00 UTC, or `alwaysOpen`. Holidays are not in it; missing while unknown. |
 
 So "running and fine" is `status` `running` without `connectionLostSince` and `crashes`. `get_alerts` lists the instances that are not: `instance_stopped`, `instance_error`, `instance_disconnected` and `instance_crashed`, with the instance name as `subject`.
 

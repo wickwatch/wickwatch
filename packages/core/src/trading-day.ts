@@ -38,6 +38,13 @@ function zonedParts(date: Date, timeZone: string): Parts {
   };
 }
 
+/** Offset of a time zone from UTC at `at`, in seconds (east positive). */
+export function zoneOffsetSeconds(timeZone: string, at: Date): number {
+  const p = zonedParts(at, timeZone);
+  const local = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return Math.round((local - Math.floor(at.getTime() / 1000) * 1000) / 1000);
+}
+
 /** The UTC instant of a local wall-clock time in a time zone (DST-aware). */
 function zonedToUtc(year: number, month: number, day: number, hour: number, minute: number, timeZone: string): Date {
   const wanted = Date.UTC(year, month - 1, day, hour, minute);

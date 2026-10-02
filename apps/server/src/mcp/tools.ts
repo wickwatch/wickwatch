@@ -9,6 +9,7 @@ import type { DealHistory } from "../services/deal-history";
 import { loadHostStatus } from "../services/host-status";
 import { loadInstanceDetail } from "../services/instance-detail";
 import type { LogTracker } from "../services/log-tracker";
+import type { MarketHoursCache } from "../services/market-hours";
 import type { OverviewLoader } from "../services/overview";
 import { defineTool, type McpTool } from "./protocol";
 
@@ -20,6 +21,7 @@ export interface ToolDeps {
   labelPrefix: string;
   logTracker: LogTracker;
   history: DealHistory;
+  marketHours: MarketHoursCache;
 }
 
 const MAX_LOG_LINES = 1000;
@@ -34,7 +36,7 @@ const Since = Type.String({ format: "date-time", description: "ISO 8601 time in 
 
 /** The read-only tools of the MCP endpoint; they give the same data as the REST API, for the token's role. */
 export function wickwatchTools(deps: ToolDeps): McpTool[] {
-  const { adapters, accounts, db, overview, labelPrefix, logTracker, history } = deps;
+  const { adapters, accounts, db, overview, labelPrefix, logTracker, history, marketHours } = deps;
 
   return [
     defineTool({
@@ -89,7 +91,12 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         ),
       }),
       run: ({ ref, days }, { log }) =>
-        loadInstanceDetail(adapters, accounts, db, labelPrefix, logTracker, history, ref, days ?? 30, log),
+        loadInstanceDetail(
+          { adapters, accounts, db, labelPrefix, logTracker, history, marketHours },
+          ref,
+          days ?? 30,
+          log,
+        ),
     }),
     defineTool({
       name: "get_instance_logs",
