@@ -81,6 +81,8 @@ export interface ToolSpec {
   command: string[];
   /** Placed before the start; may hold secrets. */
   files: InstanceFile[];
+  /** What the tool is for, e.g. `session-1234567`, never a secret; the runtime may build a unique name from it. */
+  purpose?: string;
 }
 
 /** A running tool. stdout and stderr arrive together as text. */

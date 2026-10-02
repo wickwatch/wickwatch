@@ -289,7 +289,7 @@ export class CtraderCliBroker implements BrokerAdapter {
   async algoMetadata(algoPath: string): Promise<AlgoMetadata> {
     // The CLI takes the algo's name from the file name, so the file keeps it.
     const name = basename(algoPath);
-    const { code, output } = await runBatch(this.options, (path) => ["metadata", path(name)], [
+    const { code, output } = await runBatch(this.options, "metadata", (path) => ["metadata", path(name)], [
       { name, path: algoPath, mode: 0o444 },
     ]);
     if (code !== 0) throw cliError(output, `Cannot read metadata of ${algoPath}`);
@@ -301,9 +301,10 @@ export class CtraderCliBroker implements BrokerAdapter {
   }
 
   /** Batch commands authenticate with a temporary password file. */
-  private async batch(c: Credentials, args: string[]): Promise<string> {
+  private async batch(c: Credentials, args: [string, ...string[]]): Promise<string> {
     const { code, output } = await runBatch(
       this.options,
+      args[0],
       (path) => [...args, `--ctid=${c.login}`, `--pwd-file=${path("pwd")}`],
       [passwordFile(c.secret)],
     );

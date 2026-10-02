@@ -24,6 +24,7 @@ describe("runTool", () => {
     const tool = await adapter.runTool(spec);
     const container = toolOf(docker);
     expect(container?.tool?.request).toEqual({
+      name: expect.stringMatching(/^wickwatch-tool-[0-9a-f]{6}$/) as string,
       image: IMAGE,
       command: spec.command,
       labels: { "wickwatch.tool": "true" },
@@ -43,6 +44,20 @@ describe("runTool", () => {
     expect(seen.join("")).toBe("Logged in.\n[]\n");
     // Removed like with AutoRemove.
     expect(toolOf(docker)).toBeUndefined();
+  });
+
+  it("names a tool after the label prefix and its purpose, unique per call", async () => {
+    const docker = new FakeDocker();
+    docker.images.add(IMAGE);
+    const adapter = new DockerRuntimeAdapter({ client: docker, diskPath: "/", labelPrefix: "ww" });
+    await adapter.runTool({ ...spec, purpose: "session-1234567" });
+    await adapter.runTool({ ...spec, purpose: "session-1234567" });
+    await adapter.runTool({ ...spec, purpose: "../odd name/" });
+    const names = [...docker.containers.values()].map((c) => c.tool?.request.name);
+    expect(names[0]).toMatch(/^ww-session-1234567-[0-9a-f]{6}$/);
+    expect(names[1]).toMatch(/^ww-session-1234567-[0-9a-f]{6}$/);
+    expect(names[1]).not.toBe(names[0]);
+    expect(names[2]).toMatch(/^ww-odd-name-[0-9a-f]{6}$/);
   });
 
   it("never lists tools as instances", async () => {

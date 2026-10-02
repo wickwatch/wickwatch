@@ -56,6 +56,7 @@ export interface CreateRequest {
 }
 
 export interface ToolRequest {
+  name: string;
   image: string;
   command: string[];
   labels: Record<string, string>;
@@ -124,8 +125,9 @@ function wrap(docker: Docker): DockerClient {
       });
       return container.id;
     },
-    async createTool({ image, command, labels }) {
+    async createTool({ name, image, command, labels }) {
       const container = await docker.createContainer({
+        name,
         Image: image,
         Cmd: command,
         Labels: labels,
