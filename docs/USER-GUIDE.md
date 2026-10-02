@@ -12,6 +12,8 @@ Only an **admin** can change things (start, stop, set up, emergency stop). A **v
 
 Your user menu (top right) leads to **Profile**: set up or turn off 2FA (turning it off needs your password and a current code) and change the password there. Changing the password logs you out everywhere else.
 
+On a phone, wickwatch can go on the home screen like an app: in Safari **Share → Add to Home Screen**, in Chrome on Android **⋮ → Add to Home screen**. It then opens without the browser bar, with the wickwatch icon.
+
 ## 2. Connect a broker account
 
 Under **Accounts**:
@@ -109,7 +111,7 @@ Admins find the **Audit log** in the user menu: every login, change and trading 
 
 ## 11. Alerts and notifications
 
-Alerts show at the top of the Overview: stopped or crashed bots (a bot you stopped yourself, by emergency stop or the protection is no alert; one that stopped itself is), a lost broker connection, accounts that cannot be reached, challenge limits, a breached or passed challenge, the protection having acted, attribution problems, and a server clock that is off. The clock icon in the header shows whether the server time is right: green up to 1 s off, yellow up to 2 s, red beyond (then also an alert), a question mark when it could not be checked lately; the tooltip says how far off it is. With `ALERT_WEBHOOK_URL` and `DAILY_SUMMARY_TIME` you also get one summary a day per account (balance, equity, today's P&L, positions, instances, challenge). With `ALERT_WEBHOOK_URL` and `HEARTBEAT_URL` they also reach you without the dashboard open, e.g. on Telegram ([CONFIGURATION.md](CONFIGURATION.md#notifications)).
+Alerts show at the top of the Overview: stopped or crashed bots (a bot you stopped yourself, by emergency stop or the protection is no alert; one that stopped itself is), a lost broker connection, accounts that cannot be reached, challenge limits, a breached or passed challenge, the protection having acted, attribution problems, and a server clock that is off. The clock icon in the header shows whether the server time is right: green up to 1 s off, yellow up to 2 s, red beyond (then also an alert), a question mark when it could not be checked lately; the tooltip says how far off it is. With `ALERT_WEBHOOK_URL` and `DAILY_SUMMARY_TIME` you also get one summary a day, a block per account (balance and equity, today's P&L, positions and instances, the challenge with one rule per line). With `ALERT_WEBHOOK_URL` and `HEARTBEAT_URL` they also reach you without the dashboard open, e.g. on Telegram ([CONFIGURATION.md](CONFIGURATION.md#notifications)).
 
 ## 12. API tokens and MCP
 

@@ -2,6 +2,7 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
+import tokens from "../../design/tokens.json" with { type: "json" };
 
 const root = (path: string) => fileURLToPath(new URL(`../../${path}`, import.meta.url));
 
@@ -12,10 +13,24 @@ const devBaseHref: Plugin = {
   transformIndexHtml: (html) => html.replace("<head>", '<head>\n    <base href="/" />'),
 };
 
+/** The browser bar follows the page's background, light or dark (design/tokens.json). */
+const themeColors: Plugin = {
+  name: "wickwatch-theme-color",
+  transformIndexHtml: (html) =>
+    html.replace(
+      "</head>",
+      `  <meta name="theme-color" content="${tokens.light.bg}" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="${tokens.dark.bg}" media="(prefers-color-scheme: dark)" />
+  </head>`,
+    ),
+};
+
 export default defineConfig({
   // Relative asset URLs so the same build works under any BASE_PATH.
   base: "./",
-  plugins: [vue(), devBaseHref],
+  // Home-screen icons and the web manifest, served next to index.html (relative paths, so any BASE_PATH works).
+  publicDir: root("assets/logo/app"),
+  plugins: [vue(), devBaseHref, themeColors],
   define: {
     __VUE_I18N_FULL_INSTALL__: true,
     __VUE_I18N_LEGACY_API__: false,

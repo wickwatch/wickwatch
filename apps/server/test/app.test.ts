@@ -30,6 +30,8 @@ function webBuild(): string {
     "<!doctype html><html><head><title>wickwatch</title></head><body></body></html>",
   );
   writeFileSync(join(dir, "assets", "app.js"), "console.log(1)");
+  writeFileSync(join(dir, "manifest.webmanifest"), '{"name":"wickwatch"}');
+  writeFileSync(join(dir, "apple-touch-icon.png"), "png");
   return dir;
 }
 
@@ -108,6 +110,12 @@ describe("app", () => {
     const asset = await app.inject("/bots/assets/app.js");
     expect(asset.statusCode).toBe(200);
     expect(asset.headers["cache-control"]).toContain("immutable");
+
+    // Home-screen icons: fetched by the phone without a session.
+    const manifest = await app.inject("/bots/manifest.webmanifest");
+    expect(manifest.statusCode).toBe(200);
+    expect(manifest.headers["content-type"]).toContain("application/manifest+json");
+    expect((await app.inject("/bots/apple-touch-icon.png")).headers["content-type"]).toBe("image/png");
 
     expect((await app.inject("/bots/assets/missing.js")).statusCode).toBe(404);
     expect((await app.inject("/elsewhere")).statusCode).toBe(404);

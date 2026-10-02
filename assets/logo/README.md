@@ -12,7 +12,9 @@ A *wick* is the thin line above and below a candlestick that shows how far price
 | `wickwatch-logo-horizontal-*.svg` | Symbol + wordmark side by side |
 | `wickwatch-logo-stacked-*.svg` | Symbol above wordmark |
 | `favicon.svg`, `favicon-16.png`, `favicon-32.png`, `favicon.ico` | Browser favicon, pixel-aligned; `favicon.svg` adapts to dark/light browser UI |
-| `apple-touch-icon.png` (180 px, square – iOS rounds the corners), `icon-512.png`, `app-icon.svg` | App / home-screen icon (full symbol) |
+| `app-icon.svg`, `app/apple-touch-icon.png` (180 px, square – iOS rounds the corners), `app/icon-192.png`, `app/icon-512.png` | App / home-screen icon (full symbol) |
+| `app-icon-maskable.svg`, `app/icon-maskable-512.png` | Android adaptive icon: background to the edges, symbol inside the 80 % safe zone (Android cuts its own shape) |
+| `app/manifest.webmanifest` | The dashboard's web manifest; `app/` is its public folder, served next to `index.html` (`apps/web/vite.config.ts`) |
 | `social-preview.png` (1280 × 640) | GitHub repository social preview |
 
 `dark` means *for dark backgrounds*, `light` means *for light backgrounds*.
@@ -24,7 +26,10 @@ A *wick* is the thin line above and below a candlestick that shows how far price
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
 ```
+
+The PNGs are rendered from the SVGs at their size (e.g. with a headless browser).
 
 ## Colours
 

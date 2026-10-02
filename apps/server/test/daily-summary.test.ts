@@ -90,9 +90,17 @@ describe("daily summary", () => {
     expect(posts[0]).toMatchObject({ event: "daily_summary", date: "2026-09-30", alerts: 1 });
     expect(posts[0]?.text.split("\n")).toEqual([
       "wickwatch daily summary 2026-09-30",
-      "Challenge US100 (7532555): balance 9,960.79 USD, equity 9,960.79 USD, P&L today (UTC) -101.26 USD, open positions 0, instances running 1 of 1",
-      "  Challenge day 185, Running: Daily loss 1.0 % of 5.0 % · Trading days 48 of 4",
-      "5902789: not reachable (Login failed – check the credentials.)",
+      "",
+      "Challenge US100 (7532555)",
+      "Balance 9,960.79 USD · Equity 9,960.79 USD",
+      "Today (UTC) -101.26 USD · Open positions 0 · Instances 1 of 1 running",
+      "Challenge day 185 · Running",
+      "• Daily loss 1.0 % of 5.0 %",
+      "• Trading days 48 of 4",
+      "",
+      "5902789",
+      "Not reachable: Login failed – check the credentials.",
+      "",
       "Open alerts: 1",
     ]);
   });
@@ -104,5 +112,32 @@ describe("daily summary", () => {
     status = 200;
     expect(await summary().check()).toBe(true);
     expect(posts).toHaveLength(2);
+  });
+});
+
+describe("for Telegram", () => {
+  it("sends the summary as HTML: headings bold, account numbers as code, so they are no phone links", async () => {
+    const sent: { text: string; parse_mode?: string }[] = [];
+    const s = new DailySummary({
+      db: t.db,
+      load: async () => overview,
+      webhookUrl: new URL("https://api.telegram.org/botPLACEHOLDER/sendMessage?chat_id=1"),
+      time: "21:30",
+      timeZone: "Europe/Berlin",
+      locale: "en",
+      log,
+      now: () => new Date("2026-09-30T19:30:00.000Z"),
+      fetch: (async (_url: URL, init: RequestInit) => {
+        sent.push(JSON.parse(init.body as string) as { text: string; parse_mode?: string });
+        return new Response(null, { status: 200 });
+      }) as unknown as typeof fetch,
+    });
+    expect(await s.check()).toBe(true);
+    expect(sent[0]?.parse_mode).toBe("HTML");
+    const lines = sent[0]?.text.split("\n") ?? [];
+    expect(lines[0]).toBe("<b>wickwatch daily summary 2026-09-30</b>");
+    expect(lines[2]).toBe("<b>Challenge US100 (<code>7532555</code>)</b>");
+    // Amounts and dates stay as they are.
+    expect(lines[3]).toBe("Balance 9,960.79 USD · Equity 9,960.79 USD");
   });
 });

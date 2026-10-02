@@ -130,7 +130,7 @@ Examples:
 
 | Service | `ALERT_WEBHOOK_URL` / `HEARTBEAT_URL` |
 | --- | --- |
-| Telegram | `ALERT_WEBHOOK_URL=https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat id>` (uses `text`) |
+| Telegram | `ALERT_WEBHOOK_URL=https://api.telegram.org/bot<token>/sendMessage?chat_id=<chat id>` (uses `text`; wickwatch sends it as HTML with `parse_mode`: headings bold, account numbers as code, so Telegram does not turn them into phone links) |
 | Slack, Mattermost | incoming webhook URL (uses `text`) |
 | Discord | channel webhook URL (uses `content`) |
 | ntfy | `https://ntfy.sh/<topic>` shows the JSON; use ntfy's JSON publishing if you want only the text |

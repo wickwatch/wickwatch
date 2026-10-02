@@ -6,7 +6,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Added
 - Account size check: on the Algos page, name the parameter an algo calculates positions with as its account size (e.g. a starting capital). The instance form marks a value more than 25 % off the account's challenge start balance (else its balance at the start of the trading day) and asks before saving, **Apply template…** warns before saving the version, and the Configuration tab shows a warning while it stays. Set per algo for all its versions, audit-logged as `algo.settings`. API: `GET /api/v1/algo-settings`, `PUT /api/v1/algo-settings/:name`; accounts carry the size they are checked against (`accountSize`), instance details the check (`accountSizeCheck`); both come from the database, without a broker query.
+- Home-screen icons for iPhone and Android: a web manifest (`manifest.webmanifest`), the Apple touch icon, a 192 px icon and a maskable 512 px icon for Android's adaptive shapes; "Add to Home Screen" opens wickwatch without the browser bar.
 - Market hours: the instance tables (overview, account page) get a **Market** column (Open, Closing soon in the last 30 minutes, Closed) for the symbol of each instance, the instance page the same badge next to the status. Hovering or tapping the badge shows the weekly trading hours in local time and the next opening or closing. From the broker's weekly schedule, without holidays; wickwatch asks at most once a day per account and symbol, in the background. cTrader: `sessions <symbol>` in the account's shell session. Adapter API: optional `BrokerAdapter.marketHours()`, `InstanceSummary.marketHours`.
+
+### Changed
+- The daily summary reads better in chats: a block per account (name, balance and equity, today's P&L with positions and instances, the challenge with one rule per line), separated by blank lines. Telegram gets it, and the alerts, as HTML: headings bold, account numbers as code, so Telegram no longer turns them into phone links.
 
 ### Fixed
 - Tooltips in tables (e.g. the trade info buttons) were cut off at the table's edge; inside an element that clips they are now placed on the window.

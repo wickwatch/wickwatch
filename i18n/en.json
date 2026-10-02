@@ -919,9 +919,11 @@
   },
   "summary": {
     "title": "wickwatch daily summary {date}",
-    "account": "{name}: balance {balance}, equity {equity}, P&L today (UTC) {pnl}, open positions {positions}, instances running {running} of {total}",
-    "accountError": "{name}: not reachable ({reason})",
-    "challenge": "  Challenge day {day}, {status}: {rules}",
+    "balances": "Balance {balance} · Equity {equity}",
+    "activity": "Today (UTC) {pnl} · Open positions {positions} · Instances {running} of {total} running",
+    "noInstances": "Today (UTC) {pnl} · Open positions {positions} · No instances",
+    "accountError": "Not reachable: {reason}",
+    "challenge": "Challenge day {day} · {status}",
     "noAccounts": "No accounts.",
     "alerts": "Open alerts: {count}",
     "noAlerts": "No open alerts."

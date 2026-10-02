@@ -81,44 +81,42 @@ function ruleText(rule: RuleResult, locale: Locale, t: (key: string) => string):
 }
 
 /**
- * The daily summary as plain text lines in the given locale: per account balance, equity, today's P&L (UTC day, as on
- * the dashboard), positions, instances and the challenge, then the number of open alerts.
+ * The daily summary as plain text in the given locale: a title, then one block per account (name, balance and equity,
+ * today's P&L as on the dashboard (UTC day), positions and instances, the challenge with one rule per line), then the
+ * number of open alerts. Blocks are separated by a blank line, so it reads well in any chat; the first line of each is
+ * its heading, which telegramHtml (webhook.ts) puts in bold.
  */
 export function summaryText(overview: Overview, locale: Locale, day: string): string {
   const t = (key: string) => lookup(locale, key) ?? lookup("en", key) ?? key;
-  const lines = [fill(t("summary.title"), { date: day })];
+  const blocks = [[fill(t("summary.title"), { date: day })]];
   for (const a of overview.accounts) {
-    const name = a.displayName === a.number ? a.number : `${a.displayName} (${a.number})`;
+    const block = [a.displayName === a.number ? a.number : `${a.displayName} (${a.number})`];
+    blocks.push(block);
     if (a.error || a.balance === undefined) {
-      lines.push(fill(t("summary.accountError"), { name, reason: t(`error.adapter.${a.error ?? "unavailable"}`) }));
+      block.push(fill(t("summary.accountError"), { reason: t(`error.adapter.${a.error ?? "unavailable"}`) }));
       continue;
     }
-    const currency = a.currency ? ` ${a.currency}` : "";
-    lines.push(
-      fill(t("summary.account"), {
-        name,
-        balance: `${money(locale, a.balance)}${currency}`,
-        equity: `${money(locale, a.equity ?? a.balance)}${currency}`,
-        pnl: `${money(locale, a.dayPnl ?? 0, true)}${currency}`,
+    const amount = (value: number, sign = false) =>
+      `${money(locale, value, sign)}${a.currency ? ` ${a.currency}` : ""}`;
+    block.push(
+      fill(t("summary.balances"), { balance: amount(a.balance), equity: amount(a.equity ?? a.balance) }),
+      fill(t(a.instances.total ? "summary.activity" : "summary.noInstances"), {
+        pnl: amount(a.dayPnl ?? 0, true),
         positions: a.openPositions,
         running: a.instances.running,
         total: a.instances.total,
       }),
     );
     if (a.challenge) {
-      const rules = a.challenge.rules.map((r) => ruleText(r, locale, t)).join(" · ");
-      lines.push(
-        fill(t("summary.challenge"), {
-          status: t(`challenge.status.${a.challenge.status}`),
-          day: a.challenge.day,
-          rules,
-        }),
+      block.push(
+        fill(t("summary.challenge"), { status: t(`challenge.status.${a.challenge.status}`), day: a.challenge.day }),
+        ...a.challenge.rules.map((r) => `• ${ruleText(r, locale, t)}`),
       );
     }
   }
-  if (!overview.accounts.length) lines.push(t("summary.noAccounts"));
-  lines.push(
+  if (!overview.accounts.length) blocks.push([t("summary.noAccounts")]);
+  blocks.push([
     overview.alerts.length ? fill(t("summary.alerts"), { count: overview.alerts.length }) : t("summary.noAlerts"),
-  );
-  return lines.join("\n");
+  ]);
+  return blocks.map((lines) => lines.join("\n")).join("\n\n");
 }
