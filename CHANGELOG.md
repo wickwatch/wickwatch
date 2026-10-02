@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.4.1 – 2026-10-02
+
 ### Changed
 - Overview: at most three account cards side by side, so they stay wide enough to read.
 - The challenge on an account card stays folded, also on a warning; the badge in its head ("Near limit", "Breached") says so, and all cards keep the same height.
