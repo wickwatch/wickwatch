@@ -72,14 +72,14 @@ export function sessionCookie(res: LightMyRequestResponse): string {
   return `ww_session=${cookie.value}`;
 }
 
-/** Creates a user and logs in; returns the Cookie header value. */
-export async function loginAs(t: TestApp, role: Role, basePath = ""): Promise<string> {
+/** Creates a user and logs in; returns the Cookie header value. `totp: false` creates the user without 2FA. */
+export async function loginAs(t: TestApp, role: Role, basePath = "", { totp = true } = {}): Promise<string> {
   const username = `${role}-user`;
-  const secret = await createUser(t, username, role);
+  const secret = await createUser(t, username, role, { totp });
   const res = await t.app.inject({
     method: "POST",
     url: `${basePath}/api/v1/auth/login`,
-    payload: { username, password: PASSWORD, code: currentCode(secret) },
+    payload: { username, password: PASSWORD, ...(totp ? { code: currentCode(secret) } : {}) },
   });
   return sessionCookie(res);
 }

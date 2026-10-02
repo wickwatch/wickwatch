@@ -3,6 +3,7 @@ import { setUnauthenticatedHandler } from "./api";
 import { clearUser, loadSession, session } from "./session";
 import { loadSystem } from "./system";
 import AccountsView from "./views/AccountsView.vue";
+import ApiTokensView from "./views/ApiTokensView.vue";
 import AlgosView from "./views/AlgosView.vue";
 import AuditView from "./views/AuditView.vue";
 import AccountView from "./views/AccountView.vue";
@@ -23,6 +24,7 @@ export const router = createRouter({
     { path: "/accounts", name: "accounts", component: AccountsView },
     { path: "/algos", name: "algos", component: AlgosView },
     { path: "/audit", name: "audit", component: AuditView },
+    { path: "/api-tokens", name: "api-tokens", component: ApiTokensView },
     { path: "/instances/new", name: "instance-new", component: InstanceFormView },
     { path: "/instances/:ref", name: "instance", component: InstanceView },
     // Tabs of the instance page; the same component, so switching keeps its state.

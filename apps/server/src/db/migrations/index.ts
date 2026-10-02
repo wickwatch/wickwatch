@@ -13,6 +13,8 @@ import { instanceShouldRun } from "./0011-instance-should-run";
 import { tradingDaysFrom } from "./0012-trading-days-from";
 import { dailySummaries } from "./0013-daily-summaries";
 import { instanceStoppedByUser } from "./0014-instance-stopped-by-user";
+import { apiTokens } from "./0015-api-tokens";
+import { auditApiToken } from "./0016-audit-api-token";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -31,4 +33,6 @@ export const migrations: Record<string, Migration> = {
   "0012-trading-days-from": tradingDaysFrom,
   "0013-daily-summaries": dailySummaries,
   "0014-instance-stopped-by-user": instanceStoppedByUser,
+  "0015-api-tokens": apiTokens,
+  "0016-audit-api-token": auditApiToken,
 };

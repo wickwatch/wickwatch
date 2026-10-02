@@ -1,6 +1,7 @@
 import type {
   Account,
   Algo,
+  ApiToken,
   AuditPage,
   Credential,
   InstanceConfigInput,
@@ -12,6 +13,7 @@ import type {
   AccountDetail,
   ChallengeProfile,
   ChallengeTemplate,
+  CreatedApiToken,
   EmergencyStopReport,
   HostStatus,
   InstanceDetail,
@@ -75,12 +77,21 @@ const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
 
-export type { AuditPage, AuditRecord, ManagedInstanceDetail, OfferedAccount } from "@wickwatch/core";
+export type {
+  ApiToken,
+  AuditPage,
+  AuditRecord,
+  CreatedApiToken,
+  ManagedInstanceDetail,
+  OfferedAccount,
+} from "@wickwatch/core";
 
 export interface SessionUser {
   username: string;
   role: "admin" | "viewer";
   totpEnabled: boolean;
+  /** API tokens the user created; they outlive a password change unless deleted with it. */
+  apiTokens: number;
 }
 
 export interface SessionInfo {
@@ -109,8 +120,9 @@ export const api = {
   totpEnable: (code: string) => post<undefined>("auth/totp/enable", { code }),
   /** Needs the password and a current code. */
   totpDisable: (password: string, code: string) => post<undefined>("auth/totp/disable", { password, code }),
-  /** Logs out the user's other sessions; this one stays. */
-  changePassword: (current: string, next: string) => post<undefined>("auth/password", { current, next }),
+  /** Logs out the user's other sessions; this one stays. `deleteApiTokens` also deletes the user's API tokens. */
+  changePassword: (current: string, next: string, deleteApiTokens = false) =>
+    post<undefined>("auth/password", { current, next, ...(deleteApiTokens ? { deleteApiTokens } : {}) }),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   accountDetail: (number: string) => request<AccountDetail>(`accounts/${encodeURIComponent(number)}/detail`),
@@ -146,6 +158,19 @@ export const api = {
     const qs = params.toString();
     return request<AuditPage>(`audit${qs ? `?${qs}` : ""}`);
   },
+  apiTokens: () => request<ApiToken[]>("api-tokens"),
+  /** The answer holds the token itself, which is not shown again. Without `expiresInDays` it does not expire. */
+  /** Needs the password and, with 2FA on, a current code. */
+  createApiToken: (body: {
+    name: string;
+    role: "admin" | "viewer";
+    expiresInDays?: number;
+    password: string;
+    code?: string;
+  }) => post<CreatedApiToken>("api-tokens", body),
+  deleteApiToken: (id: number) => send<undefined>("DELETE", `api-tokens/${String(id)}`),
+  /** Address of the read-only MCP endpoint, for AI clients with an API token. */
+  mcpUrl: () => new URL("mcp", document.baseURI).toString(),
   uploadAlgo: (file: File, version?: string) =>
     request<Algo>(
       `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}`,

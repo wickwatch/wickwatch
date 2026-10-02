@@ -142,9 +142,9 @@ onMounted(() => {
 
       <p v-if="error" class="tone-negative" role="alert">{{ error }}</p>
       <AppSpinner v-if="loading" />
-      <p v-else-if="!entries.length" class="muted">{{ $t("audit.none") }}</p>
       <section v-else class="panel card" :aria-label="$t('audit.title')">
-        <div class="table-wrap">
+        <p v-if="!entries.length" class="muted">{{ $t("audit.none") }}</p>
+        <div v-else class="table-wrap">
           <table class="table">
             <thead>
               <tr>
@@ -163,6 +163,7 @@ onMounted(() => {
                   <span v-if="e.user">{{ e.user }}</span>
                   <span v-else-if="SYSTEM_ACTIONS.has(e.action)" class="muted">{{ $t("audit.system") }}</span>
                   <template v-else>{{ $t("format.none") }}</template>
+                  <span v-if="e.token" class="muted via">{{ $t("audit.viaToken", { name: e.token.name }) }}</span>
                 </td>
                 <td>{{ actionLabel(e.action) }}</td>
                 <td class="mono">
@@ -223,6 +224,11 @@ onMounted(() => {
   padding: var(--ww-space-5);
 }
 
+/* The empty-list text, inside the card like on the accounts page. */
+.card > p {
+  margin: 0;
+}
+
 .table-wrap {
   position: relative;
   overflow-x: auto;
@@ -259,6 +265,12 @@ thead th {
   white-space: normal;
   overflow-wrap: anywhere;
   color: var(--ww-text-muted);
+}
+
+/* The API token below its user, so the column stays narrow. */
+.via {
+  display: block;
+  font-size: var(--ww-size-xs);
 }
 
 .more {

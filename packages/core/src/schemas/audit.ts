@@ -5,6 +5,8 @@ export const AuditRecord = Type.Object({
   time: Type.String(),
   /** The user who acted; missing for wickwatch itself (loss guard, autostart) and failed logins. */
   user: Type.Optional(Type.String()),
+  /** The API token the user acted through; missing for the web app. */
+  token: Type.Optional(Type.Object({ id: Type.Integer(), name: Type.String() })),
   action: Type.String(),
   target: Type.Optional(Type.String()),
   details: Type.Optional(Type.Record(Type.String(), Type.Unknown())),

@@ -30,7 +30,7 @@ Then:
 2. Open http://localhost:3000, enter the token, a user name and a password.
 3. Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator) and enter the code, or skip two-factor authentication and set it up later under *Profile*. The overview with demo data opens.
 
-How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md), step by step on a Linux server: [`deploy/INSTALL.md`](deploy/INSTALL.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
+How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md), step by step on a Linux server: [`deploy/INSTALL.md`](deploy/INSTALL.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). AI clients: [`docs/MCP.md`](docs/MCP.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
 
 ## Features
 - **Overview:** accounts with balance, equity, today's P&L, open positions and pending orders; all instances with status, uptime, positions, today's P&L and the last log line; alerts for stopped, crashed or disconnected bots, broker errors and challenge limits.
@@ -38,6 +38,7 @@ How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and
 - **Instance detail:** key figures, realised P&L curve (7, 30, 90 days or all), live log, open positions, pending orders and trade history with risk in % and R per trade; a details panel per position, order and trade.
 - **Accounts:** broker logins stored encrypted, an account page with all its bots, positions and orders, and an **emergency stop** that stops the account's bots, cancels its orders and closes its positions (with confirmation, audit-logged).
 - **Prop challenges:** a profile per account with profit target, daily loss (reset time and zone, balance or equity), max drawdown (static, trailing, or trailing on the end-of-day balance), minimum trading days and duration. Templates for FTMO and The Trading Pit. An optional **loss guard** runs the emergency stop when a limit is nearly used up.
+- **API and MCP:** REST API with OpenAPI docs, API tokens for scripts, and a read-only MCP endpoint so AI clients can read accounts, instances, logs and alerts.
 - **Operations:** built-in login with optional two-factor authentication and read-only users, audit log, bots started again after a host or Docker restart, webhook and heartbeat notifications, backups and data retention, host status.
 - Dark and light mode, English and German, usable on a phone.
 - Deploy standalone, behind nginx-proxy, Traefik or any reverse proxy.

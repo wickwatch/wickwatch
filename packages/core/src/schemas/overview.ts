@@ -153,5 +153,9 @@ export const SystemInfo = Type.Object({
   sourceUrl: Type.String(),
   /** Where to support the project; missing when the operator switched it off. */
   supportUrl: Type.Optional(Type.String()),
+  /** Whether the read-only MCP endpoint at <base>/mcp is on (`MCP`). */
+  mcp: Type.Boolean(),
+  /** Only users with 2FA may create API tokens (`API_TOKENS_REQUIRE_2FA`). */
+  apiTokensRequire2fa: Type.Boolean(),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

@@ -4,8 +4,7 @@ import Type from "typebox";
 import type { Db } from "../db";
 import { requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
-
-const MAX_LIMIT = 200;
+import { AUDIT_MAX_LIMIT, readAuditLog } from "../services/audit";
 
 /** The audit log, newest first, for admins: who did what and what wickwatch did by itself. */
 export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { db }) => {
@@ -24,7 +23,7 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
           before: Type.Optional(Type.Integer({ minimum: 1 })),
           /** Only entries at or after this time (ISO, UTC). */
           since: Type.Optional(Type.String({ format: "date-time" })),
-          limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_LIMIT })),
+          limit: Type.Optional(Type.Integer({ minimum: 1, maximum: AUDIT_MAX_LIMIT })),
         }),
         response: {
           200: AuditPage,
@@ -32,53 +31,6 @@ export const auditRoutes: FastifyPluginAsyncTypebox<{ db: Db }> = async (app, { 
         },
       },
     },
-    async (request) => {
-      const { action, target, before, since } = request.query;
-      const limit = request.query.limit ?? 100;
-      const rows = await db
-        .selectFrom("audit_log")
-        .leftJoin("users", "users.id", "audit_log.user_id")
-        .select([
-          "audit_log.id",
-          "audit_log.time",
-          "users.username",
-          "audit_log.action",
-          "audit_log.target",
-          "audit_log.details",
-        ])
-        .$if(action !== undefined && action.endsWith("."), (q) =>
-          q.where("audit_log.action", "like", `${action ?? ""}%`),
-        )
-        .$if(action !== undefined && !action.endsWith("."), (q) => q.where("audit_log.action", "=", action ?? ""))
-        .$if(Boolean(target), (q) => q.where("audit_log.target", "like", `%${target ?? ""}%`))
-        .$if(before !== undefined, (q) => q.where("audit_log.id", "<", before ?? 0))
-        .$if(since !== undefined, (q) => q.where("audit_log.time", ">=", new Date(since ?? 0).toISOString()))
-        .orderBy("audit_log.id", "desc")
-        .limit(limit + 1)
-        .execute();
-      const actions = await db.selectFrom("audit_log").select("action").distinct().orderBy("action").execute();
-      return {
-        entries: rows.slice(0, limit).map((r) => {
-          let details: Record<string, unknown> | undefined;
-          try {
-            const parsed: unknown = r.details ? JSON.parse(r.details) : undefined;
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-              details = parsed as Record<string, unknown>;
-          } catch {
-            // An unreadable entry still shows, without details.
-          }
-          return {
-            id: r.id,
-            time: r.time,
-            ...(r.username ? { user: r.username } : {}),
-            action: r.action,
-            ...(r.target ? { target: r.target } : {}),
-            ...(details ? { details } : {}),
-          };
-        }),
-        more: rows.length > limit,
-        actions: actions.map((a) => a.action),
-      };
-    },
+    async (request) => readAuditLog(db, request.query),
   );
 };

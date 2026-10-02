@@ -4,7 +4,7 @@ import Type from "typebox";
 import { findAccountId, type AccountDirectory } from "../accounts";
 import { readProfile } from "../challenges/store";
 import type { Db } from "../db";
-import { requireAdmin } from "../plugins/auth";
+import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { audit } from "../services/audit";
 
@@ -84,7 +84,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
         action: "challenge.save",
         target: request.params.number,
         details: { name: profile.name, templateId: profile.templateId ?? null },
-        userId: request.user?.id,
+        ...actor(request),
       });
       onSaved?.(id);
       return profile;
@@ -109,7 +109,7 @@ export const challengeRoutes: FastifyPluginAsyncTypebox<ChallengeRouteOptions> =
           ? undefined
           : await db.deleteFrom("challenge_profiles").where("account_id", "=", id).executeTakeFirst();
       if (!result?.numDeletedRows) return reply.code(404).send({ error: "not_found" });
-      await audit(db, { action: "challenge.delete", target: request.params.number, userId: request.user?.id });
+      await audit(db, { action: "challenge.delete", target: request.params.number, ...actor(request) });
       return reply.code(204).send(null);
     },
   );

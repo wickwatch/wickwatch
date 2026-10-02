@@ -4,7 +4,7 @@ import Type from "typebox";
 import { decryptCredential } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { requireAdmin } from "../plugins/auth";
+import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
@@ -86,7 +86,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         action: "credential.create",
         target: String(id),
         details: { label },
-        userId: request.user?.id,
+        ...actor(request),
       });
       return reply.code(201).send({ id, label, login, createdAt: now, accounts: 0 });
     },
@@ -130,7 +130,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         action: "credential.update",
         target: String(id),
         details: { changed },
-        userId: request.user?.id,
+        ...actor(request),
       });
       const row = await db
         .selectFrom("credentials")
@@ -198,7 +198,7 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
       if (used) return reply.code(409).send({ error: "credential_in_use" });
       const result = await db.deleteFrom("credentials").where("id", "=", id).executeTakeFirst();
       if (result.numDeletedRows === 0n) return reply.code(404).send({ error: "not_found" });
-      await audit(db, { action: "credential.delete", target: String(id), userId: request.user?.id });
+      await audit(db, { action: "credential.delete", target: String(id), ...actor(request) });
       return reply.code(204).send(null);
     },
   );

@@ -53,6 +53,10 @@ export interface Config {
   sourceUrl: URL;
   /** Where the UI's footer links to support the project; missing when switched off (`off`). */
   supportUrl?: URL;
+  /** The read-only MCP endpoint at <base>/mcp; false with `MCP=off`. */
+  mcp: boolean;
+  /** Only users with 2FA may create API tokens (`API_TOKENS_REQUIRE_2FA=on`). */
+  apiTokensRequire2fa: boolean;
   /** Once a day at this local time (HH:MM) a summary goes to the alert webhook; missing when off. */
   dailySummary?: { time: string; timeZone: string };
 }
@@ -95,6 +99,14 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   }
 
   const defaultLocale = oneOf("DEFAULT_LOCALE", "en", LOCALES);
+  // Like the other switches, `off` in any case.
+  const mcpSetting = (get("MCP") ?? "on").toLowerCase();
+  if (mcpSetting !== "on" && mcpSetting !== "off") problems.push("MCP must be on or off");
+  const mcp = mcpSetting === "on";
+  const require2faSetting = (get("API_TOKENS_REQUIRE_2FA") ?? "off").toLowerCase();
+  if (require2faSetting !== "on" && require2faSetting !== "off")
+    problems.push("API_TOKENS_REQUIRE_2FA must be on or off");
+  const apiTokensRequire2fa = require2faSetting === "on";
 
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
@@ -169,6 +181,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(alertWebhookUrl ? { alertWebhookUrl } : {}),
     ...(clockCheckUrl ? { clockCheckUrl } : {}),
     sourceUrl: sourceUrl ?? new URL(DEFAULT_SOURCE_URL),
+    mcp,
+    apiTokensRequire2fa,
     ...(supportUrl ? { supportUrl } : {}),
     ...(summaryTime !== undefined ? { dailySummary: { time: summaryTime, timeZone: summaryZone } } : {}),
   };

@@ -50,6 +50,22 @@ export interface SessionsTable {
   last_seen_at: string;
 }
 
+export interface ApiTokensTable {
+  id: Generated<number>;
+  name: string;
+  /** SHA-256 (hex) of the token; the token itself is shown only once, when it is created. */
+  hash: string;
+  /** The first characters of the token, to recognise it. */
+  prefix: string;
+  role: Role;
+  /** Requests with the token act as this user, with at most the token's role. */
+  user_id: number;
+  created_at: string;
+  /** Null: does not expire. */
+  expires_at: string | null;
+  last_used_at: string | null;
+}
+
 export interface AuditLogTable {
   id: Generated<number>;
   time: string;
@@ -58,6 +74,9 @@ export interface AuditLogTable {
   target: string | null;
   /** JSON object with action-specific details; never secrets. */
   details: string | null;
+  /** The API token the action came through (id and name at that time); null for the web app and wickwatch itself. */
+  api_token_id: number | null;
+  api_token: string | null;
 }
 
 export interface ChallengeProfilesTable {
@@ -180,6 +199,7 @@ export interface Database {
   accounts: AccountsTable;
   audit_log: AuditLogTable;
   sessions: SessionsTable;
+  api_tokens: ApiTokensTable;
   challenge_profiles: ChallengeProfilesTable;
   daily_stats: DailyStatsTable;
   attribution_overrides: AttributionOverridesTable;

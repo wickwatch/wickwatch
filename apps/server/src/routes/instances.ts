@@ -5,7 +5,7 @@ import Type from "typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { requireAdmin } from "../plugins/auth";
+import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { auditOutcome } from "../services/audit";
 import { setShouldRun } from "../services/instance-keeper";
@@ -18,7 +18,7 @@ const Action = Type.Union([Type.Literal("start"), Type.Literal("stop"), Type.Lit
  * The ref reaches the runtime unchanged (for a container runtime inside the path of an API call), so only the characters
  * of a container name: no slashes, and no dot or dash at the start.
  */
-const Ref = Type.String({ minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]*$" });
+export const Ref = Type.String({ minLength: 1, maxLength: 200, pattern: "^[A-Za-z0-9][A-Za-z0-9_.-]*$" });
 const KEEP_ALIVE_MS = 15_000;
 const HOUR_MS = 60 * 60 * 1000;
 const PERIOD_MS = { "24h": 24 * HOUR_MS, "7d": 7 * 24 * HOUR_MS } as const;
@@ -181,7 +181,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
     },
     async (request, reply) => {
       const { ref, action } = request.params;
-      await auditOutcome(db, { action: `instance.${action}`, target: ref, userId: request.user?.id }, async () => {
+      await auditOutcome(db, { action: `instance.${action}`, target: ref, ...actor(request) }, async () => {
         // Before stopping, so the instance keeper does not see it ended while still "meant to run".
         if (action === "stop") await setShouldRun(db, ref, false, true);
         await adapters.runtime[action](ref);

@@ -24,7 +24,7 @@ import { findAccountById, type AccountDirectory, type AccountEntry } from "../ac
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import type { InstanceConfigsTable } from "../db/schema";
-import { isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
+import { actor, isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
@@ -270,7 +270,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         action: "instance.parameter_file",
         target: instance.name,
         details: { version },
-        userId: request.user?.id,
+        ...actor(request),
       });
       return (
         reply
@@ -366,7 +366,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         action: "instance.create",
         target: name,
         details: { account: entry.number, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
-        userId: request.user?.id,
+        ...actor(request),
       });
       const [created] = await load(name);
       if (!created) throw new AdapterError("not_found", `Instance ${name} vanished`);
@@ -428,7 +428,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         action: "instance.config",
         target: instance.name,
         details: { version, algo: `${checked.row.algo_name} ${checked.row.algo_version}` },
-        userId: request.user?.id,
+        ...actor(request),
       });
       const [updated] = await load(instance.name);
       if (!updated) throw new AdapterError("not_found", `Instance ${instance.name} vanished`);
@@ -488,7 +488,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const replaced = instance.deployment !== undefined;
       const { runtime } = await auditOutcome(
         db,
-        { action: "instance.deploy", target: name, userId: request.user?.id },
+        { action: "instance.deploy", target: name, ...actor(request) },
         async () => {
           const launched = await launch({
             credentials: await entry.credentials(),
@@ -548,7 +548,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const { name } = request.params;
       await auditOutcome(
         db,
-        { action: "instance.delete", target: name, userId: request.user?.id },
+        { action: "instance.delete", target: name, ...actor(request) },
         async () => {
           // Strict: an unreachable runtime must fail the delete, not orphan a running container.
           const [instance] = await load(name, { strict: true });

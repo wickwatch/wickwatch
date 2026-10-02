@@ -111,7 +111,9 @@ const confirmRemove = () => {
     <AppSpinner v-if="loading" />
 
     <template v-else>
-      <p v-if="!algos.length" class="muted">{{ $t("algos.none") }}</p>
+      <section v-if="!algos.length" class="panel card">
+        <p class="muted">{{ $t("algos.none") }}</p>
+      </section>
       <section v-for="[name, versions] in groups" :key="name" class="panel card" :aria-label="name">
         <h2 class="mono">{{ name }}</h2>
         <div v-for="a in versions" :key="a.id" class="version">
@@ -259,6 +261,11 @@ const confirmRemove = () => {
 
 .card {
   padding: var(--ww-space-5);
+}
+
+/* The empty-list text, inside the card like on the accounts page. */
+.card > p {
+  margin: 0;
 }
 
 .version {

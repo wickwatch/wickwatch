@@ -30,6 +30,8 @@ Dashboard only. Real deployments (instances, parameter sets, secrets) live outsi
 - Auth decisions use the matched route (`request.routeOptions.url`), never the raw `request.url`.
 - Write routes carry `preHandler: requireAdmin` (the auth plugin's hook is only a safety net); destructive ones
   add `requireConfirmation(param)` and wrap the action in `auditOutcome`.
+- Audit entries take the actor from `...actor(request)` (user and API token), never `userId: request.user?.id`;
+  a test fails on routes that do. API tokens never reach `auth/` routes; token management adds `requireSession`.
 - Look up accounts through the account directory (`findAccount`, `findAccountById`), not by number in SQL:
   numbers are unique only per adapter.
 - Platform specifics (file extensions, periods, env vars) come from the adapter (`/system`, adapter settings);

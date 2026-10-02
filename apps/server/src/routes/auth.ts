@@ -4,6 +4,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import QRCode from "qrcode";
 import Type from "typebox";
 import { type SetupState, needsSetup } from "../auth/setup";
+import { countApiTokens, deleteUserApiTokens } from "../auth/api-tokens";
 import { createSession, deleteOtherSessions, deleteSession, SESSION_COOKIE } from "../auth/sessions";
 import type { Db } from "../db";
 import { ErrorBody } from "../plugins/errors";
@@ -17,6 +18,8 @@ const User = Type.Object({
   username: Type.String(),
   role: Type.Union([Type.Literal("admin"), Type.Literal("viewer")]),
   totpEnabled: Type.Boolean(),
+  /** API tokens the user created; they outlive a password change unless deleted with it. */
+  apiTokens: Type.Integer({ minimum: 0 }),
 });
 
 const Session = Type.Object({
@@ -73,7 +76,16 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       return {
         setupRequired: await needsSetup(db),
         masterKeyConfigured: cipher !== undefined,
-        ...(user ? { user: { username: user.username, role: user.role, totpEnabled: user.totp_secret !== null } } : {}),
+        ...(user
+          ? {
+              user: {
+                username: user.username,
+                role: user.role,
+                totpEnabled: user.totp_secret !== null,
+                apiTokens: await countApiTokens(db, user.id),
+              },
+            }
+          : {}),
       };
     },
   );
@@ -143,7 +155,7 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
 
       await audit(db, { action: "auth.setup", target: username, userId: id, details: { totp: totp !== undefined } });
       setSessionCookie(reply, await createSession(db, id), basePath);
-      return { username, role: "admin" as const, totpEnabled: totp !== undefined };
+      return { username, role: "admin" as const, totpEnabled: totp !== undefined, apiTokens: 0 };
     },
   );
 
@@ -185,7 +197,12 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
 
       await audit(db, { action: "auth.login", target: username, userId: user.id, details: { ok: true } });
       setSessionCookie(reply, await createSession(db, user.id), basePath);
-      return { username: user.username, role: user.role, totpEnabled: user.totp_secret !== null };
+      return {
+        username: user.username,
+        role: user.role,
+        totpEnabled: user.totp_secret !== null,
+        apiTokens: await countApiTokens(db, user.id),
+      };
     },
   );
 
@@ -264,9 +281,15 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       schema: {
         tags: ["auth"],
         summary: "Change the password of the logged-in user; needs the current one",
-        description: "Other sessions of the user are logged out; this one stays.",
+        description:
+          "Other sessions of the user are logged out; this one stays. API tokens stay valid unless `deleteApiTokens` " +
+          "is true: then the user's tokens are deleted too, e.g. when the password may have leaked.",
         security: [{ session: [] }],
-        body: Type.Object({ current: Password, next: Password }),
+        body: Type.Object({
+          current: Password,
+          next: Password,
+          deleteApiTokens: Type.Optional(Type.Boolean()),
+        }),
         response: { 204: Type.Null(), 400: ErrorBody, 401: ErrorBody, 403: ErrorBody, 429: ErrorBody },
       },
     },
@@ -291,12 +314,21 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         .where("id", "=", current.id)
         .execute();
       await deleteOtherSessions(db, current.id, request.cookies[SESSION_COOKIE]);
+      const deleted = request.body.deleteApiTokens ? await deleteUserApiTokens(db, current.id) : [];
       await audit(db, {
         action: "auth.password_change",
         target: current.username,
         userId: current.id,
-        details: { ok: true },
+        details: { ok: true, ...(request.body.deleteApiTokens ? { apiTokensDeleted: deleted.length } : {}) },
       });
+      for (const token of deleted) {
+        await audit(db, {
+          action: "api_token.delete",
+          target: token.name,
+          userId: current.id,
+          details: { id: token.id, reason: "password_change" },
+        });
+      }
       return reply.code(204).send(null);
     },
   );

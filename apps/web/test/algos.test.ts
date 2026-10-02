@@ -55,7 +55,7 @@ const asRole = (role: "admin" | "viewer") =>
   (session.value = {
     setupRequired: false,
     masterKeyConfigured: true,
-    user: { username: "a", role, totpEnabled: false },
+    user: { username: "a", role, totpEnabled: false, apiTokens: 0 },
   });
 const render = async () => {
   const wrapper = mount(AlgosView, { global: { plugins: [i18n, router] } });

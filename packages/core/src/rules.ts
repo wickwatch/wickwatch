@@ -9,6 +9,9 @@ export { DEFAULT_LABEL_PREFIX } from "./labels";
 /** Shortest password accepted for a login. */
 export const MIN_PASSWORD_LENGTH = 12;
 
+/** Lifetimes offered for a new API token, in days; the server accepts any number up to the last one. */
+export const API_TOKEN_EXPIRY_DAYS = [30, 90, 365] as const;
+
 /**
  * Instance names: lower case, digits and dashes, usable as a container name and host name. Also the default order
  * label. Use `.source` where a JSON Schema pattern is needed.
