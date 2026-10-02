@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { StatsFs } from "node:fs";
 import { readFile, statfs } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -57,6 +58,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly instanceLabel: string;
   private readonly managedLabel: string;
   private readonly toolLabel: string;
+  private readonly labelPrefix: string;
   private orphansRemoved: Promise<void> | undefined;
   private readonly diskPath: string;
   private readonly now: () => Date;
@@ -68,6 +70,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     this.instanceLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "instance");
     this.managedLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "managed");
     this.toolLabel = labelKey(options.labelPrefix ?? DEFAULT_LABEL_PREFIX, "tool");
+    this.labelPrefix = options.labelPrefix ?? DEFAULT_LABEL_PREFIX;
     this.restartPolicy = options.restartPolicy ?? "on-failure";
     this.stopTimeout = options.stopTimeoutSeconds ?? 30;
     this.diskPath = options.diskPath ?? process.cwd();
@@ -204,7 +207,12 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     await this.orphansRemoved;
 
     const id = await call(() =>
-      this.client.createTool({ image: spec.image, command: spec.command, labels: { [this.toolLabel]: "true" } }),
+      this.client.createTool({
+        name: this.toolName(spec.purpose),
+        image: spec.image,
+        command: spec.command,
+        labels: { [this.toolLabel]: "true" },
+      }),
     );
     const handle = this.client.container(id);
     let stream: NodeJS.ReadWriteStream;
@@ -245,6 +253,13 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       exit,
       kill: () => void handle.kill().catch(() => undefined),
     };
+  }
+
+  /** `<prefix>-<purpose>-<random>`: readable in `docker ps`, unique while a replaced tool is still being removed. */
+  private toolName(purpose = "tool"): string {
+    const slug = (text: string) => text.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const base = `${slug(this.labelPrefix) || "tool"}-${slug(purpose) || "tool"}`.slice(0, 120);
+    return `${base}-${randomBytes(3).toString("hex")}`;
   }
 
   private async removeOrphans(): Promise<void> {

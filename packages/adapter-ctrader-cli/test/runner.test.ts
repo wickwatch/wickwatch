@@ -47,6 +47,7 @@ describe("toolRunner", () => {
 
     expect(specs.map((s) => s.image)).toEqual(specs.map(() => IMAGE));
     expect(specs[0]?.command).toEqual(["accounts", "--ctid=user@example.com", "--pwd-file=/mnt/wickwatch/pwd"]);
+    expect(specs.map((s) => s.purpose)).toEqual(["accounts", "session-1111111"]);
     for (const spec of specs) {
       expect(spec.command.join(" ")).not.toContain(c.secret);
       expect(spec.files).toEqual([
@@ -60,6 +61,7 @@ describe("toolRunner", () => {
     writeFileSync(algo, "compiled");
     expect((await broker.algoMetadata(algo)).name).toBe("SampleBot");
     expect(specs[0]?.command).toEqual(["metadata", "/mnt/wickwatch/bot.algo"]);
+    expect(specs[0]?.purpose).toBe("metadata");
     expect(specs[0]?.files[0]).toMatchObject({ path: "/mnt/wickwatch/bot.algo", mode: 0o444 });
 
     await expect(broker.algoMetadata("/does/not/exist/bot.algo")).rejects.toMatchObject({ code: "not_found" });

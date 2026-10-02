@@ -31,6 +31,7 @@ export class CliSession {
     const child = await runnerOf(this.options).start(
       (path) => [`--ctid=${this.credentials.login}`, `--pwd-file=${path("pwd")}`, `--account=${this.account}`],
       [passwordFile(this.credentials.secret)],
+      `session-${this.account}`,
     );
     this.child = child;
     child.onOutput((text) => {

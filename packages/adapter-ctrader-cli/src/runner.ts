@@ -12,7 +12,8 @@ export type CliArguments = (path: (name: string) => string) => string[];
 
 /** Starts the cTrader CLI: as a local program, or through the runtime (e.g. in the official image). */
 export interface CliRunner {
-  start(args: CliArguments, files: CliFile[]): Promise<ToolProcess>;
+  /** `purpose` names the call, e.g. `session-1234567`; a runtime may show it in the tool's name. */
+  start(args: CliArguments, files: CliFile[], purpose?: string): Promise<ToolProcess>;
 }
 
 /**
@@ -84,7 +85,7 @@ const TOOL_DIR = "/mnt/wickwatch";
  */
 export function toolRunner(runTool: (spec: ToolSpec) => Promise<ToolProcess>, image: string): CliRunner {
   return {
-    async start(args, files) {
+    async start(args, files, purpose) {
       const place = (name: string) => `${TOOL_DIR}/${name}`;
       const contents = await Promise.all(
         files.map(async (file) => {
@@ -99,6 +100,7 @@ export function toolRunner(runTool: (spec: ToolSpec) => Promise<ToolProcess>, im
       return runTool({
         image,
         command: args(place),
+        ...(purpose ? { purpose } : {}),
         files: files.map((file, i) => {
           const content = contents[i] ?? "";
           return {

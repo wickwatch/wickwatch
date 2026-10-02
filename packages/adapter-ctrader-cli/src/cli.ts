@@ -41,8 +41,13 @@ export interface BatchResult {
 }
 
 /** Runs one batch command (accounts, symbols, metadata …) and returns stdout and stderr combined. */
-export async function runBatch(options: CliOptions, args: CliArguments, files: CliFile[] = []): Promise<BatchResult> {
-  const tool = await runnerOf(options).start(args, files);
+export async function runBatch(
+  options: CliOptions,
+  purpose: string,
+  args: CliArguments,
+  files: CliFile[] = [],
+): Promise<BatchResult> {
+  const tool = await runnerOf(options).start(args, files, purpose);
   let output = "";
   tool.onOutput((text) => (output += text));
   let timer: ReturnType<typeof setTimeout> | undefined;
