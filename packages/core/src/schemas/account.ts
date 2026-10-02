@@ -3,6 +3,16 @@ import { BrokerAccount } from "./broker";
 
 // Accounts and broker logins as the dashboard stores them.
 
+/**
+ * The size of an account to check an algo's account size parameter against (AlgoSettings): the challenge's start
+ * balance (`challengeStart`), else the balance at the start of the latest recorded trading day (`dayStart`).
+ */
+export const AccountSize = Type.Object({
+  value: Type.Number(),
+  basis: Type.Union([Type.Literal("challengeStart"), Type.Literal("dayStart")]),
+});
+export type AccountSize = Type.Static<typeof AccountSize>;
+
 export const Account = Type.Object({
   id: Type.Integer(),
   adapter: Type.String(),
@@ -15,6 +25,8 @@ export const Account = Type.Object({
   credentialLabel: Type.Union([Type.String(), Type.Null()]),
   timezone: Type.Union([Type.String(), Type.Null()]),
   hasChallenge: Type.Boolean(),
+  /** What an algo's account size parameter is checked against; missing while nothing is known yet. */
+  accountSize: Type.Optional(AccountSize),
 });
 export type Account = Type.Static<typeof Account>;
 

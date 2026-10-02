@@ -176,3 +176,28 @@ export function applyTemplate(
   const known = new Set(schema.map((p) => p.name));
   return { values, changed, rejected, unknown: Object.keys(template).filter((n) => !known.has(n)), kept };
 }
+
+/** How far the account size an algo calculates with may be off the account's before wickwatch warns, as a share. */
+export const ACCOUNT_SIZE_TOLERANCE = 0.25;
+
+export interface AccountSizeMismatch {
+  parameter: string;
+  value: number;
+  reference: number;
+}
+
+/**
+ * Checks the parameter an algo names as its account size (e.g. a starting capital it sizes positions with) against the
+ * account's: one zero too many there multiplies the risk of every trade. 0 or less counts as not set, as bots often
+ * take the balance then.
+ */
+export function accountSizeMismatch(
+  values: ParameterValues,
+  parameter: string | undefined,
+  reference: number | undefined,
+): AccountSizeMismatch | undefined {
+  if (parameter === undefined || reference === undefined || !(reference > 0)) return undefined;
+  const value = values[parameter];
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
+  return Math.abs(value - reference) > reference * ACCOUNT_SIZE_TOLERANCE ? { parameter, value, reference } : undefined;
+}

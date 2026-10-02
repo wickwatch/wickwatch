@@ -100,7 +100,7 @@ describe("AlgosView", () => {
     // The same drop zone as for parameter files; it names the chosen file until the upload.
     expect(wrapper.find(".dropzone__selected").text()).toBe("Selected: SampleBot.algo");
     await wrapper.find("input.mono").setValue("1.0.0");
-    await wrapper.find("form").trigger("submit");
+    await wrapper.find("dialog form").trigger("submit");
     await flushPromises();
     const [url, init] = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST") as [
       URL,
@@ -128,7 +128,7 @@ describe("AlgosView", () => {
     const input = wrapper.find("input[type=file]");
     Object.defineProperty(input.element, "files", { value: [new File(["x"], "SampleBot.algo")], configurable: true });
     await input.trigger("change");
-    await wrapper.find("form").trigger("submit");
+    await wrapper.find("dialog form").trigger("submit");
     await flushPromises();
     expect(wrapper.text()).toContain("uploaded");
     // The modal closed; opened again, the form is empty and shows no problem.

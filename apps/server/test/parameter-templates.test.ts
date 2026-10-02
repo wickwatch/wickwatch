@@ -70,6 +70,10 @@ describe("parameter templates", () => {
     expect(list).toHaveLength(1);
     expect(list[0]?.parameters).toEqual({ LicenceKey: "placeholder-key", RiskPercent: 0.3 });
     expect((await inject("GET", "/parameter-templates?algo=beta")).json()).toEqual([]);
+
+    const one = await inject("GET", `/parameter-templates/${String(list[0]?.id)}`);
+    expect(one.json()).toMatchObject({ name: "Conservative", parameters: { RiskPercent: 0.3 } });
+    expect((await inject("GET", "/parameter-templates/999")).statusCode).toBe(404);
   });
 
   it("gives viewers the names and counts but no values, and lets them change nothing", async () => {
@@ -77,6 +81,10 @@ describe("parameter templates", () => {
     const viewer = await loginAs(t, "viewer");
     const list = (await inject("GET", "/parameter-templates", undefined, viewer)).json<Template[]>();
     expect(list[0]).toMatchObject({ name: "Conservative", parameters: {}, count: 2 });
+    expect((await inject("GET", `/parameter-templates/${String(id)}`, undefined, viewer)).json()).toMatchObject({
+      parameters: {},
+      count: 2,
+    });
     expect((await inject("POST", "/parameter-templates", template({ name: "x" }), viewer)).statusCode).toBe(403);
     expect((await inject("PATCH", `/parameter-templates/${String(id)}`, { name: "y" }, viewer)).statusCode).toBe(403);
     expect((await inject("DELETE", `/parameter-templates/${String(id)}`, undefined, viewer)).statusCode).toBe(403);

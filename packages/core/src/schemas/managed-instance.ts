@@ -1,5 +1,6 @@
 import Type from "typebox";
 import { ATTRIBUTION_MODES } from "../attribution";
+import { AccountSize } from "./account";
 import { ParameterValues } from "./config";
 import { InstanceStatus } from "./runtime";
 
@@ -60,8 +61,16 @@ export const ManagedInstance = Type.Object({
 });
 export type ManagedInstance = Type.Static<typeof ManagedInstance>;
 
+/** The algo's account size parameter (AlgoSettings) and the account's size to check it against. */
+export const AccountSizeCheck = Type.Object({ parameter: Type.String(), reference: AccountSize });
+export type AccountSizeCheck = Type.Static<typeof AccountSizeCheck>;
+
 export const ManagedInstanceDetail = Type.Intersect([
   ManagedInstance,
-  Type.Object({ history: Type.Array(InstanceConfig, { description: "All versions, newest first" }) }),
+  Type.Object({
+    history: Type.Array(InstanceConfig, { description: "All versions, newest first" }),
+    /** Present when the algo names such a parameter and the account's size is known. */
+    accountSizeCheck: Type.Optional(AccountSizeCheck),
+  }),
 ]);
 export type ManagedInstanceDetail = Type.Static<typeof ManagedInstanceDetail>;

@@ -1,7 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { Algo, isAdapterError, ParameterFile, type AlgoMetadata } from "@wickwatch/core";
+import {
+  Algo,
+  AlgoSettings,
+  AlgoSettingsInput,
+  isAdapterError,
+  ParameterFile,
+  type AlgoMetadata,
+} from "@wickwatch/core";
 import { SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -40,6 +47,11 @@ function toAlgo(
     uploadedAt: row.uploaded_at,
   };
 }
+
+const toSettings = (algoName: string, accountSizeParameter: string | null): AlgoSettings => ({
+  algoName,
+  ...(accountSizeParameter ? { accountSizeParameter } : {}),
+});
 
 /** Default version: the bot's own `BotVersion` default, else its build time, else the hash. */
 function defaultVersion(metadata: AlgoMetadata, sha256: string): string {
@@ -214,6 +226,60 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       await rm(dirname(join(algosDir, row.file_path)), { recursive: true, force: true });
       await audit(db, { action: "algo.delete", target: `${row.name} ${row.version}`, ...actor(request) });
       return reply.code(204).send(null);
+    },
+  );
+
+  app.get(
+    "/algo-settings",
+    {
+      schema: {
+        tags: ["algos"],
+        summary: "Settings of the algos, by name; algos without any are left out",
+        response: { 200: Type.Array(AlgoSettings) },
+      },
+    },
+    async () =>
+      (await db.selectFrom("algo_settings").selectAll().orderBy("algo_name").execute()).map((row) =>
+        toSettings(row.algo_name, row.account_size_parameter),
+      ),
+  );
+
+  app.put(
+    "/algo-settings/:name",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["algos"],
+        summary: "Change the settings of an algo, for all its versions",
+        description:
+          "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's.",
+        params: Type.Object({ name: Type.String({ minLength: 1, maxLength: 100 }) }),
+        body: AlgoSettingsInput,
+        response: { 200: AlgoSettings, 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const algoName = request.params.name;
+      const algo = await db.selectFrom("algos").select("id").where("name", "=", algoName).executeTakeFirst();
+      if (!algo) return reply.code(404).send({ error: "algo_not_found" });
+      const parameter = request.body.accountSizeParameter;
+      const row = {
+        account_size_parameter: parameter,
+        updated_by: request.user?.id ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      await db
+        .insertInto("algo_settings")
+        .values({ algo_name: algoName, ...row })
+        .onConflict((c) => c.column("algo_name").doUpdateSet(row))
+        .execute();
+      await audit(db, {
+        action: "algo.settings",
+        target: algoName,
+        details: { accountSizeParameter: parameter },
+        ...actor(request),
+      });
+      return toSettings(algoName, parameter);
     },
   );
 };

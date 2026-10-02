@@ -6,6 +6,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api, errorKey, type ManagedInstanceDetail } from "../api";
+import { useAccountSizeWarning } from "../composables/useAccountSizeWarning";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { formatDateTime } from "../format";
 import { isOutdated, outdatedText } from "../instance-state";
@@ -127,6 +128,13 @@ const incomplete = computed(() => {
     .map((i) => parameterTitle(schema.value, i.parameter));
 });
 
+/** The saved version's account size far off the account's; viewers get no values, so it stays quiet for them. */
+const { text: accountSizeWarning } = useAccountSizeWarning({
+  check: () => props.managed?.accountSizeCheck,
+  values: () => props.managed?.config.parameters ?? {},
+  schema: () => schema.value,
+});
+
 const attributionText = (c: InstanceConfig) =>
   [t(`instanceForm.modes.${c.attribution.mode}`), c.attribution.orderLabel].filter(Boolean).join(" · ");
 
@@ -168,6 +176,14 @@ function changes(index: number): string[] {
       <AppBanner v-if="incomplete.length" tone="warning" :title="$t('alert.level.warning')">
         <span>{{ $t("instanceConfig.incomplete", { version, names: incomplete.join(", ") }) }}</span>
         <template #actions>
+          <RouterLink :to="{ name: 'instance-edit', params: { ref: managed.name } }" class="btn">
+            {{ $t("instanceConfig.edit") }}
+          </RouterLink>
+        </template>
+      </AppBanner>
+      <AppBanner v-if="accountSizeWarning" tone="warning" :title="$t('alert.level.warning')">
+        <span>{{ accountSizeWarning }}</span>
+        <template v-if="isAdmin" #actions>
           <RouterLink :to="{ name: 'instance-edit', params: { ref: managed.name } }" class="btn">
             {{ $t("instanceConfig.edit") }}
           </RouterLink>

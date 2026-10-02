@@ -96,6 +96,24 @@ export const parameterTemplateRoutes: FastifyPluginAsyncTypebox<{ db: Db; cipher
     },
   );
 
+  app.get(
+    "/parameter-templates/:id",
+    {
+      schema: {
+        tags: ["algos"],
+        summary: "One parameter template",
+        description: "Values only for admins, as in the list.",
+        params: IdParams,
+        response: { 200: ParameterTemplate, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const row = await byId(request.params.id);
+      if (!row) return reply.code(404).send({ error: "not_found" });
+      return toTemplate(row, cipher, isAdmin(request));
+    },
+  );
+
   app.post(
     "/parameter-templates",
     {

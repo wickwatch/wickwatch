@@ -89,6 +89,9 @@ describe("challenge profile API", () => {
     expect((await call("GET", "1111111")).statusCode).toBe(404);
     expect((await call("PUT", "1111111", profile)).statusCode).toBe(200);
     expect((await call("GET", "1111111")).json()).toEqual(profile);
+    const accounts = await t.app.inject({ url: "/api/v1/accounts", headers: { cookie: admin } });
+    const account = accounts.json<{ number: string; accountSize?: unknown }[]>().find((a) => a.number === "1111111");
+    expect(account?.accountSize).toEqual({ value: profile.startBalance, basis: "challengeStart" });
     expect((await call("PUT", "1111111", { ...profile, name: "Renamed" })).json()).toMatchObject({ name: "Renamed" });
     expect((await call("DELETE", "1111111")).statusCode).toBe(204);
     expect((await call("GET", "1111111")).statusCode).toBe(404);

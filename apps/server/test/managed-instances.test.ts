@@ -360,3 +360,51 @@ describe("parameter files", () => {
     );
   });
 });
+
+describe("account size check", () => {
+  const sizeOf = async (number: string) =>
+    (await inject("GET", "/accounts"))
+      .json<{ number: string; accountSize?: unknown }[]>()
+      .find((a) => a.number === number)?.accountSize;
+  const dayStart = (day: string, balance: number | null) =>
+    t.db.insertInto("daily_stats").values({ account_id: accountId, day, start_balance: balance }).execute();
+
+  beforeEach(async () => {
+    await t.db.deleteFrom("daily_stats").execute();
+  });
+
+  it("takes the challenge's start balance, else the latest recorded day-start balance, from the database", async () => {
+    expect(await sizeOf("1111111")).toBeUndefined();
+    await dayStart("2026-09-30", 9900);
+    await dayStart("2026-10-01", 9800);
+    await dayStart("2026-10-02", null);
+    expect(await sizeOf("1111111")).toEqual({ value: 9800, basis: "dayStart" });
+
+    const now = new Date().toISOString();
+    const profile = { name: "Trial", startDate: "2026-09-01", startBalance: 10_000, rules: {} };
+    await t.db
+      .insertInto("challenge_profiles")
+      .values({ account_id: accountId, profile: JSON.stringify(profile), created_at: now, updated_at: now })
+      .execute();
+    expect(await sizeOf("1111111")).toEqual({ value: 10_000, basis: "challengeStart" });
+  });
+
+  it("gives an instance's detail the parameter and size to check it with, once the algo names one", async () => {
+    await create("alpha-ger40-size");
+    await dayStart("2026-10-01", 10_000);
+    const detail = async () =>
+      (await inject("GET", "/managed-instances/alpha-ger40-size")).json<{ accountSizeCheck?: unknown }>();
+    expect((await detail()).accountSizeCheck).toBeUndefined();
+
+    await t.app.inject({
+      method: "PUT",
+      url: "/api/v1/algo-settings/alpha",
+      headers: { cookie: admin },
+      payload: { accountSizeParameter: "RiskPercent" },
+    });
+    expect((await detail()).accountSizeCheck).toEqual({
+      parameter: "RiskPercent",
+      reference: { value: 10_000, basis: "dayStart" },
+    });
+  });
+});

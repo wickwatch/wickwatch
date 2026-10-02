@@ -4,6 +4,10 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Account size check: on the Algos page, name the parameter an algo calculates positions with as its account size (e.g. a starting capital). The instance form marks a value more than 25 % off the account's challenge start balance (else its balance at the start of the trading day) and asks before saving, **Apply template…** warns before saving the version, and the Configuration tab shows a warning while it stays. Set per algo for all its versions, audit-logged as `algo.settings`. API: `GET /api/v1/algo-settings`, `PUT /api/v1/algo-settings/:name`; accounts carry the size they are checked against (`accountSize`), instance details the check (`accountSizeCheck`); both come from the database, without a broker query.
+- Parameter templates can be edited: **Edit** on the Algos page opens name and values in the instance form's parameter list. Parameters the template does not set stay out unless changed; values the newest algo version no longer knows are kept. Replaces the rename dialog. API: `GET /api/v1/parameter-templates/:id`.
+
 ## 0.3.1 – 2026-10-02
 
 ### Changed

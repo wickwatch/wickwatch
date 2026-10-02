@@ -13,6 +13,8 @@ const props = defineProps<{
   modelValue: unknown;
   /** `required`: empty after the form was sent. */
   issue?: ParameterIssueCode | "required" | undefined;
+  /** A doubt about a valid value, e.g. an account size far off the account's; saving is still possible. */
+  warning?: string | undefined;
   /** Suggestions for `symbol` and `period` parameters. */
   symbolsList?: string | undefined;
   periodsList?: string | undefined;
@@ -127,6 +129,7 @@ function onPick(event: Event) {
 
     <p class="param__hint">
       <span v-if="issue" class="tone-negative">{{ $t(`parameterIssue.${issue}`) }}</span>
+      <span v-else-if="warning" class="tone-warning param__warning" role="status">{{ warning }}</span>
       <span v-if="changed" class="pill tone-warning">{{ $t("instanceForm.changed") }}</span>
       <span class="param__meta">
         <span v-if="hasDefault">{{ $t("parameters.default", { value: String(param.default) }) }}</span>
@@ -206,6 +209,11 @@ function onPick(event: Event) {
   margin: 0;
   color: var(--ww-text-muted);
   font-size: var(--ww-size-xs);
+}
+
+.param__warning {
+  flex-basis: 100%;
+  font-weight: 600;
 }
 
 .param__meta {

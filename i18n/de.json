@@ -737,11 +737,33 @@
     "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert. Ihre Parameterwerte werden zur Vorlage; Symbol und Timeframe werden nicht übernommen.",
     "fromFileSaved": "Vorlage {name} mit {count} Werten gespeichert.",
     "fromFileSkipped": "1 Wert aus der Datei passte nicht zum Algo und wurde weggelassen. | {count} Werte aus der Datei passten nicht zum Algo und wurden weggelassen.",
-    "rename": "Umbenennen",
-    "renameTitle": "Vorlage umbenennen",
-    "renamed": "Vorlage in {name} umbenannt.",
     "deleted": "Vorlage {name} gelöscht.",
-    "deleteConfirm": "Vorlage {name} löschen? Konfigurationen, die aus ihr gespeichert wurden, bleiben wie sie sind."
+    "deleteConfirm": "Vorlage {name} löschen? Konfigurationen, die aus ihr gespeichert wurden, bleiben wie sie sind.",
+    "edit": "Bearbeiten",
+    "editTitle": "Vorlage {name} bearbeiten",
+    "editIntro": "Die Werte dieser Vorlage für {algo}, mit den Parametern seiner neuesten Version ({version}). Parameter, die die Vorlage nicht setzt, zeigen ihren Standardwert und bleiben draußen, solange du sie nicht änderst.",
+    "back": "← Zurück zu den Algos",
+    "editSaved": "Vorlage {name} gespeichert.",
+    "editNoVersion": "Von {algo} ist keine Version hochgeladen, seine Parameter sind daher unbekannt. Lade eine hoch, um die Vorlage zu bearbeiten.",
+    "editKept": "Unverändert behalten, die neueste Version kennt sie nicht: {names}"
+  },
+  "accountSize": {
+    "tooHigh": "{parameter} ist {value}; {basis}: {reference}. Daraus berechnete Positionen wären etwa {factor}-mal zu groß.",
+    "tooLow": "{parameter} ist {value}; {basis}: {reference}. Daraus berechnete Positionen wären etwa {factor}-mal zu klein.",
+    "basis": {
+      "challengeStart": "Startsaldo der Challenge des Kontos",
+      "dayStart": "Kontostand zu Beginn des Handelstags"
+    },
+    "confirmTitle": "Mit dieser Kontogröße speichern?",
+    "confirm": "Trotzdem speichern",
+    "title": "Prüfung der Kontogröße",
+    "parameter": "Parameter mit der Kontogröße",
+    "hint": "Z. B. ein Startkapital, mit dem der Algo Positionen berechnet. Bei den Instanzen von {algo} warnt wickwatch, wenn er mehr als {tolerance} vom Startsaldo der Challenge des Kontos abweicht, sonst vom Kontostand zu Beginn des Handelstags.",
+    "none": "Keine Prüfung",
+    "save": "Speichern",
+    "saved": "Prüfung der Kontogröße für {algo}: {parameter}.",
+    "cleared": "Prüfung der Kontogröße für {algo} ausgeschaltet.",
+    "noVersion": "Lade eine Version dieses Algos hoch, um seinen Parameter zu wählen."
   },
   "modal": {
     "close": "Schließen",
@@ -782,6 +804,7 @@
       "account_update": "Konto geändert",
       "algo_delete": "Algo gelöscht",
       "algo_upload": "Algo hochgeladen",
+      "algo_settings": "Algo-Einstellungen geändert",
       "attribution_clear": "Trade der Instanz wieder zugeordnet",
       "attribution_set": "Trade aus der Instanz genommen",
       "auth_login": "Anmeldung",

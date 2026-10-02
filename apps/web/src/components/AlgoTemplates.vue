@@ -14,7 +14,7 @@ import FieldError from "./FieldError.vue";
 import FileDrop from "./FileDrop.vue";
 import IconButton from "./IconButton.vue";
 
-/** The parameter templates of one algo on the Algos page: list, rename, delete, and a new one from a file. */
+/** The parameter templates of one algo on the Algos page: list, edit, delete, and a new one from a file. */
 const props = defineProps<{
   algoName: string;
   /** The newest uploaded version, to read parameter files with; none when every version was deleted. */
@@ -43,42 +43,30 @@ const meta = (tpl: ParameterTemplate) =>
     .filter(Boolean)
     .join(" · ");
 
-// One modal for both: a new template from a file (with `file`) or a new name for an existing one.
-const editing = ref<{ kind: "file" } | { kind: "rename"; template: ParameterTemplate }>();
+/** A new template from a file; name and values of an existing one are edited on a page of their own. */
+const creating = ref(false);
 const name = ref("");
 const file = ref<File>();
 const modalError = ref<string>();
 const form = useValidation();
 const nameField = form.field(() => name.value, checks.required);
-const fileField = form.field(() => (editing.value?.kind === "file" ? file.value?.name : "-"), checks.required);
+const fileField = form.field(() => file.value?.name, checks.required);
 
-function open(next: NonNullable<typeof editing.value>) {
-  editing.value = next;
-  name.value = next.kind === "rename" ? next.template.name : "";
+function open() {
+  creating.value = true;
+  name.value = "";
   file.value = undefined;
   modalError.value = undefined;
   form.reset();
 }
 function close() {
-  editing.value = undefined;
+  creating.value = false;
   form.reset();
 }
 
 function submit() {
-  const current = editing.value;
-  if (!current || !form.validate()) return;
+  if (!form.validate()) return;
   const newName = name.value.trim();
-  if (current.kind === "rename") {
-    void run(
-      async () => {
-        const saved = await api.updateParameterTemplate(current.template.id, { name: newName });
-        close();
-        emit("changed", t("templates.renamed", { name: saved.name }));
-      },
-      { error: modalError },
-    );
-    return;
-  }
   const chosen = file.value;
   const algo = props.newest;
   if (!chosen || !algo) return;
@@ -132,7 +120,7 @@ function confirmRemove() {
         :label="$t('templates.fromFile')"
         show-label
         small
-        @click="open({ kind: 'file' })"
+        @click="open"
       />
     </div>
     <p v-if="!templates.length" class="muted hint">{{ $t("templates.intro") }}</p>
@@ -144,10 +132,9 @@ function confirmRemove() {
         <span v-if="isAdmin" class="template__actions">
           <IconButton
             icon="edit"
-            :label="$t('table.actionOn', { action: $t('templates.rename'), name: tpl.name })"
+            :label="$t('table.actionOn', { action: $t('templates.edit'), name: tpl.name })"
             small
-            :disabled="busy"
-            @click="open({ kind: 'rename', template: tpl })"
+            :to="{ name: 'template-edit', params: { id: String(tpl.id) } }"
           />
           <IconButton
             icon="trash"
@@ -164,16 +151,14 @@ function confirmRemove() {
     <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
 
     <AppModal
-      :open="editing !== undefined"
-      :title="
-        editing?.kind === 'rename' ? $t('templates.renameTitle') : $t('templates.fromFileTitle', { algo: algoName })
-      "
-      :dirty="editing?.kind === 'file' ? file !== undefined || name !== '' : name !== (editing?.template.name ?? '')"
+      :open="creating"
+      :title="$t('templates.fromFileTitle', { algo: algoName })"
+      :dirty="file !== undefined || name !== ''"
       @close="close"
     >
       <template #default="{ close: dismiss }">
         <form class="form" novalidate @submit.prevent="submit">
-          <div v-if="editing?.kind === 'file'" class="field">
+          <div class="field">
             <FileDrop
               v-bind="fileField.attrs.value"
               :accept="extensions.join(',')"
@@ -198,7 +183,7 @@ function confirmRemove() {
           </label>
           <div class="buttons">
             <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
-              {{ editing?.kind === "rename" ? $t("templates.rename") : $t("templates.create") }}
+              {{ $t("templates.create") }}
             </button>
             <button type="button" class="btn btn--ghost" @click="dismiss()">{{ $t("action.cancel") }}</button>
           </div>

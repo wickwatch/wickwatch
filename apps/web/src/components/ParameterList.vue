@@ -23,6 +23,8 @@ const props = defineProps<{
   mode: "view" | "edit" | "schema";
   values?: Record<string, unknown> | undefined;
   issues?: ReadonlyMap<string, ParameterIssueCode | "required"> | undefined;
+  /** Edit only: doubts about valid values, as text, e.g. from the account size check. */
+  warnings?: ReadonlyMap<string, string> | undefined;
   /** Edit only: required parameters still without a value, known before the form is sent. */
   missing?: ReadonlySet<string> | undefined;
   symbolsList?: string | undefined;
@@ -98,9 +100,9 @@ function toggle(g: Group) {
 /** Changed values per group key. */
 const changedIn = computed(() => new Map(groups.value.map((g) => [g.key, g.params.filter(isChanged).length])));
 const issuesIn = (g: Group) => g.params.filter((p) => props.issues?.has(p.name)).length;
-// A group with a problem opens, so the marked field can be seen and focused.
+// A group with a problem or a warning opens, so the marked field can be seen and focused.
 watch(
-  () => [...(props.issues?.keys() ?? [])],
+  () => [...(props.issues?.keys() ?? []), ...(props.warnings?.keys() ?? [])],
   (names) => {
     for (const g of groups.value) if (g.params.some((p) => names.includes(p.name))) open.add(g.key);
   },
@@ -203,6 +205,7 @@ const range = (p: ParameterSchema) =>
             :model-value="value(p)"
             :param="p"
             :issue="issues?.get(p.name)"
+            :warning="warnings?.get(p.name)"
             :symbols-list="symbolsList"
             :periods-list="periodsList"
             @update:model-value="update(p.name, $event)"

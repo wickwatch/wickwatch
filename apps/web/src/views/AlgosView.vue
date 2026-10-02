@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { Algo, ParameterTemplate } from "@wickwatch/core";
+import type { Algo, AlgoSettings, ParameterTemplate } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute } from "vue-router";
 import { api } from "../api";
+import AlgoAccountSize from "../components/AlgoAccountSize.vue";
 import AlgoTemplates from "../components/AlgoTemplates.vue";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -19,8 +21,10 @@ import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
 
 const { t, locale } = useI18n();
+const route = useRoute();
 const algos = ref<Algo[]>([]);
 const templates = ref<ParameterTemplate[]>([]);
+const settings = ref<AlgoSettings[]>([]);
 const loading = ref(true);
 const file = ref<File>();
 const version = ref("");
@@ -49,15 +53,27 @@ const groups = computed(() => {
   const versions = groupBy(algos.value, (a) => a.name);
   const byAlgo = groupBy(templates.value, (tpl) => tpl.algoName);
   const names = [...new Set([...versions.keys(), ...byAlgo.keys()])].sort((a, b) => a.localeCompare(b));
-  return names.map((name) => ({ name, versions: versions.get(name) ?? [], templates: byAlgo.get(name) ?? [] }));
+  return names.map((name) => ({
+    name,
+    versions: versions.get(name) ?? [],
+    templates: byAlgo.get(name) ?? [],
+    accountSize: settings.value.find((s) => s.algoName === name)?.accountSizeParameter,
+  }));
 });
 
 async function load() {
-  [algos.value, templates.value] = await Promise.all([api.algos(), api.parameterTemplates()]);
+  [algos.value, templates.value, settings.value] = await Promise.all([
+    api.algos(),
+    api.parameterTemplates(),
+    api.algoSettings(),
+  ]);
 }
 const { busy, running, error, notice, run } = useAsyncAction({ reload: load });
 
-onMounted(() => void run(async () => undefined).finally(() => (loading.value = false)));
+/** Back from editing a template, the page says it was saved. */
+const saved = typeof route.query["saved"] === "string" ? route.query["saved"] : undefined;
+const done = saved === undefined ? undefined : () => t("templates.editSaved", { name: saved });
+onMounted(() => void run(async () => undefined, { done }).finally(() => (loading.value = false)));
 
 /** The upload form sits in a modal; its errors stay inside it. */
 const uploading = ref(false);
@@ -89,8 +105,8 @@ function upload() {
   );
 }
 
-/** A template was added, renamed or deleted: show what happened and fetch the lists again. */
-const templatesChanged = (message: string) => void run(async () => undefined, { done: () => message });
+/** A template or a setting changed: show what happened and fetch the lists again. */
+const changed = (message: string) => void run(async () => undefined, { done: () => message });
 
 const confirmRemove = () => {
   const algo = removing.value;
@@ -127,7 +143,12 @@ const confirmRemove = () => {
       <section v-if="!algos.length" class="panel card">
         <p class="muted">{{ $t("algos.none") }}</p>
       </section>
-      <section v-for="{ name, versions, templates: own } in groups" :key="name" class="panel card" :aria-label="name">
+      <section
+        v-for="{ name, versions, templates: own, accountSize } in groups"
+        :key="name"
+        class="panel card"
+        :aria-label="name"
+      >
         <h2 class="mono">{{ name }}</h2>
         <div v-for="a in versions" :key="a.id" class="version">
           <div class="version__head">
@@ -163,7 +184,14 @@ const confirmRemove = () => {
             <ParameterList mode="schema" :schema="a.parameters" class="algo-params" />
           </details>
         </div>
-        <AlgoTemplates :algo-name="name" :newest="versions[0]" :templates="own" @changed="templatesChanged" />
+        <AlgoAccountSize
+          v-if="versions.length || accountSize"
+          :algo-name="name"
+          :newest="versions[0]"
+          :parameter="accountSize"
+          @changed="changed"
+        />
+        <AlgoTemplates :algo-name="name" :newest="versions[0]" :templates="own" @changed="changed" />
       </section>
     </template>
 

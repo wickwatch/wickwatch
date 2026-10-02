@@ -1,6 +1,8 @@
 import type {
   Account,
   Algo,
+  AlgoSettings,
+  AlgoSettingsInput,
   ApiToken,
   AuditPage,
   Credential,
@@ -180,6 +182,9 @@ export const api = {
       { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
     ),
   deleteAlgo: (id: number) => send<undefined>("DELETE", `algos/${String(id)}`),
+  algoSettings: () => request<AlgoSettings[]>("algo-settings"),
+  saveAlgoSettings: (algoName: string, body: AlgoSettingsInput) =>
+    send<AlgoSettings>("PUT", `algo-settings/${encodeURIComponent(algoName)}`, body),
   /** Reads a parameter file for an algo; the server stores nothing. */
   parseParameterFile: (algoId: number, file: File) =>
     request<ParameterFile>(`algos/${String(algoId)}/parameter-file`, {
@@ -195,6 +200,7 @@ export const api = {
     request<ParameterTemplate[]>(
       `parameter-templates${algoName === undefined ? "" : `?algo=${encodeURIComponent(algoName)}`}`,
     ),
+  parameterTemplate: (id: number) => request<ParameterTemplate>(`parameter-templates/${String(id)}`),
   createParameterTemplate: (body: ParameterTemplateInput) => post<ParameterTemplate>("parameter-templates", body),
   updateParameterTemplate: (id: number, body: ParameterTemplateUpdate) =>
     send<ParameterTemplate>("PATCH", `parameter-templates/${String(id)}`, body),

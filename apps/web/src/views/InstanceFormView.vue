@@ -2,6 +2,7 @@
 import type {
   Account,
   Algo,
+  AlgoSettings,
   AttributionMode,
   InstanceConfig,
   InstanceConfigInput,
@@ -17,9 +18,11 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { api, ApiError, errorKey } from "../api";
+import ConfirmDialog from "../components/ConfirmDialog.vue";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
+import { useAccountSizeWarning } from "../composables/useAccountSizeWarning";
 import { accountLabel, formatDateTime } from "../format";
 import { parameterTitle } from "../parameter-label";
 import { system } from "../system";
@@ -108,6 +111,23 @@ const missing = computed(
         .map((i) => i.parameter),
     ),
 );
+/** The account size the algo calculates with, against the account's; a warning, saving needs a confirmation. */
+const settings = ref<AlgoSettings[]>([]);
+const sizeCheck = computed(() => {
+  const parameter = settings.value.find((s) => s.algoName === algo.value?.name)?.accountSizeParameter;
+  const reference = accounts.value.find((a) => a.id === accountId.value)?.accountSize;
+  return parameter && reference ? { parameter, reference } : undefined;
+});
+const { text: sizeWarning, warnings } = useAccountSizeWarning({
+  check: () => sizeCheck.value,
+  values: () => values.value,
+  schema: () => schema.value,
+});
+const confirmingSize = ref(false);
+function saveDespiteSize() {
+  confirmingSize.value = false;
+  void save(true);
+}
 const formats = computed(() => system.value?.parameterFormats ?? []);
 /** The file extensions, e.g. ".cbotset". */
 const extensions = computed(() => formats.value.map((f) => `.${f}`));
@@ -267,13 +287,15 @@ const changeCount = computed(() => {
 
 onMounted(async () => {
   try {
-    const [algoRows, accountRows, detail] = await Promise.all([
+    const [algoRows, accountRows, settingRows, detail] = await Promise.all([
       api.algos(),
       api.accounts(),
+      api.algoSettings(),
       source.value ? api.managedInstance(source.value) : Promise.resolve(undefined),
     ]);
     algos.value = algoRows;
     accounts.value = accountRows;
+    settings.value = settingRows;
     if (detail) {
       const wanted = Number(route.query["version"]);
       apply(detail.history.find((h) => h.version === wanted) ?? detail.config);
@@ -298,7 +320,7 @@ onMounted(async () => {
   }
 });
 
-async function save() {
+async function save(sizeConfirmed = false) {
   sent.value = true;
   const fieldsOk = form.validate();
   if (!fieldsOk || shownIssues.value.size) {
@@ -308,6 +330,10 @@ async function save() {
     return;
   }
   if (algoId.value === undefined || accountId.value === undefined) return;
+  if (sizeWarning.value && !sizeConfirmed) {
+    confirmingSize.value = true;
+    return;
+  }
   symbol.value = canonical(symbol.value.trim(), symbols.value);
   period.value = canonical(period.value.trim(), periods.value);
   busy.value = true;
@@ -367,7 +393,7 @@ const algoLabel = (a: Algo) =>
     <h1>{{ editing ? $t("instanceForm.editTitle", { name: editing }) : $t("instanceForm.newTitle") }}</h1>
     <AppSpinner v-if="loading" />
 
-    <form v-else class="form" novalidate @submit.prevent="save">
+    <form v-else class="form" novalidate @submit.prevent="save()">
       <p v-if="!algos.length" class="tone-warning" role="alert">
         {{ $t("instanceForm.noAlgos") }} <RouterLink to="/algos">{{ $t("nav.algos") }}</RouterLink>
       </p>
@@ -514,6 +540,7 @@ const algoLabel = (a: Algo) =>
           mode="edit"
           :schema="schema"
           :issues="shownIssues"
+          :warnings="warnings"
           :missing="missing"
           symbols-list="symbols-list"
           periods-list="periods-list"
@@ -582,6 +609,14 @@ const algoLabel = (a: Algo) =>
         </span>
       </div>
     </form>
+    <ConfirmDialog
+      :open="confirmingSize"
+      :title="$t('accountSize.confirmTitle')"
+      :message="sizeWarning ?? ''"
+      :confirm-label="$t('accountSize.confirm')"
+      @confirm="saveDespiteSize"
+      @cancel="confirmingSize = false"
+    />
   </div>
 </template>
 
@@ -589,10 +624,6 @@ const algoLabel = (a: Algo) =>
 h1,
 p {
   margin: 0;
-}
-
-.back {
-  font-size: var(--ww-size-sm);
 }
 
 .form,
@@ -701,19 +732,6 @@ p {
 /* Long hints only while the field is being filled in; errors always show. */
 .field:not(:focus-within) > .hint--focus {
   display: none;
-}
-
-.savebar {
-  position: sticky;
-  bottom: var(--ww-space-4);
-  z-index: 5;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ww-space-3);
-  align-items: center;
-  padding: var(--ww-space-3) var(--ww-space-5);
-  border-color: var(--ww-border-strong);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--ww-bg) 70%, transparent);
 }
 
 .savebar__count {

@@ -29,6 +29,7 @@ import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
 import { audit, auditOutcome } from "../services/audit";
+import { accountSizeCheck } from "../services/account-size";
 import {
   canonicalParameters,
   decryptParameters,
@@ -315,7 +316,12 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         .where("instance_configs.instance_id", "=", instance.id)
         .orderBy("instance_configs.version", "desc")
         .execute();
-      const detail = { ...instance, history: history.map((c) => toConfig(c, cipher)) };
+      const check = await accountSizeCheck(db, instance.config.algo.name, instance.account.id);
+      const detail = {
+        ...instance,
+        history: history.map((c) => toConfig(c, cipher)),
+        ...(check ? { accountSizeCheck: check } : {}),
+      };
       if (isAdmin(request)) return detail;
       return { ...detail, config: withoutParameters(detail.config), history: detail.history.map(withoutParameters) };
     },

@@ -278,11 +278,6 @@ async function remove() {
 <style scoped src="../styles/page-head.css"></style>
 
 <style scoped>
-.back {
-  align-self: flex-start;
-  font-size: var(--ww-size-sm);
-}
-
 h1 {
   word-break: break-all;
 }

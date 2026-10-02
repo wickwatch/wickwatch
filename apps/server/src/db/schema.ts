@@ -175,6 +175,15 @@ export interface ParameterTemplatesTable {
   updated_at: string;
 }
 
+/** Settings of an algo by its name, for all its versions. */
+export interface AlgoSettingsTable {
+  algo_name: string;
+  /** The parameter holding the account size the algo calculates with; checked against the account's. */
+  account_size_parameter: string | null;
+  updated_by: number | null;
+  updated_at: string;
+}
+
 /** An alert sent to ALERT_WEBHOOK_URL that has not been resolved yet. */
 export interface DailySummariesTable {
   /** YYYY-MM-DD in DAILY_SUMMARY_TIMEZONE. */
@@ -221,6 +230,7 @@ export interface Database {
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;
   parameter_templates: ParameterTemplatesTable;
+  algo_settings: AlgoSettingsTable;
   notified_alerts: NotifiedAlertsTable;
   daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;

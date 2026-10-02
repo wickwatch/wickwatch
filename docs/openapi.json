@@ -5026,6 +5026,34 @@
                       },
                       "hasChallenge": {
                         "type": "boolean"
+                      },
+                      "accountSize": {
+                        "type": "object",
+                        "required": [
+                          "value",
+                          "basis"
+                        ],
+                        "properties": {
+                          "value": {
+                            "type": "number"
+                          },
+                          "basis": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challengeStart"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "dayStart"
+                                ]
+                              }
+                            ]
+                          }
+                        }
                       }
                     }
                   }
@@ -5154,6 +5182,34 @@
                     },
                     "hasChallenge": {
                       "type": "boolean"
+                    },
+                    "accountSize": {
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "basis"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "number"
+                        },
+                        "basis": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "challengeStart"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "dayStart"
+                              ]
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 }
@@ -5385,6 +5441,34 @@
                     },
                     "hasChallenge": {
                       "type": "boolean"
+                    },
+                    "accountSize": {
+                      "type": "object",
+                      "required": [
+                        "value",
+                        "basis"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "number"
+                        },
+                        "basis": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "challengeStart"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "dayStart"
+                              ]
+                            }
+                          ]
+                        }
+                      }
                     }
                   }
                 }
@@ -8315,6 +8399,205 @@
         }
       }
     },
+    "/api/v1/algo-settings": {
+      "get": {
+        "summary": "Settings of the algos, by name; algos without any are left out",
+        "tags": [
+          "algos"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "algoName"
+                    ],
+                    "properties": {
+                      "algoName": {
+                        "type": "string"
+                      },
+                      "accountSizeParameter": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/algo-settings/{name}": {
+      "put": {
+        "summary": "Change the settings of an algo, for all its versions",
+        "tags": [
+          "algos"
+        ],
+        "description": "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "accountSizeParameter"
+                ],
+                "properties": {
+                  "accountSizeParameter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "algoName"
+                  ],
+                  "properties": {
+                    "algoName": {
+                      "type": "string"
+                    },
+                    "accountSizeParameter": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/parameter-templates": {
       "get": {
         "summary": "Parameter templates, by algo and name",
@@ -8768,6 +9051,173 @@
       }
     },
     "/api/v1/parameter-templates/{id}": {
+      "get": {
+        "summary": "One parameter template",
+        "tags": [
+          "algos"
+        ],
+        "description": "Values only for admins, as in the list.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "algoName",
+                    "name",
+                    "parameters",
+                    "count",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "algoName": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "instance",
+                            "version"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "instance"
+                              ]
+                            },
+                            "instance": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 63
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": 1
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "file"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "file"
+                              ]
+                            },
+                            "file": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "summary": "Rename a parameter template or replace its values",
         "tags": [
@@ -10884,6 +11334,46 @@
                             }
                           },
                           "description": "All versions, newest first"
+                        },
+                        "accountSizeCheck": {
+                          "type": "object",
+                          "required": [
+                            "parameter",
+                            "reference"
+                          ],
+                          "properties": {
+                            "parameter": {
+                              "type": "string"
+                            },
+                            "reference": {
+                              "type": "object",
+                              "required": [
+                                "value",
+                                "basis"
+                              ],
+                              "properties": {
+                                "value": {
+                                  "type": "number"
+                                },
+                                "basis": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "challengeStart"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "dayStart"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
                         }
                       }
                     }

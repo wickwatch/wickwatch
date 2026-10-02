@@ -122,3 +122,45 @@ describe("algos", () => {
     expect(row.metadata).toContain("RiskPercent");
   });
 });
+
+describe("algo settings", () => {
+  const settings = (method: "GET" | "PUT", name = "", payload?: object, cookie = admin) =>
+    t.app.inject({
+      method,
+      url: `/api/v1/algo-settings${name ? `/${encodeURIComponent(name)}` : ""}`,
+      headers: { cookie },
+      ...(payload ? { payload } : {}),
+    });
+
+  it("names the account size parameter of an algo, for all its versions, and audits it", async () => {
+    await upload("alpha.algo", "binary-v1");
+    expect((await settings("GET")).json()).toEqual([]);
+    const saved = await settings("PUT", "alpha", { accountSizeParameter: "StartingCapital" });
+    expect(saved.json()).toEqual({ algoName: "alpha", accountSizeParameter: "StartingCapital" });
+    expect((await settings("GET")).json()).toEqual([{ algoName: "alpha", accountSizeParameter: "StartingCapital" }]);
+
+    expect((await settings("PUT", "alpha", { accountSizeParameter: null })).json()).toEqual({ algoName: "alpha" });
+    expect((await settings("GET")).json()).toEqual([{ algoName: "alpha" }]);
+    const rows = await t.db
+      .selectFrom("audit_log")
+      .select(["user_id", "target", "details"])
+      .where("action", "=", "algo.settings")
+      .execute();
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      target: "alpha",
+      details: JSON.stringify({ accountSizeParameter: "StartingCapital" }),
+    });
+    expect(rows[0]?.user_id).not.toBeNull();
+  });
+
+  it("needs a known algo and an admin", async () => {
+    expect((await settings("PUT", "unknown", { accountSizeParameter: "X" })).json()).toEqual({
+      error: "algo_not_found",
+    });
+    await upload("alpha.algo", "binary-v1");
+    const viewer = await loginAs(t, "viewer");
+    expect((await settings("PUT", "alpha", { accountSizeParameter: "X" }, viewer)).statusCode).toBe(403);
+    expect((await settings("GET", "", undefined, viewer)).statusCode).toBe(200);
+  });
+});

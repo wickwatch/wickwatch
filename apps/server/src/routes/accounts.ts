@@ -7,6 +7,7 @@ import type { Db } from "../db";
 import { actor, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
+import { accountSizes } from "../services/account-size";
 import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
@@ -50,18 +51,23 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       .where("accounts.adapter", "=", adapters.broker.id)
       .orderBy("accounts.id");
     if (id !== undefined) query = query.where("accounts.id", "=", id);
-    return (await query.execute()).map((a) => ({
-      id: a.id,
-      adapter: a.adapter,
-      number: a.number,
-      broker: a.broker,
-      currency: a.currency,
-      displayName: a.display_name,
-      credentialId: a.credential_id,
-      credentialLabel: a.credential_label,
-      timezone: a.timezone,
-      hasChallenge: a.challenge_account !== null,
-    }));
+    const [rows, sizes] = await Promise.all([query.execute(), accountSizes(db)]);
+    return rows.map((a) => {
+      const accountSize = sizes.get(a.id);
+      return {
+        id: a.id,
+        adapter: a.adapter,
+        number: a.number,
+        broker: a.broker,
+        currency: a.currency,
+        displayName: a.display_name,
+        credentialId: a.credential_id,
+        credentialLabel: a.credential_label,
+        timezone: a.timezone,
+        hasChallenge: a.challenge_account !== null,
+        ...(accountSize ? { accountSize } : {}),
+      };
+    });
   }
 
   /** Whether the broker shows this account for the given stored login. */

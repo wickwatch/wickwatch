@@ -25,6 +25,8 @@ The account now appears as a card on the **Overview** and has its own page (clic
 
 Under **Algos → Upload algo**, choose the `.algo` file (e.g. exported from cTrader). wickwatch reads its parameters and stores it per version. The version comes from the form, the bot's `BotVersion` parameter or its build time. Old versions stay, so you can go back. An identical file is refused as a duplicate.
 
+**Account size check:** if the algo calculates its positions from an account size of its own (e.g. a "starting capital" parameter), open **Account size check** on its card (folded, its line shows what is set) and pick that parameter. wickwatch then compares the value with the account of each instance: the challenge's start balance, or for an account without a challenge its balance at the start of the trading day (recorded by wickwatch, so no extra broker query). When it is more than 25 % off (one zero too many makes every trade ten times as large), the instance form marks the field and asks before saving, **Apply template…** says so before saving the version, and the Configuration tab shows a warning until the value is fixed. The setting holds for all versions of the algo; a value of 0 is not checked, as bots often take the balance then.
+
 ## 4. Set up an instance
 
 An instance is one bot on one account, symbol and timeframe. **Overview → New instance**:
@@ -57,7 +59,7 @@ A template is a named set of parameter values of an algo, e.g. "Conservative" an
 
 - **Save as template…** on any version in the history saves its values under a name. Using the name of an existing template of the algo replaces that template's values.
 - **Apply template…** (Configuration tab, next to the current configuration) shows every value the template changes, as "current → template". Untick a value to keep the current one, e.g. a licence key that belongs to this account. Values that do not fit the current algo version (out of range, an unknown option) or that the algo does not know are listed and left out; parameters the template does not set keep their current value. **Save as version N** saves a new version with the comment "From template …"; apply it as usual (see above) to use it in the bot.
-- **Algos page:** each algo lists its templates with the number of values, where they came from and when they were changed. **Template from file…** makes one from a `.cbotset`; templates can be renamed and deleted there. Deleting a template changes no configuration saved from it.
+- **Algos page:** each algo lists its templates with the number of values, where they came from and when they were changed. **Template from file…** makes one from a `.cbotset`. **Edit** opens a template's name and values in the same parameter list as the instance form, with the parameters of the algo's newest version; a parameter the template does not set shows its default and is only added if you change it, and values that version no longer knows are kept. Templates are deleted there as well. Deleting a template changes no configuration saved from it.
 
 Like configurations, template values are encrypted on the server and visible to admins only, since they may hold licence keys. Saving, changing, deleting and applying a template is in the audit log.
 

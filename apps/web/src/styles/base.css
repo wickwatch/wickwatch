@@ -87,6 +87,26 @@ h2 {
   }
 }
 
+/* "← Back to …" above a page's title. */
+.back {
+  align-self: flex-start;
+  font-size: var(--ww-size-sm);
+}
+
+/* The save buttons of a long form; stays in view at the bottom, as parameter lists can be very long. */
+.savebar {
+  position: sticky;
+  bottom: var(--ww-space-4);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-3);
+  align-items: center;
+  padding: var(--ww-space-3) var(--ww-space-5);
+  border-color: var(--ww-border-strong);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ww-bg) 70%, transparent);
+}
+
 /*
  * The result of the last action on a page: `notice` takes its colour from a tone class, `status` is a success. Both
  * take no room while empty.

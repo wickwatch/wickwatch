@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTemplate, validateParameters, type ParameterSchema } from "../src";
+import { accountSizeMismatch, applyTemplate, validateParameters, type ParameterSchema } from "../src";
 
 const schema: ParameterSchema[] = [
   { name: "Risk", type: "double", min: 0.1, max: 2 },
@@ -87,5 +87,29 @@ describe("applyTemplate", () => {
     expect(result.rejected).toEqual([{ parameter: "Symbol", code: "required" }]);
     expect(result.values["Symbol"]).toBe("EURUSD");
     expect(applyTemplate(valid, { Symbol: "" }, schema).values["Symbol"]).toBe("");
+  });
+});
+
+describe("accountSizeMismatch", () => {
+  it("flags an account size far off the account's, e.g. one zero too many", () => {
+    expect(accountSizeMismatch({ Capital: 100_000 }, "Capital", 10_000)).toEqual({
+      parameter: "Capital",
+      value: 100_000,
+      reference: 10_000,
+    });
+    expect(accountSizeMismatch({ Capital: 5000 }, "Capital", 10_000)).toBeDefined();
+  });
+
+  it("accepts values within the tolerance, such as a balance after some losses", () => {
+    expect(accountSizeMismatch({ Capital: 10_000 }, "Capital", 9391.37)).toBeUndefined();
+    expect(accountSizeMismatch({ Capital: 12_500 }, "Capital", 10_000)).toBeUndefined();
+  });
+
+  it("checks nothing without a parameter, a reference or a positive number", () => {
+    expect(accountSizeMismatch({ Capital: 100_000 }, undefined, 10_000)).toBeUndefined();
+    expect(accountSizeMismatch({ Capital: 100_000 }, "Capital", undefined)).toBeUndefined();
+    expect(accountSizeMismatch({ Capital: 0 }, "Capital", 10_000)).toBeUndefined();
+    expect(accountSizeMismatch({ Capital: "100000" }, "Capital", 10_000)).toBeUndefined();
+    expect(accountSizeMismatch({}, "Capital", 10_000)).toBeUndefined();
   });
 });

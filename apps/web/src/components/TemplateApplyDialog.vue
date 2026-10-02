@@ -4,6 +4,7 @@ import { applyTemplate } from "@wickwatch/core/parameters";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, type ManagedInstanceDetail } from "../api";
+import { useAccountSizeWarning } from "../composables/useAccountSizeWarning";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { parameterTitle } from "../parameter-label";
 import { system } from "../system";
@@ -41,6 +42,16 @@ const result = computed(() =>
 );
 const taken = computed(() => result.value?.changed.filter((n) => !skipped.value.has(n)) ?? []);
 const nextVersion = computed(() => props.instance.config.version + 1);
+/** The values the new version would have, checked like the instance form does. */
+const next = computed<ParameterValues>(() => {
+  const values = result.value?.values ?? {};
+  return { ...current.value, ...Object.fromEntries(taken.value.map((n) => [n, values[n]])) };
+});
+const { text: accountSizeWarning } = useAccountSizeWarning({
+  check: () => props.instance.accountSizeCheck,
+  values: () => next.value,
+  schema: () => props.schema,
+});
 
 /** A fresh start for the chosen template: all its changes taken, its name as the comment. */
 function choose(id: number | undefined) {
@@ -80,11 +91,7 @@ function save() {
   if (!tpl || !values || algoId === null || !taken.value.length) return;
   // Only parameters this algo version knows, as the form does; the server refuses others.
   const known = new Set(props.schema.map((p) => p.name));
-  const parameters: ParameterValues = Object.fromEntries(
-    Object.entries({ ...current.value, ...Object.fromEntries(taken.value.map((n) => [n, values[n]])) }).filter(([k]) =>
-      known.has(k),
-    ),
-  );
+  const parameters: ParameterValues = Object.fromEntries(Object.entries(next.value).filter(([k]) => known.has(k)));
   void run(async () => {
     const saved = await api.saveInstanceConfig(props.instance.name, {
       algoId,
@@ -140,6 +147,7 @@ function save() {
               </label>
             </fieldset>
             <div role="status" class="notes">
+              <p v-if="accountSizeWarning" class="tone-warning notes__strong">{{ accountSizeWarning }}</p>
               <p v-if="rejected" class="tone-warning">{{ $t("templates.rejected", { names: rejected }) }}</p>
               <p v-if="result.unknown.length" class="tone-warning">
                 {{ $t("templates.unknown", { names: result.unknown.join(", ") }) }}
@@ -213,6 +221,10 @@ function save() {
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-1);
+}
+
+.notes__strong {
+  font-weight: 600;
 }
 
 .notes:empty {

@@ -9,6 +9,7 @@ import { system } from "../src/system";
 import AlgosView from "../src/views/AlgosView.vue";
 import InstanceFormView from "../src/views/InstanceFormView.vue";
 import InstanceView from "../src/views/InstanceView.vue";
+import TemplateEditView from "../src/views/TemplateEditView.vue";
 
 const algo: Algo = {
   id: 1,
@@ -68,6 +69,8 @@ const template = (id: number, name: string, parameters: Record<string, unknown>)
 // A rejected value (no such option), one the algo does not know, and UseFilter left out.
 const calm = template(5, "Calm", { RiskPercent: 0.3, EntryMode: "Turbo", Retired: 1 });
 const fast = template(6, "Fast", { RiskPercent: 1.5, UseFilter: false, EntryMode: "Breakout" });
+// Sets one parameter the algo knows and one it no longer does.
+const lean = template(7, "Lean", { RiskPercent: 0.3, Retired: 1 });
 
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -107,9 +110,11 @@ beforeEach(() => {
             ? ["GER40"]
             : path === "parameter-templates"
               ? [calm, fast]
-              : path.startsWith("managed-instances/")
-                ? detail
-                : [];
+              : path === "parameter-templates/7"
+                ? lean
+                : path.startsWith("managed-instances/")
+                  ? detail
+                  : [];
     return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -317,5 +322,45 @@ describe("templates on the Algos page", () => {
     });
     expect(wrapper.text()).toContain("Template From file saved with 1 values.");
     expect(wrapper.text()).toContain("1 value from the file did not fit the algo and was left out.");
+  });
+});
+
+describe("editing a template", () => {
+  it("opens from the Algos page", async () => {
+    const wrapper = await open(AlgosView, "/algos");
+    await wrapper.find('[aria-label="Edit: Calm"]').trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe("/algos/templates/5");
+  });
+
+  it("saves name and values; parameters it does not set stay out unless changed, unknown ones are kept", async () => {
+    const wrapper = await open(TemplateEditView, "/algos/templates/7");
+    expect(wrapper.text()).toContain("Edit template Lean");
+    expect(wrapper.text()).toContain("Kept as they are, the newest version does not know them: Retired");
+    expect((wrapper.find("#param-RiskPercent").element as HTMLInputElement).value).toBe("0.3");
+    // Not in the template: shown with the default.
+    expect((wrapper.find("#param-EntryMode").element as HTMLSelectElement).value).toBe("Breakout");
+
+    await wrapper.find("input.input").setValue(" Leaner ");
+    await wrapper.find("#param-RiskPercent").setValue("0.4");
+    await wrapper.find("#param-UseFilter").setValue(false);
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(sent("PATCH")).toEqual([
+      {
+        path: "parameter-templates/7",
+        body: { name: "Leaner", parameters: { Retired: 1, RiskPercent: 0.4, UseFilter: false } },
+      },
+    ]);
+    expect(router.currentRoute.value.name).toBe("algos");
+  });
+
+  it("does not save a value that does not fit", async () => {
+    const wrapper = await open(TemplateEditView, "/algos/templates/7");
+    await wrapper.find("#param-RiskPercent").setValue("5");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(sent("PATCH")).toEqual([]);
+    expect(wrapper.find(".param--invalid").exists()).toBe(true);
   });
 });
