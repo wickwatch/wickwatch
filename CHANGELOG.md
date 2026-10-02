@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.3.0 – 2026-10-02
+
 ### Added
 - Parameter templates: named parameter values of an algo, for every instance of it, on any account and timeframe. Save one from any configuration version ("Save as template…", the same name replaces it) or from a `.cbotset` on the Algos page, where templates are listed, renamed and deleted. "Apply template…" on the Configuration tab shows each value it changes, lets you keep current ones (e.g. an account's licence key), lists what does not fit the algo version, and saves the rest as a new version; the instance form loads a template like a parameter file. Values are encrypted at rest and visible to admins only; saving, changing, deleting and applying are audit-logged (`parameter_template.*`, the template's name in `instance.config`). API: `/api/v1/parameter-templates`.
 
