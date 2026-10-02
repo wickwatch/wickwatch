@@ -110,6 +110,9 @@ describe("CtraderCliBroker", () => {
     expect(hours.sessions[0]).toEqual({ start: 22 * 3600 + 300, end: 86400 + 20 * 3600 + 3000 });
     expect(hours.sessions).toHaveLength(5);
     expect(await broker.marketHours(c, "1111111", "BTCUSD")).toEqual({ alwaysOpen: true, sessions: [] });
+    // The Trading Pit names Istanbul time (UTC+3 all year): Mon 01:05–23:58 there is Sun 22:05 – Mon 20:58 UTC.
+    const ttp = await broker.marketHours(c, "1111111", "US30");
+    expect(ttp.sessions[0]).toEqual({ start: 22 * 3600 + 300, end: 86400 + 20 * 3600 + 3480 });
     await expect(broker.marketHours(c, "1111111", "NOPE")).rejects.toThrow();
     await expect(broker.marketHours(c, "1111111", "US30 yes")).rejects.toMatchObject({ code: "invalid_input" });
   });

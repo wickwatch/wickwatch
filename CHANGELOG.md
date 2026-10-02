@@ -4,6 +4,14 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Overview: at most three account cards side by side, so they stay wide enough to read.
+- The challenge on an account card stays folded, also on a warning; the badge in its head ("Near limit", "Breached") says so, and all cards keep the same height.
+
+### Fixed
+- Market badge: a click or tap opened the hours inside the table cell and pushed the rows apart; it now pins the tooltip open (a click elsewhere, Escape or scrolling closes it). Hours over midnight (e.g. forex) read as the trading week and its daily break ("Sun 23:00 – Fri 22:29", "Daily break 22:29–23:00") instead of "Sun–Thu 23:00 – 22:29 next day". Tooltip text is left-aligned. The server time in the header pins its tooltip on a tap the same way; on a phone it had no way to show it.
+- Market hours of The Trading Pit stayed unknown: its sessions come in "Turkey Standard Time", which the cTrader adapter did not map. It now knows that and the other common broker time zones.
+
 ## 0.4.0 – 2026-10-02
 
 ### Added

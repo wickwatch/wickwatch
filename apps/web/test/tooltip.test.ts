@@ -88,3 +88,50 @@ describe("placeTooltips inside an element that clips", () => {
     expect(inDialog.dataset["tooltipFixed"]).toBeUndefined();
   });
 });
+
+describe("pinned tooltips", () => {
+  const pinnable = () => {
+    const el = tip(900);
+    el.dataset["tooltipPin"] = "";
+    return el;
+  };
+  const click = (el: Element) => el.dispatchEvent(new Event("click", { bubbles: true }));
+  const pointerdown = (el: Element) => el.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+
+  it("pins on a click, as touch has no hover, and unpins on a second click", () => {
+    vi.spyOn(window, "getComputedStyle").mockReturnValue({ width: "80px", height: "28px" } as CSSStyleDeclaration);
+    const badge = pinnable();
+    click(badge);
+    expect(badge.dataset["tooltipPinned"]).toBe("");
+    pointerdown(badge);
+    click(badge);
+    expect(badge.dataset["tooltipPinned"]).toBeUndefined();
+  });
+
+  it("keeps one pinned at a time and closes it with a click elsewhere, Escape or scrolling", () => {
+    vi.spyOn(window, "getComputedStyle").mockReturnValue({ width: "80px", height: "28px" } as CSSStyleDeclaration);
+    const first = pinnable();
+    const second = pinnable();
+    click(first);
+    pointerdown(second);
+    click(second);
+    expect(first.dataset["tooltipPinned"]).toBeUndefined();
+    expect(second.dataset["tooltipPinned"]).toBe("");
+
+    pointerdown(document.body);
+    expect(second.dataset["tooltipPinned"]).toBeUndefined();
+    click(second);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(second.dataset["tooltipPinned"]).toBeUndefined();
+    click(second);
+    document.dispatchEvent(new Event("scroll"));
+    expect(second.dataset["tooltipPinned"]).toBeUndefined();
+  });
+
+  it("leaves tooltips without data-tooltip-pin to hover and focus", () => {
+    vi.spyOn(window, "getComputedStyle").mockReturnValue({ width: "80px", height: "28px" } as CSSStyleDeclaration);
+    const plain = tip(900);
+    click(plain);
+    expect(plain.dataset["tooltipPinned"]).toBeUndefined();
+  });
+});

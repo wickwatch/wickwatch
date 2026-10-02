@@ -44,6 +44,21 @@ describe("ChallengeRules", () => {
     expect(render(challenge({ status: "passed" })).text()).toContain("Goals reached");
   });
 
+  it("stays folded on an account card, also near a limit: the badge in its head says so", async () => {
+    const wrapper = mount(ChallengeRules, {
+      props: { challenge: challenge({ status: "warning" }), collapsible: true },
+      global: { plugins: [i18n] },
+    });
+    const toggle = wrapper.find("[aria-expanded]");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+    expect(wrapper.find(".challenge__rules--closed").exists()).toBe(true);
+    expect(wrapper.find(".pill").text()).toBe("Near limit");
+    await wrapper.setProps({ challenge: challenge({ status: "breached" }) });
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+    await toggle.trigger("click");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
+  });
+
   it("formats percent values per locale", () => {
     expect(formatPercentValue("en", 4.2)).toBe("4.2%");
     expect(formatPercentValue("de", 4.2)).toBe("4,2 %");

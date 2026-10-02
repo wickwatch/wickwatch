@@ -5,7 +5,9 @@ import IconButton from "./IconButton.vue";
 
 /**
  * A parameter's name with its property name below. A description written into the label ("Name - long text") moves
- * behind an info button: tooltip on hover, and a click or tap shows it below the name (touch has no hover).
+ * behind an info button: tooltip on hover, and a click or tap shows it below the name (touch has no hover). Unlike the
+ * pinned tooltips of tables (`data-tooltip-pin`), it opens in place: a description is text to read next to its field,
+ * and a form row has the room.
  * `forId` makes the name the label of that input.
  */
 const props = defineProps<{ label: string; detail?: string | undefined; forId?: string | undefined }>();

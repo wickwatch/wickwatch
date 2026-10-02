@@ -75,21 +75,37 @@ export function toSymbols(data: unknown): string[] {
 }
 
 /**
- * Windows time zone ids the CLI names its sessions in, as IANA zones. Only zones of brokers seen so far; another one
- * leaves the market hours unknown instead of guessed. An IANA name is taken as it is.
+ * Windows time zone ids the CLI names its sessions in, as IANA zones (after the CLDR table): the zones of brokers seen so
+ * far and the common broker zones; another one leaves the market hours unknown instead of guessed. An IANA name is
+ * taken as it is.
  */
 const WINDOWS_ZONES: Record<string, string> = {
   UTC: "UTC",
-  "Russian Standard Time": "Europe/Moscow",
+  "Greenwich Standard Time": "Atlantic/Reykjavik",
   "GMT Standard Time": "Europe/London",
   "W. Europe Standard Time": "Europe/Berlin",
   "Central Europe Standard Time": "Europe/Budapest",
+  "Central European Standard Time": "Europe/Warsaw",
   "Romance Standard Time": "Europe/Paris",
   "GTB Standard Time": "Europe/Bucharest",
   "E. Europe Standard Time": "Europe/Chisinau",
   "FLE Standard Time": "Europe/Kiev",
   "Israel Standard Time": "Asia/Jerusalem",
+  "South Africa Standard Time": "Africa/Johannesburg",
+  "Russian Standard Time": "Europe/Moscow",
+  // The Trading Pit.
+  "Turkey Standard Time": "Europe/Istanbul",
+  "Arab Standard Time": "Asia/Riyadh",
+  "Arabian Standard Time": "Asia/Dubai",
+  "India Standard Time": "Asia/Kolkata",
+  "Singapore Standard Time": "Asia/Singapore",
+  "China Standard Time": "Asia/Shanghai",
+  "Tokyo Standard Time": "Asia/Tokyo",
+  "AUS Eastern Standard Time": "Australia/Sydney",
+  "New Zealand Standard Time": "Pacific/Auckland",
   "Eastern Standard Time": "America/New_York",
+  "Central Standard Time": "America/Chicago",
+  "Pacific Standard Time": "America/Los_Angeles",
 };
 
 function ianaZone(name: string): string | undefined {

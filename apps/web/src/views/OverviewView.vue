@@ -240,9 +240,10 @@ const instanceLabel = computed(() => `${system.value?.labelPrefix ?? DEFAULT_LAB
   font-size: var(--ww-size-xs);
 }
 
+/* At most three accounts side by side: each card takes at least a third of the row (and 340 px, or the whole width). */
 .accounts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(max(min(340px, 100%), calc((100% - 2 * var(--ww-space-5)) / 3)), 1fr));
   gap: var(--ww-space-5);
 }
 

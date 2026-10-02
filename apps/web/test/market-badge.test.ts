@@ -17,7 +17,7 @@ const us30: MarketHours = {
 };
 const render = (hours: MarketHours, iso: string) =>
   mount(MarketBadge, { props: { hours, now: Date.parse(iso) }, global: { plugins: [i18n] } });
-const detail = (wrapper: ReturnType<typeof render>) => wrapper.find(".market__detail").text();
+const detail = (wrapper: ReturnType<typeof render>) => wrapper.find(".visually-hidden").text();
 
 beforeEach(() => {
   setLocale("en", false);
@@ -58,8 +58,8 @@ describe("MarketBadge", () => {
     expect(detail(wrapper)).toContain("Opens Mon 12:05 AM");
   });
 
-  it("marks hours that run past midnight", () => {
-    // EURUSD: Sun 23:05 – Mon 22:55 in Berlin summer time.
+  it("shows hours over midnight as the trading week and its daily break", () => {
+    // EURUSD: Sun 23:05 – Mon 22:55 in Berlin summer time, and so on to Friday.
     const eurusd: MarketHours = {
       alwaysOpen: false,
       sessions: [0, 1, 2, 3, 4].map((d) => ({
@@ -67,18 +67,21 @@ describe("MarketBadge", () => {
         end: (d + 1) * DAY + 20 * HOUR + 3300,
       })),
     };
-    expect(detail(render(eurusd, "2026-10-01T12:00:00Z"))).toContain("Sun–Thu 11:05 PM – 10:55 PM next day");
+    expect(detail(render(eurusd, "2026-10-01T12:00:00Z")).split("\n").slice(1, 3)).toEqual([
+      "Sun 11:05 PM – Fri 10:55 PM",
+      "Daily break 10:55 PM–11:05 PM",
+    ]);
   });
 
-  it("shows the hours on a click as well, as touch has no hover", async () => {
+  it("pins its tooltip on a click, as touch has no hover, and describes the badge for screen readers", () => {
     const wrapper = render({ alwaysOpen: true, sessions: [] }, "2026-10-03T12:00:00Z");
-    expect(wrapper.find(".pill").text()).toBe("Market open");
     const button = wrapper.find("button");
+    expect(button.text()).toBe("Market open");
     expect(button.attributes("data-tooltip")).toBe("Open around the clock, by the broker's schedule.");
-    expect(wrapper.find(".market__detail").attributes("style")).toContain("display: none");
-    await button.trigger("click");
-    expect(button.attributes("aria-expanded")).toBe("true");
-    expect(wrapper.find(".market__detail").attributes("style") ?? "").not.toContain("display: none");
+    expect(button.attributes()).toHaveProperty("data-tooltip-pin");
+    expect(wrapper.find(`#${String(button.attributes("aria-describedby"))}`).text()).toBe(
+      "Open around the clock, by the broker's schedule.",
+    );
   });
 });
 

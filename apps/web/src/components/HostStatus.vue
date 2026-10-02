@@ -57,7 +57,15 @@ const clock = computed(() => {
     </li>
     <li>{{ $t("host.disk", { value: formatPercent(locale, data.diskUsed / data.diskTotal) }) }}</li>
     <!-- Focusable, so the tooltip also opens from the keyboard. -->
-    <li v-if="clock" class="clock" :class="clock.tone" :data-tooltip="clock.text" data-tooltip-wrap tabindex="0">
+    <li
+      v-if="clock"
+      class="clock"
+      :class="clock.tone"
+      :data-tooltip="clock.text"
+      data-tooltip-wrap
+      data-tooltip-pin
+      tabindex="0"
+    >
       <AppIcon :name="clock.icon" :size="16" />
       <span class="visually-hidden">{{ clock.text }}</span>
     </li>

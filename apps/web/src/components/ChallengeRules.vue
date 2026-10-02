@@ -1,23 +1,18 @@
 <script setup lang="ts">
-import type { ChallengeEvaluation, ChallengeStatus, RuleResult, RuleStatus } from "@wickwatch/core";
-import { ref, useId, watch } from "vue";
+import type { ChallengeEvaluation, RuleResult, RuleStatus } from "@wickwatch/core";
+import { ref, useId } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatPercentValue } from "../format";
 import AppIcon from "./AppIcon.vue";
 
-/** collapsible: the rules fold away behind the head (account cards); they open by themselves on a warning or breach. */
+/**
+ * collapsible: the rules fold away behind the head (account cards), always closed at first; a warning or breach shows as
+ * the badge in the head, so the cards keep the same height.
+ */
 const props = defineProps<{ challenge: ChallengeEvaluation; collapsible?: boolean }>();
 const { t, locale } = useI18n();
 const id = useId();
-
-const needsAttention = (status: ChallengeStatus) => status === "warning" || status === "breached";
-const open = ref(!props.collapsible || needsAttention(props.challenge.status));
-watch(
-  () => props.challenge.status,
-  (status) => {
-    if (needsAttention(status)) open.value = true;
-  },
-);
+const open = ref(!props.collapsible);
 
 const TONES: Record<RuleStatus, string> = {
   ok: "positive",

@@ -308,20 +308,23 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     );
   else if (cmd === "sessions" && rest[0] === "BTCUSD")
     json({ symbolName: "BTCUSD", timeZone: "Russian Standard Time", marketIsAlwaysOpen: true, sessions: [] });
-  else if (cmd === "sessions" && rest[0] === "US30.cash")
-    // As recorded at FTMO (5.9.11): Mon–Fri 01:05–23:50 Moscow time, seconds from Sunday 00:00 there.
+  else if (cmd === "sessions" && (rest[0] === "US30.cash" || rest[0] === "US30")) {
+    // As recorded on 2026-10-02 (5.9.11), seconds from Sunday 00:00 in the zone: FTMO's US30.cash Mon–Fri 01:05–23:50
+    // Moscow time, The Trading Pit's US30 Mon–Fri 01:05–23:58 Istanbul time.
+    const ttp = rest[0] === "US30";
+    const end = ttp ? "23:58" : "23:50";
     json({
-      symbolName: "US30.cash",
-      timeZone: "Russian Standard Time",
+      symbolName: rest[0],
+      timeZone: ttp ? "Turkey Standard Time" : "Russian Standard Time",
       marketIsAlwaysOpen: false,
       sessions: [1, 2, 3, 4, 5].map((d) => ({
         start: `${["Mon", "Tue", "Wed", "Thu", "Fri"][d - 1]} 01:05:00`,
-        end: `${["Mon", "Tue", "Wed", "Thu", "Fri"][d - 1]} 23:50:00`,
+        end: `${["Mon", "Tue", "Wed", "Thu", "Fri"][d - 1]} ${end}:00`,
         startSecond: d * 86400 + 3900,
-        endSecond: d * 86400 + 85800,
+        endSecond: d * 86400 + (ttp ? 86280 : 85800),
       })),
     });
-  else if (cmd === "symbol" || cmd === "sessions") out(`Error: Symbol not found: ${rest[0]}\n`);
+  } else if (cmd === "symbol" || cmd === "sessions") out(`Error: Symbol not found: ${rest[0]}\n`);
   else out(`Error: Unknown command: ${cmd}\n`);
   out("\n> ");
 });

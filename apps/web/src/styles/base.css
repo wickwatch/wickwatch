@@ -189,6 +189,7 @@ p[role="alert"] {
 [data-tooltip-wrap]::after {
   width: max-content;
   max-width: min(360px, 80vw);
+  text-align: left;
   white-space: pre-line;
 }
 
@@ -202,7 +203,8 @@ p[role="alert"] {
 }
 
 [data-tooltip]:hover::after,
-[data-tooltip]:focus-visible::after {
+[data-tooltip]:focus-visible::after,
+[data-tooltip][data-tooltip-pinned]::after {
   opacity: 1;
   visibility: visible;
 }

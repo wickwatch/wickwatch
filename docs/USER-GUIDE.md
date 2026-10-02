@@ -67,7 +67,7 @@ Like configurations, template values are encrypted on the server and visible to 
 
 ## 6. Watch an instance
 
-The instance tables (overview, account page) have a **Market** column: **Open**, **Closing soon** (the last 30 minutes) or **Closed** for the symbol of each instance; on the instance page the same badge stands next to the status ("Market open"). Hovering the badge, or tapping it, lists the trading hours in your local time and when the market opens or closes next, e.g. "Mon–Fri 00:05–22:50". The hours are the broker's weekly schedule, fetched once a day; holidays are not in it. So "Running" with "Closed" explains a bot that does not trade.
+The instance tables (overview, account page) have a **Market** column: **Open**, **Closing soon** (the last 30 minutes) or **Closed** for the symbol of each instance; on the instance page the same badge stands next to the status ("Market open"). Hovering the badge, or tapping it, lists the trading hours in your local time and when the market opens or closes next, e.g. "Mon–Fri 00:05–22:50", or for markets that trade over midnight the trading week and its daily break ("Sun 23:00 – Fri 22:29", "Daily break 22:29–23:00"). The hours are the broker's weekly schedule, fetched once a day; holidays are not in it. So "Running" with "Closed" explains a bot that does not trade.
 
 The **Overview** tab of an instance shows:
 
@@ -89,7 +89,7 @@ On the account page: **Add challenge profile**.
 3. **Rules:** profit target, daily loss (measured from the balance, the equity or the higher of both at the day start; the reset time and time zone come from the firm), max drawdown (static, trailing on the highest equity, or trailing on the end-of-day balance), minimum trading days, duration. Leave a field empty if the rule does not apply.
 4. **Protection (optional):** stop the account automatically when the daily or max loss limit is used up to a share you choose, e.g. 80 %. See below.
 
-The account card and page then show each rule with a bar and its state: in words, not only in colour ("50 % of the limit used", "Reached", "Limit breached"). On the card the rules fold away behind the challenge's head and open by themselves when a limit needs attention.
+The account card and page then show each rule with a bar and its state: in words, not only in colour ("50 % of the limit used", "Reached", "Limit breached"). On the card the rules fold away behind the challenge's head; a limit that needs attention shows as a badge there ("Near limit", "Breached").
 
 **Trading days** count the days on which a position was opened, as prop firms do. After you save a profile, wickwatch loads the days since the start date; until then the count says "loading …".
 
