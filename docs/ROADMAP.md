@@ -3,7 +3,7 @@
 wickwatch is built in phases. Order and scope may change; issues and pull requests are welcome.
 
 ## Phase 1 – MVP
-Status: largely done; open items are unchecked.
+Status: built; in trial operation.
 
 - [x] **Overview:** instance table (account, symbol, timeframe, status, uptime, open positions, today's P&L, last log line), account tiles (balance, equity, today's P&L, open positions and pending orders), alerts for stopped instances and unreachable accounts (e.g. login failures). Mobile-friendly, including the emergency stop.
 - [x] **Instance actions:** start, stop, restart, edit, duplicate, delete.
