@@ -9,6 +9,7 @@ import {
   CtraderCliBroker,
   DEFAULT_CTRADER_IMAGE,
   extractJson,
+  localRunner,
   redactStartupTable,
   toLogEvent,
 } from "../src";
@@ -319,6 +320,54 @@ describe("CtraderCliBroker", () => {
     await broker.stats(c, "1111111");
     await broker.dispose();
     expect(await broker.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
+  });
+
+  it("lists an account that became active after a session logged in", async () => {
+    await broker.stats(c, "1111111");
+    process.env["FAKE_CTRADER_ALSO_ACTIVE"] = "5555555";
+    try {
+      expect((await broker.accounts(c)).find((a) => a.number === "5555555")).toMatchObject({ active: true });
+    } finally {
+      delete process.env["FAKE_CTRADER_ALSO_ACTIVE"];
+    }
+  });
+
+  it("replaces a session that stopped answering even if its end is never reported", async () => {
+    // As with a tool container killed from outside while a proxy had dropped the wait for its exit.
+    const local = localRunner(process.execPath, [FAKE]);
+    const tools: { muted: boolean; kill: () => void }[] = [];
+    const hanging = new CtraderCliBroker({
+      runner: {
+        async start(args, files) {
+          const tool = await local.start(args, files);
+          const state = {
+            muted: false,
+            kill: () => {
+              tool.kill();
+            },
+          };
+          tools.push(state);
+          return {
+            ...tool,
+            onOutput: (listener) => {
+              tool.onOutput((text) => {
+                if (!state.muted) listener(text);
+              });
+            },
+            exit: new Promise<number | null>(() => undefined),
+          };
+        },
+      },
+      commandTimeoutMs: 300,
+      priceRetryMs: 10,
+      connectTimeoutMs: 5000,
+    });
+    expect(await hanging.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
+    tools[0]!.muted = true;
+    await expect(hanging.stats(c, "1111111")).rejects.toMatchObject({ code: "timeout" });
+    expect(await hanging.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
+    expect(tools).toHaveLength(2);
+    for (const tool of tools) tool.kill();
   });
 });
 

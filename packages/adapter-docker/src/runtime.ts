@@ -45,6 +45,8 @@ export interface DockerRuntimeOptions {
 const CONTAINER_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
 
 const MAX_TAIL = 1000;
+/** How long the exit code of a tool may lag behind the end of its output, and the other way round. */
+const TOOL_END_GRACE_MS = 1000;
 /** Exit codes after SIGINT, SIGKILL, SIGTERM: a deliberate stop, not a crash. */
 const STOP_EXIT_CODES = new Set([130, 137, 143]);
 
@@ -237,13 +239,28 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
         else early.push(text);
       }
     })().catch(() => undefined);
-    const exit = exited.then(
-      async (code) => {
-        await drained;
-        return code;
-      },
-      () => null,
-    );
+    // Either the exit code or the end of the output ends the tool: behind a proxy that drops idle
+    // connections (docker-socket-proxy after 10 minutes) the wait for the exit is lost without an error.
+    const exit = (async () => {
+      const exitedFirst = await Promise.race([
+        exited.then(
+          (code) => ({ code }),
+          () => ({ code: undefined }),
+        ),
+        drained.then(() => undefined),
+      ]);
+      let code: number | undefined;
+      if (exitedFirst) {
+        await settle(drained, TOOL_END_GRACE_MS);
+        code = exitedFirst.code;
+      } else {
+        code = await settle(exited, TOOL_END_GRACE_MS);
+      }
+      if (code !== undefined) return code;
+      // Without an exit code the tool may still run (e.g. only the connection broke): it is ended to be sure.
+      await handle.kill().catch(() => undefined);
+      return null;
+    })();
     return {
       write: (text) => void stream.write(text),
       onOutput: (listener) => {
@@ -427,4 +444,21 @@ export function mapError(error: unknown): AdapterError {
   if (code === "ETIMEDOUT" || code === "ESOCKETTIMEDOUT") return new AdapterError("timeout", message, { cause: error });
   // 403 comes from docker-socket-proxy when an endpoint is not enabled.
   return new AdapterError("unavailable", message, { cause: error });
+}
+
+/** The value of `promise`, or undefined if it fails or takes longer than `ms`. */
+async function settle<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.catch(() => undefined),
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => {
+          resolve(undefined);
+        }, ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }

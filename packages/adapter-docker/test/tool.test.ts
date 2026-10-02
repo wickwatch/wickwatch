@@ -60,6 +60,23 @@ describe("runTool", () => {
     expect(names[2]).toMatch(/^ww-odd-name-[0-9a-f]{6}$/);
   });
 
+  it("ends a tool killed from outside when the wait for its exit was lost", async () => {
+    const { docker, adapter } = setup();
+    docker.lostWaits = true;
+    const tool = await adapter.runTool(spec);
+    toolOf(docker)?.tool?.exit(137);
+    expect(await tool.exit).toBeNull();
+  });
+
+  it("kills a tool whose output ended without an exit code, so it cannot run on unseen", async () => {
+    const { docker, adapter } = setup();
+    docker.lostWaits = true;
+    const tool = await adapter.runTool(spec);
+    toolOf(docker)?.tool?.output.end();
+    expect(await tool.exit).toBeNull();
+    expect(toolOf(docker)).toBeUndefined();
+  });
+
   it("never lists tools as instances", async () => {
     const { adapter } = setup();
     await adapter.runTool(spec);
