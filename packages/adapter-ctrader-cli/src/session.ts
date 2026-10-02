@@ -3,6 +3,26 @@ import { AdapterError, type Credentials, type ToolProcess } from "@wickwatch/cor
 import { cliError, passwordFile, runnerOf, type CliOptions } from "./cli";
 
 const PROMPT = "> ";
+/** How long `q`, and then a kill, may take to end the process. */
+const QUIT_MS = 5000;
+
+/** Whether `promise` settles within `ms`. */
+async function within(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const settled = await Promise.race([
+    promise.then(
+      () => true,
+      () => true,
+    ),
+    new Promise<false>((resolve) => {
+      timer = setTimeout(() => {
+        resolve(false);
+      }, ms);
+    }),
+  ]);
+  clearTimeout(timer);
+  return settled;
+}
 
 /**
  * One long-running interactive CLI shell for one account. Commands go in via stdin and run one
@@ -25,6 +45,8 @@ export class CliSession {
     private readonly credentials: Credentials,
     private readonly account: string,
     private readonly onIdle: () => void,
+    /** Off for a session that runs one command that needs no warm history, e.g. `accounts`. */
+    private readonly warmUp = true,
   ) {}
 
   async start(): Promise<void> {
@@ -54,7 +76,7 @@ export class CliSession {
     }
     this.buffer = "";
     // The first history query of a session comes back empty; this one is thrown away.
-    await this.run("orders-history 1").catch(() => undefined);
+    if (this.warmUp) await this.run("orders-history 1").catch(() => undefined);
     this.touch();
   }
 
@@ -69,24 +91,18 @@ export class CliSession {
     if (this.closed) return;
     this.closed = true;
     clearTimeout(this.idleTimer);
-    if (this.child && !this.dead) {
-      const child = this.child;
-      child.write("q\n");
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      await Promise.race([
-        child.exit,
-        new Promise<void>((resolve) => {
-          timer = setTimeout(() => {
-            child.kill();
-            resolve();
-          }, 5000);
-        }),
-      ]);
-      clearTimeout(timer);
-      // The temporary password file goes away with the process.
-      await child.exit;
-    }
+    const ended = this.dead;
+    // At once, so the pool replaces the session even if the end of the process is never reported
+    // (e.g. a tool container killed from outside behind a proxy that dropped the wait).
     this.dead = true;
+    if (!this.child || ended) return;
+    const child = this.child;
+    child.write("q\n");
+    if (!(await within(child.exit, QUIT_MS))) {
+      child.kill();
+      // The temporary password file goes away with the process.
+      await within(child.exit, QUIT_MS);
+    }
   }
 
   private async exec(command: string): Promise<string> {

@@ -129,6 +129,8 @@ export class FakeDocker implements DockerClient {
   }
 
   private readonly toolEnds = new Map<string, Promise<number>>();
+  /** Waits for a tool's exit never answer, as when a proxy dropped the idle connection. */
+  lostWaits = false;
 
   add(container: FakeContainer): this {
     this.containers.set(container.details.Name.slice(1), container);
@@ -208,6 +210,7 @@ export class FakeDocker implements DockerClient {
           return duplex;
         }),
       wait: () => {
+        if (this.lostWaits) return new Promise<number>(() => undefined);
         const ended = this.toolEnds.get(name);
         return ended ?? Promise.reject(httpError(404));
       },

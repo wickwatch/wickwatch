@@ -34,7 +34,7 @@ import {
   toPositions,
   toSymbols,
 } from "./mapping";
-import { SessionPool } from "./session";
+import { CliSession, SessionPool } from "./session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Positions closed in a range may have been opened before it; their opening orders are looked up this far back. */
@@ -168,14 +168,19 @@ export class CtraderCliBroker implements BrokerAdapter {
     }
     const batch = extractJson(await this.batch(c, ["accounts"]));
     const numbers = Array.isArray(batch) ? batch.map((a: { Number?: unknown }) => String(a.Number)) : [];
-    // The shell lists only active accounts, but needs one to log in to: try them in order.
+    // The shell lists only active accounts, but needs one to log in to: try them in order. A shell keeps
+    // the list of its login, so a fresh one is used: a warm session would miss accounts opened since.
     let active: unknown;
     for (const number of numbers) {
+      const session = new CliSession(this.options, c, number, () => undefined, false);
       try {
-        active = extractJson(await this.pool.run(c, number, "accounts"));
+        await session.start();
+        active = extractJson(await session.run("accounts"));
         break;
       } catch (error) {
         if (error instanceof AdapterError && error.code === "auth_failed") throw error;
+      } finally {
+        void session.close();
       }
     }
     const accounts = toBrokerAccounts(batch, active);

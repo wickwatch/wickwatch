@@ -47,7 +47,8 @@ describe("toolRunner", () => {
 
     expect(specs.map((s) => s.image)).toEqual(specs.map(() => IMAGE));
     expect(specs[0]?.command).toEqual(["accounts", "--ctid=user@example.com", "--pwd-file=/mnt/wickwatch/pwd"]);
-    expect(specs.map((s) => s.purpose)).toEqual(["accounts", "session-1111111"]);
+    // The active accounts come from a fresh shell; the stats from the account's long-running one.
+    expect(specs.map((s) => s.purpose)).toEqual(["accounts", "session-1111111", "session-1111111"]);
     for (const spec of specs) {
       expect(spec.command.join(" ")).not.toContain(c.secret);
       expect(spec.files).toEqual([

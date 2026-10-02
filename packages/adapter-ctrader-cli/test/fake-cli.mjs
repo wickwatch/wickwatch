@@ -41,6 +41,11 @@ const active = [
   },
   { traderLogin: 2222222, brokerName: "Demo Broker", environment: "live", accountName: null, accountStatus: "Active" },
 ];
+// Like the real CLI, a shell lists the active accounts as of its login. FAKE_CTRADER_ALSO_ACTIVE (numbers,
+// comma-separated) stands for accounts that became active since, e.g. a new challenge.
+for (const number of process.env.FAKE_CTRADER_ALSO_ACTIVE?.split(",") ?? []) {
+  active.push({ traderLogin: Number(number), brokerName: "Demo Broker", environment: "demo", accountStatus: "Active" });
+}
 const historyOrders = [
   {
     id: 31,

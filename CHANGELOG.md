@@ -7,6 +7,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ### Changed
 - Helper containers of the cTrader CLI get readable names instead of random Docker ones: `wickwatch-session-<account>-<random>` for an account's shell session, `wickwatch-accounts-…`, `wickwatch-symbols-…` and `wickwatch-metadata-…` for single calls (the label prefix comes first).
 
+### Fixed
+- An account opened after wickwatch started (e.g. a new challenge) was offered as inactive when adding it: the cTrader CLI shell lists the active accounts as of its login, and the list came from a long-running session. It now comes from a fresh one.
+- A cTrader CLI session whose process stopped answering without its end being reported (e.g. its helper container killed from outside) blocked its account until wickwatch was restarted; every query ran into the 60 s timeout. The session now counts as ended at its first timeout and is replaced.
+- Behind docker-socket-proxy, a helper container that ended after running for more than 10 minutes was never noticed: the proxy drops the idle wait for its exit without an error. A tool now also ends with the end of its output, and is killed when no exit code comes.
+
 ## 0.3.0 – 2026-10-02
 
 ### Added
