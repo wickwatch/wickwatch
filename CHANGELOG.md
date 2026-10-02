@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.3.1 – 2026-10-02
+
 ### Changed
 - Helper containers of the cTrader CLI get readable names instead of random Docker ones: `wickwatch-session-<account>-<random>` for an account's shell session, `wickwatch-accounts-…`, `wickwatch-symbols-…` and `wickwatch-metadata-…` for single calls (the label prefix comes first).
 
