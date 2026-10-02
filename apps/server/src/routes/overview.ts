@@ -1,9 +1,9 @@
-import { AccountDetail, CLOCK_TOLERANCE_MS, HostStatus, Overview } from "@wickwatch/core";
+import { AccountDetail, HostStatus, Overview } from "@wickwatch/core";
 import Type from "typebox";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { Adapters } from "../adapters";
-import { clockCheckState, clockOffset } from "../services/clock-check";
 import { ErrorBody } from "../plugins/errors";
+import { loadHostStatus } from "../services/host-status";
 import type { OverviewLoader } from "../services/overview";
 
 export const overviewRoutes: FastifyPluginAsyncTypebox<{
@@ -47,16 +47,6 @@ export const overviewRoutes: FastifyPluginAsyncTypebox<{
         response: { 200: HostStatus },
       },
     },
-    async () => {
-      const host = await adapters.runtime.hostStatus();
-      // Runtimes that cannot see the host's time sync get the measured clock offset instead (services/clock-check.ts).
-      if (host.ntpSynced !== undefined) return host;
-      const offset = clockOffset();
-      if (offset === undefined) {
-        const state = clockCheckState();
-        return state ? { ...host, clockCheck: state } : host;
-      }
-      return { ...host, ntpSynced: Math.abs(offset) <= CLOCK_TOLERANCE_MS, clockOffsetMs: offset };
-    },
+    async () => loadHostStatus(adapters),
   );
 };
