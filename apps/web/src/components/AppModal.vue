@@ -99,7 +99,7 @@ function discard() {
             @click="emit('next')"
           />
         </template>
-        <IconButton icon="close" :label="$t('modal.close')" variant="ghost" @click="requestClose" />
+        <IconButton icon="close" :label="$t('modal.close')" :tooltip="false" variant="ghost" @click="requestClose" />
       </div>
     </header>
     <div class="modal__body">

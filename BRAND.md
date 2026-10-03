@@ -54,6 +54,7 @@ Sizes: 12, 13, 14 (default), 16, 18, 20, 28, 36 px (`--ww-size-*`). Numbers in t
 ## Buttons and icons
 Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, rendered by `AppIcon`); no icon font, no library. Buttons with an icon use `IconButton`.
 - **Icon only**, with the label as tooltip and accessible name: actions repeated in every row (tables, history) and the compact header controls.
+- The × that closes a dialog is icon only without tooltip (`tooltip: false`; its label stays the accessible name): the icon is clear on its own.
 - **Icon and text**: the primary actions of a page (edit, save, start) and destructive actions outside table rows (delete, emergency stop), so a tap is never a guess.
 - Destructive row actions (close position, cancel order) are icon only in the negative colour, with tooltip; they always ask for confirmation first.
 - Button sizes come from tokens (`--ww-control`, `--ww-control-sm`), a little larger on touch screens; never below the 24 px minimum target. Row actions stay on one line.

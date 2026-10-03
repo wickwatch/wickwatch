@@ -309,6 +309,10 @@ describe("InstanceView", () => {
     expect(drawer?.props("drawer")).toBe(true);
     expect(drawer?.props("title")).toMatch(/^Position · /);
     expect(drawer?.text()).toContain("Held for");
+    // The × is clear on its own: named for screen readers, no tooltip over the dialog.
+    const close = drawer?.find('button[aria-label="Close"]');
+    expect(close?.exists()).toBe(true);
+    expect(close?.attributes("data-tooltip")).toBeUndefined();
     wrapper.unmount();
   });
 
