@@ -31,10 +31,48 @@ import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /**
- * How long after its start a running load is still joined. A hanging broker session must not hand out old data under a
- * caller's fresh time: later callers start a load of their own.
+ * How long after its start a load is shared, running or done: several browser tabs polling on their own cycles, the
+ * notifier and MCP clients then cost one broker query. Short, so the data stays fresh, and a hanging broker session
+ * does not hand out old data under a caller's fresh time: later callers start a load of their own. Actions of
+ * wickwatch drop it (withChangeNotice).
  */
-const JOIN_WITHIN_MS = 5_000;
+const REUSE_WITHIN_MS = 15_000;
+
+/** Runtime and broker actions that change what the overview shows. */
+const RUNTIME_CHANGES = ["create", "update", "remove", "start", "stop", "restart"] as const;
+const BROKER_CHANGES = ["closePosition", "cancelOrder", "emergencyStop"] as const;
+
+/** `target` with `changed` called after each of `methods`, also after a failed one: it may have changed something. */
+function notifyAfter<T extends object>(target: T, methods: readonly string[], changed: () => void): T {
+  return new Proxy(target, {
+    get(object, key) {
+      const value: unknown = Reflect.get(object, key);
+      if (typeof value !== "function") return value;
+      const bound = (value as (...args: unknown[]) => unknown).bind(object);
+      if (typeof key !== "string" || !methods.includes(key)) return bound;
+      return async (...args: unknown[]) => {
+        try {
+          return await bound(...args);
+        } finally {
+          changed();
+        }
+      };
+    },
+  });
+}
+
+/**
+ * The adapters with `changed` called after every runtime and broker action that changes what the overview shows,
+ * whoever runs it (a route, the instance keeper, the loss guard), so the next load asks again. Changes outside
+ * wickwatch (a stop loss hit, a bot's own trade) show once the shared load is older than REUSE_WITHIN_MS.
+ */
+export function withChangeNotice(adapters: Adapters, changed: () => void): Adapters {
+  return {
+    ...adapters,
+    runtime: notifyAfter(adapters.runtime, RUNTIME_CHANGES, changed),
+    broker: notifyAfter(adapters.broker, BROKER_CHANGES, changed),
+  };
+}
 
 export interface OverviewLoaderOptions {
   adapters: Adapters;
@@ -56,7 +94,7 @@ interface Fetched {
   accounts: FetchedAccount[];
 }
 
-interface RunningLoad {
+interface RecentLoad {
   time: Date;
   fetched: Promise<Fetched>;
 }
@@ -71,15 +109,23 @@ interface FetchedAccount {
 
 /**
  * Builds the overview and the account pages. Every browser tab, the notifier and the daily summary ask on their own;
- * callers that ask while a load of the same accounts (or of all accounts) started just before is running share its
- * runtime, log and broker queries. What depends on the time (today's deals, challenge, loss guard, clock) is derived
- * per caller with its own `now`.
+ * callers that ask shortly after a load of the same accounts (or of all accounts) started share its runtime, log and
+ * broker queries. What depends on the time (today's deals, challenge, loss guard, clock) is derived per caller with its
+ * own `now`.
  */
 export class OverviewLoader {
-  /** Running loads by the one account asked for; `undefined` for all accounts. */
-  private readonly running = new Map<string | undefined, RunningLoad>();
+  /** Recent loads by the one account asked for; `undefined` for all accounts. */
+  private readonly recent = new Map<string | undefined, RecentLoad>();
 
   constructor(private readonly options: OverviewLoaderOptions) {}
+
+  /**
+   * Forgets the recent loads, after something changed (a position closed, an instance started): the next caller asks
+   * again. Loads still running finish for the callers that joined them.
+   */
+  invalidate(): void {
+    this.recent.clear();
+  }
 
   /** Runtime and broker are queried in parallel; failures per account become alerts. */
   async overview(now = new Date()): Promise<Overview> {
@@ -128,27 +174,29 @@ export class OverviewLoader {
   }
 
   /**
-   * Joins a running load if it was started at `now` or up to JOIN_WITHIN_MS before: the day starts of a later `now` are
-   * no earlier, so the deals asked for cover its days as well (everything using them filters by its own day). One
-   * account also joins a load of all accounts. A caller with an earlier `now` gets a load of its own; so does one more
-   * than JOIN_WITHIN_MS later, whose load then replaces the running one for the callers after it.
+   * Shares a load, running or done, if it was started at `now` or up to REUSE_WITHIN_MS before: the day starts of a
+   * later `now` are no earlier, so the deals asked for cover its days as well (everything using them filters by its own
+   * day). One account also takes a load of all accounts. A caller with an earlier `now` gets a load of its own; so does
+   * one more than REUSE_WITHIN_MS later, whose load then replaces the old one for the callers after it. A failed load
+   * is not kept.
    */
   private fetch(now: Date, only: string | undefined): Promise<Fetched> {
-    const joinable = (load: RunningLoad) => load.time <= now && now.getTime() - load.time.getTime() <= JOIN_WITHIN_MS;
-    const running = this.running.get(only);
-    if (running && joinable(running)) return running.fetched;
+    const reusable = (load: RecentLoad) => load.time <= now && now.getTime() - load.time.getTime() <= REUSE_WITHIN_MS;
+    const recent = this.recent.get(only);
+    if (recent && reusable(recent)) return recent.fetched;
     if (only !== undefined) {
-      const all = this.running.get(undefined);
-      if (all && joinable(all)) return all.fetched.then((fetched) => this.narrow(fetched, only));
+      const all = this.recent.get(undefined);
+      if (all && reusable(all)) return all.fetched.then((fetched) => this.narrow(fetched, only));
     }
     const fetched = this.query(now, only);
-    // Kept for the callers after it, unless the running load started later (this caller asked for an earlier time).
-    if (!running || running.time < now) {
-      this.running.set(only, { time: now, fetched });
-      const done = () => {
-        if (this.running.get(only)?.fetched === fetched) this.running.delete(only);
+    // Kept for the callers after it, unless the recent load started later (this caller asked for an earlier time).
+    if (!recent || recent.time < now) {
+      this.recent.set(only, { time: now, fetched });
+      const drop = () => {
+        if (this.recent.get(only)?.fetched === fetched) this.recent.delete(only);
       };
-      void fetched.then(done, done);
+      // Not kept past its use: a failed load at once, a done one once it is too old to share.
+      void fetched.then(() => setTimeout(drop, REUSE_WITHIN_MS).unref(), drop);
     }
     return fetched;
   }

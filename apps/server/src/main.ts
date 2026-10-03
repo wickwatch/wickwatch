@@ -87,7 +87,7 @@ try {
   });
   const lossGuard = new LossGuardService({
     db,
-    adapters,
+    adapters: app.adapters,
     accounts,
     labelPrefix: config.labelPrefix,
     log: app.log,
@@ -117,7 +117,7 @@ try {
         })
       : undefined;
   // Starts managed instances again that a host or Docker restart ended (see the class for the rules).
-  const keeper = new InstanceKeeper({ db, runtime: adapters.runtime, log: app.log });
+  const keeper = new InstanceKeeper({ db, runtime: app.adapters.runtime, log: app.log });
   app.addHook("onClose", () => {
     keeper.stop();
     clock?.stop();

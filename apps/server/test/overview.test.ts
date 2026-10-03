@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dbAccountDirectory } from "../src/accounts";
 import { LogTracker } from "../src/services/log-tracker";
 import { OverviewLoader } from "../src/services/overview";
-import { startApp, type TestApp } from "./helpers";
+import { loginAs, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
 let log: { error: ReturnType<typeof vi.fn> };
@@ -37,8 +37,36 @@ describe("OverviewLoader", () => {
     expect(list).toHaveBeenCalledTimes(1);
     expect(b.accounts).toEqual(a.accounts);
 
-    // Nothing is kept once the load is done.
+    // Kept for a short while once done, e.g. for another browser tab; a change drops it.
     await loader.overview();
+    expect(stats).toHaveBeenCalledTimes(accounts);
+    loader.invalidate();
+    await loader.overview();
+    expect(stats).toHaveBeenCalledTimes(2 * accounts);
+  });
+
+  it("asks again once the shared load is older than its time to live", async () => {
+    const stats = vi.spyOn(t.adapters.broker, "stats");
+    const now = new Date();
+    await loader.overview(now);
+    await loader.overview(new Date(now.getTime() + 15_000));
+    expect(stats).toHaveBeenCalledTimes(accounts);
+    await loader.overview(new Date(now.getTime() + 15_001));
+    expect(stats).toHaveBeenCalledTimes(2 * accounts);
+  });
+
+  it("drops the shared load after an action on bots or positions, whoever runs it", async () => {
+    const stats = vi.spyOn(t.adapters.broker, "stats");
+    const cookie = await loginAs(t, "admin");
+    const overview = () => t.app.inject({ url: "/api/v1/overview", headers: { cookie } });
+    await overview();
+    await overview();
+    expect(stats).toHaveBeenCalledTimes(accounts);
+    expect(
+      (await t.app.inject({ method: "POST", url: "/api/v1/instances/alpha-ger40-a/stop", headers: { cookie } }))
+        .statusCode,
+    ).toBe(204);
+    await overview();
     expect(stats).toHaveBeenCalledTimes(2 * accounts);
   });
 
@@ -62,6 +90,7 @@ describe("OverviewLoader", () => {
     expect(stats).toHaveBeenCalledTimes(accounts);
     expect(list).toHaveBeenCalledTimes(1);
 
+    loader.invalidate();
     const own = await loader.accountDetail("1111111", now);
     expect(stats).toHaveBeenCalledTimes(accounts + 1);
     expect(joined).toEqual(own);
@@ -79,7 +108,7 @@ describe("OverviewLoader", () => {
     const first = loader.accountDetail("1111111", now);
 
     // Later callers get fresh data of their own; the ones after them join that load.
-    const later = new Date(now.getTime() + 10_000);
+    const later = new Date(now.getTime() + 20_000);
     const [second, third] = await Promise.all([
       loader.accountDetail("1111111", later),
       loader.accountDetail("1111111", new Date(later.getTime() + 1000)),

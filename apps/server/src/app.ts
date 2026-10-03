@@ -30,7 +30,7 @@ import { createDealHistory } from "./services/deal-history";
 import { LogArchive, logReader, withLogArchive } from "./services/log-archive";
 import { LogTracker } from "./services/log-tracker";
 import { MarketHoursCache } from "./services/market-hours";
-import { OverviewLoader } from "./services/overview";
+import { OverviewLoader, withChangeNotice } from "./services/overview";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
 
@@ -38,6 +38,8 @@ declare module "fastify" {
   interface FastifyInstance {
     /** Shared by the routes, the notifier and the daily summary, so concurrent loads query runtime and broker once. */
     overview: OverviewLoader;
+    /** The adapters as the app uses them (archiving logs, dropping the overview's shared load); for the services. */
+    adapters: Adapters;
     /** Trading hours of the instances' symbols, asked in the background. */
     marketHours: MarketHoursCache;
     /** Logs of replaced containers, for the hourly cleanup; undefined with LOG_ARCHIVE=off. */
@@ -83,7 +85,10 @@ export async function buildApp({
 
   const { basePath, labelPrefix } = config;
   const logArchive = config.logArchive ? new LogArchive(config.logArchive) : undefined;
-  const adapters = { ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) };
+  // Every action that changes what the overview shows drops its shared load, whoever runs it.
+  const adapters = withChangeNotice({ ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) }, () => {
+    overview.invalidate();
+  });
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
@@ -101,6 +106,7 @@ export async function buildApp({
     marketHours,
   });
   app.decorate("overview", overview);
+  app.decorate("adapters", adapters);
   app.decorate("marketHours", marketHours);
   app.decorate("logArchive", logArchive);
 
