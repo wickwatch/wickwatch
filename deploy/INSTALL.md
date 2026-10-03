@@ -39,7 +39,7 @@ getent hosts bots.example.com; curl -s -4 https://ifconfig.me; echo
 Pull a pinned wickwatch version (never `latest` in production) and the cTrader image your bots run with (`CTRADER_IMAGE`):
 
 ```bash
-docker pull ghcr.io/wickwatch/wickwatch:0.4.2
+docker pull ghcr.io/wickwatch/wickwatch:0.4.3
 docker pull ghcr.io/spotware/ctrader-console:5.9.11
 ```
 
@@ -60,7 +60,7 @@ Write `compose.yml`: [`compose.standalone.yml`](compose.standalone.yml) and [`co
 ```yaml
 services:
   wickwatch:
-    image: ghcr.io/wickwatch/wickwatch:0.4.2
+    image: ghcr.io/wickwatch/wickwatch:0.4.3
     restart: unless-stopped
     env_file: .env
     environment:
