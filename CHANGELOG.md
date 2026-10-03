@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- Schedule form: the preview of the next pauses did not ask again when the weekend's day or time changed.
+
 ## 0.5.0 – 2026-10-03
 
 ### Added

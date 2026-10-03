@@ -67,7 +67,15 @@ const currencies = computed(() => [...new Set(news.value.currencies.toUpperCase(
 
 const rules = computed<ScheduleRules>(() => ({
   timezone: timezone.value.trim(),
-  ...(useWeekend.value ? { weekend: weekend.value } : {}),
+  // Field by field, so a changed day or time counts as a change of the rules (and asks for a new preview).
+  ...(useWeekend.value
+    ? {
+        weekend: {
+          from: { day: weekend.value.from.day, time: weekend.value.from.time },
+          to: { day: weekend.value.to.day, time: weekend.value.to.time },
+        },
+      }
+    : {}),
   holidays: holidays.value
     .filter((h) => h.from)
     .map((h) => ({

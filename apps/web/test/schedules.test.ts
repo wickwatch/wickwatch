@@ -136,6 +136,25 @@ describe("editing a schedule", () => {
   });
 });
 
+describe("preview", () => {
+  it("asks again when the weekend's day or time changes", async () => {
+    const wrapper = await open();
+    await wrapper.find(`button[aria-label="Edit: Weekend and news"]`).trigger("click");
+    await flushPromises();
+    const previews = () => sent("POST").filter((c) => c.path === "schedules/preview");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await flushPromises();
+    expect(previews()).toHaveLength(1);
+
+    await wrapper.find("dialog[open] form input[type=time]").setValue("18:00");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await flushPromises();
+    expect(previews()).toHaveLength(2);
+    expect(previews()[1]?.body).toMatchObject({ rules: { weekend: { from: { day: 5, time: "18:00" } } } });
+    wrapper.unmount();
+  });
+});
+
 describe("one-off pauses", () => {
   it("are added with a day and time from and to and a name", async () => {
     const wrapper = await open();
