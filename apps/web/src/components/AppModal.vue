@@ -4,9 +4,11 @@ import ConfirmDialog from "./ConfirmDialog.vue";
 import IconButton from "./IconButton.vue";
 
 /**
- * The shared modal (BRAND.md, "Consistency") on a native modal <dialog>: focus stays inside, Escape closes, focus
- * returns to where it was. A sheet at the bottom on phones. With `dirty` it asks before closing, so typed input is
- * not lost by accident; the slot gets `close`, which asks the same way. Field errors stay inside the content.
+ * The shared modal (BRAND.md, "Consistency") on a native <dialog>, or with `drawer` a side panel that is no modal.
+ * A modal keeps the focus inside; a drawer leaves the page next to it usable and closes on a click outside it (except
+ * in `keepOpen`). Escape closes both, focus returns to where it was. A sheet at the bottom on phones. With `dirty` it
+ * asks before closing, so typed input is not lost by accident; the slot gets `close`, which asks the same way. Field
+ * errors stay inside the content.
  */
 const props = defineProps<{
   open: boolean;
@@ -18,6 +20,8 @@ const props = defineProps<{
   full?: boolean;
   /** Arrows to the previous and next entry (a drawer over a table), also on the up and down keys; which way is open. */
   nav?: { prev: boolean; next: boolean } | undefined;
+  /** A drawer stays open on a click inside this element, e.g. the table rows that show in it. */
+  keepOpen?: HTMLElement | undefined;
 }>();
 const emit = defineEmits<{ close: []; prev: []; next: [] }>();
 const dialog = ref<HTMLDialogElement>();
@@ -34,22 +38,57 @@ watch(
     if (!el) return;
     if (open && !el.open) {
       returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      el.showModal();
+      if (props.drawer) el.show();
+      else el.showModal();
       el.focus();
     }
     if (!open && el.open) {
+      // Not after a click elsewhere on the page: the focus belongs there then.
+      const focused = el.contains(document.activeElement);
       el.close();
-      returnTo?.focus();
+      if (focused) returnTo?.focus();
     }
   },
   { flush: "post" },
 );
 
+// A drawer's keys and outside clicks are on the document: the focus may be anywhere on the page. Removed on close and
+// on unmount.
+watch(
+  () => props.drawer && props.open,
+  (on, _, onCleanup) => {
+    if (!on) return;
+    document.addEventListener("keydown", onDocumentKey);
+    document.addEventListener("click", onDocumentClick);
+    onCleanup(() => {
+      document.removeEventListener("keydown", onDocumentKey);
+      document.removeEventListener("click", onDocumentClick);
+    });
+  },
+  { flush: "post" },
+);
+function onDocumentKey(event: KeyboardEvent) {
+  // In another dialog (a confirmation over the page) the key is that dialog's.
+  const inDialog = event.target instanceof Element ? event.target.closest("dialog") : null;
+  if (inDialog && inDialog !== dialog.value) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    requestClose();
+  } else {
+    onKey(event);
+  }
+}
+function onDocumentClick(event: MouseEvent) {
+  const target = event.target;
+  if (!(target instanceof Element) || target.closest("dialog") || props.keepOpen?.contains(target)) return;
+  requestClose();
+}
+
 function requestClose() {
   if (props.dirty) asking.value = true;
   else emit("close");
 }
-/** Up and down step through the entries, unless the focus is in a field or the discard question is open. */
+/** Up and down step through a drawer's entries, unless the focus is in a field or the discard question is open. */
 function onKey(event: KeyboardEvent) {
   if (!props.nav || asking.value || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   const target = event.target;
@@ -78,7 +117,6 @@ function discard() {
     :aria-labelledby="titleId"
     tabindex="-1"
     @cancel.prevent="requestClose"
-    @keydown="onKey"
   >
     <header class="modal__head">
       <h2 :id="titleId">{{ title }}</h2>
@@ -87,6 +125,7 @@ function discard() {
           <IconButton
             icon="chevronUp"
             :label="$t('modal.previous')"
+            :tooltip="false"
             variant="ghost"
             :disabled="!nav.prev"
             @click="emit('prev')"
@@ -94,6 +133,7 @@ function discard() {
           <IconButton
             icon="chevronDown"
             :label="$t('modal.next')"
+            :tooltip="false"
             variant="ghost"
             :disabled="!nav.next"
             @click="emit('next')"
@@ -177,11 +217,16 @@ function discard() {
   overflow: hidden;
 }
 
+/* Not in the top layer (no modal): fixed at the right edge, above the page and below modals. */
 .modal--drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 30;
   width: min(440px, 100vw);
   height: 100dvh;
   max-height: 100dvh;
-  margin: 0 0 0 auto;
+  margin: 0;
+  box-shadow: -8px 0 24px color-mix(in srgb, var(--ww-bg) 70%, transparent);
   border-width: 0 0 0 1px;
   border-radius: var(--ww-radius-xl) 0 0 var(--ww-radius-xl);
 }
@@ -212,6 +257,10 @@ function discard() {
     margin: auto 0 0;
     border-width: 1px 0 0;
     border-radius: var(--ww-radius-xl) var(--ww-radius-xl) 0 0;
+  }
+
+  .modal--drawer {
+    inset: auto 0 0;
   }
 
   .modal--drawer[open] {

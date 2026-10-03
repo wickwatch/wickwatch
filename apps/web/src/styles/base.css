@@ -10,8 +10,9 @@ html {
   scrollbar-gutter: stable;
 }
 
-/* While a dialog is open (modal, drawer, confirmation) the page behind it stays still; scrolling stays in the dialog. */
-html:has(dialog[open]) {
+/* While a modal is open (incl. a confirmation) the page behind it stays still; scrolling stays in the modal. A drawer
+   is no modal: the page next to it keeps scrolling. */
+html:has(dialog:modal) {
   overflow: hidden;
 }
 

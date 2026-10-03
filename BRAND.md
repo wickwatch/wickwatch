@@ -54,7 +54,7 @@ Sizes: 12, 13, 14 (default), 16, 18, 20, 28, 36 px (`--ww-size-*`). Numbers in t
 ## Buttons and icons
 Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, rendered by `AppIcon`); no icon font, no library. Buttons with an icon use `IconButton`.
 - **Icon only**, with the label as tooltip and accessible name: actions repeated in every row (tables, history) and the compact header controls.
-- The × that closes a dialog is icon only without tooltip (`tooltip: false`; its label stays the accessible name): the icon is clear on its own.
+- The controls in a dialog's head (× to close, arrows to the previous and next row) are icon only without tooltip (`tooltip: false`; the label stays the accessible name): the icons are clear on their own.
 - **Icon and text**: the primary actions of a page (edit, save, start) and destructive actions outside table rows (delete, emergency stop), so a tap is never a guess.
 - Destructive row actions (close position, cancel order) are icon only in the negative colour, with tooltip; they always ask for confirmation first.
 - Button sizes come from tokens (`--ww-control`, `--ww-control-sm`), a little larger on touch screens; never below the 24 px minimum target. Row actions stay on one line.
@@ -66,7 +66,7 @@ Line icons on a 24 px grid, stroked in `currentColor` (`apps/web/src/icons.ts`, 
 ## Consistency
 - The same kind of action behaves the same everywhere. Adding something (account, login, algo, challenge profile) is a button that opens a modal.
 - Page and section heads: title and actions in one row on wide screens, the intro or meta line below at full width. On phones the actions go below the heading and its text, with their labels: one action at full width, several in two equal columns (a lone last one at full width), long labels end in "…".
-- Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from an info button in the row; arrows in its head (and the up and down keys) step to the previous and next row.
+- Details of a table row (position, order, trade) open in a drawer at the right edge (`AppModal` with `drawer`; the same bottom sheet as a modal on phones), from a click on the row (not on its buttons and links) or its info button, which keyboard and screen readers use; the shown row stays marked. The drawer is no modal: a click on another row of the table (`keepOpen`) shows that row, a click anywhere else or Escape closes it. Arrows in its head (and the up and down keys) step to the previous and next row.
 - Loading states show the spinner (`AppSpinner`: the logo symbol with its radar turning; the plain symbol with reduced motion), not a "Loading …" text. Screen readers still get the text.
 - A button whose action runs shows a small spinner in place of its icon (or before its text) with `aria-busy="true"`; the other buttons of the view are only disabled. Only the clicked button spins (`running` from `useAsyncAction`, the action per row in the row composables).
 - Optional detail (the rules of a challenge on an account card, parameter groups) folds away behind a disclosure with a chevron; it opens by itself when something needs attention.

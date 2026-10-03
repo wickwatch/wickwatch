@@ -6,7 +6,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ### Changed
 - Notifications about a lost broker connection or an account the broker does not answer for (timeout, unavailable; a failed login still comes at once) wait until it lasted `ALERT_DISCONNECT_GRACE_SECONDS` (default 180), so short drops that pass by themselves no longer send an alert and a resolution each. While the market is closed (of the instance's symbol; for an account, of all its instances), when brokers do their maintenance, `ALERT_DISCONNECT_GRACE_CLOSED_SECONDS` applies (default 1800; `off` holds them until the market opens). Any alert is resolved only once it stayed away for `ALERT_RESOLVE_DELAY_SECONDS` (default 120), so one that comes right back no longer sends "Resolved" and a new alert. The dashboard still shows everything at once.
-- The × at the top right of dialogs has no tooltip any more; it covered the dialog and said nothing the icon does not.
+- The × at the top right of dialogs and the arrows of the details panel have no tooltips any more; they covered the content and said nothing the icons do not.
+- Trade tables (positions, orders, history): a click on a row opens its details panel, not only the info button; the shown row stays marked. The panel no longer blocks the page: a click on another row shows that one, a click anywhere else (or Escape) closes it.
 
 ## 0.4.1 – 2026-10-02
 

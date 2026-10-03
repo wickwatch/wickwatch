@@ -8,7 +8,7 @@ import AppIcon from "./AppIcon.vue";
  * A button with an icon (BRAND.md, "Buttons and icons"). Icon only by default, with the label as tooltip and accessible
  * name; `showLabel` adds the text for primary page actions and destructive ones outside table rows. `tooltip` shows
  * other text than the label, e.g. the description an info button reveals; `false` none, where the icon is clear
- * (closing a dialog). On phones, page and section heads put their
+ * (a dialog's head). On phones, page and section heads put their
  * buttons below the heading with their text (see BRAND.md, "Consistency").
  * With `to` it is a link that looks the same, for actions that open a page (edit).
  */

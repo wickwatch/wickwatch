@@ -74,7 +74,7 @@ The **Overview** tab of an instance shows:
 - key figures and the realised P&L curve of closed trades (7, 30 or 90 days, or all since the first trade);
 - the **live log**, with the filters **Warnings & errors** and **Setups**. **Show larger** opens it almost full screen with a search; the download button saves the log of the last 24 hours, the last 7 days or everything the container still has as a text file (one line per log line: UTC time, then the text as the bot wrote it);
 - **Open positions**, **Pending orders** and the **History** of closed trades, with risk in % of the balance and the result in R when the stop the position opened with is known;
-- an info button in every row that opens the **details panel**: entry and exit, initial stop, opening and closing time with the holding time, gross result, commission, swap, net, risk and R, label and IDs.
+- a click on a row (or its info button) opens the **details panel** at the right: entry and exit, initial stop, opening and closing time with the holding time, gross result, commission, swap, net, risk and R, label and IDs. The table stays usable next to it: a click on another row shows that one, a click anywhere else or Escape closes the panel.
 
 Admins can **Close position** and **Cancel order** from the rows (with confirmation). **Not from this bot** removes a trade from this instance, e.g. a manual one; it is listed under "Excluded trades" and can be restored.
 

@@ -51,9 +51,10 @@ const rows = computed<TradeItem[]>(() => {
   if (props.kind === "orders") return (props.orders ?? []).map((value) => ({ kind: "order", value }));
   return allDeals.value.map((value) => ({ kind: "deal", value }));
 });
+const selectedId = computed(() => selected.value?.item.value.id);
 /** By id: the lists are replaced on every refresh. -1 once the entry is gone (a closed position). */
 const index = computed(() => {
-  const id = selected.value?.item.value.id;
+  const id = selectedId.value;
   return id === undefined ? -1 : rows.value.findIndex((row) => row.value.id === id);
 });
 const nav = computed(() => ({
@@ -64,6 +65,14 @@ const step = (by: number) => {
   const item = rows.value[index.value + by];
   if (index.value >= 0 && item) show(item);
 };
+/** A click on a row shows it in the drawer (not on its buttons and links, nor when text was selected to copy). */
+function showRow(event: MouseEvent, item: TradeItem) {
+  if (event.target instanceof Element && event.target.closest("button, a")) return;
+  if (window.getSelection()?.isCollapsed === false) return;
+  show(item);
+}
+/** The rows of the table shown: a click on another one keeps the drawer open, a click anywhere else closes it. */
+const body = ref<HTMLElement>();
 const detailTitle = computed(() => {
   const item = selected.value?.item;
   return item ? `${t(`trade.kind.${item.kind}`)} · ${item.value.symbol}` : "";
@@ -88,8 +97,13 @@ const detailTitle = computed(() => {
           </th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="p in positions" :key="p.id">
+      <tbody ref="body">
+        <tr
+          v-for="p in positions"
+          :key="p.id"
+          :class="{ selected: selectedId === p.id }"
+          @click="showRow($event, { kind: 'position', value: p })"
+        >
           <td v-if="instances"><InstanceName :name="p.instance" :instance-ref="refOf(p.instance)" /></td>
           <td class="mono">{{ formatDateTime(locale, p.openedAt) }}</td>
           <td>{{ $t(`trade.${p.side}`) }}</td>
@@ -149,8 +163,13 @@ const detailTitle = computed(() => {
           </th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="o in orders" :key="o.id">
+      <tbody ref="body">
+        <tr
+          v-for="o in orders"
+          :key="o.id"
+          :class="{ selected: selectedId === o.id }"
+          @click="showRow($event, { kind: 'order', value: o })"
+        >
           <td v-if="instances"><InstanceName :name="o.instance" :instance-ref="refOf(o.instance)" /></td>
           <td>{{ $t(`trade.orderType.${o.type}`) }}</td>
           <td>{{ $t(`trade.${o.side}`) }}</td>
@@ -202,8 +221,13 @@ const detailTitle = computed(() => {
           </th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="d in dealRows" :key="d.id">
+      <tbody ref="body">
+        <tr
+          v-for="d in dealRows"
+          :key="d.id"
+          :class="{ selected: selectedId === d.id }"
+          @click="showRow($event, { kind: 'deal', value: d })"
+        >
           <td class="mono">{{ formatDateTime(locale, d.time) }}</td>
           <td>{{ $t(`trade.${d.side}`) }}</td>
           <td class="mono num">{{ formatNumber(locale, d.volume) }}</td>
@@ -254,6 +278,7 @@ const detailTitle = computed(() => {
       :title="detailTitle"
       drawer
       :nav="nav"
+      :keep-open="body"
       @close="selected = undefined"
       @prev="step(-1)"
       @next="step(1)"
@@ -286,6 +311,20 @@ td {
 
 tbody tr:last-child > * {
   border-bottom: 0;
+}
+
+/* The whole row opens its details; the shown one stays marked while the drawer is open. */
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover,
+tbody tr.selected {
+  background: var(--ww-surface-raised);
+}
+
+tbody tr.selected > :first-child {
+  box-shadow: inset 3px 0 0 var(--ww-accent);
 }
 
 thead th {

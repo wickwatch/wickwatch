@@ -111,6 +111,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** The instance with two closed trades, the newer one (d2) first in the history. */
+function stubTwoDeals() {
+  const twoDeals: InstanceDetail = {
+    ...detail,
+    deals: [detail.deals[0]!, { ...detail.deals[0]!, id: "d2", time: "2026-09-25T10:00:00.000Z" }],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: URL) =>
+      Promise.resolve(
+        input.pathname.includes("/managed-instances/")
+          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+          : new Response(JSON.stringify(twoDeals), { status: 200 }),
+      ),
+    ),
+  );
+}
+
 async function render() {
   const wrapper = mount(InstanceView, { global: { plugins: [i18n, router] }, attachTo: document.body });
   await flushPromises();
@@ -309,28 +327,15 @@ describe("InstanceView", () => {
     expect(drawer?.props("drawer")).toBe(true);
     expect(drawer?.props("title")).toMatch(/^Position · /);
     expect(drawer?.text()).toContain("Held for");
-    // The × is clear on its own: named for screen readers, no tooltip over the dialog.
-    const close = drawer?.find('button[aria-label="Close"]');
-    expect(close?.exists()).toBe(true);
-    expect(close?.attributes("data-tooltip")).toBeUndefined();
+    // The head's controls are clear on their own: named for screen readers, no tooltip over the content.
+    const head = drawer?.findAll(".modal__head button") ?? [];
+    expect(head.map((b) => b.attributes("aria-label"))).toEqual(["Previous entry", "Next entry", "Close"]);
+    expect(head.every((b) => b.attributes("data-tooltip") === undefined)).toBe(true);
     wrapper.unmount();
   });
 
   it("steps through the trades in the drawer, by arrow and by key", async () => {
-    const twoDeals: InstanceDetail = {
-      ...detail,
-      deals: [detail.deals[0]!, { ...detail.deals[0]!, id: "d2", time: "2026-09-25T10:00:00.000Z" }],
-    };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((input: URL) =>
-        Promise.resolve(
-          input.pathname.includes("/managed-instances/")
-            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
-            : new Response(JSON.stringify(twoDeals), { status: 200 }),
-        ),
-      ),
-    );
+    stubTwoDeals();
     const wrapper = await render();
     const history = wrapper.find("section[aria-labelledby=history-title]");
     // The newest trade is the first row.
@@ -345,6 +350,33 @@ describe("InstanceView", () => {
     expect(arrow("Next entry").attributes("disabled")).toBeDefined();
     await drawer().find("dialog").trigger("keydown", { key: "ArrowUp" });
     expect(shownId()).toBe("d2");
+    wrapper.unmount();
+  });
+
+  it("opens a trade's details on a click on its row and closes them on a click elsewhere", async () => {
+    stubTwoDeals();
+    const wrapper = await render();
+    const history = wrapper.find("section[aria-labelledby=history-title]");
+    const rows = () => history.findAll("tbody tr");
+    const drawer = () => wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"));
+    const shownId = () => drawer()?.findAll("dd").at(-1)?.text();
+
+    await rows()[1]!.find("td").trigger("click");
+    expect(shownId()).toBe("d1");
+    expect(rows()[1]!.classes()).toContain("selected");
+    // Another row of the table shows in the open drawer.
+    await rows()[0]!.find("td").trigger("click");
+    expect(shownId()).toBe("d2");
+    // Inside the drawer it stays open; anywhere else on the page it closes.
+    await drawer()!.find("dd").trigger("click");
+    expect(drawer()).toBeDefined();
+    await history.find("h2").trigger("click");
+    expect(drawer()).toBeUndefined();
+
+    await rows()[0]!.find("td").trigger("click");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await flushPromises();
+    expect(drawer()).toBeUndefined();
     wrapper.unmount();
   });
 
