@@ -43,6 +43,8 @@ docker pull ghcr.io/wickwatch/wickwatch:0.4.3
 docker pull ghcr.io/spotware/ctrader-console:5.9.11
 ```
 
+The cTrader image comes from Spotware, not from wickwatch; pulling it means accepting Spotware's licence terms ([EULA](https://www.spotware.com/eula/), [Terms of Service](https://www.spotware.com/terms-of-service/)).
+
 ## 3. Folders and compose files
 
 One folder holds the compose file, `.env` and the data. The container runs as UID 1000, so `data/` must belong to it:

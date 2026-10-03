@@ -30,7 +30,7 @@ Then:
 2. Open http://localhost:3000, enter the token, a user name and a password.
 3. Scan the QR code with an authenticator app (e.g. 2FAS, Aegis, Google Authenticator) and enter the code, or skip two-factor authentication and set it up later under *Profile*. The overview with demo data opens.
 
-How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md), step by step on a Linux server: [`deploy/INSTALL.md`](deploy/INSTALL.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). AI clients: [`docs/MCP.md`](docs/MCP.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
+How to use it: [`docs/USER-GUIDE.md`](docs/USER-GUIDE.md). Running real bots and deploying behind a reverse proxy: [`deploy/README.md`](deploy/README.md), step by step on a Linux server: [`deploy/INSTALL.md`](deploy/INSTALL.md). All settings: [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md). AI clients: [`docs/MCP.md`](docs/MCP.md). Prop-firm accounts (rules on devices, IP addresses and automation): [`docs/PROP-FIRMS.md`](docs/PROP-FIRMS.md). The API is described with OpenAPI: [`docs/openapi.json`](docs/openapi.json) in the repo, interactive docs at `/api/docs` after login.
 
 ## Features
 - **Overview:** accounts with balance, equity, today's P&L, open positions and pending orders; all instances with status, uptime, positions, today's P&L and the last log line; alerts for stopped, crashed or disconnected bots, broker errors and challenge limits.
@@ -78,7 +78,7 @@ Contributions are welcome, see [`CONTRIBUTING.md`](CONTRIBUTING.md). Commits mus
 wickwatch is a hobby project. If it helps you, you can support it on [Ko-fi](https://ko-fi.com/mmohrx) or through [GitHub Sponsors](https://github.com/sponsors/mmohrx). The dashboard's footer links there too; `SUPPORT_URL=off` hides the link.
 
 ## Disclaimer
-wickwatch is a monitoring and control tool, not financial advice. Trading involves risk; you are responsible for your bots and accounts. cTrader is a trademark of its respective owner; wickwatch is not affiliated with or endorsed by Spotware.
+wickwatch is a monitoring and control tool, not financial advice. Trading involves risk; you are responsible for your bots and accounts. cTrader is a trademark of its respective owner; wickwatch is not affiliated with or endorsed by Spotware. wickwatch does not include or redistribute any cTrader software: you pull the cTrader CLI image from Spotware yourself, and it is subject to Spotware's licence terms ([EULA](https://www.spotware.com/eula/), [Terms of Service](https://www.spotware.com/terms-of-service/)).
 
 ## License
 [AGPL-3.0](LICENSE)

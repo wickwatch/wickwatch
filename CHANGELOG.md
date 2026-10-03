@@ -5,7 +5,13 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ## Unreleased
 
 ### Added
+- `docs/PROP-FIRMS.md`: what wickwatch does on an account (logins, polling, trading actions) and which prop-firm rules to check before connecting one, with notes on FTMO and The Trading Pit.
 - Logs outlive a redeploy: applying a configuration replaces the container, and the runtime lost its log with it. wickwatch now keeps it (gzipped, in `LOG_ARCHIVE_DIR`, default `logs` next to the database) for `LOG_ARCHIVE_DAYS` (default 7); the live log, the download and the MCP tool `get_instance_logs` show the kept lines before the new container's own. Deleting an instance deletes its kept logs. `LOG_ARCHIVE=off` switches it off. The runtime adapter's `update` takes an optional `beforeRemove` hook for this.
+
+### Changed
+- cTrader CLI: after a failed login (wrong password, broker maintenance or outage) the adapter waits 1 minute before the same login, doubling up to 5 minutes; until then calls fail at once with the last error. A rejected password holds every login of that cTrader ID. Before, every poll and every open dashboard page logged in again, a few hundred times an hour, which brokers and prop firms may read as suspicious. Closing a position, cancelling an order and the emergency stop log in regardless.
+- Balance and equity samples and the deal check skip a run while the last one still goes, so they no longer pile up behind a slow broker.
+- README, `deploy/INSTALL.md`: wickwatch includes no cTrader software; the cTrader CLI image is pulled from Spotware and subject to its licence terms.
 
 ## 0.4.3 – 2026-10-03
 
