@@ -191,6 +191,15 @@ export interface DailySummariesTable {
   sent_at: string;
 }
 
+/** The last trading hours the broker named for a symbol on an account. */
+export interface MarketHoursTable {
+  account_id: number;
+  symbol: string;
+  /** JSON of `MarketHours`. */
+  hours: string;
+  fetched_at: string;
+}
+
 export interface NotifiedAlertsTable {
   /** `<code>:<subject>` */
   key: string;
@@ -232,6 +241,7 @@ export interface Database {
   parameter_templates: ParameterTemplatesTable;
   algo_settings: AlgoSettingsTable;
   notified_alerts: NotifiedAlertsTable;
+  market_hours: MarketHoursTable;
   daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;
 }

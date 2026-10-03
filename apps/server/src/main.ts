@@ -142,6 +142,8 @@ try {
     });
   }
 
+  // Before the first overview, so a restart during the broker's maintenance still knows when markets are closed.
+  await app.marketHours.load();
   await app.listen({ host: config.host, port: config.port });
   poller.start();
   notifier.start();

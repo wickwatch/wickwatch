@@ -33,6 +33,7 @@ describe("MarketHoursCache", () => {
     new MarketHoursCache({
       adapters: { ...t.adapters, broker: { ...t.adapters.broker, marketHours } } as never,
       log: { warn: vi.fn() } as never,
+      db: t.db,
       now: () => now,
       jitter: () => 0,
     });
@@ -99,6 +100,26 @@ describe("MarketHoursCache", () => {
     cache.attach([onUs30], accounts);
     await cache.settled();
     expect(ask).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps the hours over a restart and asks again only when they are due", async () => {
+    cache.attach([onUs30], accounts);
+    await cache.settled();
+
+    // A restart while the broker is down: the stored hours are there at once.
+    now += 2 * HOUR;
+    const down = vi.fn(() => Promise.reject(new Error("broker down")));
+    const restarted = make(down);
+    await restarted.load();
+    expect(restarted.attach([onUs30], accounts)[0]?.marketHours).toEqual(hours);
+    await restarted.settled();
+    expect(down).not.toHaveBeenCalled();
+
+    now += 23 * HOUR;
+    restarted.attach([onUs30], accounts);
+    await restarted.settled();
+    expect(down).toHaveBeenCalledTimes(1);
+    expect(restarted.attach([onUs30], accounts)[0]?.marketHours).toEqual(hours);
   });
 
   it("adds nothing when the broker adapter cannot tell", () => {

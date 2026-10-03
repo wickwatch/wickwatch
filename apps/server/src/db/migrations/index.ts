@@ -17,6 +17,7 @@ import { apiTokens } from "./0015-api-tokens";
 import { auditApiToken } from "./0016-audit-api-token";
 import { parameterTemplates } from "./0017-parameter-templates";
 import { algoSettings } from "./0018-algo-settings";
+import { marketHours } from "./0019-market-hours";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -39,4 +40,5 @@ export const migrations: Record<string, Migration> = {
   "0016-audit-api-token": auditApiToken,
   "0017-parameter-templates": parameterTemplates,
   "0018-algo-settings": algoSettings,
+  "0019-market-hours": marketHours,
 };

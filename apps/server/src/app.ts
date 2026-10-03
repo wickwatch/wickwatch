@@ -84,7 +84,7 @@ export async function buildApp({
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
   const logTracker = new LogTracker(adapters.runtime);
-  const marketHours = new MarketHoursCache({ adapters, log: app.log });
+  const marketHours = new MarketHoursCache({ adapters, log: app.log, db });
   const overview = new OverviewLoader({
     adapters,
     directory: accounts,
