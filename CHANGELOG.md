@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.4.3 – 2026-10-03
+
 ### Fixed
 - Market hours outlive a restart: the last ones the broker named are stored in the database (migration 0019, table `market_hours`) and loaded at start. A restart during the broker's maintenance used to lose them for an hour, so a lost connection waited the short `ALERT_DISCONNECT_GRACE_SECONDS` instead of `ALERT_DISCONNECT_GRACE_CLOSED_SECONDS`, and the market badge was missing.
 
