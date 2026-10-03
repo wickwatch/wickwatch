@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountSizeMismatch, applyTemplate, validateParameters, type ParameterSchema } from "../src";
+import { accountSizeMismatch, applyTemplate, riskPreview, validateParameters, type ParameterSchema } from "../src";
 
 const schema: ParameterSchema[] = [
   { name: "Risk", type: "double", min: 0.1, max: 2 },
@@ -111,5 +111,50 @@ describe("accountSizeMismatch", () => {
     expect(accountSizeMismatch({ Capital: 0 }, "Capital", 10_000)).toBeUndefined();
     expect(accountSizeMismatch({ Capital: "100000" }, "Capital", 10_000)).toBeUndefined();
     expect(accountSizeMismatch({}, "Capital", 10_000)).toBeUndefined();
+  });
+});
+
+describe("riskPreview", () => {
+  const check = {
+    parameter: "Risk",
+    currency: "USD",
+    sizeParameter: "Capital",
+    reference: { value: 10_000, basis: "challengeStart" as const },
+    limits: { daily: 500, max: 1000 },
+  };
+
+  it("values the risk with the account size parameter and compares it with the loss limits", () => {
+    // The incident it is for: a backtest's 100k starting capital on a 10k account.
+    expect(riskPreview({ Risk: 1, Capital: 100_000 }, check)).toEqual({
+      percent: 1,
+      capital: 100_000,
+      capitalFrom: "parameter",
+      amount: 1000,
+      daily: { limit: 500, share: 2 },
+      max: { limit: 1000, share: 1 },
+      level: "over",
+    });
+    expect(riskPreview({ Risk: 1, Capital: 10_000 }, check)).toMatchObject({ amount: 100, level: "ok" });
+    expect(riskPreview({ Risk: 2.5, Capital: 10_000 }, check)).toMatchObject({ amount: 250, level: "high" });
+  });
+
+  it("takes the account's size when the algo names no account size parameter or it is 0", () => {
+    expect(riskPreview({ Risk: 1, Capital: 0 }, check)).toMatchObject({ capital: 10_000, capitalFrom: "account" });
+    const { sizeParameter: _, ...withoutSize } = check;
+    expect(riskPreview({ Risk: 1 }, withoutSize)).toMatchObject({ amount: 100, capitalFrom: "account" });
+  });
+
+  it("shows the amount without limits, and nothing without a risk or a capital", () => {
+    expect(riskPreview({ Risk: 1 }, { parameter: "Risk", currency: "USD", reference: check.reference })).toEqual({
+      percent: 1,
+      capital: 10_000,
+      capitalFrom: "account",
+      amount: 100,
+      level: "ok",
+    });
+    expect(riskPreview({ Risk: 0 }, check)).toBeUndefined();
+    expect(riskPreview({ Risk: "1" }, check)).toBeUndefined();
+    expect(riskPreview({ Risk: 1 }, { parameter: "Risk", currency: "USD" })).toBeUndefined();
+    expect(riskPreview({ Risk: 1 }, undefined)).toBeUndefined();
   });
 });

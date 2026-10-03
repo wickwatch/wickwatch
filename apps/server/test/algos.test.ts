@@ -132,35 +132,68 @@ describe("algo settings", () => {
       ...(payload ? { payload } : {}),
     });
 
-  it("names the account size parameter of an algo, for all its versions, and audits it", async () => {
+  it("names the account size and risk parameters of an algo, for all its versions, and audits it", async () => {
     await upload("alpha.algo", "binary-v1");
     expect((await settings("GET")).json()).toEqual([]);
-    const saved = await settings("PUT", "alpha", { accountSizeParameter: "StartingCapital" });
-    expect(saved.json()).toEqual({ algoName: "alpha", accountSizeParameter: "StartingCapital" });
-    expect((await settings("GET")).json()).toEqual([{ algoName: "alpha", accountSizeParameter: "StartingCapital" }]);
+    // The demo algo has no starting capital; any number parameter does for the test.
+    const saved = await settings("PUT", "alpha", { accountSizeParameter: "StopLossPoints" });
+    expect(saved.json()).toEqual({ algoName: "alpha", accountSizeParameter: "StopLossPoints" });
+    // Fields left out stay as they are.
+    expect((await settings("PUT", "alpha", { riskParameter: "RiskPercent" })).json()).toEqual({
+      algoName: "alpha",
+      accountSizeParameter: "StopLossPoints",
+      riskParameter: "RiskPercent",
+    });
+    expect((await settings("GET")).json()).toEqual([
+      { algoName: "alpha", accountSizeParameter: "StopLossPoints", riskParameter: "RiskPercent" },
+    ]);
 
-    expect((await settings("PUT", "alpha", { accountSizeParameter: null })).json()).toEqual({ algoName: "alpha" });
-    expect((await settings("GET")).json()).toEqual([{ algoName: "alpha" }]);
+    expect((await settings("PUT", "alpha", { accountSizeParameter: null })).json()).toEqual({
+      algoName: "alpha",
+      riskParameter: "RiskPercent",
+    });
     const rows = await t.db
       .selectFrom("audit_log")
       .select(["user_id", "target", "details"])
       .where("action", "=", "algo.settings")
       .execute();
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0]).toMatchObject({
       target: "alpha",
-      details: JSON.stringify({ accountSizeParameter: "StartingCapital" }),
+      details: JSON.stringify({ accountSizeParameter: "StopLossPoints", riskParameter: null }),
     });
     expect(rows[0]?.user_id).not.toBeNull();
   });
 
+  it("takes only number parameters of the newest version, but keeps a saved one it no longer has", async () => {
+    await upload("alpha.algo", "binary-v1");
+    for (const parameter of ["Unknown", "SessionEnd"]) {
+      const res = await settings("PUT", "alpha", { riskParameter: parameter });
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ error: "setting_parameter_invalid" });
+    }
+    await t.db
+      .insertInto("algo_settings")
+      .values({
+        algo_name: "alpha",
+        account_size_parameter: "Gone",
+        risk_parameter: null,
+        updated_by: null,
+        updated_at: "2026-10-03T00:00:00.000Z",
+      })
+      .execute();
+    expect(
+      (await settings("PUT", "alpha", { accountSizeParameter: "Gone", riskParameter: "RiskPercent" })).statusCode,
+    ).toBe(200);
+  });
+
   it("needs a known algo and an admin", async () => {
-    expect((await settings("PUT", "unknown", { accountSizeParameter: "X" })).json()).toEqual({
+    expect((await settings("PUT", "unknown", { accountSizeParameter: "RiskPercent" })).json()).toEqual({
       error: "algo_not_found",
     });
     await upload("alpha.algo", "binary-v1");
     const viewer = await loginAs(t, "viewer");
-    expect((await settings("PUT", "alpha", { accountSizeParameter: "X" }, viewer)).statusCode).toBe(403);
+    expect((await settings("PUT", "alpha", { accountSizeParameter: "RiskPercent" }, viewer)).statusCode).toBe(403);
     expect((await settings("GET", "", undefined, viewer)).statusCode).toBe(200);
   });
 });

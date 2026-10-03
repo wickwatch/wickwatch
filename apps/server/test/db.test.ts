@@ -43,7 +43,7 @@ describe("database", () => {
 
   it("migrates up, is idempotent and migrates down", async () => {
     db = createDatabase({ client: "sqlite", filename: ":memory:" });
-    expect((await migrateToLatest(db)).map((r) => r.status)).toEqual(Array(19).fill("Success"));
+    expect((await migrateToLatest(db)).map((r) => r.status)).toEqual(Array(20).fill("Success"));
     expect(await migrateToLatest(db)).toEqual([]);
 
     const tables = (await db.introspection.getTables()).map((t) => t.name).sort();

@@ -1,6 +1,6 @@
 import Type from "typebox";
 import { ATTRIBUTION_MODES } from "../attribution";
-import { AccountSize } from "./account";
+import { AccountSize, LossLimits } from "./account";
 import { ParameterValues } from "./config";
 import { InstanceStatus } from "./runtime";
 
@@ -65,12 +65,28 @@ export type ManagedInstance = Type.Static<typeof ManagedInstance>;
 export const AccountSizeCheck = Type.Object({ parameter: Type.String(), reference: AccountSize });
 export type AccountSizeCheck = Type.Static<typeof AccountSizeCheck>;
 
+/**
+ * The algo's risk parameter (percent of its capital per trade, AlgoSettings) with what to value it: the account size
+ * parameter if the algo names one, else the account's size, and the challenge's loss limits.
+ */
+export const RiskCheck = Type.Object({
+  parameter: Type.String(),
+  /** Currency of the account, for the amounts. */
+  currency: Type.String(),
+  sizeParameter: Type.Optional(Type.String()),
+  reference: Type.Optional(AccountSize),
+  limits: Type.Optional(LossLimits),
+});
+export type RiskCheck = Type.Static<typeof RiskCheck>;
+
 export const ManagedInstanceDetail = Type.Intersect([
   ManagedInstance,
   Type.Object({
     history: Type.Array(InstanceConfig, { description: "All versions, newest first" }),
     /** Present when the algo names such a parameter and the account's size is known. */
     accountSizeCheck: Type.Optional(AccountSizeCheck),
+    /** Present when the algo names a risk parameter. */
+    riskCheck: Type.Optional(RiskCheck),
   }),
 ]);
 export type ManagedInstanceDetail = Type.Static<typeof ManagedInstanceDetail>;

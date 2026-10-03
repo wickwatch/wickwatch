@@ -270,7 +270,8 @@
       "session_required": "This works only when logged in, not with an API token.",
       "totp_needed": "Creating API tokens needs 2FA. Set it up in your profile first.",
       "parameter_template_exists": "This algo already has a template with this name.",
-      "parameter_template_not_found": "This parameter template no longer exists."
+      "parameter_template_not_found": "This parameter template no longer exists.",
+      "setting_parameter_invalid": "Choose a number parameter of the newest version."
     }
   },
   "parameterIssue": {
@@ -775,15 +776,31 @@
       "dayStart": "the account's balance at the start of the trading day"
     },
     "confirmTitle": "Save with this account size?",
-    "confirm": "Save anyway",
-    "title": "Account size check",
-    "parameter": "Parameter holding the account size",
-    "hint": "E.g. a starting capital the algo calculates positions with. On the instances of {algo}, wickwatch warns when it is more than {tolerance} off the account's challenge start balance, else its balance at the start of the trading day.",
-    "none": "No check",
+    "confirm": "Save anyway"
+  },
+  "algoSizing": {
+    "title": "Account size and risk",
+    "state": "Account size: {size} · Risk: {risk}",
+    "sizeParameter": "Parameter holding the account size",
+    "riskParameter": "Parameter holding the risk per trade in %",
+    "sizeHint": "Account size: e.g. a starting capital the algo calculates positions with. On the instances of {algo}, wickwatch warns when it is more than {tolerance} off the account's challenge start balance, else its balance at the start of the trading day.",
+    "riskHint": "Risk: the percentage of that capital (or, without one, of the account's size) the algo risks per trade. wickwatch shows it in money and against the daily and max loss limits of the account's challenge.",
+    "none": "None",
     "save": "Save",
-    "saved": "Account size check for {algo}: {parameter}.",
-    "cleared": "Account size check for {algo} switched off.",
-    "noVersion": "Upload a version of this algo to choose its parameter."
+    "saved": "Account size and risk parameters of {algo} saved.",
+    "noVersion": "Upload a version of this algo to choose its parameters."
+  },
+  "risk": {
+    "title": "Risk per trade",
+    "amount": "Risk per trade: about {amount} ({percent} of {capital}).",
+    "capitalParameter": "{capital} from {parameter}",
+    "capitalAccount": "the account size {capital}",
+    "daily": "{share} of the daily loss limit ({limit})",
+    "max": "{share} of the max loss ({limit})",
+    "noLimits": "The account has no challenge loss limits to compare it with.",
+    "high": "One losing trade would use more than half of a loss limit.",
+    "over": "One losing trade would use up a loss limit of the challenge.",
+    "confirmTitle": "Save with this risk?"
   },
   "modal": {
     "close": "Close",

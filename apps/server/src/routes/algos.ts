@@ -9,6 +9,7 @@ import {
   ParameterFile,
   type AlgoMetadata,
 } from "@wickwatch/core";
+import { numberParameters } from "@wickwatch/core/parameters";
 import { SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -20,6 +21,7 @@ import { ErrorBody } from "../plugins/errors";
 import { metadataReader, schemaOf } from "../services/algo-metadata";
 import { audit } from "../services/audit";
 import { latestConfigIds } from "../services/instance-configs";
+import { algoSettingsOf } from "../services/parameter-checks";
 
 const MAX_ALGO_BYTES = 64 * 1024 * 1024;
 
@@ -47,11 +49,6 @@ function toAlgo(
     uploadedAt: row.uploaded_at,
   };
 }
-
-const toSettings = (algoName: string, accountSizeParameter: string | null): AlgoSettings => ({
-  algoName,
-  ...(accountSizeParameter ? { accountSizeParameter } : {}),
-});
 
 /** Default version: the bot's own `BotVersion` default, else its build time, else the hash. */
 function defaultVersion(metadata: AlgoMetadata, sha256: string): string {
@@ -238,10 +235,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         response: { 200: Type.Array(AlgoSettings) },
       },
     },
-    async () =>
-      (await db.selectFrom("algo_settings").selectAll().orderBy("algo_name").execute()).map((row) =>
-        toSettings(row.algo_name, row.account_size_parameter),
-      ),
+    async () => (await db.selectFrom("algo_settings").selectAll().orderBy("algo_name").execute()).map(algoSettingsOf),
   );
 
   app.put(
@@ -252,22 +246,44 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         tags: ["algos"],
         summary: "Change the settings of an algo, for all its versions",
         description:
-          "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's.",
+          "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off.",
         params: Type.Object({ name: Type.String({ minLength: 1, maxLength: 100 }) }),
         body: AlgoSettingsInput,
-        response: { 200: AlgoSettings, 403: ErrorBody, 404: ErrorBody },
+        response: { 200: AlgoSettings, 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
       },
     },
     async (request, reply) => {
       const algoName = request.params.name;
-      const algo = await db.selectFrom("algos").select("id").where("name", "=", algoName).executeTakeFirst();
-      if (!algo) return reply.code(404).send({ error: "algo_not_found" });
-      const parameter = request.body.accountSizeParameter;
+      const [newest, stored] = await Promise.all([
+        db
+          .selectFrom("algos")
+          .select("metadata")
+          .where("name", "=", algoName)
+          .orderBy("uploaded_at", "desc")
+          .orderBy("id", "desc")
+          .executeTakeFirst(),
+        db.selectFrom("algo_settings").selectAll().where("algo_name", "=", algoName).executeTakeFirst(),
+      ]);
+      if (!newest) return reply.code(404).send({ error: "algo_not_found" });
+      // Fields left out stay as they are. A saved parameter the newest version no longer has may stay; a new choice
+      // must be one of its numbers.
+      const numbers = new Set(numberParameters(schemaOf(newest.metadata)).map((p) => p.name));
+      const choose = (value: string | null | undefined, current: string | null = null) =>
+        value === undefined ? current : value;
       const row = {
-        account_size_parameter: parameter,
+        account_size_parameter: choose(request.body.accountSizeParameter, stored?.account_size_parameter),
+        risk_parameter: choose(request.body.riskParameter, stored?.risk_parameter),
         updated_by: request.user?.id ?? null,
         updated_at: new Date().toISOString(),
       };
+      const fine = (value: string | null, current: string | null | undefined) =>
+        value === null || value === current || numbers.has(value);
+      if (
+        !fine(row.account_size_parameter, stored?.account_size_parameter) ||
+        !fine(row.risk_parameter, stored?.risk_parameter)
+      ) {
+        return reply.code(400).send({ error: "setting_parameter_invalid" });
+      }
       await db
         .insertInto("algo_settings")
         .values({ algo_name: algoName, ...row })
@@ -276,10 +292,10 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       await audit(db, {
         action: "algo.settings",
         target: algoName,
-        details: { accountSizeParameter: parameter },
+        details: { accountSizeParameter: row.account_size_parameter, riskParameter: row.risk_parameter },
         ...actor(request),
       });
-      return toSettings(algoName, parameter);
+      return algoSettingsOf({ algo_name: algoName, ...row });
     },
   );
 };

@@ -408,3 +408,72 @@ describe("account size check", () => {
     });
   });
 });
+
+describe("risk check", () => {
+  const challenge = async (dailyLoss: object) => {
+    const now = new Date().toISOString();
+    const profile = {
+      name: "Trial",
+      startDate: "2026-09-01",
+      startBalance: 10_000,
+      rules: {
+        dailyLoss: {
+          limitPct: 5,
+          reference: "balance-at-day-start",
+          resetTime: "00:00",
+          timezone: "UTC",
+          ...dailyLoss,
+        },
+        maxLoss: { limitPct: 10, type: "static" },
+      },
+    };
+    await t.db.deleteFrom("challenge_profiles").execute();
+    await t.db
+      .insertInto("challenge_profiles")
+      .values({ account_id: accountId, profile: JSON.stringify(profile), created_at: now, updated_at: now })
+      .execute();
+  };
+  const limitsOf = async () =>
+    (await inject("GET", "/accounts"))
+      .json<{ number: string; lossLimits?: unknown }[]>()
+      .find((a) => a.number === "1111111")?.lossLimits;
+
+  beforeEach(async () => {
+    await t.db.deleteFrom("daily_stats").execute();
+    await t.db.deleteFrom("challenge_profiles").execute();
+  });
+
+  it("gives accounts the challenge's loss limits in money, the daily one of the day start when the rule says so", async () => {
+    expect(await limitsOf()).toBeUndefined();
+    await challenge({});
+    expect(await limitsOf()).toEqual({ daily: 500, max: 1000 });
+    await t.db
+      .insertInto("daily_stats")
+      .values({ account_id: accountId, day: "2026-10-01", start_balance: 9800 })
+      .execute();
+    await challenge({ limitBasis: "day-start" });
+    expect(await limitsOf()).toEqual({ daily: 490, max: 1000 });
+  });
+
+  it("gives an instance's detail the risk parameter with its capital and the limits, once the algo names one", async () => {
+    await create("alpha-ger40-risk");
+    await challenge({});
+    const detail = async () =>
+      (await inject("GET", "/managed-instances/alpha-ger40-risk")).json<{ riskCheck?: unknown }>();
+    expect((await detail()).riskCheck).toBeUndefined();
+
+    await t.app.inject({
+      method: "PUT",
+      url: "/api/v1/algo-settings/alpha",
+      headers: { cookie: admin },
+      payload: { riskParameter: "RiskPercent", accountSizeParameter: "StopLossPoints" },
+    });
+    expect((await detail()).riskCheck).toEqual({
+      parameter: "RiskPercent",
+      currency: "USD",
+      sizeParameter: "StopLossPoints",
+      reference: { value: 10_000, basis: "challengeStart" },
+      limits: { daily: 500, max: 1000 },
+    });
+  });
+});

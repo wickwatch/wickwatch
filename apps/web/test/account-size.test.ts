@@ -189,16 +189,19 @@ describe("account size check", () => {
     expect(wrapper.find("dialog[open]").text()).toContain(WARNING);
   });
 
-  it("is set per algo on the Algos page, by admins", async () => {
+  it("is set per algo on the Algos page, by admins, together with the risk parameter", async () => {
     settings = [];
     const wrapper = await open(AlgosView, "/algos");
-    const select = wrapper.findAll("select").find((s) => s.text().includes("No check"));
-    expect(select?.findAll("option").map((o) => o.text())).toEqual(["No check", "Starting capital", "Risk %"]);
-    await select?.setValue("StartingCapital");
+    const [size, risk] = wrapper.findAll(".size__form select");
+    expect(size?.findAll("option").map((o) => o.text())).toEqual(["None", "Starting capital", "Risk %"]);
+    await size?.setValue("StartingCapital");
+    await risk?.setValue("RiskPercent");
     await wrapper.find(".size__form").trigger("submit");
     await flushPromises();
-    expect(sent("PUT")).toEqual([{ path: "algo-settings/alpha", body: { accountSizeParameter: "StartingCapital" } }]);
-    expect(wrapper.text()).toContain("Account size check for alpha: Starting capital.");
+    expect(sent("PUT")).toEqual([
+      { path: "algo-settings/alpha", body: { accountSizeParameter: "StartingCapital", riskParameter: "RiskPercent" } },
+    ]);
+    expect(wrapper.text()).toContain("Account size and risk parameters of alpha saved.");
   });
 
   it("shows viewers the setting without a form", async () => {
@@ -210,8 +213,58 @@ describe("account size check", () => {
     const wrapper = await open(AlgosView, "/algos");
     // Folded by default; the summary says what is set.
     expect(wrapper.find("details.size").attributes("open")).toBeUndefined();
-    expect(wrapper.find(".size__summary").text()).toBe("Account size check · Starting capital");
-    expect(wrapper.text()).toContain("Parameter holding the account size: Starting capital");
+    expect(wrapper.find(".size__summary").text()).toBe(
+      "Account size and risk · Account size: Starting capital · Risk: None",
+    );
     expect(wrapper.findAll("select")).toHaveLength(0);
+  });
+});
+
+describe("risk preview", () => {
+  beforeEach(() => {
+    settings = [{ algoName: "alpha", accountSizeParameter: "StartingCapital", riskParameter: "RiskPercent" }];
+    accounts = [{ ...account, lossLimits: { daily: 500, max: 1000 } }];
+  });
+
+  it("shows the risk per trade in money against the loss limits in the form", async () => {
+    detail = detailWith(10_000);
+    const wrapper = await open(InstanceFormView, "/instances/alpha-ger40/edit");
+    expect(wrapper.find(".banner").text()).toBe(
+      "Risk per tradeRisk per trade: about 50.00 USD (0.5% of 10,000.00 from Starting capital).10% of the daily loss limit (500.00 USD) · 5% of the max loss (1,000.00 USD)",
+    );
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(sent("POST")).toHaveLength(1);
+  });
+
+  it("asks before saving a risk that one losing trade uses up a limit with", async () => {
+    // The incident it is for: a backtest's starting capital ten times the account's.
+    const wrapper = await open(InstanceFormView, "/instances/alpha-ger40/edit");
+    expect(wrapper.find(".banner--negative").text()).toContain(
+      "100% of the daily loss limit (500.00 USD) · 50% of the max loss (1,000.00 USD)One losing trade would use up a loss limit of the challenge.",
+    );
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect(sent("POST")).toEqual([]);
+    expect(openDialog(wrapper)?.props("title")).toBe("Save with this risk?");
+    expect(openDialog(wrapper)?.props("message")).toBe(
+      `${WARNING} One losing trade would use up a loss limit of the challenge.`,
+    );
+  });
+
+  it("shows the saved version's risk on the configuration tab", async () => {
+    detail = {
+      ...detailWith(10_000),
+      riskCheck: {
+        parameter: "RiskPercent",
+        currency: "USD",
+        sizeParameter: "StartingCapital",
+        reference: { value: 10_000, basis: "challengeStart" },
+        limits: { daily: 500 },
+      },
+    };
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+    expect(wrapper.text()).toContain("Risk per trade: about 50.00 USD (0.5% of 10,000.00 from Starting capital).");
+    expect(wrapper.text()).toContain("10% of the daily loss limit (500.00 USD)");
   });
 });

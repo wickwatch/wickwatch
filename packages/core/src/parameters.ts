@@ -1,4 +1,14 @@
-import type { ParameterFile, ParameterIssue, ParameterSchema, ParameterValues, ValidationResult } from "./schemas";
+import type {
+  Account,
+  AccountSizeCheck,
+  AlgoSettings,
+  ParameterFile,
+  ParameterIssue,
+  ParameterSchema,
+  ParameterValues,
+  RiskCheck,
+  ValidationResult,
+} from "./schemas";
 
 const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const COLOR = /^(#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[A-Za-z]+)$/;
@@ -200,4 +210,90 @@ export function accountSizeMismatch(
   const value = values[parameter];
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined;
   return Math.abs(value - reference) > reference * ACCOUNT_SIZE_TOLERANCE ? { parameter, value, reference } : undefined;
+}
+
+/** Share of a loss limit one losing trade may use before the risk preview warns. */
+export const RISK_SHARE_WARNING = 0.5;
+
+export interface RiskShare {
+  /** The limit in the account currency. */
+  limit: number;
+  /** Risk per trade as a share of it; 1 or more: one losing trade uses it up. */
+  share: number;
+}
+
+export interface RiskPreview {
+  /** Risk per trade in percent of the capital, as the algo's risk parameter holds it. */
+  percent: number;
+  capital: number;
+  /** Where the capital comes from: the algo's account size parameter, or the account's size. */
+  capitalFrom: "parameter" | "account";
+  /** Risk per trade in the account currency. */
+  amount: number;
+  daily?: RiskShare;
+  max?: RiskShare;
+  level: "ok" | "high" | "over";
+}
+
+/** The parameters an algo's account size or risk can be: numbers. */
+export const numberParameters = (schema: ParameterSchema[]): ParameterSchema[] =>
+  schema.filter((p) => p.type === "int" || p.type === "double");
+
+/**
+ * The account size check and the risk check of an instance, from its algo's settings (Algos page) and its account; each
+ * missing when it does not apply. The server and the instance form build them the same way.
+ */
+export function parameterChecks(
+  settings: AlgoSettings | undefined,
+  account: Pick<Account, "currency" | "accountSize" | "lossLimits"> | undefined,
+): { accountSizeCheck?: AccountSizeCheck; riskCheck?: RiskCheck } {
+  if (!settings || !account) return {};
+  const { accountSizeParameter, riskParameter } = settings;
+  const { currency, accountSize, lossLimits } = account;
+  return {
+    ...(accountSizeParameter && accountSize
+      ? { accountSizeCheck: { parameter: accountSizeParameter, reference: accountSize } }
+      : {}),
+    ...(riskParameter
+      ? {
+          riskCheck: {
+            parameter: riskParameter,
+            currency,
+            ...(accountSizeParameter ? { sizeParameter: accountSizeParameter } : {}),
+            ...(accountSize ? { reference: accountSize } : {}),
+            ...(lossLimits ? { limits: lossLimits } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+const positive = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
+
+/**
+ * The risk per trade an instance's parameters mean, in money and against the challenge's loss limits: the algo's risk
+ * parameter (percent) of its capital, which is its account size parameter when it names one with a value, else the
+ * account's size. An estimate: what a trade really risks depends on the stop loss and on how the bot rounds volumes.
+ */
+export function riskPreview(values: ParameterValues, check: RiskCheck | undefined): RiskPreview | undefined {
+  if (!check) return undefined;
+  const percent = values[check.parameter];
+  const sized = check.sizeParameter === undefined ? undefined : values[check.sizeParameter];
+  const capital = positive(sized) ? sized : check.reference?.value;
+  if (!positive(percent) || !positive(capital)) return undefined;
+  const amount = (percent / 100) * capital;
+  const share = (limit: number | undefined): RiskShare | undefined =>
+    positive(limit) ? { limit, share: amount / limit } : undefined;
+  const daily = share(check.limits?.daily);
+  const max = share(check.limits?.max);
+  const worst = Math.max(daily?.share ?? 0, max?.share ?? 0);
+  return {
+    percent,
+    capital,
+    capitalFrom: positive(sized) ? "parameter" : "account",
+    amount,
+    ...(daily ? { daily } : {}),
+    ...(max ? { max } : {}),
+    level: worst >= 1 ? "over" : worst >= RISK_SHARE_WARNING ? "high" : "ok",
+  };
 }

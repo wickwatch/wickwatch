@@ -13,6 +13,17 @@ export const AccountSize = Type.Object({
 });
 export type AccountSize = Type.Static<typeof AccountSize>;
 
+/**
+ * The loss limits of the account's challenge in the account currency, for the risk preview: the daily limit (of the
+ * initial balance, or of the latest day-start balance when the rule says so) and the max loss; each missing without
+ * such a rule.
+ */
+export const LossLimits = Type.Object({
+  daily: Type.Optional(Type.Number()),
+  max: Type.Optional(Type.Number()),
+});
+export type LossLimits = Type.Static<typeof LossLimits>;
+
 export const Account = Type.Object({
   id: Type.Integer(),
   adapter: Type.String(),
@@ -27,6 +38,8 @@ export const Account = Type.Object({
   hasChallenge: Type.Boolean(),
   /** What an algo's account size parameter is checked against; missing while nothing is known yet. */
   accountSize: Type.Optional(AccountSize),
+  /** Present with a challenge profile that has a daily or max loss limit. */
+  lossLimits: Type.Optional(LossLimits),
 });
 export type Account = Type.Static<typeof Account>;
 

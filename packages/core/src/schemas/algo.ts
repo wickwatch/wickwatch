@@ -23,11 +23,19 @@ export const AlgoSettings = Type.Object({
    * account's (challenge start balance, else balance) so a wrong value is noticed before it trades.
    */
   accountSizeParameter: Type.Optional(Type.String()),
+  /**
+   * The parameter holding the risk per trade in percent of the algo's capital (the account size parameter, else the
+   * account's size); wickwatch shows it in money and against the challenge's loss limits.
+   */
+  riskParameter: Type.Optional(Type.String()),
 });
 export type AlgoSettings = Type.Static<typeof AlgoSettings>;
 
+const SettingParameter = Type.Union([Type.String({ minLength: 1, maxLength: 200 }), Type.Null()]);
+
+/** Fields left out stay as they are; null switches one off. */
 export const AlgoSettingsInput = Type.Object({
-  /** null: no check. */
-  accountSizeParameter: Type.Union([Type.String({ minLength: 1, maxLength: 200 }), Type.Null()]),
+  accountSizeParameter: Type.Optional(SettingParameter),
+  riskParameter: Type.Optional(SettingParameter),
 });
 export type AlgoSettingsInput = Type.Static<typeof AlgoSettingsInput>;

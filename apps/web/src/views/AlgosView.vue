@@ -5,7 +5,7 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api } from "../api";
-import AlgoAccountSize from "../components/AlgoAccountSize.vue";
+import AlgoSizing from "../components/AlgoSizing.vue";
 import AlgoTemplates from "../components/AlgoTemplates.vue";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -57,7 +57,7 @@ const groups = computed(() => {
     name,
     versions: versions.get(name) ?? [],
     templates: byAlgo.get(name) ?? [],
-    accountSize: settings.value.find((s) => s.algoName === name)?.accountSizeParameter,
+    sizing: settings.value.find((s) => s.algoName === name),
   }));
 });
 
@@ -144,7 +144,7 @@ const confirmRemove = () => {
         <p class="muted">{{ $t("algos.none") }}</p>
       </section>
       <section
-        v-for="{ name, versions, templates: own, accountSize } in groups"
+        v-for="{ name, versions, templates: own, sizing } in groups"
         :key="name"
         class="panel card"
         :aria-label="name"
@@ -184,11 +184,11 @@ const confirmRemove = () => {
             <ParameterList mode="schema" :schema="a.parameters" class="algo-params" />
           </details>
         </div>
-        <AlgoAccountSize
-          v-if="versions.length || accountSize"
+        <AlgoSizing
+          v-if="versions.length || sizing"
           :algo-name="name"
           :newest="versions[0]"
-          :parameter="accountSize"
+          :settings="sizing"
           @changed="changed"
         />
         <AlgoTemplates :algo-name="name" :newest="versions[0]" :templates="own" @changed="changed" />

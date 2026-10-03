@@ -5150,6 +5150,17 @@
                             ]
                           }
                         }
+                      },
+                      "lossLimits": {
+                        "type": "object",
+                        "properties": {
+                          "daily": {
+                            "type": "number"
+                          },
+                          "max": {
+                            "type": "number"
+                          }
+                        }
                       }
                     }
                   }
@@ -5304,6 +5315,17 @@
                               ]
                             }
                           ]
+                        }
+                      }
+                    },
+                    "lossLimits": {
+                      "type": "object",
+                      "properties": {
+                        "daily": {
+                          "type": "number"
+                        },
+                        "max": {
+                          "type": "number"
                         }
                       }
                     }
@@ -5563,6 +5585,17 @@
                               ]
                             }
                           ]
+                        }
+                      }
+                    },
+                    "lossLimits": {
+                      "type": "object",
+                      "properties": {
+                        "daily": {
+                          "type": "number"
+                        },
+                        "max": {
+                          "type": "number"
                         }
                       }
                     }
@@ -8527,6 +8560,9 @@
                       },
                       "accountSizeParameter": {
                         "type": "string"
+                      },
+                      "riskParameter": {
+                        "type": "string"
                       }
                     }
                   }
@@ -8564,18 +8600,21 @@
         "tags": [
           "algos"
         ],
-        "description": "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's.",
+        "description": "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "accountSizeParameter"
-                ],
                 "properties": {
                   "accountSizeParameter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "nullable": true
+                  },
+                  "riskParameter": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200,
@@ -8621,6 +8660,30 @@
                       "type": "string"
                     },
                     "accountSizeParameter": {
+                      "type": "string"
+                    },
+                    "riskParameter": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
                       "type": "string"
                     }
                   }
@@ -11466,6 +11529,63 @@
                                       ]
                                     }
                                   ]
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "riskCheck": {
+                          "type": "object",
+                          "required": [
+                            "parameter",
+                            "currency"
+                          ],
+                          "properties": {
+                            "parameter": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string"
+                            },
+                            "sizeParameter": {
+                              "type": "string"
+                            },
+                            "reference": {
+                              "type": "object",
+                              "required": [
+                                "value",
+                                "basis"
+                              ],
+                              "properties": {
+                                "value": {
+                                  "type": "number"
+                                },
+                                "basis": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "challengeStart"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "dayStart"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "limits": {
+                              "type": "object",
+                              "properties": {
+                                "daily": {
+                                  "type": "number"
+                                },
+                                "max": {
+                                  "type": "number"
                                 }
                               }
                             }

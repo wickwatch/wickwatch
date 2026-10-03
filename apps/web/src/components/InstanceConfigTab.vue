@@ -17,6 +17,7 @@ import AppBanner from "./AppBanner.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import IconButton from "./IconButton.vue";
 import ParameterList from "./ParameterList.vue";
+import RiskNote from "./RiskNote.vue";
 import TemplateApplyDialog from "./TemplateApplyDialog.vue";
 import TemplateSaveDialog from "./TemplateSaveDialog.vue";
 
@@ -189,6 +190,8 @@ function changes(index: number): string[] {
           </RouterLink>
         </template>
       </AppBanner>
+      <!-- The saved version's risk per trade; viewers get no values, so it stays quiet for them. -->
+      <RiskNote :check="managed.riskCheck" :values="managed.config.parameters" :schema="schema" />
       <!-- Only when the container and the saved configuration differ; start and stop live in the page head. -->
       <AppBanner v-if="!deployment" tone="neutral">
         <span>{{ $t("deploy.none") }}</span>

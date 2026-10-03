@@ -180,6 +180,8 @@ export interface AlgoSettingsTable {
   algo_name: string;
   /** The parameter holding the account size the algo calculates with; checked against the account's. */
   account_size_parameter: string | null;
+  /** The parameter holding the risk per trade in percent of the algo's capital, for the risk preview. */
+  risk_parameter: string | null;
   updated_by: number | null;
   updated_at: string;
 }

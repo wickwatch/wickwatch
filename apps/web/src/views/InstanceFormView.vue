@@ -12,7 +12,13 @@ import type {
 } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
 // Plain functions and constants without the schema library, unlike the core's main entry.
-import { applyTemplate, parameterDefaults, validateParameters } from "@wickwatch/core/parameters";
+import {
+  applyTemplate,
+  parameterChecks,
+  parameterDefaults,
+  riskPreview,
+  validateParameters,
+} from "@wickwatch/core/parameters";
 import { ATTRIBUTION_MODES } from "@wickwatch/core/rules";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -22,6 +28,7 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import FieldError from "../components/FieldError.vue";
 import FileDrop from "../components/FileDrop.vue";
 import ParameterList from "../components/ParameterList.vue";
+import RiskNote from "../components/RiskNote.vue";
 import { useAccountSizeWarning } from "../composables/useAccountSizeWarning";
 import { accountLabel, formatDateTime } from "../format";
 import { parameterTitle } from "../parameter-label";
@@ -111,21 +118,30 @@ const missing = computed(
         .map((i) => i.parameter),
     ),
 );
-/** The account size the algo calculates with, against the account's; a warning, saving needs a confirmation. */
+/**
+ * The account size the algo calculates with against the account's, and the risk per trade against the challenge's
+ * loss limits (settings from the Algos page); a far-off size or one losing trade using up a limit needs a confirmation.
+ */
 const settings = ref<AlgoSettings[]>([]);
-const sizeCheck = computed(() => {
-  const parameter = settings.value.find((s) => s.algoName === algo.value?.name)?.accountSizeParameter;
-  const reference = accounts.value.find((a) => a.id === accountId.value)?.accountSize;
-  return parameter && reference ? { parameter, reference } : undefined;
-});
+const parameterRules = computed(() =>
+  parameterChecks(
+    settings.value.find((s) => s.algoName === algo.value?.name),
+    accounts.value.find((a) => a.id === accountId.value),
+  ),
+);
 const { text: sizeWarning, warnings } = useAccountSizeWarning({
-  check: () => sizeCheck.value,
+  check: () => parameterRules.value.accountSizeCheck,
   values: () => values.value,
   schema: () => schema.value,
 });
-const confirmingSize = ref(false);
-function saveDespiteSize() {
-  confirmingSize.value = false;
+const riskOver = computed(() => riskPreview(values.value, parameterRules.value.riskCheck)?.level === "over");
+const confirm = computed(() => ({
+  title: riskOver.value ? t("risk.confirmTitle") : t("accountSize.confirmTitle"),
+  message: [sizeWarning.value, riskOver.value && t("risk.over")].filter(Boolean).join(" "),
+}));
+const confirming = ref(false);
+function saveConfirmed() {
+  confirming.value = false;
   void save(true);
 }
 const formats = computed(() => system.value?.parameterFormats ?? []);
@@ -320,7 +336,7 @@ onMounted(async () => {
   }
 });
 
-async function save(sizeConfirmed = false) {
+async function save(confirmed = false) {
   sent.value = true;
   const fieldsOk = form.validate();
   if (!fieldsOk || shownIssues.value.size) {
@@ -330,8 +346,8 @@ async function save(sizeConfirmed = false) {
     return;
   }
   if (algoId.value === undefined || accountId.value === undefined) return;
-  if (sizeWarning.value && !sizeConfirmed) {
-    confirmingSize.value = true;
+  if (confirm.value.message && !confirmed) {
+    confirming.value = true;
     return;
   }
   symbol.value = canonical(symbol.value.trim(), symbols.value);
@@ -545,6 +561,7 @@ const algoLabel = (a: Algo) =>
           symbols-list="symbols-list"
           periods-list="periods-list"
         />
+        <RiskNote :check="parameterRules.riskCheck" :values="values" :schema="schema" />
       </section>
 
       <section class="panel card" aria-labelledby="attribution-title">
@@ -610,12 +627,12 @@ const algoLabel = (a: Algo) =>
       </div>
     </form>
     <ConfirmDialog
-      :open="confirmingSize"
-      :title="$t('accountSize.confirmTitle')"
-      :message="sizeWarning ?? ''"
+      :open="confirming"
+      :title="confirm.title"
+      :message="confirm.message"
       :confirm-label="$t('accountSize.confirm')"
-      @confirm="saveDespiteSize"
-      @cancel="confirmingSize = false"
+      @confirm="saveConfirmed"
+      @cancel="confirming = false"
     />
   </div>
 </template>

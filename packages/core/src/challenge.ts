@@ -2,6 +2,7 @@ import type {
   ChallengeEvaluation,
   ChallengeProfile,
   Deal,
+  LossLimits,
   Position,
   ChallengeRules,
   ChallengeStatus,
@@ -53,6 +54,22 @@ export function tradingDays(deals: Deal[], positions: Position[], resetTime: str
 /** Reset time and zone of the profile's trading day; UTC midnight without a daily-loss rule. */
 export function profileDay(rules: ChallengeRules): { resetTime: string; timeZone: string } {
   return { resetTime: rules.dailyLoss?.resetTime ?? "00:00", timeZone: rules.dailyLoss?.timezone ?? "UTC" };
+}
+
+/**
+ * The profile's loss limits in money, for a preview of the risk per trade: the daily limit as a share of the initial
+ * balance, or of `dayStart` (the balance at the start of the trading day) when the rule takes the day start; the max
+ * loss as a share of the initial balance, as evaluateChallenge measures them. Without a day start the initial balance
+ * stands in; a rule that takes equity is estimated with the balance.
+ */
+export function lossLimitAmounts(profile: ChallengeProfile, dayStart?: number): LossLimits | undefined {
+  const { dailyLoss, maxLoss } = profile.rules;
+  if (!dailyLoss && !maxLoss) return undefined;
+  const dailyBasis = dailyLoss?.limitBasis === "day-start" ? (dayStart ?? profile.startBalance) : profile.startBalance;
+  return {
+    ...(dailyLoss ? { daily: (dailyLoss.limitPct / 100) * dailyBasis } : {}),
+    ...(maxLoss ? { max: (maxLoss.limitPct / 100) * profile.startBalance } : {}),
+  };
 }
 
 function limitStatus(usage: number): RuleStatus {

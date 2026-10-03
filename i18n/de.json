@@ -270,7 +270,8 @@
       "session_required": "Das geht nur angemeldet, nicht mit einem API-Token.",
       "totp_needed": "API-Tokens anlegen geht nur mit 2FA. Richte sie zuerst im Profil ein.",
       "parameter_template_exists": "Dieser Algo hat schon eine Vorlage mit diesem Namen.",
-      "parameter_template_not_found": "Diese Parametervorlage gibt es nicht mehr."
+      "parameter_template_not_found": "Diese Parametervorlage gibt es nicht mehr.",
+      "setting_parameter_invalid": "Wähle einen Zahlen-Parameter der neuesten Version."
     }
   },
   "parameterIssue": {
@@ -775,15 +776,31 @@
       "dayStart": "Kontostand zu Beginn des Handelstags"
     },
     "confirmTitle": "Mit dieser Kontogröße speichern?",
-    "confirm": "Trotzdem speichern",
-    "title": "Prüfung der Kontogröße",
-    "parameter": "Parameter mit der Kontogröße",
-    "hint": "Z. B. ein Startkapital, mit dem der Algo Positionen berechnet. Bei den Instanzen von {algo} warnt wickwatch, wenn er mehr als {tolerance} vom Startsaldo der Challenge des Kontos abweicht, sonst vom Kontostand zu Beginn des Handelstags.",
-    "none": "Keine Prüfung",
+    "confirm": "Trotzdem speichern"
+  },
+  "algoSizing": {
+    "title": "Kontogröße und Risiko",
+    "state": "Kontogröße: {size} · Risiko: {risk}",
+    "sizeParameter": "Parameter mit der Kontogröße",
+    "riskParameter": "Parameter mit dem Risiko pro Trade in %",
+    "sizeHint": "Kontogröße: z. B. ein Startkapital, mit dem der Algo Positionen berechnet. Bei den Instanzen von {algo} warnt wickwatch, wenn er mehr als {tolerance} vom Startsaldo der Challenge des Kontos abweicht, sonst vom Kontostand zu Beginn des Handelstags.",
+    "riskHint": "Risiko: der Prozentsatz dieses Kapitals (ohne eines: der Kontogröße), den der Algo pro Trade riskiert. wickwatch zeigt ihn in Geld und im Verhältnis zum Tages- und Gesamtverlustlimit der Challenge des Kontos.",
+    "none": "Keiner",
     "save": "Speichern",
-    "saved": "Prüfung der Kontogröße für {algo}: {parameter}.",
-    "cleared": "Prüfung der Kontogröße für {algo} ausgeschaltet.",
-    "noVersion": "Lade eine Version dieses Algos hoch, um seinen Parameter zu wählen."
+    "saved": "Parameter für Kontogröße und Risiko von {algo} gespeichert.",
+    "noVersion": "Lade eine Version dieses Algos hoch, um seine Parameter zu wählen."
+  },
+  "risk": {
+    "title": "Risiko pro Trade",
+    "amount": "Risiko pro Trade: etwa {amount} ({percent} von {capital}).",
+    "capitalParameter": "{capital} aus {parameter}",
+    "capitalAccount": "der Kontogröße {capital}",
+    "daily": "{share} des Tagesverlustlimits ({limit})",
+    "max": "{share} des Gesamtverlustlimits ({limit})",
+    "noLimits": "Das Konto hat keine Verlustlimits einer Challenge zum Vergleich.",
+    "high": "Ein Verlusttrade würde mehr als die Hälfte eines Verlustlimits verbrauchen.",
+    "over": "Ein Verlusttrade würde ein Verlustlimit der Challenge aufbrauchen.",
+    "confirmTitle": "Mit diesem Risiko speichern?"
   },
   "modal": {
     "close": "Schließen",
