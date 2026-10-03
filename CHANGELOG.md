@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Notifications about a lost broker connection wait until it lasted `ALERT_DISCONNECT_GRACE_SECONDS` (default 180), so short drops the bot recovers from by itself no longer send an alert and a resolution each. While the market of the instance's symbol is closed, when brokers do their maintenance, `ALERT_DISCONNECT_GRACE_CLOSED_SECONDS` applies (default 1800; `off` holds them until the market opens). The dashboard still shows a lost connection at once.
+
 ## 0.4.1 – 2026-10-02
 
 ### Changed

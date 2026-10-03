@@ -1,4 +1,4 @@
-import type { Alert, Overview } from "@wickwatch/core";
+import { marketState, type Alert, type Overview } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import type { Locale } from "../config";
 import type { Db } from "../db";
@@ -16,6 +16,13 @@ export interface NotifierOptions {
   locale: Locale;
   log: FastifyBaseLogger;
   intervalMs?: number;
+  /** A lost broker connection is only posted once it lasted this long; short drops are no news. Default 0. */
+  disconnectGraceMs?: number;
+  /**
+   * The same while the instance's market is closed, e.g. during a broker's weekend maintenance; Infinity holds it
+   * until the market opens. Default `disconnectGraceMs`.
+   */
+  disconnectGraceClosedMs?: number;
   fetch?: typeof fetch;
   now?: () => Date;
 }
@@ -108,7 +115,7 @@ export class AlertNotifier {
     const time = this.now().toISOString();
 
     for (const [key, alert] of current) {
-      if (sent.some((row) => row.key === key)) continue;
+      if (sent.some((row) => row.key === key) || this.held(alert, overview)) continue;
       const text = alertText(alert, this.options.locale);
       if (!(await this.post(url, this.event("alert_raised", alert, time, text)))) continue;
       await db
@@ -135,6 +142,18 @@ export class AlertNotifier {
       if (!(await this.post(url, this.event("alert_resolved", alert, time, text)))) continue;
       await db.deleteFrom("notified_alerts").where("key", "=", row.key).execute();
     }
+  }
+
+  /** A lost connection that may still come back by itself: not posted yet, and so no resolution either. */
+  private held(alert: Alert, overview: Overview): boolean {
+    if (alert.code !== "instance_disconnected") return false;
+    const now = this.now();
+    const grace = this.options.disconnectGraceMs ?? 0;
+    // Without the broker's hours the market counts as open.
+    const hours = overview.instances.find((i) => i.name === alert.subject)?.marketHours;
+    const closed = hours !== undefined && !marketState(hours, now).open;
+    const wait = closed ? (this.options.disconnectGraceClosedMs ?? grace) : grace;
+    return now.getTime() - Date.parse(String(alert.params.since)) < wait;
   }
 
   private event(event: AlertEvent["event"], alert: Alert, time: string, text: string): AlertEvent {

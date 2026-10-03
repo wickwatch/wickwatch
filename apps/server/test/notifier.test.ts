@@ -1,4 +1,4 @@
-import type { Alert, Overview } from "@wickwatch/core";
+import type { Alert, MarketHours, Overview } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDatabase, migrateToLatest, type Db } from "../src/db";
@@ -25,10 +25,12 @@ const stopped: Alert = { level: "warning", code: "instance_stopped", subject: "a
 
 /** Names of the instances and numbers of the accounts that exist; a resolved alert of a missing one was removed. */
 let present: { instances: string[]; accounts: string[] };
+/** The broker's hours of every instance's symbol; unknown when unset. */
+let hours: MarketHours | undefined;
 const overview = (alerts: Alert[]): Overview => ({
   time: NOW.toISOString(),
   accounts: present.accounts.map((number) => ({ number })) as unknown as Overview["accounts"],
-  instances: present.instances.map((name) => ({ name })) as unknown as Overview["instances"],
+  instances: present.instances.map((name) => ({ name, marketHours: hours })) as unknown as Overview["instances"],
   alerts,
 });
 
@@ -61,6 +63,7 @@ beforeEach(async () => {
   await migrateToLatest(db);
   alerts = [];
   present = { instances: ["alpha"], accounts: ["5902789"] };
+  hours = undefined;
   fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response(null, { status: 204 })));
   log = { warn: vi.fn() };
 });
@@ -126,6 +129,48 @@ describe("AlertNotifier", () => {
         .slice(4)
         .map((e) => e.text),
     ).toEqual(["Closed: account 5902789 was removed", "Closed: alpha was removed"]);
+  });
+
+  it("posts a lost connection only once it outlasted the grace time", async () => {
+    // Lost 5 min 10 s before NOW.
+    const n = notifier({ disconnectGraceMs: 10 * 60_000 });
+    alerts = [disconnected, loginFailed];
+    await n.check();
+    expect(posted().map((e) => e.code)).toEqual(["account_error"]);
+
+    // Back before the grace time ended: neither the alert nor a resolution.
+    alerts = [loginFailed];
+    await n.check();
+    expect(posted()).toHaveLength(1);
+
+    alerts = [disconnected, loginFailed];
+    await notifier({ disconnectGraceMs: 5 * 60_000 }).check();
+    expect(posted().map((e) => e.code)).toEqual(["account_error", "instance_disconnected"]);
+  });
+
+  it("waits longer while the market is closed", async () => {
+    // NOW is a Monday afternoon; the only session is Sunday 00:00–00:01. Lost 5 min 10 s before NOW.
+    hours = { alwaysOpen: false, sessions: [{ start: 0, end: 60 }] };
+    alerts = [disconnected];
+    const closed = (ms: number) => notifier({ disconnectGraceMs: 60_000, disconnectGraceClosedMs: ms }).check();
+    await closed(30 * 60_000);
+    await closed(Infinity);
+    expect(posted()).toEqual([]);
+    await closed(5 * 60_000);
+    expect(posted().map((e) => e.code)).toEqual(["instance_disconnected"]);
+  });
+
+  it("uses the open market's grace time while it is open, and when its hours are unknown", async () => {
+    const options = { disconnectGraceMs: 60_000, disconnectGraceClosedMs: Infinity };
+    alerts = [disconnected];
+    await notifier(options).check();
+    expect(posted()).toHaveLength(1);
+
+    present = { instances: ["alpha", "beta"], accounts: [] };
+    hours = { alwaysOpen: true, sessions: [] };
+    alerts = [disconnected, { ...disconnected, subject: "beta" }];
+    await notifier(options).check();
+    expect(posted().map((e) => e.subject)).toEqual(["alpha", "beta"]);
   });
 
   it("does not repeat alerts after a restart", async () => {

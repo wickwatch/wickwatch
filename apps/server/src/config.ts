@@ -40,6 +40,10 @@ export interface Config {
   accountPollSeconds: number;
   /** How often alerts are checked for ALERT_WEBHOOK_URL and HEARTBEAT_URL. */
   alertCheckSeconds: number;
+  /** A lost broker connection is only notified once it lasted this long. */
+  alertDisconnectGraceSeconds: number;
+  /** The same while the instance's market is closed; Infinity when off (held until the market opens). */
+  alertDisconnectGraceClosedSeconds: number;
   /** Database backups; `intervalHours` 0 turns them off. */
   backup: { dir: string; intervalHours: number; keep: number };
   /** Audit entries older than this are deleted; 0 keeps them forever. */
@@ -139,6 +143,11 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
   const adapterSettings = readAdapterSettings(get, problems);
   const alertCheckSeconds = integer("ALERT_CHECK_SECONDS", 60, 10, 3600);
+  const alertDisconnectGraceSeconds = integer("ALERT_DISCONNECT_GRACE_SECONDS", 180, 0, 3600);
+  const alertDisconnectGraceClosedSeconds =
+    get("ALERT_DISCONNECT_GRACE_CLOSED_SECONDS")?.toLowerCase() === "off"
+      ? Infinity
+      : integer("ALERT_DISCONNECT_GRACE_CLOSED_SECONDS", 1800, 0, 86400);
   if (dockerHost !== undefined && !/^(tcp|http|https|unix):\/\/.+/.test(dockerHost)) {
     problems.push("DOCKER_HOST must look like tcp://socket-proxy:2375 or unix:///var/run/docker.sock");
   }
@@ -162,6 +171,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     instanceRestartPolicy,
     accountPollSeconds,
     alertCheckSeconds,
+    alertDisconnectGraceSeconds,
+    alertDisconnectGraceClosedSeconds,
     backup: {
       // Next to the database by default, e.g. data/backups.
       dir: resolve(cwd, get("BACKUP_DIR") ?? resolve(dirname(database.filename), "backups")),

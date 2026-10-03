@@ -30,6 +30,8 @@ describe("loadConfig", () => {
       algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
       alertCheckSeconds: 60,
+      alertDisconnectGraceSeconds: 180,
+      alertDisconnectGraceClosedSeconds: 1800,
       backup: { dir: "/srv/wickwatch/data/backups", intervalHours: 24, keep: 7 },
       auditRetentionDays: 365,
       adapterSettings: { "ctrader-cli": { cli: "local", cliPath: "ctrader-cli" } },
@@ -114,6 +116,11 @@ describe("loadConfig", () => {
     expect(load({ DATABASE_URL: "file::memory:" }).database.filename).toBe(":memory:");
   });
 
+  it("switches the grace time for a closed market off", () => {
+    expect(load({ ALERT_DISCONNECT_GRACE_CLOSED_SECONDS: "off" }).alertDisconnectGraceClosedSeconds).toBe(Infinity);
+    expect(load({ ALERT_DISCONNECT_GRACE_CLOSED_SECONDS: "7200" }).alertDisconnectGraceClosedSeconds).toBe(7200);
+  });
+
   it("reports every problem at once", () => {
     expect(
       problems({
@@ -126,9 +133,11 @@ describe("loadConfig", () => {
         HEARTBEAT_URL: "ftp://example.com",
         LOG_LEVEL: "loud",
         ALERT_CHECK_SECONDS: "5",
+        ALERT_DISCONNECT_GRACE_SECONDS: "-1",
+        ALERT_DISCONNECT_GRACE_CLOSED_SECONDS: "never",
         CTRADER_CLI: "docker",
       }),
-    ).toHaveLength(10);
+    ).toHaveLength(12);
   });
 
   it("explains that Postgres is not supported yet", () => {

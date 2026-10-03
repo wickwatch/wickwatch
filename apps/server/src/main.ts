@@ -81,6 +81,8 @@ try {
     locale: config.defaultLocale,
     log: app.log,
     intervalMs: config.alertCheckSeconds * 1000,
+    disconnectGraceMs: config.alertDisconnectGraceSeconds * 1000,
+    disconnectGraceClosedMs: config.alertDisconnectGraceClosedSeconds * 1000,
   });
   const lossGuard = new LossGuardService({
     db,
