@@ -41,7 +41,8 @@ const STATUS =
   "An instance's `status` is running, stopped, restarting, error or unknown; `startedAt` is when it started. " +
   "Running is not the whole answer: `connectionLostSince` means it runs but lost its broker connection, `crashes` " +
   "counts errors the algo threw while it kept running. `stoppedByUser` marks a stop on purpose through wickwatch " +
-  "(stop, emergency stop, loss guard), which is no alert.";
+  "(stop, emergency stop, loss guard, a schedule's pause), which is no alert; `paused` (until, reasons) means its " +
+  "schedule holds it stopped for a weekend, holiday or news.";
 const Since = Type.String({ format: "date-time", description: "ISO 8601 time in UTC, e.g. 2026-10-01T00:00:00Z." });
 
 /** The read-only tools of the MCP endpoint; they give the same data as the REST API, for the token's role. */

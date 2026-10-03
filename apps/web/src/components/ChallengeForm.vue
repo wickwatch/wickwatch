@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { api, ApiError, errorKey } from "../api";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { isAdmin } from "../session";
-import { checks, useValidation } from "../validation";
+import { checks, TIME_ZONES, useValidation } from "../validation";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import FieldError from "./FieldError.vue";
 import AppSpinner from "./AppSpinner.vue";
@@ -21,7 +21,6 @@ const REFERENCES: DailyLossReference[] = [
   "balance-at-day-start",
   "equity-at-day-start",
 ];
-const TIME_ZONES = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
 
 const templates = ref<ChallengeTemplate[]>([]);
 const exists = ref(false);

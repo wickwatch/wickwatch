@@ -2,6 +2,7 @@
 // (`@wickwatch/core/rules`) without pulling in the rest of the core.
 
 import type { InstanceStatus, LogFilter, LogLine } from "./schemas/runtime";
+import type { InstancePause } from "./schemas/schedule";
 
 export { ATTRIBUTION_MODES } from "./attribution";
 export { DEFAULT_LABEL_PREFIX } from "./labels";
@@ -23,6 +24,10 @@ export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 /** Running, or about to run again: counts as meant to run. */
 export const isUp = (status: InstanceStatus | undefined): boolean => status === "running" || status === "restarting";
+
+/** A schedule's pause shows only while the instance is not up: one started by hand during the pause just runs. */
+export const shownPause = (status: InstanceStatus, pause: InstancePause | undefined): InstancePause | undefined =>
+  isUp(status) ? undefined : pause;
 
 /** Whether a log filter keeps a line: problems are warnings and errors, setups the lines with setup features. */
 export const keepsLogLine = (line: Pick<LogLine, "level" | "setup">, filter: LogFilter): boolean =>

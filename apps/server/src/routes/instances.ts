@@ -8,7 +8,7 @@ import type { Db } from "../db";
 import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import { auditOutcome } from "../services/audit";
-import { setShouldRun } from "../services/instance-keeper";
+import { endPause, setShouldRun } from "../services/instance-keeper";
 import type { DealHistory } from "../services/deal-history";
 import { LOG_SEARCH_LIMIT, searchLog, type LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
@@ -219,7 +219,9 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
     async (request, reply) => {
       const { ref, action } = request.params;
       await auditOutcome(db, { action: `instance.${action}`, target: ref, ...actor(request) }, async () => {
-        // Before stopping, so the instance keeper does not see it ended while still "meant to run".
+        // Before stopping, so the instance keeper does not see it ended while still "meant to run". What the user does
+        // ends a schedule's pause: started by hand it runs on, stopped by hand it stays stopped.
+        await endPause(db, ref);
         if (action === "stop") await setShouldRun(db, ref, false, true);
         await adapters.runtime[action](ref);
         if (action !== "stop") await setShouldRun(db, ref, true);

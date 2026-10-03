@@ -50,6 +50,9 @@ async function logout() {
           $t("nav.accounts")
         }}</RouterLink>
         <RouterLink to="/algos" class="nav-link" active-class="nav-link--active">{{ $t("nav.algos") }}</RouterLink>
+        <RouterLink to="/schedules" class="nav-link" active-class="nav-link--active">{{
+          $t("nav.schedules")
+        }}</RouterLink>
       </nav>
     </div>
     <div class="header__end">

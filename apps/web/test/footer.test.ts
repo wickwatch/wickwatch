@@ -23,6 +23,7 @@ const info = (extra: Partial<SystemInfo> = {}): SystemInfo => ({
   sourceUrl: "https://github.com/wickwatch/wickwatch",
   mcp: true,
   apiTokensRequire2fa: false,
+  newsCalendar: false,
   ...extra,
 });
 

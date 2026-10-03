@@ -76,6 +76,7 @@ beforeEach(() => {
     sourceUrl: "https://github.com/wickwatch/wickwatch",
     mcp: true,
     apiTokensRequire2fa: false,
+    newsCalendar: false,
   };
   body = detail();
   vi.stubGlobal(

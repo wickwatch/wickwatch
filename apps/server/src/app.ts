@@ -24,12 +24,14 @@ import { managedInstanceRoutes } from "./routes/managed-instances";
 import { mcpRoutes } from "./routes/mcp";
 import { overviewRoutes } from "./routes/overview";
 import { parameterTemplateRoutes } from "./routes/parameter-templates";
+import { scheduleRoutes } from "./routes/schedules";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
 import { LogArchive, logReader, withLogArchive } from "./services/log-archive";
 import { LogTracker } from "./services/log-tracker";
 import { MarketHoursCache } from "./services/market-hours";
+import { NewsCalendar } from "./services/news-calendar";
 import { OverviewLoader, withChangeNotice } from "./services/overview";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
@@ -44,6 +46,8 @@ declare module "fastify" {
     marketHours: MarketHoursCache;
     /** Logs of replaced containers, for the hourly cleanup; undefined with LOG_ARCHIVE=off. */
     logArchive: LogArchive | undefined;
+    /** The economic calendar for the news pauses of schedules, for the scheduler. */
+    newsCalendar: NewsCalendar;
   }
 }
 
@@ -109,6 +113,8 @@ export async function buildApp({
   app.decorate("adapters", adapters);
   app.decorate("marketHours", marketHours);
   app.decorate("logArchive", logArchive);
+  const newsCalendar = new NewsCalendar({ db, log: app.log, url: config.newsCalendarUrl });
+  app.decorate("newsCalendar", newsCalendar);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -157,6 +163,7 @@ export async function buildApp({
     require2fa: config.apiTokensRequire2fa,
     prefix: api,
   });
+  await app.register(scheduleRoutes, { db, news: newsCalendar, brokerId: adapters.broker.id, prefix: api });
   await app.register(managedInstanceRoutes, {
     adapters,
     accounts,

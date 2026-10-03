@@ -1215,7 +1215,8 @@
                     "parameterFormats",
                     "sourceUrl",
                     "mcp",
-                    "apiTokensRequire2fa"
+                    "apiTokensRequire2fa",
+                    "newsCalendar"
                   ],
                   "properties": {
                     "version": {
@@ -1314,6 +1315,9 @@
                       "type": "boolean"
                     },
                     "apiTokensRequire2fa": {
+                      "type": "boolean"
+                    },
+                    "newsCalendar": {
                       "type": "boolean"
                     }
                   }
@@ -1870,6 +1874,50 @@
                           },
                           "stoppedByUser": {
                             "type": "boolean"
+                          },
+                          "paused": {
+                            "type": "object",
+                            "required": [
+                              "until",
+                              "reasons"
+                            ],
+                            "properties": {
+                              "until": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "weekend"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "holiday"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "period"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "news"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
                           },
                           "marketHours": {
                             "type": "object",
@@ -2600,6 +2648,50 @@
                           "stoppedByUser": {
                             "type": "boolean"
                           },
+                          "paused": {
+                            "type": "object",
+                            "required": [
+                              "until",
+                              "reasons"
+                            ],
+                            "properties": {
+                              "until": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "reasons": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "weekend"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "holiday"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "period"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "news"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
                           "marketHours": {
                             "type": "object",
                             "required": [
@@ -3307,6 +3399,50 @@
                             },
                             "stoppedByUser": {
                               "type": "boolean"
+                            },
+                            "paused": {
+                              "type": "object",
+                              "required": [
+                                "until",
+                                "reasons"
+                              ],
+                              "properties": {
+                                "until": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "reasons": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "weekend"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "holiday"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "period"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "news"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
                             },
                             "marketHours": {
                               "type": "object",
@@ -10624,6 +10760,1894 @@
         }
       }
     },
+    "/api/v1/schedules": {
+      "get": {
+        "summary": "Schedules with the instances that use them and their current or next pause",
+        "tags": [
+          "schedules"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "rules",
+                      "instances",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "rules": {
+                        "type": "object",
+                        "required": [
+                          "timezone",
+                          "holidays"
+                        ],
+                        "properties": {
+                          "timezone": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "weekend": {
+                            "type": "object",
+                            "required": [
+                              "from",
+                              "to"
+                            ],
+                            "properties": {
+                              "from": {
+                                "type": "object",
+                                "required": [
+                                  "day",
+                                  "time"
+                                ],
+                                "properties": {
+                                  "day": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                  }
+                                }
+                              },
+                              "to": {
+                                "type": "object",
+                                "required": [
+                                  "day",
+                                  "time"
+                                ],
+                                "properties": {
+                                  "day": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 6
+                                  },
+                                  "time": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "holidays": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "from"
+                              ],
+                              "properties": {
+                                "from": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "to": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                }
+                              }
+                            },
+                            "maxItems": 200
+                          },
+                          "periods": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "from",
+                                "to"
+                              ],
+                              "properties": {
+                                "from": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                                },
+                                "to": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                }
+                              }
+                            },
+                            "maxItems": 200
+                          },
+                          "news": {
+                            "type": "object",
+                            "required": [
+                              "currencies",
+                              "impact",
+                              "before",
+                              "after"
+                            ],
+                            "properties": {
+                              "currencies": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "pattern": "^[A-Z]{3}$"
+                                },
+                                "minItems": 1,
+                                "maxItems": 20
+                              },
+                              "impact": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "high"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "medium"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "before": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 240
+                              },
+                              "after": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 240
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "instances": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "nextPause": {
+                        "type": "object",
+                        "required": [
+                          "start",
+                          "end",
+                          "reasons",
+                          "labels"
+                        ],
+                        "properties": {
+                          "start": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "end": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "weekend"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "holiday"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "period"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "news"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "labels": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "createdBy": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      },
+                      "updatedBy": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a schedule",
+        "tags": [
+          "schedules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "rules"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "rules": {
+                    "type": "object",
+                    "required": [
+                      "timezone",
+                      "holidays"
+                    ],
+                    "properties": {
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "weekend": {
+                        "type": "object",
+                        "required": [
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "from": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          },
+                          "to": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "holidays": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "periods": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "news": {
+                        "type": "object",
+                        "required": [
+                          "currencies",
+                          "impact",
+                          "before",
+                          "after"
+                        ],
+                        "properties": {
+                          "currencies": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[A-Z]{3}$"
+                            },
+                            "minItems": 1,
+                            "maxItems": 20
+                          },
+                          "impact": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "high"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "medium"
+                                ]
+                              }
+                            ]
+                          },
+                          "before": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          },
+                          "after": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "instances": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "rules",
+                    "instances",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rules": {
+                      "type": "object",
+                      "required": [
+                        "timezone",
+                        "holidays"
+                      ],
+                      "properties": {
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "weekend": {
+                          "type": "object",
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "object",
+                              "required": [
+                                "day",
+                                "time"
+                              ],
+                              "properties": {
+                                "day": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                }
+                              }
+                            },
+                            "to": {
+                              "type": "object",
+                              "required": [
+                                "day",
+                                "time"
+                              ],
+                              "properties": {
+                                "day": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "holidays": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "from"
+                            ],
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "maxLength": 100
+                              }
+                            }
+                          },
+                          "maxItems": 200
+                        },
+                        "periods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "from",
+                              "to"
+                            ],
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "maxLength": 100
+                              }
+                            }
+                          },
+                          "maxItems": 200
+                        },
+                        "news": {
+                          "type": "object",
+                          "required": [
+                            "currencies",
+                            "impact",
+                            "before",
+                            "after"
+                          ],
+                          "properties": {
+                            "currencies": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^[A-Z]{3}$"
+                              },
+                              "minItems": 1,
+                              "maxItems": 20
+                            },
+                            "impact": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "high"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "medium"
+                                  ]
+                                }
+                              ]
+                            },
+                            "before": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 240
+                            },
+                            "after": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 240
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "instances": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "nextPause": {
+                      "type": "object",
+                      "required": [
+                        "start",
+                        "end",
+                        "reasons",
+                        "labels"
+                      ],
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "end": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "weekend"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "holiday"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "period"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "news"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "labels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/instances": {
+      "get": {
+        "summary": "The names of the instances a schedule can pause: those set up in wickwatch",
+        "tags": [
+          "schedules"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/preview": {
+      "post": {
+        "summary": "The pauses of the next 14 days that rules would make, before they are saved",
+        "tags": [
+          "schedules"
+        ],
+        "description": "News pauses only with the events of the calendar fetched so far (NEWS_CALENDAR_URL).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rules"
+                ],
+                "properties": {
+                  "rules": {
+                    "type": "object",
+                    "required": [
+                      "timezone",
+                      "holidays"
+                    ],
+                    "properties": {
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "weekend": {
+                        "type": "object",
+                        "required": [
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "from": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          },
+                          "to": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "holidays": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "periods": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "news": {
+                        "type": "object",
+                        "required": [
+                          "currencies",
+                          "impact",
+                          "before",
+                          "after"
+                        ],
+                        "properties": {
+                          "currencies": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[A-Z]{3}$"
+                            },
+                            "minItems": 1,
+                            "maxItems": 20
+                          },
+                          "impact": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "high"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "medium"
+                                ]
+                              }
+                            ]
+                          },
+                          "before": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          },
+                          "after": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "start",
+                      "end",
+                      "reasons",
+                      "labels"
+                    ],
+                    "properties": {
+                      "start": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "end": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "reasons": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "weekend"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "holiday"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "period"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "news"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "labels": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/{id}": {
+      "put": {
+        "summary": "Change a schedule; its instances follow at the next check",
+        "tags": [
+          "schedules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "rules"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "rules": {
+                    "type": "object",
+                    "required": [
+                      "timezone",
+                      "holidays"
+                    ],
+                    "properties": {
+                      "timezone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "weekend": {
+                        "type": "object",
+                        "required": [
+                          "from",
+                          "to"
+                        ],
+                        "properties": {
+                          "from": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          },
+                          "to": {
+                            "type": "object",
+                            "required": [
+                              "day",
+                              "time"
+                            ],
+                            "properties": {
+                              "day": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 6
+                              },
+                              "time": {
+                                "type": "string",
+                                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "holidays": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "periods": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "to": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 100
+                            }
+                          }
+                        },
+                        "maxItems": 200
+                      },
+                      "news": {
+                        "type": "object",
+                        "required": [
+                          "currencies",
+                          "impact",
+                          "before",
+                          "after"
+                        ],
+                        "properties": {
+                          "currencies": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^[A-Z]{3}$"
+                            },
+                            "minItems": 1,
+                            "maxItems": 20
+                          },
+                          "impact": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "high"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "medium"
+                                ]
+                              }
+                            ]
+                          },
+                          "before": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          },
+                          "after": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 240
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "instances": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "rules",
+                    "instances",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rules": {
+                      "type": "object",
+                      "required": [
+                        "timezone",
+                        "holidays"
+                      ],
+                      "properties": {
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "weekend": {
+                          "type": "object",
+                          "required": [
+                            "from",
+                            "to"
+                          ],
+                          "properties": {
+                            "from": {
+                              "type": "object",
+                              "required": [
+                                "day",
+                                "time"
+                              ],
+                              "properties": {
+                                "day": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                }
+                              }
+                            },
+                            "to": {
+                              "type": "object",
+                              "required": [
+                                "day",
+                                "time"
+                              ],
+                              "properties": {
+                                "day": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "holidays": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "from"
+                            ],
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "maxLength": 100
+                              }
+                            }
+                          },
+                          "maxItems": 200
+                        },
+                        "periods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "from",
+                              "to"
+                            ],
+                            "properties": {
+                              "from": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "to": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T([01]\\d|2[0-3]):[0-5]\\d$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "maxLength": 100
+                              }
+                            }
+                          },
+                          "maxItems": 200
+                        },
+                        "news": {
+                          "type": "object",
+                          "required": [
+                            "currencies",
+                            "impact",
+                            "before",
+                            "after"
+                          ],
+                          "properties": {
+                            "currencies": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "pattern": "^[A-Z]{3}$"
+                              },
+                              "minItems": 1,
+                              "maxItems": 20
+                            },
+                            "impact": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "high"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "medium"
+                                  ]
+                                }
+                              ]
+                            },
+                            "before": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 240
+                            },
+                            "after": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 240
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "instances": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "nextPause": {
+                      "type": "object",
+                      "required": [
+                        "start",
+                        "end",
+                        "reasons",
+                        "labels"
+                      ],
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "end": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "weekend"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "holiday"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "period"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "news"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "labels": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "createdBy": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "updatedBy": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a schedule",
+        "tags": [
+          "schedules"
+        ],
+        "description": "Its instances keep running without one; instances it paused are started at the next check.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/managed-instances": {
       "get": {
         "summary": "Instances set up in wickwatch, with their current configuration",
@@ -10653,7 +12677,8 @@
                       "name",
                       "account",
                       "createdAt",
-                      "config"
+                      "config",
+                      "scheduleIds"
                     ],
                     "properties": {
                       "id": {
@@ -10809,6 +12834,12 @@
                             "type": "integer"
                           }
                         }
+                      },
+                      "scheduleIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
                       }
                     }
                   }
@@ -10945,7 +12976,8 @@
                     "name",
                     "account",
                     "createdAt",
-                    "config"
+                    "config",
+                    "scheduleIds"
                   ],
                   "properties": {
                     "id": {
@@ -11100,6 +13132,12 @@
                         "configVersion": {
                           "type": "integer"
                         }
+                      }
+                    },
+                    "scheduleIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
                       }
                     }
                   }
@@ -11481,7 +13519,8 @@
                         "name",
                         "account",
                         "createdAt",
-                        "config"
+                        "config",
+                        "scheduleIds"
                       ],
                       "properties": {
                         "id": {
@@ -11636,6 +13675,12 @@
                             "configVersion": {
                               "type": "integer"
                             }
+                          }
+                        },
+                        "scheduleIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "integer"
                           }
                         }
                       }
@@ -12132,7 +14177,8 @@
                     "name",
                     "account",
                     "createdAt",
-                    "config"
+                    "config",
+                    "scheduleIds"
                   ],
                   "properties": {
                     "id": {
@@ -12287,6 +14333,12 @@
                         "configVersion": {
                           "type": "integer"
                         }
+                      }
+                    },
+                    "scheduleIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
                       }
                     }
                   }
@@ -12756,6 +14808,123 @@
           }
         }
       }
+    },
+    "/api/v1/managed-instances/{name}/schedules": {
+      "put": {
+        "summary": "Choose the schedules that pause an instance; it is paused while any of them pauses",
+        "tags": [
+          "schedules"
+        ],
+        "description": "The scheduler applies them within half a minute: during one of their pauses a running instance is paused at once. Without any, an instance they paused is started again.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "scheduleIds"
+                ],
+                "properties": {
+                  "scheduleIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "maxItems": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": [
@@ -12787,6 +14956,10 @@
     {
       "name": "algos",
       "description": "Uploaded bot versions"
+    },
+    {
+      "name": "schedules",
+      "description": "Pauses on weekends, holidays and around news"
     }
   ]
 }

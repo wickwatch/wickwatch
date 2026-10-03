@@ -42,6 +42,7 @@ export const openapi = fp<{ basePath: string; version: string }>(async (app, { b
         { name: "instances", description: "Bot instances" },
         { name: "accounts", description: "Broker accounts and stored credentials" },
         { name: "algos", description: "Uploaded bot versions" },
+        { name: "schedules", description: "Pauses on weekends, holidays and around news" },
       ],
       components: {
         securitySchemes: {

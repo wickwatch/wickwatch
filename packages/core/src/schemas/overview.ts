@@ -1,4 +1,5 @@
 import Type from "typebox";
+import { InstancePause } from "./schedule";
 import { AdapterErrorCode } from "../errors";
 import { MarketHours, PendingOrder, Position } from "./broker";
 import { Capabilities } from "./capabilities";
@@ -50,6 +51,8 @@ export const InstanceSummary = Type.Object({
   crashes: Type.Optional(AlgoCrashes),
   /** Stopped on purpose through wickwatch (stop, emergency stop, loss guard); its being stopped is no alert. */
   stoppedByUser: Type.Optional(Type.Boolean()),
+  /** Stopped by its schedule (weekend, holiday, news) and started again when the pause ends. */
+  paused: Type.Optional(InstancePause),
   /** When its symbol can be traded; missing while unknown or when the broker adapter cannot tell. */
   marketHours: Type.Optional(MarketHours),
 });
@@ -159,5 +162,7 @@ export const SystemInfo = Type.Object({
   mcp: Type.Boolean(),
   /** Only users with 2FA may create API tokens (`API_TOKENS_REQUIRE_2FA`). */
   apiTokensRequire2fa: Type.Boolean(),
+  /** Whether schedules can pause around news: a calendar is set (`NEWS_CALENDAR_URL`). */
+  newsCalendar: Type.Boolean(),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

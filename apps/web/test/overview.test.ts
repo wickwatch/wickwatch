@@ -79,6 +79,7 @@ beforeEach(() => {
     sourceUrl: "https://github.com/wickwatch/wickwatch",
     mcp: true,
     apiTokensRequire2fa: false,
+    newsCalendar: false,
   };
   fetchMock = vi.fn((input: URL) => {
     const path = input.pathname;

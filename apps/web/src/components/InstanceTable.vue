@@ -82,7 +82,13 @@ const log = useLogStream(() =>
           </td>
           <td class="wide mono">{{ instance.symbol ?? $t("format.none") }}</td>
           <td class="wide mono">{{ instance.period ?? $t("format.none") }}</td>
-          <td><StatusBadge :instance="instance.status" :connection-lost="!!instance.connectionLostSince" /></td>
+          <td>
+            <StatusBadge
+              :instance="instance.status"
+              :connection-lost="!!instance.connectionLostSince"
+              :paused="!!instance.paused"
+            />
+          </td>
           <td class="wide">
             <MarketBadge v-if="instance.marketHours" :hours="instance.marketHours" :now="now" short />
             <span v-else class="muted">{{ $t("format.none") }}</span>

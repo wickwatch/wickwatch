@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Algo, InstanceConfig, ParameterSchema, ParameterTemplate } from "@wickwatch/core";
+import type { Algo, InstanceConfig, ParameterSchema, ParameterTemplate, Schedule } from "@wickwatch/core";
 import { validateParameters } from "@wickwatch/core/parameters";
 import { isUp } from "@wickwatch/core/rules";
 import { computed, onMounted, ref, watch } from "vue";
@@ -41,13 +41,42 @@ const algos = ref<Algo[]>([]);
 const format = computed(() => (system.value?.parameterFormats ?? [])[0]);
 const saved = computed(() => (typeof route.query["saved"] === "string" ? route.query["saved"] : undefined));
 
+/** The schedules to choose from; the instance's own are `managed.scheduleIds`. */
+const schedules = ref<Schedule[]>([]);
+const chosen = ref<number[]>([]);
+const own = () => props.managed?.scheduleIds ?? [];
+watch(own, (ids) => (chosen.value = [...ids]), { immediate: true });
+const sameSchedules = computed(
+  () => chosen.value.length === own().length && chosen.value.every((id) => own().includes(id)),
+);
+const scheduleNames = computed(
+  () =>
+    schedules.value
+      .filter((s) => own().includes(s.id))
+      .map((s) => s.name)
+      .join(", ") || t("schedules.noneChosen"),
+);
+
 onMounted(async () => {
   try {
-    algos.value = await api.algos();
+    [algos.value, schedules.value] = await Promise.all([api.algos(), api.schedules()]);
   } catch (e) {
     error.value = errorKey(e);
   }
 });
+
+function saveSchedules() {
+  const name = props.managed?.name;
+  if (name === undefined) return;
+  const ids = [...chosen.value];
+  void run(
+    async () => {
+      await api.setInstanceSchedules(name, ids);
+      emit("changed");
+    },
+    { as: "schedule", done: () => t(ids.length ? "schedules.instanceSet" : "schedules.instanceCleared") },
+  );
+}
 
 /** The parameter templates of the instance's algo; admins only, viewers get no values to apply. */
 const templates = ref<ParameterTemplate[]>([]);
@@ -244,6 +273,33 @@ function changes(index: number): string[] {
           </button>
         </template>
       </AppBanner>
+
+      <!-- Its own panel: between the algo's settings a schedule would be overlooked. -->
+      <section class="panel card" aria-labelledby="schedules-title">
+        <div class="card__head">
+          <h2 id="schedules-title">{{ $t("schedules.schedules") }}</h2>
+          <RouterLink :to="{ name: 'schedules' }" class="muted">{{ $t("schedules.manage") }}</RouterLink>
+        </div>
+        <p class="muted card__hint">{{ $t("schedules.instanceHint") }}</p>
+        <template v-if="isAdmin">
+          <p v-if="!schedules.length" class="muted">{{ $t("schedules.none") }}</p>
+          <div v-else class="schedules">
+            <label v-for="s in schedules" :key="s.id" class="check">
+              <input v-model="chosen" type="checkbox" :value="s.id" /> {{ s.name }}
+            </label>
+            <button
+              type="button"
+              class="btn btn--small"
+              :disabled="busy || sameSchedules"
+              :aria-busy="deploying === 'schedule'"
+              @click="saveSchedules"
+            >
+              {{ $t("action.save") }}
+            </button>
+          </div>
+        </template>
+        <p v-else>{{ scheduleNames }}</p>
+      </section>
 
       <section class="panel card" aria-labelledby="current-title">
         <div class="card__head">
@@ -486,5 +542,18 @@ p {
 .labels dd {
   margin: 0;
   word-break: break-all;
+}
+
+.schedules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ww-space-2) var(--ww-space-4);
+  align-items: center;
+}
+
+.check {
+  display: inline-flex;
+  gap: var(--ww-space-2);
+  align-items: center;
 }
 </style>

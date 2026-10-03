@@ -17,7 +17,7 @@ import StatusBadge from "../components/StatusBadge.vue";
 import type { Notice } from "../composables/notice";
 import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
-import { accountLabel, durationParts, formatDateTime } from "../format";
+import { accountLabel, durationParts, formatDateTime, formatWhen } from "../format";
 import { isOutdated, outdatedText } from "../instance-state";
 import { isAdmin } from "../session";
 import { system } from "../system";
@@ -34,6 +34,18 @@ const tab = computed(() => (route.name === "instance-config" ? "config" : "overv
 const days = ref<Range>(30);
 
 const { data, error, now, refresh } = usePolling(() => api.instance(instanceRef.value, days.value), 30_000);
+/** Why and until when its schedule holds it stopped; positions stay open meanwhile. */
+const pauseText = computed(() => {
+  const pause = data.value?.instance.paused;
+  return (
+    pause &&
+    t("instance.paused", {
+      until: formatWhen(locale.value, pause.until),
+      reasons: pause.reasons.map((r) => t(`schedules.reasons.${r}`)).join(", "),
+      positions: data.value?.positions.length ?? 0,
+    })
+  );
+});
 watch([instanceRef, days], () => void refresh());
 /** The runtime does not know the instance, e.g. a configuration without a container yet. */
 const noContainer = computed(() => error.value instanceof ApiError && error.value.status === 404);
@@ -160,6 +172,7 @@ async function remove() {
               :instance="status"
               :connection-lost="!!data?.instance.connectionLostSince"
               :not-created="!data && !!managed && !managed.deployment"
+              :paused="!!data?.instance.paused"
             />
             <MarketBadge v-if="data?.instance.marketHours" :hours="data.instance.marketHours" :now="now" />
           </div>
@@ -223,6 +236,7 @@ async function remove() {
       </section>
 
       <p v-if="notice" class="notice" :class="`tone-${notice.tone}`" role="alert">{{ notice.text }}</p>
+      <p v-if="pauseText" class="muted" role="status">{{ pauseText }}</p>
       <p v-if="data?.instance.connectionLostSince" class="tone-warning" role="alert">
         {{ $t("instance.connectionLost", { since: formatDateTime(locale, data.instance.connectionLostSince) }) }}
       </p>

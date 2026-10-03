@@ -12,3 +12,4 @@ export * from "./managed-instance";
 export * from "./audit";
 export * from "./api-token";
 export * from "./parameter-template";
+export * from "./schedule";

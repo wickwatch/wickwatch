@@ -10,12 +10,14 @@ import type {
   Deal,
   InstanceSummary,
   InstanceLogState,
+  InstancePause,
   LogLine,
   Overview,
   PendingOrder,
   Position,
   RuntimeInstance,
 } from "./schemas";
+import { shownPause } from "./rules";
 import { toIsoTime } from "./schemas";
 import { dealResult, round2 } from "./stats";
 
@@ -47,6 +49,8 @@ export interface OverviewInput {
   clockOffsetMs?: number;
   /** Runtime refs of instances stopped on purpose through wickwatch. */
   stoppedByUser?: ReadonlySet<string>;
+  /** Instances their schedule holds stopped, by runtime ref. */
+  paused?: ReadonlyMap<string, InstancePause>;
 }
 
 const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
@@ -109,7 +113,12 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
       attributor,
       input.logStates?.get(instance.ref),
     );
-    return input.stoppedByUser?.has(instance.ref) ? { ...summary, stoppedByUser: true } : summary;
+    const paused = shownPause(summary.status, input.paused?.get(instance.ref));
+    return {
+      ...summary,
+      ...(input.stoppedByUser?.has(instance.ref) ? { stoppedByUser: true } : {}),
+      ...(paused ? { paused } : {}),
+    };
   });
 
   const accounts = input.accounts.map((account): AccountSummary => {

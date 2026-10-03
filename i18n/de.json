@@ -12,7 +12,8 @@
     "overview": "Übersicht",
     "accounts": "Konten",
     "backtests": "Backtests",
-    "algos": "Algos"
+    "algos": "Algos",
+    "schedules": "Zeitpläne"
   },
   "status": {
     "running": "Läuft",
@@ -22,7 +23,8 @@
     "stale": "Daten veraltet",
     "unknown": "Unbekannt",
     "connectionLost": "Verbindung verloren",
-    "notCreated": "Kein Container"
+    "notCreated": "Kein Container",
+    "paused": "Pausiert"
   },
   "market": {
     "open": "Markt offen",
@@ -206,7 +208,8 @@
     "configVersion": "Konfiguration v{version}",
     "notCreated": "Noch kein Container, daher keine Trades und kein Log. Anlegen unter Konfiguration.",
     "managedLabels": "Von wickwatch aus der Konfiguration gesetzt.",
-    "moreShort": "Mehr"
+    "moreShort": "Mehr",
+    "paused": "Vom Zeitplan pausiert bis {until} ({reasons}). Offene Positionen bleiben offen: {positions}; der Bot übernimmt sie, wenn er wieder startet."
   },
   "confirm": {
     "emergencyStop": "Alle Instanzen auf Konto {account} stoppen, Pending Orders löschen und alle Positionen schließen?"
@@ -271,7 +274,12 @@
       "totp_needed": "API-Tokens anlegen geht nur mit 2FA. Richte sie zuerst im Profil ein.",
       "parameter_template_exists": "Dieser Algo hat schon eine Vorlage mit diesem Namen.",
       "parameter_template_not_found": "Diese Parametervorlage gibt es nicht mehr.",
-      "setting_parameter_invalid": "Wähle einen Zahlen-Parameter der neuesten Version."
+      "setting_parameter_invalid": "Wähle einen Zahlen-Parameter der neuesten Version.",
+      "schedule_exists": "Es gibt schon einen Zeitplan mit diesem Namen.",
+      "schedule_not_found": "Diesen Zeitplan gibt es nicht mehr.",
+      "invalid_holiday": "Ein Feiertag endet vor seinem Beginn.",
+      "instance_not_found": "Eine Instanz der Liste gibt es nicht mehr.",
+      "invalid_pause_period": "Eine einmalige Pause endet vor ihrem Beginn."
     }
   },
   "parameterIssue": {
@@ -875,7 +883,13 @@
       "api_token_delete": "API-Token gelöscht",
       "parameter_template_create": "Parametervorlage gespeichert",
       "parameter_template_update": "Parametervorlage geändert",
-      "parameter_template_delete": "Parametervorlage gelöscht"
+      "parameter_template_delete": "Parametervorlage gelöscht",
+      "schedule_create": "Zeitplan angelegt",
+      "schedule_update": "Zeitplan geändert",
+      "schedule_delete": "Zeitplan gelöscht",
+      "instance_schedule": "Zeitplan gewählt",
+      "instance_schedule_pause": "Vom Zeitplan pausiert",
+      "instance_schedule_resume": "Nach der Pause wieder gestartet"
     },
     "groups": {
       "account": "Konten",
@@ -888,7 +902,8 @@
       "order": "Orders",
       "position": "Positionen",
       "api_token": "API-Tokens",
-      "parameter_template": "Parametervorlagen"
+      "parameter_template": "Parametervorlagen",
+      "schedule": "Zeitpläne"
     },
     "period": "Zeitraum",
     "periods": {
@@ -949,5 +964,77 @@
     "noAccounts": "Keine Konten.",
     "alerts": "Offene Alarme: {count}",
     "noAlerts": "Keine offenen Alarme."
+  },
+  "schedules": {
+    "intro": "Zeitpläne pausieren Bots am Wochenende, an Feiertagen und rund um Wirtschaftsnachrichten: wickwatch stoppt sie, wenn eine Pause beginnt, und startet sie wieder, wenn sie endet. Offene Positionen bleiben offen; die Bots übernehmen sie beim Start. Die Instanzen hakst du im Formular eines Zeitplans an, oder die Zeitpläne im Tab Konfiguration einer Instanz.",
+    "add": "Neuer Zeitplan",
+    "none": "Noch keine Zeitpläne.",
+    "edit": "Bearbeiten",
+    "editTitle": "{name} bearbeiten",
+    "name": "Name",
+    "timezone": "Zeitzone (der Zeiten und Tage)",
+    "weekend": "Am Wochenende pausieren",
+    "from": "von",
+    "to": "bis",
+    "fromDay": "Pause beginnt am",
+    "fromTime": "Pause beginnt um",
+    "toDay": "Pause endet am",
+    "toTime": "Pause endet um",
+    "holidays": "Feiertage",
+    "holidaysHint": "Ganze Tage in der Zeitzone des Zeitplans; für einen Tag das Ende leer lassen.",
+    "holidayFrom": "Erster Tag",
+    "holidayTo": "Letzter Tag",
+    "holidayName": "Name (optional)",
+    "holidayAdd": "Feiertag hinzufügen",
+    "holidayRemove": "Feiertag entfernen",
+    "news": "Rund um News pausieren",
+    "currencies": "Währungen",
+    "impact": "Wichtigkeit",
+    "before": "Minuten vorher",
+    "after": "Minuten nachher",
+    "impacts": {
+      "high": "Nur hohe",
+      "medium": "Mittlere und hohe"
+    },
+    "newsHint": "Aus dem Wirtschaftskalender in NEWS_CALENDAR_URL (z. B. dem von Forex Factory), stündlich abgerufen, solange ein Zeitplan News nutzt; er umfasst die laufende Woche.",
+    "preview": "Pausen in den nächsten 14 Tagen (deine Zeit)",
+    "previewFailed": "Die Vorschau ist gerade nicht verfügbar.",
+    "noPauses": "Keine Pause in dieser Zeit.",
+    "nextPause": "Aktuelle oder nächste Pause",
+    "instances": "Instanzen",
+    "noInstances": "noch keine",
+    "reasons": {
+      "weekend": "Wochenende",
+      "holiday": "Feiertag",
+      "news": "News",
+      "period": "Einmalig"
+    },
+    "weekendSummary": "Wochenende {from} – {to}",
+    "holidaysSummary": "keine Feiertage | 1 Feiertag | {count} Feiertage",
+    "newsSummary": "News {currencies} ({impact}), {before} Min. vorher bis {after} Min. nachher",
+    "create": "Anlegen",
+    "save": "Speichern",
+    "created": "Zeitplan {name} angelegt.",
+    "saved": "Zeitplan {name} gespeichert.",
+    "deleted": "Zeitplan {name} gelöscht.",
+    "deleteConfirm": "Zeitplan {name} löschen? Seine Instanzen pausieren nicht mehr dafür; pausierte werden wieder gestartet.",
+    "noneChosen": "Keine Zeitpläne",
+    "manage": "Zeitpläne verwalten",
+    "instanceSet": "Zeitpläne gespeichert; sie greifen innerhalb einer halben Minute.",
+    "instanceCleared": "Zeitpläne entfernt; eine pausierte Instanz wird wieder gestartet.",
+    "currenciesPlaceholder": "z. B. USD, EUR",
+    "newsOff": "Kein News-Kalender eingestellt (NEWS_CALENDAR_URL): News-Pausen pausieren nichts.",
+    "schedules": "Zeitpläne",
+    "instancesHint": "Die Instanzen, die er pausiert; eine Instanz kann mehrere Zeitpläne haben und ist pausiert, solange einer davon pausiert.",
+    "noManaged": "Noch keine in wickwatch eingerichteten Instanzen.",
+    "instanceHint": "Pausen am Wochenende, an Feiertagen und rund um News; die Instanz ist pausiert, solange einer der gewählten Zeitpläne pausiert.",
+    "periods": "Einmalige Pausen",
+    "periodsHint": "Von einem Tag und einer Uhrzeit bis zu einem anderen, in der Zeitzone des Zeitplans, z. B. für eine Wartung des Brokers.",
+    "periodFrom": "Pause beginnt",
+    "periodTo": "Pause endet",
+    "periodName": "Name (optional), z. B. Wartung",
+    "periodAdd": "Einmalige Pause hinzufügen",
+    "periodRemove": "Einmalige Pause entfernen",
+    "periodsSummary": "keine einmaligen Pausen | 1 einmalige Pause | {count} einmalige Pausen"
   }
 }

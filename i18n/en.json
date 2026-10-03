@@ -12,7 +12,8 @@
     "overview": "Overview",
     "accounts": "Accounts",
     "backtests": "Backtests",
-    "algos": "Algos"
+    "algos": "Algos",
+    "schedules": "Schedules"
   },
   "status": {
     "running": "Running",
@@ -22,7 +23,8 @@
     "stale": "Data outdated",
     "unknown": "Unknown",
     "connectionLost": "Connection lost",
-    "notCreated": "No container"
+    "notCreated": "No container",
+    "paused": "Paused"
   },
   "market": {
     "open": "Market open",
@@ -206,7 +208,8 @@
     "configVersion": "Configuration v{version}",
     "notCreated": "No container yet, so there are no trades and no log. Create it under Configuration.",
     "managedLabels": "Set by wickwatch from the configuration.",
-    "moreShort": "More"
+    "moreShort": "More",
+    "paused": "Paused by its schedule until {until} ({reasons}). Open positions stay open: {positions}; the bot takes them over when it starts again."
   },
   "confirm": {
     "emergencyStop": "Stop all instances on account {account}, cancel pending orders and close all positions?"
@@ -271,7 +274,12 @@
       "totp_needed": "Creating API tokens needs 2FA. Set it up in your profile first.",
       "parameter_template_exists": "This algo already has a template with this name.",
       "parameter_template_not_found": "This parameter template no longer exists.",
-      "setting_parameter_invalid": "Choose a number parameter of the newest version."
+      "setting_parameter_invalid": "Choose a number parameter of the newest version.",
+      "schedule_exists": "A schedule with this name already exists.",
+      "schedule_not_found": "This schedule no longer exists.",
+      "invalid_holiday": "A holiday ends before it starts.",
+      "instance_not_found": "An instance in the list no longer exists.",
+      "invalid_pause_period": "A one-off pause ends before it starts."
     }
   },
   "parameterIssue": {
@@ -875,7 +883,13 @@
       "api_token_delete": "API token deleted",
       "parameter_template_create": "Parameter template saved",
       "parameter_template_update": "Parameter template changed",
-      "parameter_template_delete": "Parameter template deleted"
+      "parameter_template_delete": "Parameter template deleted",
+      "schedule_create": "Schedule created",
+      "schedule_update": "Schedule changed",
+      "schedule_delete": "Schedule deleted",
+      "instance_schedule": "Schedule chosen",
+      "instance_schedule_pause": "Paused by its schedule",
+      "instance_schedule_resume": "Started again after its pause"
     },
     "groups": {
       "account": "Accounts",
@@ -888,7 +902,8 @@
       "order": "Orders",
       "position": "Positions",
       "api_token": "API tokens",
-      "parameter_template": "Parameter templates"
+      "parameter_template": "Parameter templates",
+      "schedule": "Schedules"
     },
     "period": "Time range",
     "periods": {
@@ -949,5 +964,77 @@
     "noAccounts": "No accounts.",
     "alerts": "Open alerts: {count}",
     "noAlerts": "No open alerts."
+  },
+  "schedules": {
+    "intro": "Schedules pause bots on weekends, on holidays and around economic news: wickwatch stops them when a pause begins and starts them again when it ends. Open positions stay open; the bots take them over when they start. Tick the instances in a schedule's form, or the schedules on an instance's Configuration tab.",
+    "add": "New schedule",
+    "none": "No schedules yet.",
+    "edit": "Edit",
+    "editTitle": "Edit {name}",
+    "name": "Name",
+    "timezone": "Time zone (of the times and days)",
+    "weekend": "Pause on the weekend",
+    "from": "from",
+    "to": "to",
+    "fromDay": "Pause starts on",
+    "fromTime": "Pause starts at",
+    "toDay": "Pause ends on",
+    "toTime": "Pause ends at",
+    "holidays": "Holidays",
+    "holidaysHint": "Whole days in the schedule's time zone; leave the end empty for one day.",
+    "holidayFrom": "First day",
+    "holidayTo": "Last day",
+    "holidayName": "Name (optional)",
+    "holidayAdd": "Add holiday",
+    "holidayRemove": "Remove holiday",
+    "news": "Pause around news",
+    "currencies": "Currencies",
+    "impact": "Impact",
+    "before": "Minutes before",
+    "after": "Minutes after",
+    "impacts": {
+      "high": "High only",
+      "medium": "Medium and high"
+    },
+    "newsHint": "From the economic calendar set in NEWS_CALENDAR_URL (e.g. Forex Factory's), fetched hourly while a schedule uses news; it covers the current week.",
+    "preview": "Pauses in the next 14 days (your time)",
+    "previewFailed": "The preview is not available right now.",
+    "noPauses": "No pause in this time.",
+    "nextPause": "Current or next pause",
+    "instances": "Instances",
+    "noInstances": "none yet",
+    "reasons": {
+      "weekend": "Weekend",
+      "holiday": "Holiday",
+      "news": "News",
+      "period": "One-off"
+    },
+    "weekendSummary": "Weekend {from} – {to}",
+    "holidaysSummary": "no holidays | 1 holiday | {count} holidays",
+    "newsSummary": "News {currencies} ({impact}), {before} min before to {after} min after",
+    "create": "Create",
+    "save": "Save",
+    "created": "Schedule {name} created.",
+    "saved": "Schedule {name} saved.",
+    "deleted": "Schedule {name} deleted.",
+    "deleteConfirm": "Delete the schedule {name}? Its instances no longer pause for it; instances it paused are started again.",
+    "noneChosen": "No schedules",
+    "manage": "Manage schedules",
+    "instanceSet": "Schedules saved; they apply within half a minute.",
+    "instanceCleared": "Schedules removed; an instance they paused is started again.",
+    "currenciesPlaceholder": "e.g. USD, EUR",
+    "newsOff": "No news calendar is set (NEWS_CALENDAR_URL): news pauses pause nothing.",
+    "schedules": "Schedules",
+    "instancesHint": "The instances it pauses; an instance can have several schedules and is paused while any of them pauses.",
+    "noManaged": "No instances set up in wickwatch yet.",
+    "instanceHint": "Pauses on weekends, holidays and around news; the instance is paused while any of the ticked schedules pauses.",
+    "periods": "One-off pauses",
+    "periodsHint": "From a day and time to another in the schedule's time zone, e.g. for a broker's maintenance.",
+    "periodFrom": "Pause starts",
+    "periodTo": "Pause ends",
+    "periodName": "Name (optional), e.g. maintenance",
+    "periodAdd": "Add one-off pause",
+    "periodRemove": "Remove one-off pause",
+    "periodsSummary": "no one-off pauses | 1 one-off pause | {count} one-off pauses"
   }
 }

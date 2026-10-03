@@ -52,6 +52,7 @@ const detail: ManagedInstanceDetail = {
   id: 3,
   name: "alpha-ger40",
   account: { id: 7, number: "1111111", displayName: "Prop A" },
+  scheduleIds: [],
   createdAt: "2026-09-21T10:00:00.000Z",
   config: config(2, 1),
   history: [{ ...config(2, 1), comment: "More risk" }, config(1, 0.5)],
@@ -225,6 +226,7 @@ describe("InstanceFormView", () => {
       sourceUrl: "https://github.com/wickwatch/wickwatch",
       mcp: true,
       apiTokensRequire2fa: false,
+      newsCalendar: false,
     };
     response = (url, init) =>
       init?.method === "POST" && url.pathname.endsWith("/parameter-file")
@@ -393,6 +395,7 @@ describe("InstanceView configuration tab", () => {
       sourceUrl: "https://github.com/wickwatch/wickwatch",
       mcp: true,
       apiTokensRequire2fa: false,
+      newsCalendar: false,
     };
     const withLicence = [
       {

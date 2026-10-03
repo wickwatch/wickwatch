@@ -46,7 +46,14 @@ export function zoneOffsetSeconds(timeZone: string, at: Date): number {
 }
 
 /** The UTC instant of a local wall-clock time in a time zone (DST-aware). */
-function zonedToUtc(year: number, month: number, day: number, hour: number, minute: number, timeZone: string): Date {
+export function zonedToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  timeZone: string,
+): Date {
   const wanted = Date.UTC(year, month - 1, day, hour, minute);
   let guess = wanted;
   for (let i = 0; i < 3; i++) {
@@ -56,6 +63,17 @@ function zonedToUtc(year: number, month: number, day: number, hour: number, minu
     guess += wanted - shown;
   }
   return new Date(guess);
+}
+
+/** The local calendar day of `time` in a time zone; `weekday` 0 is Sunday. */
+export function zonedDay(time: Date, timeZone: string): { year: number; month: number; day: number; weekday: number } {
+  const p = zonedParts(time, timeZone);
+  return {
+    year: p.year,
+    month: p.month,
+    day: p.day,
+    weekday: new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay(),
+  };
 }
 
 export function isTimeZone(timeZone: string): boolean {

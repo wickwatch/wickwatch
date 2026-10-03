@@ -57,6 +57,8 @@ export interface Config {
   alertWebhookUrl?: URL;
   /** Time reference for the clock check; missing when switched off (`off`). */
   clockCheckUrl?: URL;
+  /** Economic calendar for news pauses of schedules; without it they are not offered. Fetched only while a schedule has news rules. */
+  newsCalendarUrl?: URL;
   /** Where the UI's footer links for the source code. */
   sourceUrl: URL;
   /** Where the UI's footer links to support the project; missing when switched off (`off`). */
@@ -121,6 +123,8 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const clockCheckSetting = get("CLOCK_CHECK_URL") ?? DEFAULT_CLOCK_CHECK_URL;
   const clockCheckUrl =
     clockCheckSetting.toLowerCase() === "off" ? undefined : parseUrl("CLOCK_CHECK_URL", clockCheckSetting, problems);
+  // Off unless set: wickwatch calls no third party for it on its own.
+  const newsCalendarUrl = parseUrl("NEWS_CALENDAR_URL", get("NEWS_CALENDAR_URL"), problems);
   const sourceUrl = parseUrl("SOURCE_URL", get("SOURCE_URL") ?? DEFAULT_SOURCE_URL, problems);
   const supportSetting = get("SUPPORT_URL") ?? DEFAULT_SUPPORT_URL;
   const supportUrl =
@@ -207,6 +211,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(heartbeatUrl ? { heartbeatUrl } : {}),
     ...(alertWebhookUrl ? { alertWebhookUrl } : {}),
     ...(clockCheckUrl ? { clockCheckUrl } : {}),
+    ...(newsCalendarUrl ? { newsCalendarUrl } : {}),
     sourceUrl: sourceUrl ?? new URL(DEFAULT_SOURCE_URL),
     mcp,
     apiTokensRequire2fa,

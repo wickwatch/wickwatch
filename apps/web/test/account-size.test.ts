@@ -51,6 +51,7 @@ const detailWith = (capital: number): ManagedInstanceDetail => ({
   id: 3,
   name: "alpha-ger40",
   account: { id: 7, number: "1111111", displayName: "Prop A" },
+  scheduleIds: [],
   createdAt: "2026-09-21T10:00:00.000Z",
   config: config(capital),
   history: [config(capital)],

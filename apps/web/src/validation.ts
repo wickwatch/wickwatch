@@ -3,6 +3,9 @@ import { INSTANCE_NAME, SAFE_NAME } from "@wickwatch/core/rules";
 import { isTimeZone } from "@wickwatch/core/trading-day";
 import { ApiError } from "./api";
 
+/** The time zones the browser knows, for a datalist next to a time zone field. */
+export const TIME_ZONES = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : ["UTC"];
+
 // Field checks shared by all forms: a check returns an i18n message or nothing. The server checks
 // again; these only tell the user earlier and next to the field. Forms use `novalidate`, so the
 // messages are ours (translated) and not the browser's.

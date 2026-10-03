@@ -13,6 +13,7 @@ import { createCipher } from "./security/cipher";
 import { refreshAlgoMetadata } from "./services/algo-metadata";
 import { encryptStoredParameters } from "./services/instance-configs";
 import { InstanceKeeper } from "./services/instance-keeper";
+import { Scheduler } from "./services/scheduler";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
@@ -118,8 +119,10 @@ try {
       : undefined;
   // Starts managed instances again that a host or Docker restart ended (see the class for the rules).
   const keeper = new InstanceKeeper({ db, runtime: app.adapters.runtime, log: app.log });
+  const scheduler = new Scheduler({ db, runtime: app.adapters.runtime, news: app.newsCalendar, log: app.log });
   app.addHook("onClose", () => {
     keeper.stop();
+    scheduler.stop();
     clock?.stop();
     summary?.stop();
     poller.stop();
@@ -151,6 +154,7 @@ try {
   maintenance.start();
   lossGuard.start();
   keeper.start();
+  scheduler.start();
   clock?.start();
   summary?.start();
   // In the background: reading an algo can take a few seconds (the cTrader CLI may run in a helper container).

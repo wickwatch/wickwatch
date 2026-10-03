@@ -23,6 +23,7 @@ export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters:
       sourceUrl: config.sourceUrl.href,
       mcp: config.mcp,
       apiTokensRequire2fa: config.apiTokensRequire2fa,
+      newsCalendar: config.newsCalendarUrl !== undefined,
       ...(config.supportUrl ? { supportUrl: config.supportUrl.href } : {}),
     }),
   );

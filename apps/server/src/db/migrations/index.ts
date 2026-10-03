@@ -19,6 +19,8 @@ import { parameterTemplates } from "./0017-parameter-templates";
 import { algoSettings } from "./0018-algo-settings";
 import { marketHours } from "./0019-market-hours";
 import { algoRiskParameter } from "./0020-algo-risk-parameter";
+import { schedules } from "./0021-schedules";
+import { instanceSchedules } from "./0022-instance-schedules";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -43,4 +45,6 @@ export const migrations: Record<string, Migration> = {
   "0018-algo-settings": algoSettings,
   "0019-market-hours": marketHours,
   "0020-algo-risk-parameter": algoRiskParameter,
+  "0021-schedules": schedules,
+  "0022-instance-schedules": instanceSchedules,
 };

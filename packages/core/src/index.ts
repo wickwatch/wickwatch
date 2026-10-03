@@ -15,4 +15,5 @@ export * from "./stats";
 export * from "./instance-detail";
 export * from "./trading-day";
 export * from "./challenge";
+export * from "./schedule";
 export * from "./attribution";

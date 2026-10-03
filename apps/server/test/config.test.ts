@@ -61,6 +61,9 @@ describe("loadConfig", () => {
 
   it("switches the clock check off and checks the daily summary settings", () => {
     expect(load({ CLOCK_CHECK_URL: "off" }).clockCheckUrl).toBeUndefined();
+    expect(
+      load({ NEWS_CALENDAR_URL: "https://nfs.faireconomy.media/ff_calendar_thisweek.json" }).newsCalendarUrl?.host,
+    ).toBe("nfs.faireconomy.media");
     expect(() => load({ CLOCK_CHECK_URL: "ntp.example" })).toThrow(/CLOCK_CHECK_URL/);
     expect(load({}).sourceUrl.href).toBe("https://github.com/wickwatch/wickwatch");
     expect(load({ SOURCE_URL: "https://git.example/fork" }).sourceUrl.href).toBe("https://git.example/fork");

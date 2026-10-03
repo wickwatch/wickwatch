@@ -141,6 +141,38 @@ export interface InstancesTable {
   should_run: Generated<number>;
   /** 1 while it is stopped on purpose through wickwatch, so its stop raises no alert. */
   stopped_by_user: Generated<number>;
+  /** Start of the pause the scheduler last handled (ISO), so it stops the instance once per pause. */
+  schedule_window: string | null;
+  /** End of the pause while the scheduler holds the instance stopped; only those are started again. */
+  paused_until: string | null;
+  /** Why it is paused, comma-separated PauseReasons. */
+  pause_reasons: string | null;
+}
+
+/** Which schedules pause an instance; it is paused while any of them pauses. */
+export interface InstanceSchedulesTable {
+  instance_id: number;
+  schedule_id: number;
+}
+
+export interface SchedulesTable {
+  id: Generated<number>;
+  name: string;
+  /** ScheduleRules as JSON. */
+  rules: string;
+  created_by: number | null;
+  created_at: string;
+  updated_by: number | null;
+  updated_at: string;
+}
+
+/** The economic calendar (NEWS_CALENDAR_URL), as last fetched. */
+export interface NewsEventsTable {
+  id: Generated<number>;
+  time: string;
+  currency: string;
+  impact: string;
+  title: string;
 }
 
 export interface InstanceConfigsTable {
@@ -246,4 +278,7 @@ export interface Database {
   market_hours: MarketHoursTable;
   daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;
+  schedules: SchedulesTable;
+  instance_schedules: InstanceSchedulesTable;
+  news_events: NewsEventsTable;
 }

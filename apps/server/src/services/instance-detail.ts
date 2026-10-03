@@ -14,6 +14,8 @@ import type { DealHistory } from "./deal-history";
 import type { LogTracker } from "./log-tracker";
 import type { MarketHoursCache } from "./market-hours";
 import { loadOverrides } from "./overrides";
+import { pauseOf } from "./schedules";
+import { shownPause } from "@wickwatch/core/rules";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -44,10 +46,11 @@ export async function loadInstanceDetail(
   const number = readLabels(labelPrefix, instance.labels).account;
   const entry = number ? await findAccount(directory, number) : undefined;
 
-  const [logs, account, overrides] = await Promise.all([
+  const [logs, account, overrides, row] = await Promise.all([
     logTracker.read([instance]),
     entry ? brokerData(adapters, history, entry, from, now, range === "all", log) : Promise.resolve(undefined),
     loadOverrides(db, adapters.broker.id),
+    db.selectFrom("instances").select(["paused_until", "pause_reasons"]).where("name", "=", ref).executeTakeFirst(),
   ]);
   const lastLog = logs.lastLines.get(ref);
   const logState = logs.states.get(ref);
@@ -63,8 +66,10 @@ export async function loadInstanceDetail(
     ...(logState ? { logState } : {}),
     ...(account ? { account } : {}),
   });
-  if (!marketHours || !entry) return detail;
-  const [withHours = detail.instance] = marketHours.attach([detail.instance], [entry]);
+  const paused = shownPause(instance.status, row && pauseOf(row));
+  const summary = paused ? { ...detail.instance, paused } : detail.instance;
+  if (!marketHours || !entry) return { ...detail, instance: summary };
+  const [withHours = summary] = marketHours.attach([summary], [entry]);
   return { ...detail, instance: withHours };
 }
 

@@ -33,7 +33,8 @@ Added along the way:
 ## Phase 2
 - Backtests and optimisation runs started from an instance, backtest vs. live comparison, `.optset` export.
 - [x] Daily summaries (`DAILY_SUMMARY_TIME`); notifications for challenge limits, breaches, passed challenges and the loss guard exist too.
-- Schedules (holidays, weekends, news pauses), exposure across accounts, canary rollout of algo versions.
+- [x] Schedules: pauses on weekends, holidays and around economic news, per instance.
+- Exposure across accounts, canary rollout of algo versions.
 - Trade journal, statistics across instances, bots, symbols and accounts.
 - OIDC login, role management UI.
 - [x] API tokens (hashed, revocable, with expiry and role) for scripts and external clients.

@@ -58,6 +58,8 @@ export const ManagedInstance = Type.Object({
   createdAt: Type.String(),
   config: InstanceConfig,
   deployment: Type.Optional(Deployment),
+  /** The schedules that pause it (weekends, holidays, news); paused while any of them pauses. */
+  scheduleIds: Type.Array(Type.Integer()),
 });
 export type ManagedInstance = Type.Static<typeof ManagedInstance>;
 

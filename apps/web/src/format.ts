@@ -128,3 +128,18 @@ export function accountLabel(account: { displayName?: string | undefined; number
   const name = account.displayName?.trim();
   return name && name !== account.number ? `${name} · ${account.number}` : account.number;
 }
+
+const weekdayCache = new Map<string, Intl.DateTimeFormat>();
+
+/** The name of a weekday, 0 for Sunday, e.g. "Friday" / "Freitag". */
+export function weekdayName(locale: string, day: number): string {
+  let format = weekdayCache.get(locale);
+  if (!format)
+    weekdayCache.set(locale, (format = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" })));
+  // 4 January 1970 was a Sunday.
+  return format.format(new Date(Date.UTC(1970, 0, 4 + day)));
+}
+
+/** A time with its weekday, e.g. "Fri 23.10.2026, 21:00", for pauses that span days. */
+export const formatWhen = (locale: string, iso: string): string =>
+  `${formatDateTime(locale, iso, "weekday")} ${formatDateTime(locale, iso)}`;

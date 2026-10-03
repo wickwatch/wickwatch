@@ -14,6 +14,7 @@ import OverviewView from "./views/OverviewView.vue";
 import ProfileView from "./views/ProfileView.vue";
 import SetupView from "./views/SetupView.vue";
 import TemplateEditView from "./views/TemplateEditView.vue";
+import SchedulesView from "./views/SchedulesView.vue";
 
 // History base from <base href>, so deep links work under any BASE_PATH.
 export const router = createRouter({
@@ -25,6 +26,7 @@ export const router = createRouter({
     { path: "/accounts", name: "accounts", component: AccountsView },
     { path: "/algos", name: "algos", component: AlgosView },
     { path: "/algos/templates/:id", name: "template-edit", component: TemplateEditView },
+    { path: "/schedules", name: "schedules", component: SchedulesView },
     { path: "/audit", name: "audit", component: AuditView },
     { path: "/api-tokens", name: "api-tokens", component: ApiTokensView },
     { path: "/instances/new", name: "instance-new", component: InstanceFormView },

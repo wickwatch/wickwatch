@@ -64,7 +64,13 @@ async function load(append = false) {
 }
 
 /** Actions wickwatch takes by itself; other entries without a user are e.g. failed logins (the name tried is the target). */
-const SYSTEM_ACTIONS = new Set(["account.loss_guard", "instance.autostart", "instance.autostart_gave_up"]);
+const SYSTEM_ACTIONS = new Set([
+  "account.loss_guard",
+  "instance.autostart",
+  "instance.autostart_gave_up",
+  "instance.schedule_pause",
+  "instance.schedule_resume",
+]);
 
 /** Result of an action that can fail (`ok` in its details), in words, not colour alone. */
 const result = (e: AuditRecord) => (typeof e.details?.["ok"] === "boolean" ? e.details["ok"] : undefined);

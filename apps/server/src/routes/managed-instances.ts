@@ -16,6 +16,7 @@ import {
   type InstanceConfig,
   type RuntimeInstance,
 } from "@wickwatch/core";
+import { groupBy } from "@wickwatch/core/group-by";
 import { INSTANCE_NAME, isUp } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -30,13 +31,14 @@ import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
 import { audit, auditOutcome } from "../services/audit";
 import { parameterChecks } from "../services/parameter-checks";
+import { setLinks } from "../services/schedules";
 import {
   canonicalParameters,
   decryptParameters,
   encryptParameters,
   latestConfigIds,
 } from "../services/instance-configs";
-import { setShouldRun } from "../services/instance-keeper";
+import { endPause, setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
 /** A rejected configuration; `issues` and `unknown` are set for `invalid_parameters`. */
@@ -141,8 +143,19 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     if (name !== undefined) query = query.where("name", "=", name);
     const rows = (await query.execute()).filter((r) => entries.has(r.account_id));
     if (!rows.length) return [];
-    const latest = await configs().where("instance_configs.id", "in", latestConfigIds(db)).execute();
+    const [latest, links] = await Promise.all([
+      configs().where("instance_configs.id", "in", latestConfigIds(db)).execute(),
+      // All links, or one instance's; few rows either way.
+      (name === undefined
+        ? db.selectFrom("instance_schedules")
+        : db.selectFrom("instance_schedules").where("instance_id", "=", rows[0]?.id ?? -1)
+      )
+        .select(["instance_id", "schedule_id"])
+        .orderBy("schedule_id")
+        .execute(),
+    ]);
     const byInstance = new Map(latest.map((c) => [c.instance_id, c]));
+    const scheduleIdsOf = groupBy(links, (l) => l.instance_id);
     return rows.flatMap((row) => {
       const entry = entries.get(row.account_id);
       const config = byInstance.get(row.id);
@@ -156,6 +169,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           createdAt: row.created_at,
           config: toConfig(config, cipher),
           ...(deployed ? { deployment: deployed } : {}),
+          scheduleIds: (scheduleIdsOf.get(row.id) ?? []).map((l) => l.schedule_id),
         },
       ];
     });
@@ -511,6 +525,9 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       }
 
       const replaced = instance.deployment !== undefined;
+      const paused =
+        (await db.selectFrom("instances").select("paused_until").where("name", "=", name).executeTakeFirst())
+          ?.paused_until != null;
       const { runtime } = await auditOutcome(
         db,
         { action: "instance.deploy", target: name, ...actor(request) },
@@ -548,12 +565,50 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
             await adapters.runtime.start(name);
             runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
           }
-          await setShouldRun(db, name, isUp(runtime.status), true);
+          // A new version for an instance its schedule holds stopped keeps the pause: it starts when the pause ends.
+          if (started || !paused) {
+            await endPause(db, name);
+            await setShouldRun(db, name, isUp(runtime.status), true);
+          }
           return { runtime, started, image: launched.image };
         },
         ({ started, image }) => ({ version: config.version, replaced, started, image }),
       );
       return { status: runtime.status, configVersion: config.version };
+    },
+  );
+
+  app.put(
+    "/managed-instances/:name/schedules",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["schedules"],
+        summary: "Choose the schedules that pause an instance; it is paused while any of them pauses",
+        description:
+          "The scheduler applies them within half a minute: during one of their pauses a running instance is paused at once. Without any, an instance they paused is started again.",
+        params: Type.Object({ name: Type.String() }),
+        body: Type.Object({ scheduleIds: Type.Array(Type.Integer(), { maxItems: 100 }) }),
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { name } = request.params;
+      const ids = [...new Set(request.body.scheduleIds)];
+      const instance = await db.selectFrom("instances").select("id").where("name", "=", name).executeTakeFirst();
+      if (!instance) return reply.code(404).send({ error: "not_found" });
+      const schedules = ids.length
+        ? await db.selectFrom("schedules").select(["id", "name"]).where("id", "in", ids).orderBy("name").execute()
+        : [];
+      if (schedules.length !== ids.length) return reply.code(404).send({ error: "schedule_not_found" });
+      await setLinks(db, { instanceId: instance.id }, ids);
+      await audit(db, {
+        action: "instance.schedule",
+        target: name,
+        details: { schedules: schedules.map((s) => s.name) },
+        ...actor(request),
+      });
+      return reply.code(204).send(null);
     },
   );
 

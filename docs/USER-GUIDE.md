@@ -103,6 +103,17 @@ wickwatch watches the account every minute. The hard daily stop still belongs in
 
 With **Protection** switched on in the challenge profile, wickwatch runs the same emergency stop by itself when a loss limit reaches the chosen share, at most once per trading day. An alert says when and why. The instances stay stopped until you start them again, also after a restart of the server or Docker.
 
+### Schedules
+
+**Schedules** (main menu) pause bots on weekends, on holidays and around economic news. A schedule has a time zone and any of:
+
+- a weekly pause, e.g. Friday 21:00 to Sunday 23:00;
+- holidays as whole days (a range or a single day, with an optional name);
+- one-off pauses from a day and time to another, e.g. for a broker's maintenance;
+- news pauses, once an economic calendar is set (`NEWS_CALENDAR_URL`, e.g. Forex Factory's; without it the form does not offer them): currencies (e.g. USD, EUR), high or medium-and-high impact, and the minutes before and after. The calendar is fetched hourly while a schedule uses news; it covers the current week.
+
+The form shows the pauses of the next 14 days the rules make, and lets you tick the instances it pauses. An instance can have several schedules (also chosen on its **Configuration** tab) and is paused while any of them pauses. When a pause begins, wickwatch stops the running instances of the schedule (status **Paused**, no alert) and starts them again when it ends; overlapping pauses run on as one. Open positions and orders stay open, with their stop loss and take profit at the broker; the bots take them over when they start (see [BOT-CONTRACT.md](BOT-CONTRACT.md)). What you do by hand wins: an instance you start during a pause keeps running, one you stop stays stopped, and a new configuration applied without starting it starts when the pause ends. The emergency stop and the loss guard end a pause too: their instances stay stopped. Every pause and start is in the audit log.
+
 ## 9. After a restart
 
 When the host or Docker restarts, wickwatch starts the instances it set up again if they were running before. A bot that stopped itself (e.g. after its own daily limit), or one that was stopped by you, the emergency stop or the protection, stays stopped. Details: [CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart).

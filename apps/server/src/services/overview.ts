@@ -25,6 +25,7 @@ import type { Db } from "../db";
 import { brokerErrorCode } from "./broker-error";
 import { clockOffset } from "./clock-check";
 import type { LogTracker } from "./log-tracker";
+import { pauseOf } from "./schedules";
 import { guardTripToday } from "./loss-guard";
 import type { MarketHoursCache } from "./market-hours";
 import { loadOverrides } from "./overrides";
@@ -155,7 +156,11 @@ export class OverviewLoader {
       this.fetch(now, only),
       loadOverrides(db, adapters.broker.id),
       // Managed instances are named after their runtime ref.
-      db.selectFrom("instances").select("name").where("stopped_by_user", "=", 1).execute(),
+      db
+        .selectFrom("instances")
+        .select(["name", "stopped_by_user", "paused_until", "pause_reasons"])
+        .where((eb) => eb.or([eb("stopped_by_user", "=", 1), eb("paused_until", "is not", null)]))
+        .execute(),
     ]);
     const accounts = await Promise.all(fetched.accounts.map((account) => snapshot(db, account, now)));
     const clockOffsetMs = clockOffset(now.getTime());
@@ -167,7 +172,13 @@ export class OverviewLoader {
       logStates: fetched.logs.states,
       accounts,
       overrides,
-      stoppedByUser: new Set(stopped.map((row) => row.name)),
+      stoppedByUser: new Set(stopped.filter((row) => row.stopped_by_user === 1).map((row) => row.name)),
+      paused: new Map(
+        stopped.flatMap((row) => {
+          const pause = pauseOf(row);
+          return pause ? [[row.name, pause] as const] : [];
+        }),
+      ),
       ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
     };
     return { input, entries: fetched.accounts.map((a) => a.entry) };

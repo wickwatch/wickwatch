@@ -27,6 +27,10 @@ import type {
   LogPeriod,
   LogSearchResult,
   Overview,
+  PauseWindow,
+  Schedule,
+  ScheduleInput,
+  ScheduleRules,
   SystemInfo,
 } from "@wickwatch/core";
 
@@ -212,6 +216,17 @@ export const api = {
   updateParameterTemplate: (id: number, body: ParameterTemplateUpdate) =>
     send<ParameterTemplate>("PATCH", `parameter-templates/${String(id)}`, body),
   deleteParameterTemplate: (id: number) => send<undefined>("DELETE", `parameter-templates/${String(id)}`),
+  schedules: () => request<Schedule[]>("schedules"),
+  /** The names of the instances a schedule can pause. */
+  scheduleInstances: () => request<string[]>("schedules/instances"),
+  createSchedule: (body: ScheduleInput) => post<Schedule>("schedules", body),
+  updateSchedule: (id: number, body: ScheduleInput) => send<Schedule>("PUT", `schedules/${String(id)}`, body),
+  deleteSchedule: (id: number) => send<undefined>("DELETE", `schedules/${String(id)}`),
+  /** The pauses of the next 14 days that rules would make, before they are saved. */
+  previewSchedule: (rules: ScheduleRules) => post<PauseWindow[]>("schedules/preview", { rules }),
+  /** The schedules that pause an instance; it is paused while any of them pauses. */
+  setInstanceSchedules: (name: string, scheduleIds: number[]) =>
+    send<undefined>("PUT", `managed-instances/${encodeURIComponent(name)}/schedules`, { scheduleIds }),
   managedInstances: () => request<ManagedInstance[]>("managed-instances"),
   managedInstance: (name: string) => request<ManagedInstanceDetail>(`managed-instances/${encodeURIComponent(name)}`),
   createManagedInstance: (body: { name: string; accountId: number; config: InstanceConfigInput }) =>

@@ -38,9 +38,17 @@ export async function setShouldRun(
 }
 
 /**
+ * Ends a schedule's hold on instances: what the user does (start, stop, deploy) and the emergency stop win over a
+ * pause, so the scheduler does not start them when it ends.
+ */
+export async function endPause(db: Db, name: string): Promise<void> {
+  await db.updateTable("instances").set({ paused_until: null, pause_reasons: null }).where("name", "=", name).execute();
+}
+
+/**
  * Emergency stop of an account, by hand or by the loss guard. Its instances are first marked as no longer meant to run,
- * so they are not started again after a restart; the credentials are read only after that. They count as stopped on
- * purpose: the user knows, and the loss guard raises an alert of its own.
+ * so they are not started again after a restart or a schedule's pause; the credentials are read only after that. They
+ * count as stopped on purpose: the user knows, and the loss guard raises an alert of its own.
  */
 export async function stopAccount(
   db: Db,
@@ -49,7 +57,7 @@ export async function stopAccount(
 ): Promise<EmergencyStopReport> {
   await db
     .updateTable("instances")
-    .set({ should_run: 0, stopped_by_user: 1 })
+    .set({ should_run: 0, stopped_by_user: 1, paused_until: null, pause_reasons: null })
     .where("account_id", "=", entry.id)
     .execute();
   return emergencyStopAccount({ ...options, account: entry.number, credentials: await entry.credentials() });
@@ -120,12 +128,13 @@ export class InstanceKeeper {
       return;
     }
     const byRef = new Map(instances.map((i) => [i.ref, i]));
-    const rows = await db.selectFrom("instances").select(["name", "should_run"]).execute();
+    const rows = await db.selectFrom("instances").select(["name", "should_run", "paused_until"]).execute();
     for (const row of rows) {
       const instance = byRef.get(row.name);
       if (!instance) continue;
       if (isUp(instance.status)) {
-        if (!row.should_run && !this.tookOver) await setShouldRun(db, row.name, true);
+        // A paused one is the scheduler's: it may still be stopping it.
+        if (!row.should_run && !row.paused_until && !this.tookOver) await setShouldRun(db, row.name, true);
         continue;
       }
       // Only clean ends ("stopped" with an exit code); "created" never ran, "error" is left to the restart policy.
