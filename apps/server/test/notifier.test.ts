@@ -21,7 +21,14 @@ const loginFailed: Alert = {
   subject: "5902789",
   params: { reason: "auth_failed" },
 };
+const unreachable: Alert = { ...loginFailed, params: { reason: "unavailable" } };
 const stopped: Alert = { level: "warning", code: "instance_stopped", subject: "alpha", params: {} };
+const nearLimit: Alert = {
+  level: "warning",
+  code: "challenge_limit",
+  subject: "5902789",
+  params: { rule: "dailyLoss", used: 85 },
+};
 
 /** Names of the instances and numbers of the accounts that exist; a resolved alert of a missing one was removed. */
 let present: { instances: string[]; accounts: string[] };
@@ -30,7 +37,11 @@ let hours: MarketHours | undefined;
 const overview = (alerts: Alert[]): Overview => ({
   time: NOW.toISOString(),
   accounts: present.accounts.map((number) => ({ number })) as unknown as Overview["accounts"],
-  instances: present.instances.map((name) => ({ name, marketHours: hours })) as unknown as Overview["instances"],
+  instances: present.instances.map((name) => ({
+    name,
+    account: "5902789",
+    marketHours: hours,
+  })) as unknown as Overview["instances"],
   alerts,
 });
 
@@ -134,18 +145,18 @@ describe("AlertNotifier", () => {
   it("posts a lost connection only once it outlasted the grace time", async () => {
     // Lost 5 min 10 s before NOW.
     const n = notifier({ disconnectGraceMs: 10 * 60_000 });
-    alerts = [disconnected, loginFailed];
+    alerts = [disconnected, nearLimit];
     await n.check();
-    expect(posted().map((e) => e.code)).toEqual(["account_error"]);
+    expect(posted().map((e) => e.code)).toEqual(["challenge_limit"]);
 
     // Back before the grace time ended: neither the alert nor a resolution.
-    alerts = [loginFailed];
+    alerts = [nearLimit];
     await n.check();
     expect(posted()).toHaveLength(1);
 
-    alerts = [disconnected, loginFailed];
+    alerts = [disconnected, nearLimit];
     await notifier({ disconnectGraceMs: 5 * 60_000 }).check();
-    expect(posted().map((e) => e.code)).toEqual(["account_error", "instance_disconnected"]);
+    expect(posted().map((e) => e.code)).toEqual(["challenge_limit", "instance_disconnected"]);
   });
 
   it("waits longer while the market is closed", async () => {
@@ -158,6 +169,63 @@ describe("AlertNotifier", () => {
     expect(posted()).toEqual([]);
     await closed(5 * 60_000);
     expect(posted().map((e) => e.code)).toEqual(["instance_disconnected"]);
+  });
+
+  it("holds an unreachable account from when it was first seen, but not a failed login", async () => {
+    let now = NOW;
+    const n = notifier({ disconnectGraceMs: 3 * 60_000, now: () => now });
+    alerts = [unreachable];
+    await n.check();
+    now = new Date(NOW.getTime() + 2 * 60_000);
+    await n.check();
+    expect(posted()).toEqual([]);
+    now = new Date(NOW.getTime() + 3 * 60_000);
+    await n.check();
+    expect(posted().map((e) => e.code)).toEqual(["account_error"]);
+
+    present = { instances: ["alpha"], accounts: ["5902789", "other"] };
+    alerts = [unreachable, { ...loginFailed, subject: "other" }];
+    await n.check();
+    expect(posted().map((e) => e.subject)).toEqual(["5902789", "other"]);
+  });
+
+  it("holds an unreachable account longer while the markets of its instances are closed", async () => {
+    // The account's only instance trades Sunday 00:00–00:01; NOW is a Monday afternoon.
+    hours = { alwaysOpen: false, sessions: [{ start: 0, end: 60 }] };
+    let now = NOW;
+    const n = notifier({ disconnectGraceMs: 3 * 60_000, disconnectGraceClosedMs: 30 * 60_000, now: () => now });
+    alerts = [unreachable];
+    await n.check();
+    now = new Date(NOW.getTime() + 10 * 60_000);
+    await n.check();
+    expect(posted()).toEqual([]);
+    now = new Date(NOW.getTime() + 30 * 60_000);
+    await n.check();
+    expect(posted().map((e) => e.code)).toEqual(["account_error"]);
+  });
+
+  it("resolves an alert only once it stayed away for the delay", async () => {
+    let now = NOW;
+    const n = notifier({ resolveDelayMs: 2 * 60_000, now: () => now });
+    alerts = [loginFailed];
+    await n.check();
+
+    // Away for a minute and back: no resolution, no second alert.
+    alerts = [];
+    await n.check();
+    now = new Date(NOW.getTime() + 60_000);
+    alerts = [loginFailed];
+    await n.check();
+    expect(posted().map((e) => e.event)).toEqual(["alert_raised"]);
+
+    alerts = [];
+    now = new Date(NOW.getTime() + 2 * 60_000);
+    await n.check();
+    now = new Date(NOW.getTime() + 4 * 60_000);
+    await n.check();
+    // Resolved once.
+    await n.check();
+    expect(posted().map((e) => e.event)).toEqual(["alert_raised", "alert_resolved"]);
   });
 
   it("uses the open market's grace time while it is open, and when its hours are unknown", async () => {

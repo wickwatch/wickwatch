@@ -16,13 +16,18 @@ export interface NotifierOptions {
   locale: Locale;
   log: FastifyBaseLogger;
   intervalMs?: number;
-  /** A lost broker connection is only posted once it lasted this long; short drops are no news. Default 0. */
+  /**
+   * Alerts about the broker connection (a bot's lost connection, an unreachable account) are only posted once they
+   * lasted this long; short drops are no news. Default 0.
+   */
   disconnectGraceMs?: number;
   /**
-   * The same while the instance's market is closed, e.g. during a broker's weekend maintenance; Infinity holds it
-   * until the market opens. Default `disconnectGraceMs`.
+   * The same while the market is closed (of the instance, or of all instances of the account), e.g. during a broker's
+   * weekend maintenance; Infinity holds them until the market opens. Default `disconnectGraceMs`.
    */
   disconnectGraceClosedMs?: number;
+  /** A posted alert is only resolved once it stayed away this long, so it does not flap back and forth. Default 0. */
+  resolveDelayMs?: number;
   fetch?: typeof fetch;
   now?: () => Date;
 }
@@ -43,6 +48,11 @@ export interface AlertEvent {
 }
 
 const keyOf = (alert: Pick<Alert, "code" | "subject">) => `${alert.code}:${alert.subject}`;
+
+/** Alerts that come and go with the broker's connection, e.g. during its maintenance; a failed login is none. */
+const brokerConnection = (alert: Alert) =>
+  alert.code === "instance_disconnected" ||
+  (alert.code === "account_error" && (alert.params.reason === "timeout" || alert.params.reason === "unavailable"));
 
 const INSTANCE_STATES: Alert["code"][] = ["instance_stopped", "instance_error", "instance_disconnected"];
 /** Alerts an alert can turn into: when one of them is raised for the same subject, the first one did not recover. */
@@ -65,6 +75,14 @@ function resolutionOf(alert: Alert, overview: Overview): Resolution {
   return turned ? "resolved" : "recovered";
 }
 
+/** The market of the alert's instance, or of every instance of its account, is closed; unknown hours count as open. */
+function marketClosed(alert: Alert, overview: Overview, now: Date): boolean {
+  const instances = overview.instances.filter((i) =>
+    alert.code.startsWith("instance_") ? i.name === alert.subject : i.account === alert.subject,
+  );
+  return instances.length > 0 && instances.every((i) => i.marketHours && !marketState(i.marketHours, now).open);
+}
+
 /**
  * Checks the alerts of the overview (default every 60 s) and posts the ones that are new or gone
  * to the webhook. Sent alerts are stored, so a restart neither repeats nor forgets them; a failed
@@ -75,6 +93,8 @@ export class AlertNotifier {
   private running = false;
   private readonly fetch: typeof fetch;
   private readonly now: () => Date;
+  /** Since when an alert differs from what was posted (new, or gone); a restart starts anew. */
+  private readonly pendingSince = new Map<string, number>();
 
   constructor(private readonly options: NotifierOptions) {
     this.fetch = options.fetch ?? fetch;
@@ -112,10 +132,15 @@ export class AlertNotifier {
     const { db } = this.options;
     const sent = await db.selectFrom("notified_alerts").selectAll().execute();
     const current = new Map(overview.alerts.map((a) => [keyOf(a), a]));
-    const time = this.now().toISOString();
+    const sentKeys = new Set(sent.map((row) => row.key));
+    const now = this.now();
+    const time = now.toISOString();
+    for (const key of this.pendingSince.keys()) {
+      if (sentKeys.has(key) === current.has(key)) this.pendingSince.delete(key);
+    }
 
     for (const [key, alert] of current) {
-      if (sent.some((row) => row.key === key) || this.held(alert, overview)) continue;
+      if (sentKeys.has(key) || this.held(key, alert, overview, now)) continue;
       const text = alertText(alert, this.options.locale);
       if (!(await this.post(url, this.event("alert_raised", alert, time, text)))) continue;
       await db
@@ -129,9 +154,11 @@ export class AlertNotifier {
           raised_at: time,
         })
         .execute();
+      this.pendingSince.delete(key);
     }
     for (const row of sent) {
       if (current.has(row.key)) continue;
+      if (now.getTime() - this.since(row.key, now) < (this.options.resolveDelayMs ?? 0)) continue;
       const alert = {
         level: row.level,
         code: row.code,
@@ -141,19 +168,27 @@ export class AlertNotifier {
       const text = alertText(alert, this.options.locale, resolutionOf(alert, overview));
       if (!(await this.post(url, this.event("alert_resolved", alert, time, text)))) continue;
       await db.deleteFrom("notified_alerts").where("key", "=", row.key).execute();
+      this.pendingSince.delete(row.key);
     }
   }
 
-  /** A lost connection that may still come back by itself: not posted yet, and so no resolution either. */
-  private held(alert: Alert, overview: Overview): boolean {
-    if (alert.code !== "instance_disconnected") return false;
-    const now = this.now();
+  private since(key: string, now: Date): number {
+    const since = this.pendingSince.get(key) ?? now.getTime();
+    this.pendingSince.set(key, since);
+    return since;
+  }
+
+  /**
+   * A broker connection that may still come back by itself: not posted yet, and so no resolution either. Counted from
+   * the alert's `since` where it has one (a lost connection is logged before the check sees it), else from when this
+   * notifier first saw it.
+   */
+  private held(key: string, alert: Alert, overview: Overview, now: Date): boolean {
+    if (!brokerConnection(alert)) return false;
+    const since = typeof alert.params.since === "string" ? Date.parse(alert.params.since) : this.since(key, now);
     const grace = this.options.disconnectGraceMs ?? 0;
-    // Without the broker's hours the market counts as open.
-    const hours = overview.instances.find((i) => i.name === alert.subject)?.marketHours;
-    const closed = hours !== undefined && !marketState(hours, now).open;
-    const wait = closed ? (this.options.disconnectGraceClosedMs ?? grace) : grace;
-    return now.getTime() - Date.parse(String(alert.params.since)) < wait;
+    const wait = marketClosed(alert, overview, now) ? (this.options.disconnectGraceClosedMs ?? grace) : grace;
+    return now.getTime() - since < wait;
   }
 
   private event(event: AlertEvent["event"], alert: Alert, time: string, text: string): AlertEvent {

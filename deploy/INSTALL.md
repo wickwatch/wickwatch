@@ -203,7 +203,7 @@ DAILY_SUMMARY_TIMEZONE=Europe/Berlin
 Then `docker compose up -d --force-recreate wickwatch`; running bots keep running.
 
 - **Heartbeat** (e.g. Healthchecks.io): period 1 minute (`ALERT_CHECK_SECONDS`), grace time a few minutes longer than a restart of wickwatch takes, e.g. 10 minutes for bots on M30 and above. Send its "down" notification to the same chat. Pause the check during longer planned maintenance.
-- **Lost broker connection:** posted only once it lasted 3 minutes, or 30 minutes while the market is closed, so a broker's weekend maintenance stays quiet but a bot that does not come back is still reported; tune with `ALERT_DISCONNECT_GRACE_SECONDS` and `ALERT_DISCONNECT_GRACE_CLOSED_SECONDS` ([CONFIGURATION.md](../docs/CONFIGURATION.md#notifications)).
+- **Lost broker connection:** a bot's lost connection or an account the broker does not answer for (not a failed login) is posted only once it lasted 3 minutes, or 30 minutes while the market is closed, so a broker's weekend maintenance stays quiet but a bot that does not come back is still reported; "Resolved" follows once the alert stayed away 2 minutes. Tune with `ALERT_DISCONNECT_GRACE_SECONDS`, `ALERT_DISCONNECT_GRACE_CLOSED_SECONDS` and `ALERT_RESOLVE_DELAY_SECONDS` ([CONFIGURATION.md](../docs/CONFIGURATION.md#notifications)).
 - **Telegram chat ID:** write to your bot, then read the ID with `curl -s "https://api.telegram.org/bot<token>/getUpdates"` (`"chat":{"id":…}`; group IDs are negative). If another program polls the same bot, `getUpdates` stays empty; a separate bot for wickwatch avoids that.
 - **Test:** stop an instance in the dashboard; within `ALERT_CHECK_SECONDS` the chat gets the alert, and after starting it again a "Resolved" message.
 

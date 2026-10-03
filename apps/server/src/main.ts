@@ -83,6 +83,7 @@ try {
     intervalMs: config.alertCheckSeconds * 1000,
     disconnectGraceMs: config.alertDisconnectGraceSeconds * 1000,
     disconnectGraceClosedMs: config.alertDisconnectGraceClosedSeconds * 1000,
+    resolveDelayMs: config.alertResolveDelaySeconds * 1000,
   });
   const lossGuard = new LossGuardService({
     db,

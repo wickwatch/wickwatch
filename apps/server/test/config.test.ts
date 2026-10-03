@@ -32,6 +32,7 @@ describe("loadConfig", () => {
       alertCheckSeconds: 60,
       alertDisconnectGraceSeconds: 180,
       alertDisconnectGraceClosedSeconds: 1800,
+      alertResolveDelaySeconds: 120,
       backup: { dir: "/srv/wickwatch/data/backups", intervalHours: 24, keep: 7 },
       auditRetentionDays: 365,
       adapterSettings: { "ctrader-cli": { cli: "local", cliPath: "ctrader-cli" } },
@@ -135,9 +136,10 @@ describe("loadConfig", () => {
         ALERT_CHECK_SECONDS: "5",
         ALERT_DISCONNECT_GRACE_SECONDS: "-1",
         ALERT_DISCONNECT_GRACE_CLOSED_SECONDS: "never",
+        ALERT_RESOLVE_DELAY_SECONDS: "1h",
         CTRADER_CLI: "docker",
       }),
-    ).toHaveLength(12);
+    ).toHaveLength(13);
   });
 
   it("explains that Postgres is not supported yet", () => {
