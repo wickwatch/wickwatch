@@ -5,7 +5,8 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip, createGzip } from "node:zlib";
 import type { FastifyBaseLogger } from "fastify";
-import type { IsoTime, LogLine, LogOptions, RuntimeAdapter } from "@wickwatch/core";
+import type { IsoTime, LogFilter, LogLine, LogOptions, LogSearchResult, RuntimeAdapter } from "@wickwatch/core";
+import { keepsLogLine } from "@wickwatch/core/rules";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** `1791037500123.jsonl.gz`: when the log was kept, in ms since the epoch; later than every line in it. */
@@ -185,6 +186,39 @@ export function withLogArchive(
 }
 
 export type LogReader = (ref: string, opts: LogOptions) => AsyncIterable<LogLine>;
+
+/** Most matches a log search keeps; the newest win. */
+export const LOG_SEARCH_LIMIT = 1000;
+
+/**
+ * Searches an instance's whole log (since `since`, with the kept lines of replaced containers): text containing
+ * `contains`, case ignored, and lines the filter keeps. Streams through it, keeping only the newest `limit` matches.
+ */
+export async function searchLog(
+  readLog: LogReader,
+  ref: string,
+  opts: {
+    contains?: string | undefined;
+    filter?: LogFilter | undefined;
+    since?: string | undefined;
+    limit?: number | undefined;
+    signal?: AbortSignal | undefined;
+  },
+): Promise<LogSearchResult> {
+  const { filter = "all", since, limit = LOG_SEARCH_LIMIT, signal } = opts;
+  const pattern = opts.contains ? new RegExp(opts.contains.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : undefined;
+  // A ring of the newest matches; `found` counts all of them.
+  const ring: LogLine[] = [];
+  let found = 0;
+  const read = readLog(ref, { tail: "all", ...(since ? { since } : {}), ...(signal ? { signal } : {}) });
+  for await (const line of read) {
+    if (!keepsLogLine(line, filter) || (pattern && !pattern.test(line.text))) continue;
+    ring[found % limit] = line;
+    found++;
+  }
+  const start = found > limit ? found % limit : 0;
+  return { lines: [...ring.slice(start), ...ring.slice(0, start)], truncated: found > limit };
+}
 
 /**
  * An instance's log as people read it (live log, download, MCP): the kept lines of its earlier containers, then the

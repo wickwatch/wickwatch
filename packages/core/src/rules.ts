@@ -1,7 +1,7 @@
 // Input rules shared by the server and the dashboard. Dependency-free, so the SPA can import them at runtime
 // (`@wickwatch/core/rules`) without pulling in the rest of the core.
 
-import type { InstanceStatus } from "./schemas/runtime";
+import type { InstanceStatus, LogFilter, LogLine } from "./schemas/runtime";
 
 export { ATTRIBUTION_MODES } from "./attribution";
 export { DEFAULT_LABEL_PREFIX } from "./labels";
@@ -23,3 +23,7 @@ export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 /** Running, or about to run again: counts as meant to run. */
 export const isUp = (status: InstanceStatus | undefined): boolean => status === "running" || status === "restarting";
+
+/** Whether a log filter keeps a line: problems are warnings and errors, setups the lines with setup features. */
+export const keepsLogLine = (line: Pick<LogLine, "level" | "setup">, filter: LogFilter): boolean =>
+  filter === "problems" ? line.level === "warn" || line.level === "error" : filter === "setups" ? !!line.setup : true;

@@ -1,21 +1,32 @@
 <script setup lang="ts">
-import type { LogLine } from "@wickwatch/core";
+import type { LogFilter, LogLine, LogPeriod, LogSearchResult } from "@wickwatch/core";
+import { keepsLogLine } from "@wickwatch/core/rules";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { api } from "../api";
+import { useAsyncAction } from "../composables/useAsyncAction";
 import { formatDateTime } from "../format";
+import { LOG_PERIODS } from "../log-periods";
 import AppIcon from "./AppIcon.vue";
+import MenuButton, { type MenuItem } from "./MenuButton.vue";
 
 export type LogState = "connecting" | "live" | "reconnecting" | "stopped";
 
 /**
  * Log lines with filters and "follow". The panel next to the chart and its larger view (`large`, with a search) show the
- * same lines, each with its own filter and scroll position. Buttons for the bar come in the `actions` slot.
+ * same lines, each with its own filter and scroll position. Buttons for the bar come in the `actions` slot. The search
+ * looks at the live lines; with `instanceRef`, the whole log of a period can be searched on the server instead (the
+ * live view keeps only the last 1000 lines).
  */
-const props = defineProps<{ lines: readonly (LogLine & { seq: number })[]; state: LogState; large?: boolean }>();
-const { locale } = useI18n();
+const props = defineProps<{
+  lines: readonly (LogLine & { seq: number })[];
+  state: LogState;
+  large?: boolean;
+  instanceRef?: string;
+}>();
+const { t, locale } = useI18n();
 
-type Filter = "all" | "problems" | "setups";
-const filter = ref<Filter>("all");
+const filter = ref<LogFilter>("all");
 const follow = ref(true);
 const query = ref("");
 const box = ref<HTMLDivElement>();
@@ -25,16 +36,37 @@ const pattern = computed(() => {
   const q = props.large ? query.value.trim() : "";
   return q ? new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "i") : undefined;
 });
-const visible = computed(() =>
-  props.lines.filter(
-    (l) =>
-      (filter.value === "problems"
-        ? l.level === "warn" || l.level === "error"
-        : filter.value === "setups"
-          ? !!l.setup
-          : true) &&
-      (!pattern.value || l.text.search(pattern.value) !== -1),
-  ),
+/** Results of a search of the whole log, shown instead of the live lines until the search or filter changes. */
+const found = ref<{ result: LogSearchResult; period: LogPeriod }>();
+const { busy: searching, error: searchError, run } = useAsyncAction();
+const periods = computed<MenuItem[]>(() => LOG_PERIODS.map((p) => ({ id: p, label: t(`log.periods.${p}`) })));
+watch([query, filter], () => {
+  found.value = undefined;
+  searchError.value = undefined;
+});
+function searchAll(id: string) {
+  const instance = props.instanceRef;
+  const text = query.value.trim();
+  if (!instance || !text || searching.value) return;
+  const period = id as LogPeriod;
+  void run(async () => {
+    found.value = { result: await api.searchLog(instance, text, filter.value, period), period };
+  });
+}
+const foundText = computed(() =>
+  found.value
+    ? [
+        t("log.foundAll", found.value.result.lines.length),
+        t(`log.periods.${found.value.period}`),
+        ...(found.value.result.truncated ? [t("log.truncated")] : []),
+      ].join(" · ")
+    : "",
+);
+/** The live lines the filter and search keep, or the server's matches, which it already filtered. */
+const visible = computed(
+  () =>
+    found.value?.result.lines.map((line, seq) => ({ ...line, seq })) ??
+    props.lines.filter((l) => keepsLogLine(l, filter.value) && (!pattern.value || l.text.search(pattern.value) !== -1)),
 );
 const parts = (text: string) => (pattern.value ? text.split(pattern.value) : [text]);
 
@@ -86,7 +118,20 @@ watch(
         <input v-model="follow" type="checkbox" />
         {{ $t("log.follow") }}
       </label>
-      <span v-if="pattern" class="muted log__matches" role="status">{{ $t("log.matches", visible.length) }}</span>
+      <MenuButton
+        v-if="large && instanceRef && pattern && !found"
+        :label="$t('log.searchAll')"
+        :items="periods"
+        @select="searchAll"
+      >
+        <AppIcon name="search" />
+      </MenuButton>
+      <span v-if="found" class="muted log__matches" role="status">{{ foundText }}</span>
+      <span v-else-if="pattern" class="muted log__matches" role="status">{{ $t("log.matches", visible.length) }}</span>
+      <button v-if="found" type="button" class="btn btn--ghost btn--small" @click="found = undefined">
+        {{ $t("log.backToLive") }}
+      </button>
+      <span v-if="searchError" class="tone-negative" role="alert">{{ $t(searchError) }}</span>
       <span
         class="log__state"
         :class="state === 'live' ? 'tone-positive' : state === 'stopped' ? 'tone-muted' : 'tone-warning'"

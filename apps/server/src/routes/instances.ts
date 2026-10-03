@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { errorCode, InstanceDetail, LogPeriod, type LogLine } from "@wickwatch/core";
+import { errorCode, InstanceDetail, LogFilter, LogPeriod, LogSearchResult, type LogLine } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { AccountDirectory } from "../accounts";
@@ -10,7 +10,7 @@ import { ErrorBody } from "../plugins/errors";
 import { auditOutcome } from "../services/audit";
 import { setShouldRun } from "../services/instance-keeper";
 import type { DealHistory } from "../services/deal-history";
-import type { LogReader } from "../services/log-archive";
+import { LOG_SEARCH_LIMIT, searchLog, type LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
 import type { MarketHoursCache } from "../services/market-hours";
@@ -24,6 +24,9 @@ export const Ref = Type.String({ minLength: 1, maxLength: 200, pattern: "^[A-Za-
 const KEEP_ALIVE_MS = 15_000;
 const HOUR_MS = 60 * 60 * 1000;
 const PERIOD_MS = { "24h": 24 * HOUR_MS, "7d": 7 * 24 * HOUR_MS } as const;
+/** Where a log period starts; undefined for `all`. */
+const sinceOf = (period: LogPeriod, now: Date) =>
+  period === "all" ? undefined : new Date(now.getTime() - PERIOD_MS[period]).toISOString();
 /** A download line: the UTC time, then the text as the instance wrote it. */
 const fileLine = (line: LogLine) => `${line.time} ${line.text}\n`;
 
@@ -143,9 +146,8 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       if (!(await adapters.runtime.list()).some((i) => i.ref === ref)) {
         return reply.code(404).send({ error: "not_found" });
       }
-      const period = request.query.period ?? "24h";
       const now = new Date();
-      const since = period === "all" ? undefined : new Date(now.getTime() - PERIOD_MS[period]).toISOString();
+      const since = sinceOf(request.query.period ?? "24h", now);
       const lines = readLog(ref, { tail: "all", ...(since ? { since } : {}) })[Symbol.asyncIterator]();
       // Read the first line before answering: a runtime that fails answers with its error, not a cut-off file.
       const first = await lines.next();
@@ -165,6 +167,41 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
           // No response schema for 200 on purpose, as for the parameter file: the text goes out as it is.
           .send(Readable.from(text()) as never)
       );
+    },
+  );
+
+  app.get(
+    "/instances/:ref/logs/search",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "Search the whole log",
+        description: `Lines containing \`q\` (case ignored) that the filter keeps, newest ${String(LOG_SEARCH_LIMIT)} at most, oldest first. \`period\` limits it to the last 24 hours (default) or 7 days; \`all\` is everything the runtime still has, with LOG_ARCHIVE also the kept logs of replaced containers.`,
+        params: Type.Object({ ref: Ref }),
+        querystring: Type.Object({
+          q: Type.String({ minLength: 1, maxLength: 200 }),
+          filter: Type.Optional(LogFilter),
+          period: Type.Optional(LogPeriod),
+        }),
+        response: { 200: LogSearchResult, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { ref } = request.params;
+      if (!(await adapters.runtime.list()).some((i) => i.ref === ref)) {
+        return reply.code(404).send({ error: "not_found" });
+      }
+      // A search of a long log takes a while; it stops when the client gives up.
+      const controller = new AbortController();
+      reply.raw.on("close", () => {
+        if (!reply.raw.writableFinished) controller.abort();
+      });
+      return searchLog(readLog, ref, {
+        contains: request.query.q,
+        filter: request.query.filter,
+        since: sinceOf(request.query.period ?? "24h", new Date()),
+        signal: controller.signal,
+      });
     },
   );
 

@@ -23,7 +23,9 @@ import type {
   HostStatus,
   InstanceDetail,
   InstanceStatus,
+  LogFilter,
   LogPeriod,
+  LogSearchResult,
   Overview,
   SystemInfo,
 } from "@wickwatch/core";
@@ -145,6 +147,11 @@ export const api = {
   /** The log as a text file; `period` is how far back. */
   logDownloadUrl: (ref: string, period: LogPeriod) =>
     url(`instances/${encodeURIComponent(ref)}/logs/download?period=${period}`).toString(),
+  /** The whole log of the period (with kept lines of replaced containers), searched on the server. */
+  searchLog: (ref: string, q: string, filter: LogFilter, period: LogPeriod) =>
+    request<LogSearchResult>(
+      `instances/${encodeURIComponent(ref)}/logs/search?${new URLSearchParams({ q, filter, period }).toString()}`,
+    ),
   closePosition: (account: string, positionId: string) =>
     post<undefined>(`accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/close`, {
       confirm: positionId,

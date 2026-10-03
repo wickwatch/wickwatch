@@ -17,7 +17,7 @@ defineEmits<{ close: [] }>();
 
 <template>
   <AppModal :open="open" :title="title" full @close="$emit('close')">
-    <LogView :lines="lines" :state="state" large>
+    <LogView :lines="lines" :state="state" large :instance-ref="instanceRef">
       <template #actions>
         <LogDownload :instance-ref="instanceRef" />
       </template>

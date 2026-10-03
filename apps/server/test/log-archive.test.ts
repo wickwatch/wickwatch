@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { InstanceSpec, LogLine, LogOptions, RuntimeAdapter, UpdateOptions } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import { describe, expect, it, vi } from "vitest";
-import { LogArchive, logReader, withLogArchive } from "../src/services/log-archive";
+import { LogArchive, logReader, searchLog, withLogArchive } from "../src/services/log-archive";
 
 const line = (minute: number, text = `line ${String(minute)}`): LogLine => ({
   time: `2026-10-03T10:${String(minute).padStart(2, "0")}:00.000Z`,
@@ -176,5 +176,35 @@ describe("logReader", () => {
     expect(await all(read("bot-a", { tail: "all", since: line(2).time }))).toEqual(["line 2", "line 4", "line 5"]);
     const readEmpty = logReader(fakeRuntime([]).runtime, archive);
     expect(await all(readEmpty("bot-a", { tail: "all" }))).toEqual(["line 1", "line 2", "kept 4"]);
+  });
+});
+
+describe("searchLog", () => {
+  it("searches kept and current lines, case ignored, keeping the newest matches", async () => {
+    const { archive } = setup();
+    await archive.keep("bot-a", from([line(1, "Order FILLED"), line(2, "heartbeat")]));
+    const current = [
+      line(4, "order filled again"),
+      { ...line(5, "Order rejected"), level: "error" as const },
+      { ...line(6, "setup"), setup: { name: "orb" } },
+    ];
+    const read = logReader(fakeRuntime(current).runtime, archive);
+    const texts = (r: { lines: LogLine[] }) => r.lines.map((l) => l.text);
+
+    expect(texts(await searchLog(read, "bot-a", { contains: "ORDER" }))).toEqual([
+      "Order FILLED",
+      "order filled again",
+      "Order rejected",
+    ]);
+    expect(await searchLog(read, "bot-a", { contains: "order", limit: 2 })).toMatchObject({ truncated: true });
+    expect(texts(await searchLog(read, "bot-a", { contains: "order", limit: 2 }))).toEqual([
+      "order filled again",
+      "Order rejected",
+    ]);
+    expect(texts(await searchLog(read, "bot-a", { contains: "order", filter: "problems" }))).toEqual([
+      "Order rejected",
+    ]);
+    expect(texts(await searchLog(read, "bot-a", { filter: "setups" }))).toEqual(["setup"]);
+    expect(await searchLog(read, "bot-a", { contains: "nothing" })).toEqual({ lines: [], truncated: false });
   });
 });

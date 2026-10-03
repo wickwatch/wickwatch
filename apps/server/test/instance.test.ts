@@ -122,6 +122,34 @@ describe("log download", () => {
   });
 });
 
+describe("log search", () => {
+  const search = (query: string, cookie = admin) => get(`/api/v1/instances/alpha-ger40-a/logs/search${query}`, cookie);
+
+  it("searches the whole log of the period for a text, case ignored, and only the problems if asked", async () => {
+    const week = (await search("?q=e&period=7d")).json<{
+      lines: { text: string; level?: string }[];
+      truncated: boolean;
+    }>();
+    expect(week.lines.length).toBeGreaterThan(0);
+    expect(week.lines.length).toBeLessThanOrEqual(1000);
+    const word = week.lines[0]?.text.split(/\s+/).find((w) => w.length > 3) ?? "e";
+    const found = (await search(`?q=${encodeURIComponent(word.toUpperCase())}&period=7d`)).json<{
+      lines: { text: string }[];
+    }>();
+    expect(found.lines.length).toBeGreaterThan(0);
+    expect(found.lines.every((l) => l.text.toLowerCase().includes(word.toLowerCase()))).toBe(true);
+    const problems = (await search("?q=e&filter=problems&period=7d")).json<{ lines: { level?: string }[] }>();
+    expect(problems.lines.every((l) => l.level === "warn" || l.level === "error")).toBe(true);
+  });
+
+  it("is open to viewers, needs a text, a login and a known instance", async () => {
+    expect((await search("?q=a", await loginAs(t, "viewer"))).statusCode).toBe(200);
+    expect((await search("")).statusCode).toBe(400);
+    expect((await t.app.inject("/api/v1/instances/alpha-ger40-a/logs/search?q=a")).statusCode).toBe(401);
+    expect((await get("/api/v1/instances/nope/logs/search?q=a")).statusCode).toBe(404);
+  });
+});
+
 describe("close position", () => {
   const close = (id: string, confirm: string, cookie = admin) =>
     t.app.inject({

@@ -52,6 +52,20 @@ export type LogLine = Type.Static<typeof LogLine>;
 export const LogPeriod = Type.Union([Type.Literal("24h"), Type.Literal("7d"), Type.Literal("all")], { default: "24h" });
 export type LogPeriod = Type.Static<typeof LogPeriod>;
 
+/** Which lines a log search keeps besides the text: all, warnings and errors, or setup lines. */
+export const LogFilter = Type.Union([Type.Literal("all"), Type.Literal("problems"), Type.Literal("setups")], {
+  default: "all",
+});
+export type LogFilter = Type.Static<typeof LogFilter>;
+
+export const LogSearchResult = Type.Object({
+  /** The newest matches, oldest first. */
+  lines: Type.Array(LogLine),
+  /** More lines matched than were kept. */
+  truncated: Type.Boolean(),
+});
+export type LogSearchResult = Type.Static<typeof LogSearchResult>;
+
 export const HostStatus = Type.Object({
   /** CPU load as a fraction, 0..1. */
   cpu: Type.Number({ minimum: 0, maximum: 1 }),

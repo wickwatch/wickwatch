@@ -518,7 +518,11 @@
     "search": "Log durchsuchen",
     "searchPlaceholder": "Text suchen",
     "matches": "Keine passende Zeile | 1 passende Zeile | {count} passende Zeilen",
-    "show": "Log anzeigen"
+    "show": "Log anzeigen",
+    "searchAll": "Im ganzen Log suchen",
+    "foundAll": "Keine Zeile im ganzen Log | 1 Zeile im ganzen Log | {count} Zeilen im ganzen Log",
+    "truncated": "nur die neuesten 1000",
+    "backToLive": "Zurück zum Live-Log"
   },
   "accounts": {
     "accounts": "Eingerichtete Konten",
