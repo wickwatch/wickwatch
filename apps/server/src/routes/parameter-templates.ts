@@ -1,69 +1,21 @@
-import {
-  ParameterTemplate,
-  ParameterTemplateInput,
-  ParameterTemplateSource,
-  ParameterTemplateUpdate,
-  ParameterValues,
-} from "@wickwatch/core";
+import { ParameterTemplate, ParameterTemplateInput, ParameterTemplateUpdate } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
-import Value from "typebox/value";
 import type { Db } from "../db";
-import type { ParameterTemplatesTable } from "../db/schema";
 import { actor, isAdmin, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
 import { canonicalParameters } from "../services/instance-configs";
-
-// Parameter values may hold licence keys, so they are encrypted like those of a configuration version.
-const PURPOSE = "template-parameters";
-
-type TemplateRow = Omit<ParameterTemplatesTable, "id"> & {
-  id: number;
-  created_by_name: string | null;
-  updated_by_name: string | null;
-};
+import { listTemplates, PURPOSE, templateQuery, toTemplate } from "../services/parameter-templates";
 
 const IdParams = Type.Object({ id: Type.Integer() });
-
-/** The values of a stored template; empty without the master key. */
-function valuesOf(cipher: Cipher | undefined, stored: string): ParameterValues {
-  if (!cipher) return {};
-  const parsed: unknown = JSON.parse(cipher.decrypt(stored, PURPOSE));
-  return Value.Check(ParameterValues, parsed) ? parsed : {};
-}
-
-function toTemplate(row: TemplateRow, cipher: Cipher | undefined, withValues: boolean): ParameterTemplate {
-  const parameters = valuesOf(cipher, row.parameters);
-  const source: unknown = row.source === null ? undefined : JSON.parse(row.source);
-  return {
-    id: row.id,
-    algoName: row.algo_name,
-    name: row.name,
-    parameters: withValues ? parameters : {},
-    count: Object.keys(parameters).length,
-    ...(Value.Check(ParameterTemplateSource, source) ? { source } : {}),
-    createdAt: row.created_at,
-    ...(row.created_by_name ? { createdBy: row.created_by_name } : {}),
-    updatedAt: row.updated_at,
-    ...(row.updated_by_name ? { updatedBy: row.updated_by_name } : {}),
-  };
-}
 
 export const parameterTemplateRoutes: FastifyPluginAsyncTypebox<{ db: Db; cipher: Cipher | undefined }> = async (
   app,
   { db, cipher },
 ) => {
-  const templates = () =>
-    db
-      .selectFrom("parameter_templates")
-      .leftJoin("users as creator", "creator.id", "parameter_templates.created_by")
-      .leftJoin("users as updater", "updater.id", "parameter_templates.updated_by")
-      .selectAll("parameter_templates")
-      .select(["creator.username as created_by_name", "updater.username as updated_by_name"]);
-
-  const byId = (id: number) => templates().where("parameter_templates.id", "=", id).executeTakeFirst();
+  const byId = (id: number) => templateQuery(db).where("parameter_templates.id", "=", id).executeTakeFirst();
 
   /** Another template of the same algo already has this name. */
   const nameTaken = async (algoName: string, name: string, except?: number) => {
@@ -88,11 +40,8 @@ export const parameterTemplateRoutes: FastifyPluginAsyncTypebox<{ db: Db; cipher
       },
     },
     async (request) => {
-      let query = templates().orderBy("parameter_templates.algo_name").orderBy("parameter_templates.name");
-      if (request.query.algo !== undefined)
-        query = query.where("parameter_templates.algo_name", "=", request.query.algo);
       const admin = isAdmin(request);
-      return (await query.execute()).map((row) => toTemplate(row, cipher, admin));
+      return (await listTemplates(db, request.query.algo)).map((row) => toTemplate(row, cipher, admin));
     },
   );
 

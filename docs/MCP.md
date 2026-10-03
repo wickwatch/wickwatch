@@ -32,7 +32,7 @@ The endpoint is on by default. `MCP=off` switches it off ([CONFIGURATION.md](CON
 
 ## Tools
 
-All tools only read and give the same data as the REST API for the token's role. None returns parameter values of instance configurations (they may hold licence keys) or broker credentials. Each answers with one JSON text. Times are UTC, money is in the account currency.
+All tools only read and give the same data as the REST API for the token's role. None returns parameter values of instance configurations or parameter templates (they may hold licence keys) or broker credentials. Each answers with one JSON text. Times are UTC, money is in the account currency.
 
 | Tool | Arguments | What it returns | Role |
 | --- | --- | --- | --- |
@@ -41,6 +41,7 @@ All tools only read and give the same data as the REST API for the token's role.
 | `get_account` | `number` | One account: summary with the challenge evaluation (profit target, daily loss, max drawdown, trading days), its instances, open positions and pending orders with their instance. | viewer |
 | `get_instance` | `ref`, `days` (1–366, default 30) | One instance: status, open positions, pending orders, the deals of the range with realised P&L curve and key figures (win rate, profit factor, drawdown, risk per trade). | viewer |
 | `get_instance_logs` | `ref`, `lines` (1–1000, default 200), `since` (ISO time) | The last log lines of an instance, oldest first, each with its time; with `LOG_ARCHIVE` also the kept lines of containers replaced by a redeploy. | viewer |
+| `list_parameter_templates` | `algo` (only its templates) | The named parameter sets of the algos: name, algo, the names of the parameters each sets (never their values), where it came from and when it was changed. | viewer |
 | `get_host_status` | – | CPU, memory and disk of the host, and whether its clock is in sync. | viewer |
 | `get_audit_log` | `action` (exact, or a prefix ending in `.`), `target` (part of it), `since`, `before` (id, to page back), `limit` (1–200, default 50) | Audit log entries, newest first: who did what (`user`, and `token` when it came through an API token), and what wickwatch did by itself. | admin |
 

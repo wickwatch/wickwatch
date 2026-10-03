@@ -175,6 +175,7 @@ export async function buildApp({
       readLog,
       history,
       marketHours,
+      cipher,
     });
   }
   await app.register(web, { basePath, distDir: config.webDistDir });

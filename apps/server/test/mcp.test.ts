@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { CreatedApiToken } from "@wickwatch/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { loginAs, PASSWORD, startApp, type TestApp } from "./helpers";
@@ -98,6 +101,7 @@ describe("MCP endpoint", () => {
       "get_account",
       "get_instance",
       "get_instance_logs",
+      "list_parameter_templates",
       "get_host_status",
     ]);
     for (const tool of tools) {
@@ -139,6 +143,34 @@ describe("MCP endpoint", () => {
 
     const host = parsed(await callTool(token, "get_host_status")) as { cpu?: unknown };
     expect(host).toBeTypeOf("object");
+  });
+
+  it("lists parameter templates with their parameter names, never their values, also for admins", async () => {
+    const { token, cookie } = await setup("admin", { ALGOS_DIR: mkdtempSync(join(tmpdir(), "ww-algos-")) });
+    await t.app.inject({
+      method: "POST",
+      url: "/api/v1/algos?fileName=alpha.algo",
+      headers: { cookie, "content-type": "application/octet-stream" },
+      payload: Buffer.from("alpha-v1"),
+    });
+    await t.app.inject({
+      method: "POST",
+      url: "/api/v1/parameter-templates",
+      headers: { cookie },
+      payload: { algoName: "alpha", name: "News day", parameters: { RiskPercent: 0.3, LicenceKey: "placeholder-key" } },
+    });
+    const result = await callTool(token, "list_parameter_templates", { algo: "alpha" });
+    expect(result.content[0]?.text).not.toContain("placeholder-key");
+    expect(parsed(result)).toEqual([
+      expect.objectContaining({
+        algoName: "alpha",
+        name: "News day",
+        count: 2,
+        parameterNames: ["LicenceKey", "RiskPercent"],
+      }),
+    ]);
+    expect((parsed(result) as object[]).every((template) => !("parameters" in template))).toBe(true);
+    expect(parsed(await callTool(token, "list_parameter_templates", { algo: "beta" }))).toEqual([]);
   });
 
   it("reports unknown subjects and invalid arguments as tool errors", async () => {

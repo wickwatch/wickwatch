@@ -12,6 +12,8 @@ import type { LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
 import type { MarketHoursCache } from "../services/market-hours";
 import type { OverviewLoader } from "../services/overview";
+import { listTemplates, withParameterNames } from "../services/parameter-templates";
+import type { Cipher } from "../security/cipher";
 import { defineTool, type McpTool } from "./protocol";
 
 export interface ToolDeps {
@@ -25,6 +27,8 @@ export interface ToolDeps {
   readLog: LogReader;
   history: DealHistory;
   marketHours: MarketHoursCache;
+  /** Reads the parameter names of templates; without the master key they have none. */
+  cipher: Cipher | undefined;
 }
 
 const MAX_LOG_LINES = 1000;
@@ -39,7 +43,7 @@ const Since = Type.String({ format: "date-time", description: "ISO 8601 time in 
 
 /** The read-only tools of the MCP endpoint; they give the same data as the REST API, for the token's role. */
 export function wickwatchTools(deps: ToolDeps): McpTool[] {
-  const { adapters, accounts, db, overview, labelPrefix, logTracker, history, marketHours } = deps;
+  const { adapters, accounts, db, overview, labelPrefix, logTracker, history, marketHours, cipher } = deps;
 
   return [
     defineTool({
@@ -127,6 +131,18 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         }
         return result;
       },
+    }),
+    defineTool({
+      name: "list_parameter_templates",
+      title: "Parameter templates",
+      description:
+        "Named parameter sets of the algos (e.g. for a news day), by algo and name: which parameters each sets and " +
+        "where it came from (`source`: an instance's configuration version or a parameter file). Never the values: " +
+        "they may hold licence keys.",
+      input: Type.Object({
+        algo: Type.Optional(Type.String({ maxLength: 100, description: "Only this algo's templates." })),
+      }),
+      run: async ({ algo }) => (await listTemplates(db, algo)).map((row) => withParameterNames(row, cipher)),
     }),
     defineTool({
       name: "get_host_status",
