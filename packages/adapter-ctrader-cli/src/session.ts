@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { AdapterError, type Credentials, type ToolProcess } from "@wickwatch/core";
+import type { LoginBackoff } from "./backoff";
 import { cliError, passwordFile, runnerOf, type CliOptions } from "./cli";
 
 const PROMPT = "> ";
@@ -156,15 +157,26 @@ export class CliSession {
   }
 }
 
-/** One session per cTrader ID, account and password; a changed password starts a new session. */
+/**
+ * One session per cTrader ID, account and password; a changed password starts a new session. Starting one is
+ * a login, so it goes through the backoff.
+ */
 export class SessionPool {
   private readonly sessions = new Map<string, Promise<CliSession>>();
 
-  constructor(private readonly options: CliOptions) {}
+  constructor(
+    private readonly options: CliOptions,
+    private readonly backoff: LoginBackoff,
+  ) {}
 
   async run(credentials: Credentials, account: string, command: string): Promise<string> {
     const session = await this.get(credentials, account);
     return session.run(command);
+  }
+
+  /** Makes sure the account has a session, logging in even while the backoff waits: for trading actions. */
+  async open(credentials: Credentials, account: string): Promise<void> {
+    await this.get(credentials, account, true);
   }
 
   async closeAll(): Promise<void> {
@@ -173,7 +185,7 @@ export class SessionPool {
     await Promise.all(sessions.map(async (s) => (await s.catch(() => undefined))?.close()));
   }
 
-  private get(credentials: Credentials, account: string): Promise<CliSession> {
+  private get(credentials: Credentials, account: string, urgent = false): Promise<CliSession> {
     const key = createHash("sha256")
       .update(`${credentials.login}\u0000${credentials.secret}\u0000${account}`)
       .digest("hex");
@@ -182,11 +194,13 @@ export class SessionPool {
       return existing.then((s) => {
         if (!s.dead) return s;
         this.sessions.delete(key);
-        return this.get(credentials, account);
+        return this.get(credentials, account, urgent);
       });
     }
     const session = new CliSession(this.options, credentials, account, () => this.sessions.delete(key));
-    const started = session.start().then(() => session);
+    const started = this.backoff
+      .login(credentials, ["session", account], () => session.start(), urgent)
+      .then(() => session);
     this.sessions.set(key, started);
     started.catch(() => this.sessions.delete(key));
     return started;

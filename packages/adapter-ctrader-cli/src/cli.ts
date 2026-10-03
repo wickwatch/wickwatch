@@ -16,6 +16,9 @@ export interface CliOptions {
   sessionIdleMs: number;
   /** Wait before asking again for positions that have no prices yet. */
   priceRetryMs: number;
+  /** Wait after a failed login before the next one; doubles with every further failure up to `loginRetryMaxMs`. */
+  loginRetryMs: number;
+  loginRetryMaxMs: number;
 }
 
 export const DEFAULT_CLI_OPTIONS: CliOptions = {
@@ -24,6 +27,8 @@ export const DEFAULT_CLI_OPTIONS: CliOptions = {
   connectTimeoutMs: 60_000,
   sessionIdleMs: 10 * 60_000,
   priceRetryMs: 500,
+  loginRetryMs: 60_000,
+  loginRetryMaxMs: 5 * 60_000,
 };
 
 export const runnerOf = (options: CliOptions): CliRunner =>

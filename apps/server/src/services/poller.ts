@@ -19,6 +19,18 @@ export interface PollerOptions {
   now?: () => Date;
 }
 
+/** A timer callback that skips its tick while the last run still goes, so a slow broker does not pile up runs. */
+function skipWhileRunning(run: () => Promise<void>): () => void {
+  let busy = false;
+  return () => {
+    if (busy) return;
+    busy = true;
+    void run().finally(() => {
+      busy = false;
+    });
+  };
+}
+
 /**
  * Samples balance and equity of every account (default every 60 s) and marks trading days from
  * the deals (every 5 min). Keeps per trading day: start, minimum and maximum equity.
@@ -36,8 +48,18 @@ export class AccountPoller {
   start(): void {
     const { statsIntervalMs = 60_000, dealsIntervalMs = 5 * 60_000 } = this.options;
     void this.pollStats().then(() => this.pollDeals());
-    this.timers.push(setInterval(() => void this.pollStats(), statsIntervalMs));
-    this.timers.push(setInterval(() => void this.pollDeals(), dealsIntervalMs));
+    this.timers.push(
+      setInterval(
+        skipWhileRunning(() => this.pollStats()),
+        statsIntervalMs,
+      ),
+    );
+    this.timers.push(
+      setInterval(
+        skipWhileRunning(() => this.pollDeals()),
+        dealsIntervalMs,
+      ),
+    );
   }
 
   stop(): void {

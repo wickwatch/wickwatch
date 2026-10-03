@@ -36,6 +36,7 @@ import {
   toPositions,
   toSymbols,
 } from "./mapping";
+import { LoginBackoff } from "./backoff";
 import { CliSession, SessionPool } from "./session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -82,6 +83,7 @@ export class CtraderCliBroker implements BrokerAdapter {
   readonly id = "ctrader-cli";
   private readonly options: CliOptions;
   private readonly pool: SessionPool;
+  private readonly backoff: LoginBackoff;
   private accountsCache: { key: string; at: number; accounts: BrokerAccount[] } | undefined;
 
   private readonly image: string;
@@ -89,7 +91,8 @@ export class CtraderCliBroker implements BrokerAdapter {
   constructor({ image, ...options }: CtraderCliBrokerOptions = {}) {
     this.image = image ?? DEFAULT_CTRADER_IMAGE;
     this.options = { ...DEFAULT_CLI_OPTIONS, ...options };
-    this.pool = new SessionPool(this.options);
+    this.backoff = new LoginBackoff(this.options.loginRetryMs, this.options.loginRetryMaxMs);
+    this.pool = new SessionPool(this.options, this.backoff);
   }
 
   capabilities(): Capabilities {
@@ -176,7 +179,7 @@ export class CtraderCliBroker implements BrokerAdapter {
     for (const number of numbers) {
       const session = new CliSession(this.options, c, number, () => undefined, false);
       try {
-        await session.start();
+        await this.backoff.login(c, ["session", number], () => session.start());
         active = extractJson(await session.run("accounts"));
         break;
       } catch (error) {
@@ -255,10 +258,12 @@ export class CtraderCliBroker implements BrokerAdapter {
   }
 
   // What the CLI answers to these commands is not documented, so each one counts only when the
-  // position or order is gone from a fresh listing afterwards.
+  // position or order is gone from a fresh listing afterwards. Trading actions open the session first:
+  // they log in even while the login backoff waits.
 
   /** `position close <id> yes` in the account's shell session. */
   async closePosition(c: Credentials, account: string, positionId: Id): Promise<void> {
+    await this.pool.open(c, account);
     await this.pool.run(c, account, `position close ${shellId(positionId)} yes`);
     if ((await this.openPositionIds(c, account)).includes(positionId)) {
       throw new AdapterError("unavailable", `Position ${positionId} is still open`);
@@ -267,6 +272,7 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   /** `order cancel <id> yes` in the account's shell session. */
   async cancelOrder(c: Credentials, account: string, orderId: Id): Promise<void> {
+    await this.pool.open(c, account);
     await this.pool.run(c, account, `order cancel ${shellId(orderId)} yes`);
     if ((await this.pendingOrders(c, account)).some((o) => o.id === orderId)) {
       throw new AdapterError("unavailable", `Order ${orderId} is still pending`);
@@ -279,6 +285,7 @@ export class CtraderCliBroker implements BrokerAdapter {
    * Positions are counted without prices: a fresh session may have none yet, and waiting must not stop the close.
    */
   async emergencyStop(c: Credentials, account: string): Promise<EmergencyStopResult> {
+    await this.pool.open(c, account);
     const orders = await this.pendingOrders(c, account);
     if (orders.length) await this.pool.run(c, account, "order cancel all yes");
     const positions = await this.openPositionIds(c, account);
@@ -313,16 +320,18 @@ export class CtraderCliBroker implements BrokerAdapter {
     await this.pool.closeAll();
   }
 
-  /** Batch commands authenticate with a temporary password file. */
-  private async batch(c: Credentials, args: [string, ...string[]]): Promise<string> {
-    const { code, output } = await runBatch(
-      this.options,
-      args[0],
-      (path) => [...args, `--ctid=${c.login}`, `--pwd-file=${path("pwd")}`],
-      [passwordFile(c.secret)],
-    );
-    if (code !== 0) throw cliError(output);
-    return output;
+  /** Batch commands authenticate with a temporary password file; each is a login, so it goes through the backoff. */
+  private batch(c: Credentials, args: [string, ...string[]]): Promise<string> {
+    return this.backoff.login(c, ["batch", ...args], async () => {
+      const { code, output } = await runBatch(
+        this.options,
+        args[0],
+        (path) => [...args, `--ctid=${c.login}`, `--pwd-file=${path("pwd")}`],
+        [passwordFile(c.secret)],
+      );
+      if (code !== 0) throw cliError(output);
+      return output;
+    });
   }
 }
 

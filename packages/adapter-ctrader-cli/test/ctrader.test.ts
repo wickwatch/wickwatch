@@ -336,6 +336,23 @@ describe("CtraderCliBroker", () => {
     expect(await broker.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
   });
 
+  it("waits after a failed login instead of logging in again on every call", async () => {
+    const wrong = { ...c, secret: "wrong" };
+    const shells = () => calls().filter((a) => !["accounts", "symbols", "metadata"].includes(a[0] ?? ""));
+    for (let i = 0; i < 3; i++) {
+      await expect(broker.stats(wrong, "1111111")).rejects.toMatchObject({ code: "auth_failed" });
+      await expect(broker.symbols(wrong, "1111111")).rejects.toMatchObject({ code: "auth_failed" });
+    }
+    // One rejected password holds every login of that cTrader ID.
+    expect(shells()).toHaveLength(1);
+    expect(calls().filter((a) => a[0] === "symbols")).toHaveLength(0);
+    // The right password is another login and not held back.
+    expect(await broker.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
+    // Trading actions log in even while waiting.
+    await expect(broker.emergencyStop(wrong, "1111111")).rejects.toMatchObject({ code: "auth_failed" });
+    expect(shells()).toHaveLength(3);
+  });
+
   it("lists an account that became active after a session logged in", async () => {
     await broker.stats(c, "1111111");
     process.env["FAKE_CTRADER_ALSO_ACTIVE"] = "5555555";
