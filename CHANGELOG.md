@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.5.0 – 2026-10-03
+
 ### Added
 - Risk preview: an algo can name the parameter holding its risk per trade in percent (Algos page, **Account size and risk**, next to the account size parameter). The instance form and the Configuration tab show the risk per trade in money (that percentage of the account size parameter, else of the account's size) and the share of the challenge's daily and max loss limits it uses; from half a limit it warns, and saving a risk where one losing trade uses up a limit needs a confirmation. `Account` has the challenge's `lossLimits` in money, `ManagedInstanceDetail` a `riskCheck`; `PUT /algo-settings/:name` takes `riskParameter`, leaves fields out of the body as they are and accepts only number parameters of the newest version (migration 0020).
 - `docs/PROP-FIRMS.md`: what wickwatch does on an account (logins, polling, trading actions) and which prop-firm rules to check before connecting one, with notes on FTMO and The Trading Pit.
