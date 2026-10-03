@@ -16,6 +16,7 @@ import {
   type RuntimeInstance,
   type ToolProcess,
   type ToolSpec,
+  type UpdateOptions,
 } from "@wickwatch/core";
 import {
   createDockerClient,
@@ -101,7 +102,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
    * Builds the replacement under a temporary name first, so a failure leaves the old container alone;
    * then swaps them. A running instance is started again with the new spec.
    */
-  async update(ref: string, spec: InstanceSpec): Promise<RuntimeInstance> {
+  async update(ref: string, spec: InstanceSpec, opts: UpdateOptions = {}): Promise<RuntimeInstance> {
     this.check(spec);
     if (spec.name !== ref) throw new AdapterError("invalid_input", "An instance cannot be renamed");
     const { handle, details } = await this.owned(ref);
@@ -114,6 +115,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     const replacement = this.client.container(next);
     try {
       await callIdempotent(() => handle.stop());
+      // The log goes with the container.
+      await opts.beforeRemove?.();
       await call(() => handle.remove());
     } catch (error) {
       await replacement.remove().catch(() => undefined);

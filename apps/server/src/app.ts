@@ -27,6 +27,7 @@ import { parameterTemplateRoutes } from "./routes/parameter-templates";
 import { systemRoutes } from "./routes/system";
 import { createCipher } from "./security/cipher";
 import { createDealHistory } from "./services/deal-history";
+import { LogArchive, logReader, withLogArchive } from "./services/log-archive";
 import { LogTracker } from "./services/log-tracker";
 import { MarketHoursCache } from "./services/market-hours";
 import { OverviewLoader } from "./services/overview";
@@ -39,6 +40,8 @@ declare module "fastify" {
     overview: OverviewLoader;
     /** Trading hours of the instances' symbols, asked in the background. */
     marketHours: MarketHoursCache;
+    /** Logs of replaced containers, for the hourly cleanup; undefined with LOG_ARCHIVE=off. */
+    logArchive: LogArchive | undefined;
   }
 }
 
@@ -60,7 +63,7 @@ export type App = Awaited<ReturnType<typeof buildApp>>;
 export async function buildApp({
   config,
   db,
-  adapters,
+  adapters: given,
   version,
   setup = new SetupState(),
   logger,
@@ -79,10 +82,13 @@ export async function buildApp({
     .setValidatorCompiler(TypeBoxValidatorCompiler);
 
   const { basePath, labelPrefix } = config;
+  const logArchive = config.logArchive ? new LogArchive(config.logArchive) : undefined;
+  const adapters = { ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) };
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
+  const readLog = logReader(adapters.runtime, logArchive);
   const logTracker = new LogTracker(adapters.runtime);
   const marketHours = new MarketHoursCache({ adapters, log: app.log, db });
   const overview = new OverviewLoader({
@@ -96,6 +102,7 @@ export async function buildApp({
   });
   app.decorate("overview", overview);
   app.decorate("marketHours", marketHours);
+  app.decorate("logArchive", logArchive);
 
   await app.register(errors);
   await app.register(rateLimit, { global: false });
@@ -116,6 +123,7 @@ export async function buildApp({
     db,
     labelPrefix,
     logTracker,
+    readLog,
     history,
     marketHours,
     prefix: api,
@@ -164,6 +172,7 @@ export async function buildApp({
       overview,
       labelPrefix,
       logTracker,
+      readLog,
       history,
       marketHours,
     });

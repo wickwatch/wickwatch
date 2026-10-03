@@ -42,6 +42,9 @@ wickwatch is configured with environment variables only (see [`.env.example`](..
 | `BACKUP_KEEP` | `7` | How many backups are kept; older ones are deleted. |
 | `BACKUP_DIR` | `backups` next to the database | Where backups go, e.g. `/app/data/backups` in the image. Files are `wickwatch-<UTC time>.db`, readable only by the owner. |
 | `AUDIT_RETENTION_DAYS` | `365` | Audit entries older than this are deleted (checked hourly); `0` keeps them forever. Expired sessions are deleted hourly as well. |
+| `LOG_ARCHIVE` | `on` | Keeps the log of a container that applying a configuration replaces; the runtime loses it with the container (a restart keeps it). The live log, the download and the MCP tool show the kept lines before the new container's own. Deleting an instance deletes its kept logs. `off` switches it off; logs kept before stay until `LOG_ARCHIVE_DAYS` (hourly cleanup only runs while on, so delete the folder by hand if needed). Off with an in-memory database unless `LOG_ARCHIVE_DIR` is set. |
+| `LOG_ARCHIVE_DAYS` | `7` | Kept logs older than this many days are deleted (checked hourly; 1–365). |
+| `LOG_ARCHIVE_DIR` | `logs` next to the database | Where kept logs go, e.g. `/app/data/logs` in the image: a folder per instance, one gzipped file per replaced container, readable only by the owner. Secrets the broker adapter hides in the log are hidden there too. |
 | `WICKWATCH_VERSION` | from the build | Version shown in the UI and `/healthz`; set by the image build. |
 
 ## Bots after a restart

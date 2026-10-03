@@ -3963,7 +3963,7 @@
         "tags": [
           "instances"
         ],
-        "description": "Sends the last `tail` lines, then new lines as they appear. Each event is `event: log` with a LogLine as JSON; comment lines keep the connection open. Stream errors arrive as `event: error` with `{ error }`.",
+        "description": "Sends the last `tail` lines (with LOG_ARCHIVE also those of replaced containers), then new lines as they appear. Each event is `event: log` with a LogLine as JSON; comment lines keep the connection open. Stream errors arrive as `event: error` with `{ error }`.",
         "parameters": [
           {
             "schema": {
@@ -4048,7 +4048,7 @@
         "tags": [
           "instances"
         ],
-        "description": "One line per log line: the UTC time, then the text as the instance wrote it. `period` limits it to the last 24 hours or 7 days; `all` is everything the runtime still has. Streamed, so a long log never sits in memory.",
+        "description": "One line per log line: the UTC time, then the text as the instance wrote it. `period` limits it to the last 24 hours or 7 days; `all` is everything the runtime still has, with LOG_ARCHIVE also the kept logs of replaced containers. Streamed, so a long log never sits in memory.",
         "parameters": [
           {
             "schema": {

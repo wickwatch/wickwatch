@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Logs outlive a redeploy: applying a configuration replaces the container, and the runtime lost its log with it. wickwatch now keeps it (gzipped, in `LOG_ARCHIVE_DIR`, default `logs` next to the database) for `LOG_ARCHIVE_DAYS` (default 7); the live log, the download and the MCP tool `get_instance_logs` show the kept lines before the new container's own. Deleting an instance deletes its kept logs. `LOG_ARCHIVE=off` switches it off. The runtime adapter's `update` takes an optional `beforeRemove` hook for this.
+
 ## 0.4.3 – 2026-10-03
 
 ### Fixed

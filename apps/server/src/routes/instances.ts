@@ -10,6 +10,7 @@ import { ErrorBody } from "../plugins/errors";
 import { auditOutcome } from "../services/audit";
 import { setShouldRun } from "../services/instance-keeper";
 import type { DealHistory } from "../services/deal-history";
+import type { LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
 import { loadInstanceDetail } from "../services/instance-detail";
 import type { MarketHoursCache } from "../services/market-hours";
@@ -32,13 +33,15 @@ export interface InstanceRouteOptions {
   db: Db;
   labelPrefix: string;
   logTracker: LogTracker;
+  /** The log as people read it, with the kept lines of replaced containers (LOG_ARCHIVE). */
+  readLog: LogReader;
   history: DealHistory;
   marketHours: MarketHoursCache;
 }
 
 export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, labelPrefix, logTracker, history, marketHours },
+  { adapters, accounts, db, labelPrefix, logTracker, readLog, history, marketHours },
 ) => {
   app.get(
     "/instances/:ref",
@@ -72,7 +75,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         tags: ["instances"],
         summary: "Live log as Server-Sent Events",
         description:
-          "Sends the last `tail` lines, then new lines as they appear. Each event is `event: log` with a LogLine as JSON; " +
+          "Sends the last `tail` lines (with LOG_ARCHIVE also those of replaced containers), then new lines as they appear. Each event is `event: log` with a LogLine as JSON; " +
           "comment lines keep the connection open. Stream errors arrive as `event: error` with `{ error }`.",
         params: Type.Object({ ref: Ref }),
         querystring: Type.Object({ tail: Type.Optional(Type.Integer({ minimum: 0, maximum: 1000, default: 200 })) }),
@@ -103,7 +106,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       });
 
       try {
-        const lines = adapters.runtime.logs(ref, {
+        const lines = readLog(ref, {
           tail: request.query.tail ?? 200,
           follow: true,
           signal: controller.signal,
@@ -129,7 +132,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
         summary: "The log as a text file",
         description:
           "One line per log line: the UTC time, then the text as the instance wrote it. `period` limits it to the last " +
-          "24 hours or 7 days; `all` is everything the runtime still has. Streamed, so a long log never sits in memory.",
+          "24 hours or 7 days; `all` is everything the runtime still has, with LOG_ARCHIVE also the kept logs of replaced containers. Streamed, so a long log never sits in memory.",
         params: Type.Object({ ref: Ref }),
         querystring: Type.Object({ period: Type.Optional(LogPeriod) }),
         response: { 404: ErrorBody },
@@ -143,7 +146,7 @@ export const instanceRoutes: FastifyPluginAsyncTypebox<InstanceRouteOptions> = a
       const period = request.query.period ?? "24h";
       const now = new Date();
       const since = period === "all" ? undefined : new Date(now.getTime() - PERIOD_MS[period]).toISOString();
-      const lines = adapters.runtime.logs(ref, { tail: "all", ...(since ? { since } : {}) })[Symbol.asyncIterator]();
+      const lines = readLog(ref, { tail: "all", ...(since ? { since } : {}) })[Symbol.asyncIterator]();
       // Read the first line before answering: a runtime that fails answers with its error, not a cut-off file.
       const first = await lines.next();
       async function* text() {

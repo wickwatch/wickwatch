@@ -71,6 +71,21 @@ describe("creating instances", () => {
     expect(docker.containers.get("bot-new")?.details.State.Status).toBe("running");
   });
 
+  it("lets the caller keep the old container's log once it stopped, before it is removed", async () => {
+    const { docker, adapter } = setup();
+    await adapter.create(spec());
+    await adapter.start("bot-new");
+    const seen: string[] = [];
+    await adapter.update("bot-new", spec({ command: ["run", "v2"] }), {
+      beforeRemove: async () => {
+        const old = docker.containers.get("bot-new");
+        seen.push(`${String(old?.created?.command.at(-1))} ${String(old?.details.State.Status)}`);
+      },
+    });
+    expect(seen).toEqual(["--symbol=GER40 exited"]);
+    expect(docker.containers.get("bot-new")?.created?.command).toEqual(["run", "v2"]);
+  });
+
   it("leaves a crashed instance stopped after replacing it", async () => {
     const { docker, adapter } = setup();
     await adapter.create(spec());

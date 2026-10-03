@@ -35,6 +35,7 @@ describe("loadConfig", () => {
       alertResolveDelaySeconds: 120,
       backup: { dir: "/srv/wickwatch/data/backups", intervalHours: 24, keep: 7 },
       auditRetentionDays: 365,
+      logArchive: { dir: "/srv/wickwatch/data/logs", days: 7 },
       adapterSettings: { "ctrader-cli": { cli: "local", cliPath: "ctrader-cli" } },
       instanceRestartPolicy: "on-failure",
       clockCheckUrl: new URL("https://www.cloudflare.com/cdn-cgi/trace"),
@@ -43,6 +44,19 @@ describe("loadConfig", () => {
       mcp: true,
       apiTokensRequire2fa: false,
     });
+  });
+
+  it("keeps the logs of replaced containers unless switched off", () => {
+    expect(load({ LOG_ARCHIVE_DAYS: "3", LOG_ARCHIVE_DIR: "kept" }).logArchive).toEqual({
+      dir: "/srv/wickwatch/kept",
+      days: 3,
+    });
+    expect(load({ LOG_ARCHIVE: "OFF" }).logArchive).toBeUndefined();
+    expect(() => load({ LOG_ARCHIVE: "yes" })).toThrow(/LOG_ARCHIVE must be on or off/);
+    expect(() => load({ LOG_ARCHIVE_DAYS: "0" })).toThrow(/LOG_ARCHIVE_DAYS/);
+    // An in-memory database has no folder to put them next to.
+    expect(load({ DATABASE_URL: "file::memory:" }).logArchive).toBeUndefined();
+    expect(load({ DATABASE_URL: "file::memory:", LOG_ARCHIVE_DIR: "/tmp/logs" }).logArchive?.dir).toBe("/tmp/logs");
   });
 
   it("switches the clock check off and checks the daily summary settings", () => {

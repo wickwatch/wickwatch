@@ -40,7 +40,7 @@ All tools only read and give the same data as the REST API for the token's role.
 | `get_alerts` | – | The current alerts only: stopped, crashed or disconnected instances, broker errors, challenge limits and breaches, an unsynchronised clock. | viewer |
 | `get_account` | `number` | One account: summary with the challenge evaluation (profit target, daily loss, max drawdown, trading days), its instances, open positions and pending orders with their instance. | viewer |
 | `get_instance` | `ref`, `days` (1–366, default 30) | One instance: status, open positions, pending orders, the deals of the range with realised P&L curve and key figures (win rate, profit factor, drawdown, risk per trade). | viewer |
-| `get_instance_logs` | `ref`, `lines` (1–1000, default 200), `since` (ISO time) | The last log lines of an instance, oldest first, each with its time. | viewer |
+| `get_instance_logs` | `ref`, `lines` (1–1000, default 200), `since` (ISO time) | The last log lines of an instance, oldest first, each with its time; with `LOG_ARCHIVE` also the kept lines of containers replaced by a redeploy. | viewer |
 | `get_host_status` | – | CPU, memory and disk of the host, and whether its clock is in sync. | viewer |
 | `get_audit_log` | `action` (exact, or a prefix ending in `.`), `target` (part of it), `since`, `before` (id, to page back), `limit` (1–200, default 50) | Audit log entries, newest first: who did what (`user`, and `token` when it came through an API token), and what wickwatch did by itself. | admin |
 

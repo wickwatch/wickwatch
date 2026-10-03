@@ -5,15 +5,16 @@ const read = (path: string) => readFileSync(new URL(`../../../${path}`, import.m
 
 /** Files that read settings: config.ts and the adapters' own (see readAdapterSettings in adapters.ts). */
 const sources = ["apps/server/src/config.ts", "packages/adapter-ctrader-cli/src/settings.ts"];
-/** Every variable they read, e.g. get("PORT") or integer("BACKUP_KEEP", …). */
+/** Every variable they read, e.g. get("PORT"), integer("BACKUP_KEEP", …) or onOff("MCP", …). */
 const variables = sources.flatMap((file) =>
-  [...read(file).matchAll(/(?:get|integer)\("([A-Z][A-Z0-9_]*)"/g)].map((m) => m[1] ?? ""),
+  [...read(file).matchAll(/(?:get|integer|onOff)\("([A-Z][A-Z0-9_]*)"/g)].map((m) => m[1] ?? ""),
 );
 
 describe("configuration docs", () => {
   it("finds the variables in config.ts and the adapters' settings", () => {
     expect(variables).toContain("MASTER_KEY");
     expect(variables).toContain("BACKUP_KEEP");
+    expect(variables).toContain("LOG_ARCHIVE");
     expect(variables).toContain("CTRADER_CLI_PATH");
   });
 

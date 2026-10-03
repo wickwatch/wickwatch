@@ -98,6 +98,7 @@ try {
     log: app.log,
     auditRetentionDays: config.auditRetentionDays,
     ...(config.backup.intervalHours > 0 ? { backup: config.backup } : {}),
+    logArchive: app.logArchive,
   });
   // The demo runtime reports its own time sync; a real host's clock is measured against CLOCK_CHECK_URL.
   const clock =

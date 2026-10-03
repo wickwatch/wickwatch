@@ -72,7 +72,7 @@ The instance tables (overview, account page) have a **Market** column: **Open**,
 The **Overview** tab of an instance shows:
 
 - key figures and the realised P&L curve of closed trades (7, 30 or 90 days, or all since the first trade);
-- the **live log**, with the filters **Warnings & errors** and **Setups**. **Show larger** opens it almost full screen with a search; the download button saves the log of the last 24 hours, the last 7 days or everything the container still has as a text file (one line per log line: UTC time, then the text as the bot wrote it);
+- the **live log**, with the filters **Warnings & errors** and **Setups**. **Show larger** opens it almost full screen with a search; the download button saves the log of the last 24 hours, the last 7 days or everything the container still has as a text file (one line per log line: UTC time, then the text as the bot wrote it). Applying a configuration replaces the container; its log is kept for `LOG_ARCHIVE_DAYS` (default 7) and shown before the new container's lines, in the live log and the download;
 - **Open positions**, **Pending orders** and the **History** of closed trades, with risk in % of the balance and the result in R when the stop the position opened with is known;
 - a click on a row (or its info button) opens the **details panel** at the right: entry and exit, initial stop, opening and closing time with the holding time, gross result, commission, swap, net, risk and R, label and IDs. The table stays usable next to it: a click on another row shows that one, a click anywhere else or Escape closes the panel.
 

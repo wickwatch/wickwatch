@@ -43,7 +43,7 @@ describe.skipIf(!enabled)("DockerRuntimeAdapter against a real daemon", () => {
     command: [
       "sh",
       "-c",
-      'trap "exit 0" TERM; echo "$(cat /mnt/wickwatch/marker.txt)"; while true; do sleep 0.2; done',
+      'trap "echo stopping; exit 0" TERM; echo "$(cat /mnt/wickwatch/marker.txt)"; while true; do sleep 0.2; done',
     ],
     labels: { [`${PREFIX}.instance`]: name },
     files: [{ path: "/mnt/wickwatch/marker.txt", content: new TextEncoder().encode(marker), mode: 0o400 }],
@@ -63,7 +63,14 @@ describe.skipIf(!enabled)("DockerRuntimeAdapter against a real daemon", () => {
       expect((await runtime.create(managedSpec(name, "first"))).status).toBe("stopped");
       await runtime.start(name);
       expect(await firstLine()).toBe("first");
-      const updated = await runtime.update(name, managedSpec(name, "second"));
+      // The old container's log is still readable once it stopped, its last words included.
+      const old: string[] = [];
+      const updated = await runtime.update(name, managedSpec(name, "second"), {
+        beforeRemove: async () => {
+          for await (const line of runtime.logs(name, { tail: "all" })) old.push(line.text);
+        },
+      });
+      expect(old).toEqual(["first", "stopping"]);
       expect(updated.status).toBe("running");
       expect(await firstLine()).toBe("second");
       await runtime.remove(name);

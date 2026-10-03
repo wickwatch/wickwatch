@@ -8,6 +8,7 @@ import { AUDIT_MAX_LIMIT, readAuditLog } from "../services/audit";
 import type { DealHistory } from "../services/deal-history";
 import { loadHostStatus } from "../services/host-status";
 import { loadInstanceDetail } from "../services/instance-detail";
+import type { LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
 import type { MarketHoursCache } from "../services/market-hours";
 import type { OverviewLoader } from "../services/overview";
@@ -20,6 +21,8 @@ export interface ToolDeps {
   overview: OverviewLoader;
   labelPrefix: string;
   logTracker: LogTracker;
+  /** The log as people read it, with the kept lines of replaced containers (LOG_ARCHIVE). */
+  readLog: LogReader;
   history: DealHistory;
   marketHours: MarketHoursCache;
 }
@@ -101,7 +104,7 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
     defineTool({
       name: "get_instance_logs",
       title: "Instance log",
-      description: `The last log lines of a bot instance, oldest first, each with its UTC time. ${UNTRUSTED}`,
+      description: `The last log lines of a bot instance, oldest first, each with its UTC time; after a redeploy also those of the replaced container (kept for a few days). ${UNTRUSTED}`,
       input: Type.Object({
         ref: Ref,
         lines: Type.Optional(
@@ -114,7 +117,7 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
           throw new AdapterError("not_found", `Unknown instance ${ref}`);
         }
         const result: LogLine[] = [];
-        const iterator = adapters.runtime.logs(ref, {
+        const iterator = deps.readLog(ref, {
           tail: lines ?? 200,
           ...(since ? { since: new Date(since).toISOString() } : {}),
         });

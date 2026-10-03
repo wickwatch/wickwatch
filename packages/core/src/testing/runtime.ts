@@ -89,8 +89,19 @@ export function describeRuntimeAdapter(name: string, options: RuntimeContractOpt
       await adapter.restart(created.ref);
       expect((await find())?.status).toBe("running");
 
-      const updated = await adapter.update(created.ref, { ...spec, command: [...spec.command, "--updated"] });
+      // A runtime that loses the log with the old instance lets the caller read it first.
+      const kept: LogLine[] = [];
+      const updated = await adapter.update(
+        created.ref,
+        { ...spec, command: [...spec.command, "--updated"] },
+        {
+          beforeRemove: async () => {
+            for await (const line of adapter.logs(created.ref, { tail: "all" })) kept.push(line);
+          },
+        },
+      );
       expectSchema(RuntimeInstance, updated);
+      expectSchema(Type.Array(LogLine), kept);
 
       await adapter.stop(updated.ref);
       await adapter.remove(updated.ref);

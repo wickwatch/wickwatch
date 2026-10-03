@@ -4,6 +4,7 @@ import { sql } from "kysely";
 import type { FastifyBaseLogger } from "fastify";
 import { deleteExpiredSessions } from "../auth/sessions";
 import type { Db } from "../db";
+import type { LogArchive } from "./log-archive";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -17,6 +18,8 @@ export interface MaintenanceOptions {
   auditRetentionDays: number;
   /** Missing: no backups (e.g. an in-memory database). */
   backup?: { dir: string; intervalHours: number; keep: number };
+  /** Missing: no kept logs to clean up (LOG_ARCHIVE=off). */
+  logArchive?: LogArchive | undefined;
   now?: () => Date;
 }
 
@@ -29,7 +32,7 @@ const parseStamp = (text: string) =>
   Date.parse(text.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/, "$1-$2-$3T$4:$5:$6Z"));
 
 /**
- * Hourly housekeeping: expired sessions, old audit entries, and a database backup when the last
+ * Hourly housekeeping: expired sessions, old audit entries and kept logs, and a database backup when the last
  * one is older than the interval (also right after a start, so restarts never skip one).
  */
 export class Maintenance {
@@ -62,6 +65,11 @@ export class Maintenance {
       }
     } catch (error) {
       log.error({ err: error }, "Cleaning up the database failed");
+    }
+    try {
+      await this.options.logArchive?.prune(now);
+    } catch (error) {
+      log.error({ err: error }, "Cleaning up the kept logs failed");
     }
     if (this.options.backup) {
       try {

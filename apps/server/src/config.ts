@@ -50,6 +50,8 @@ export interface Config {
   backup: { dir: string; intervalHours: number; keep: number };
   /** Audit entries older than this are deleted; 0 keeps them forever. */
   auditRetentionDays: number;
+  /** Logs of replaced containers, kept this many days; missing when off (`LOG_ARCHIVE=off`). */
+  logArchive?: { dir: string; days: number };
   webDistDir?: string;
   heartbeatUrl?: URL;
   alertWebhookUrl?: URL;
@@ -105,14 +107,14 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   }
 
   const defaultLocale = oneOf("DEFAULT_LOCALE", "en", LOCALES);
-  // Like the other switches, `off` in any case.
-  const mcpSetting = (get("MCP") ?? "on").toLowerCase();
-  if (mcpSetting !== "on" && mcpSetting !== "off") problems.push("MCP must be on or off");
-  const mcp = mcpSetting === "on";
-  const require2faSetting = (get("API_TOKENS_REQUIRE_2FA") ?? "off").toLowerCase();
-  if (require2faSetting !== "on" && require2faSetting !== "off")
-    problems.push("API_TOKENS_REQUIRE_2FA must be on or off");
-  const apiTokensRequire2fa = require2faSetting === "on";
+  /** A switch: `on` or `off` in any case. */
+  const onOff = (name: string, fallback: "on" | "off") => {
+    const value = (get(name) ?? fallback).toLowerCase();
+    if (value !== "on" && value !== "off") problems.push(`${name} must be on or off`);
+    return value === "on";
+  };
+  const mcp = onOff("MCP", "on");
+  const apiTokensRequire2fa = onOff("API_TOKENS_REQUIRE_2FA", "off");
 
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
   const alertWebhookUrl = parseUrl("ALERT_WEBHOOK_URL", get("ALERT_WEBHOOK_URL"), problems);
@@ -143,6 +145,9 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
   const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
+  const logArchiveDays = integer("LOG_ARCHIVE_DAYS", 7, 1, 365);
+  const logArchiveDir = get("LOG_ARCHIVE_DIR");
+  const logArchiveOn = onOff("LOG_ARCHIVE", "on");
   const adapterSettings = readAdapterSettings(get, problems);
   const alertCheckSeconds = integer("ALERT_CHECK_SECONDS", 60, 10, 3600);
   const alertDisconnectGraceSeconds = integer("ALERT_DISCONNECT_GRACE_SECONDS", 180, 0, 3600);
@@ -158,6 +163,12 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (problems.length > 0 || basePath === undefined || !database) {
     throw new ConfigError(problems);
   }
+
+  // Next to the database by default, e.g. data/logs; off with an in-memory database unless a folder is given.
+  const logArchive =
+    logArchiveOn && (database.filename !== ":memory:" || logArchiveDir !== undefined)
+      ? { dir: resolve(cwd, logArchiveDir ?? resolve(dirname(database.filename), "logs")), days: logArchiveDays }
+      : undefined;
 
   return {
     host: get("HOST") ?? "0.0.0.0",
@@ -184,6 +195,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
       keep: backupKeep,
     },
     auditRetentionDays,
+    ...(logArchive ? { logArchive } : {}),
     adapters: {
       runtime: get("RUNTIME_ADAPTER") ?? "demo",
       broker: get("BROKER_ADAPTER") ?? "demo",

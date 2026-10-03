@@ -41,6 +41,15 @@ export interface LogOptions {
   signal?: AbortSignal;
 }
 
+export interface UpdateOptions {
+  /**
+   * Called when the old instance has stopped and is about to be removed with its log, e.g. to keep that log: meanwhile
+   * `logs(ref)` still reads the old instance. A runtime that keeps the log across an update does not call it. Its failure
+   * fails the update, so it should not throw.
+   */
+  beforeRemove?: () => Promise<void>;
+}
+
 /** A file placed into an instance before it starts. May hold secrets: never log or serialise it. */
 export interface InstanceFile {
   /** Absolute path inside the instance, e.g. `/mnt/wickwatch/bot.algo`. */
@@ -102,7 +111,7 @@ export interface RuntimeAdapter {
   /** Creates a stopped instance. Only instances created this way may be updated or removed. */
   create(spec: InstanceSpec): Promise<RuntimeInstance>;
   /** Replaces an instance created by `create`; a running instance keeps running with the new spec. */
-  update(ref: string, spec: InstanceSpec): Promise<RuntimeInstance>;
+  update(ref: string, spec: InstanceSpec, opts?: UpdateOptions): Promise<RuntimeInstance>;
   /** Stops and removes an instance created by `create`. */
   remove(ref: string): Promise<void>;
   start(ref: string): Promise<void>;
