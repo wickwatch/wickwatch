@@ -22,7 +22,10 @@ afterEach(() => {
 
 describe("ProfileView", () => {
   it("changes the password in a modal after checking length and repetition", async () => {
-    const wrapper = mount(ProfileView, { global: { plugins: [i18n] }, attachTo: document.body });
+    const wrapper = mount(ProfileView, {
+      global: { plugins: [i18n], stubs: { SessionList: true } },
+      attachTo: document.body,
+    });
     await wrapper
       .findAll("button")
       .find((b) => b.text() === "Change password")
@@ -65,7 +68,10 @@ describe("ProfileView", () => {
           : new Response(null, { status: 204 }),
       ),
     );
-    const wrapper = mount(ProfileView, { global: { plugins: [i18n] }, attachTo: document.body });
+    const wrapper = mount(ProfileView, {
+      global: { plugins: [i18n], stubs: { SessionList: true } },
+      attachTo: document.body,
+    });
     await wrapper.find('input[type="password"]').setValue("my passphrase");
     await wrapper.find("form").trigger("submit");
     expect(wrapper.findAll(".field__error").map((e) => e.text())).toEqual(["Required."]);
@@ -90,7 +96,10 @@ describe("ProfileView", () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(new Response(JSON.stringify({ error: "invalid_credentials" }), { status: 401 })),
     );
-    const wrapper = mount(ProfileView, { global: { plugins: [i18n] }, attachTo: document.body });
+    const wrapper = mount(ProfileView, {
+      global: { plugins: [i18n], stubs: { SessionList: true } },
+      attachTo: document.body,
+    });
     await wrapper.find('input[type="password"]').setValue("my passphrase");
     const code = wrapper.find<HTMLInputElement>('input[autocomplete="one-time-code"]');
     await code.setValue("123456");
@@ -112,7 +121,10 @@ describe("ProfileView", () => {
           : new Response(null, { status: 204 }),
       ),
     );
-    const wrapper = mount(ProfileView, { global: { plugins: [i18n, router] }, attachTo: document.body });
+    const wrapper = mount(ProfileView, {
+      global: { plugins: [i18n, router], stubs: { SessionList: true } },
+      attachTo: document.body,
+    });
     const changeWith = async (deleteTokens: boolean) => {
       await wrapper
         .findAll("button")

@@ -143,3 +143,26 @@ export function weekdayName(locale: string, day: number): string {
 /** A time with its weekday, e.g. "Fri 23.10.2026, 21:00", for pauses that span days. */
 export const formatWhen = (locale: string, iso: string): string =>
   `${formatDateTime(locale, iso, "weekday")} ${formatDateTime(locale, iso)}`;
+
+const BROWSERS: [RegExp, string][] = [
+  [/Edg(A|iOS)?\//, "Edge"],
+  [/OPR\//, "Opera"],
+  [/Firefox\/|FxiOS\//, "Firefox"],
+  [/Chrome\/|CriOS\//, "Chrome"],
+  [/Safari\//, "Safari"],
+];
+const SYSTEMS: [RegExp, string][] = [
+  [/iPhone|iPad|iPod/, "iOS"],
+  [/Android/, "Android"],
+  [/Mac OS X|Macintosh/, "macOS"],
+  [/Windows/, "Windows"],
+  [/CrOS/, "ChromeOS"],
+  [/Linux/, "Linux"],
+];
+
+/** Browser and system of a user agent for the list of sessions, e.g. "Firefox · macOS"; undefined if neither is known. */
+export function deviceName(userAgent: string | undefined): string | undefined {
+  if (!userAgent) return undefined;
+  const parts = [BROWSERS, SYSTEMS].flatMap((list) => list.find(([pattern]) => pattern.test(userAgent))?.[1] ?? []);
+  return parts.length ? parts.join(" · ") : undefined;
+}

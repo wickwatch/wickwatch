@@ -103,7 +103,19 @@
     "deleteTokensHint": "Tokens bleiben nach einem Passwortwechsel gültig. Lösche sie, wenn das Passwort bekannt geworden sein könnte; Skripte und KI-Clients, die sie nutzen, verlieren den Zugriff.",
     "showTokens": "API-Tokens anzeigen",
     "passwordChangedTokensKept": "Passwort geändert. Andere Sitzungen sind abgemeldet; dein API-Token gilt weiter. | Passwort geändert. Andere Sitzungen sind abgemeldet; deine {count} API-Tokens gelten weiter.",
-    "passwordChangedTokensDeleted": "Passwort geändert. Andere Sitzungen sind abgemeldet und deine API-Tokens gelöscht."
+    "passwordChangedTokensDeleted": "Passwort geändert. Andere Sitzungen sind abgemeldet und deine API-Tokens gelöscht.",
+    "sessions": {
+      "title": "Sitzungen",
+      "hint": "Wo du angemeldet bist. „Angemeldet bleiben“ hält 30 Tage, sonst endet eine Sitzung mit dem Browser oder nach 12 Stunden ohne Nutzung.",
+      "times": "seit {since} · endet spätestens {until}",
+      "remembered": "angemeldet bleiben",
+      "current": "Diese Sitzung",
+      "end": "Abmelden",
+      "endOthers": "Alle anderen abmelden",
+      "ended": "Sitzung abgemeldet.",
+      "endedOthers": "Alle anderen Sitzungen sind abgemeldet.",
+      "unknownDevice": "Unbekanntes Gerät"
+    }
   },
   "challenge": {
     "label": "Challenge",
@@ -407,7 +419,10 @@
     "masterKeyMissing": "MASTER_KEY ist auf dem Server nicht gesetzt. Setzen (openssl rand -base64 32) und wickwatch neu starten.",
     "login": {
       "title": "Anmelden",
-      "submit": "Anmelden"
+      "submit": "Anmelden",
+      "remember": "Angemeldet bleiben",
+      "rememberAbout": "Mehr zu „Angemeldet bleiben“",
+      "rememberHint": "Hält dich 30 Tage angemeldet, auch nach dem Schließen des Browsers. Ohne endet die Sitzung mit dem Browser oder nach 12 Stunden ohne Nutzung."
     },
     "setup": {
       "title": "wickwatch einrichten",
@@ -859,6 +874,7 @@
       "auth_login": "Anmeldung",
       "auth_logout": "Abmeldung",
       "auth_password_change": "Passwort geändert",
+      "auth_session_end": "Sitzung abgemeldet",
       "auth_setup": "Erster Admin angelegt",
       "auth_totp_disable": "2FA ausgeschaltet",
       "auth_totp_enable": "2FA eingeschaltet",

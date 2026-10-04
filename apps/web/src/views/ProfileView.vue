@@ -7,6 +7,7 @@ import AppModal from "../components/AppModal.vue";
 import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
 import IconButton from "../components/IconButton.vue";
+import SessionList from "../components/SessionList.vue";
 import TotpEnroll from "../components/TotpEnroll.vue";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { currentUser, isAdmin, loadSession } from "../session";
@@ -127,83 +128,88 @@ const disable = () =>
     <p class="status" role="status" aria-live="polite">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
 
-    <template v-if="currentUser">
-      <section class="panel card">
-        <dl class="facts">
-          <div>
-            <dt>{{ $t("auth.username") }}</dt>
-            <dd class="mono">{{ currentUser.username }}</dd>
-          </div>
-          <div>
-            <dt>{{ $t("profile.role") }}</dt>
-            <dd>{{ $t(`profile.roles.${currentUser.role}`) }}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="panel card" aria-labelledby="password-title">
-        <div class="card__head">
-          <h2 id="password-title">{{ $t("auth.password") }}</h2>
-          <IconButton icon="key" :label="$t('profile.changePassword')" show-label @click="openPassword" />
-        </div>
-        <p class="muted">{{ $t("profile.passwordHint") }}</p>
-      </section>
-
-      <section class="panel card" aria-labelledby="totp-title">
-        <div class="card__head">
-          <h2 id="totp-title">{{ $t("auth.totp.title") }}</h2>
-          <span class="pill" :class="currentUser.totpEnabled ? 'tone-positive' : 'tone-warning'">
-            {{ currentUser.totpEnabled ? $t("profile.totpOn") : $t("profile.totpOff") }}
-          </span>
-        </div>
-
-        <template v-if="!currentUser.totpEnabled">
-          <p class="muted">{{ $t("auth.totp.recommended") }}</p>
-          <div>
-            <button
-              v-if="!totp"
-              type="button"
-              class="btn btn--primary"
-              :disabled="busy"
-              :aria-busy="running === 'totp'"
-              @click="startEnable"
-            >
-              {{ $t("profile.enableTotp") }}
-            </button>
-          </div>
-          <form v-if="totp" class="form" novalidate @submit.prevent="confirmEnable">
-            <TotpEnroll :totp="totp" />
-            <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
+    <div v-if="currentUser" class="columns">
+      <div class="column">
+        <section class="panel card">
+          <dl class="facts">
             <div>
-              <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'totp'">
-                {{ $t("profile.confirmTotp") }}
+              <dt>{{ $t("auth.username") }}</dt>
+              <dd class="mono">{{ currentUser.username }}</dd>
+            </div>
+            <div>
+              <dt>{{ $t("profile.role") }}</dt>
+              <dd>{{ $t(`profile.roles.${currentUser.role}`) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="panel card" aria-labelledby="password-title">
+          <div class="card__head">
+            <h2 id="password-title">{{ $t("auth.password") }}</h2>
+            <IconButton icon="key" :label="$t('profile.changePassword')" show-label @click="openPassword" />
+          </div>
+          <p class="muted">{{ $t("profile.passwordHint") }}</p>
+        </section>
+
+        <section class="panel card" aria-labelledby="totp-title">
+          <div class="card__head">
+            <h2 id="totp-title">{{ $t("auth.totp.title") }}</h2>
+            <span class="pill" :class="currentUser.totpEnabled ? 'tone-positive' : 'tone-warning'">
+              {{ currentUser.totpEnabled ? $t("profile.totpOn") : $t("profile.totpOff") }}
+            </span>
+          </div>
+
+          <template v-if="!currentUser.totpEnabled">
+            <p class="muted">{{ $t("auth.totp.recommended") }}</p>
+            <div>
+              <button
+                v-if="!totp"
+                type="button"
+                class="btn btn--primary"
+                :disabled="busy"
+                :aria-busy="running === 'totp'"
+                @click="startEnable"
+              >
+                {{ $t("profile.enableTotp") }}
+              </button>
+            </div>
+            <form v-if="totp" class="form" novalidate @submit.prevent="confirmEnable">
+              <TotpEnroll :totp="totp" />
+              <CodeInput v-model="code" :label="$t('auth.code')" :field="codeField" required />
+              <div>
+                <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="running === 'totp'">
+                  {{ $t("profile.confirmTotp") }}
+                </button>
+              </div>
+            </form>
+          </template>
+
+          <form v-else class="form" novalidate @submit.prevent="disable">
+            <label class="field">
+              {{ $t("profile.passwordToDisable") }}
+              <input
+                v-model="password"
+                v-bind="passwordField.attrs.value"
+                class="input"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+              <FieldError :field="passwordField" />
+            </label>
+            <CodeInput v-model="disableCode" :label="$t('auth.code')" :field="disableCodeField" required />
+            <div>
+              <button type="submit" class="btn btn--danger" :disabled="busy" :aria-busy="running === 'totp'">
+                {{ $t("profile.disableTotp") }}
               </button>
             </div>
           </form>
-        </template>
-
-        <form v-else class="form" novalidate @submit.prevent="disable">
-          <label class="field">
-            {{ $t("profile.passwordToDisable") }}
-            <input
-              v-model="password"
-              v-bind="passwordField.attrs.value"
-              class="input"
-              type="password"
-              autocomplete="current-password"
-              required
-            />
-            <FieldError :field="passwordField" />
-          </label>
-          <CodeInput v-model="disableCode" :label="$t('auth.code')" :field="disableCodeField" required />
-          <div>
-            <button type="submit" class="btn btn--danger" :disabled="busy" :aria-busy="running === 'totp'">
-              {{ $t("profile.disableTotp") }}
-            </button>
-          </div>
-        </form>
-      </section>
-    </template>
+        </section>
+      </div>
+      <div class="column">
+        <SessionList />
+      </div>
+    </div>
 
     <AppModal :open="changing" :title="$t('profile.changePassword')" :dirty="pwDirty" @close="closePassword">
       <template #default="{ close }">
@@ -283,8 +289,22 @@ const disable = () =>
   display: flex;
   flex-direction: column;
   gap: var(--ww-space-6);
-  max-width: 560px;
+  max-width: 1200px;
   padding: var(--ww-space-8) var(--ww-space-10);
+}
+
+/* Account, password and 2FA on the left, the sessions on the right; one column on narrow screens. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--ww-space-6);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ww-space-6);
 }
 
 .card,
@@ -345,6 +365,12 @@ dd {
 
 .check input {
   accent-color: var(--ww-accent);
+}
+
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 640px) {

@@ -111,6 +111,19 @@ export interface SessionInfo {
   user?: SessionUser;
 }
 
+/** One of the logged-in user's sessions, in the profile. */
+export interface LoginSession {
+  id: string;
+  createdAt: string;
+  lastSeenAt: string;
+  /** When it ends at the latest. */
+  expiresAt: string;
+  /** Logged in with "stay logged in". */
+  remember: boolean;
+  userAgent?: string;
+  current: boolean;
+}
+
 export interface TotpSetup {
   secret: string;
   uri: string;
@@ -121,7 +134,9 @@ export interface TotpSetup {
 export const api = {
   session: () => request<SessionInfo>("auth/session"),
   /** Throws ApiError "totp_required" when 2FA is on and no code was given. */
-  login: (body: { username: string; password: string; code?: string }) => post<SessionUser>("auth/login", body),
+  /** `remember`: 30 days and a cookie that outlives the browser. */
+  login: (body: { username: string; password: string; code?: string; remember?: boolean }) =>
+    post<SessionUser>("auth/login", body),
   logout: () => post<undefined>("auth/logout"),
   setupTotp: (body: { token: string; username: string }) => post<TotpSetup>("auth/setup/totp", body),
   /** Without `code` the admin is created without 2FA. */
@@ -134,6 +149,10 @@ export const api = {
   /** Logs out the user's other sessions; this one stays. `deleteApiTokens` also deletes the user's API tokens. */
   changePassword: (current: string, next: string, deleteApiTokens = false) =>
     post<undefined>("auth/password", { current, next, ...(deleteApiTokens ? { deleteApiTokens } : {}) }),
+  sessions: () => request<LoginSession[]>("auth/sessions"),
+  endSession: (id: string) => send<undefined>("DELETE", `auth/sessions/${encodeURIComponent(id)}`),
+  /** Logs out the user's other sessions; this one stays. */
+  endOtherSessions: () => send<undefined>("DELETE", "auth/sessions"),
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   accountDetail: (number: string) => request<AccountDetail>(`accounts/${encodeURIComponent(number)}/detail`),

@@ -3,7 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 import type { Db } from "../db";
 import { findApiToken } from "../auth/api-tokens";
-import { findSession, SESSION_COOKIE, SESSION_MAX_AGE_S, type SessionUser } from "../auth/sessions";
+import { findSession, REMEMBER_MAX_AGE_S, SESSION_COOKIE, type SessionUser } from "../auth/sessions";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -100,13 +100,14 @@ function sameOrigin(request: FastifyRequest): boolean {
   }
 }
 
-export function setSessionCookie(reply: FastifyReply, token: string, basePath: string): void {
+/** Without `remember` a browser session cookie: closing the browser logs out. The server-side expiry holds either way. */
+export function setSessionCookie(reply: FastifyReply, token: string, basePath: string, remember = false): void {
   void reply.setCookie(SESSION_COOKIE, token, {
     path: `${basePath}/`,
     httpOnly: true,
     sameSite: "strict",
     secure: "auto",
-    maxAge: SESSION_MAX_AGE_S,
+    ...(remember ? { maxAge: REMEMBER_MAX_AGE_S } : {}),
   });
 }
 

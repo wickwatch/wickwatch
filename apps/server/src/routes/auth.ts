@@ -5,7 +5,15 @@ import QRCode from "qrcode";
 import Type from "typebox";
 import { type SetupState, needsSetup } from "../auth/setup";
 import { countApiTokens, deleteUserApiTokens } from "../auth/api-tokens";
-import { createSession, deleteOtherSessions, deleteSession, SESSION_COOKIE } from "../auth/sessions";
+import {
+  createSession,
+  deleteOtherSessions,
+  deleteSession,
+  deleteSessionById,
+  listSessions,
+  SESSION_COOKIE,
+  sessionId,
+} from "../auth/sessions";
 import type { Db } from "../db";
 import { ErrorBody } from "../plugins/errors";
 import { clearSessionCookie, setSessionCookie } from "../plugins/auth";
@@ -27,6 +35,22 @@ const Session = Type.Object({
   /** False when MASTER_KEY is missing: setup and stored credentials are then impossible. */
   masterKeyConfigured: Type.Boolean(),
   user: Type.Optional(User),
+});
+
+const SessionEntry = Type.Object({
+  /** Stable id for ending the session; not the token. */
+  id: Type.String(),
+  createdAt: Type.String({ format: "date-time" }),
+  /** Updated at most every 5 minutes. */
+  lastSeenAt: Type.String({ format: "date-time" }),
+  /** When it ends at the latest; without `remember` 12 hours after the last request if that is sooner. */
+  expiresAt: Type.String({ format: "date-time" }),
+  /** Logged in with "stay logged in". */
+  remember: Type.Boolean(),
+  /** Of the login request; names the device. */
+  userAgent: Type.Optional(Type.String()),
+  /** The session of this request. */
+  current: Type.Boolean(),
 });
 
 const TotpSetup = Type.Object({
@@ -154,7 +178,7 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       setup.complete();
 
       await audit(db, { action: "auth.setup", target: username, userId: id, details: { totp: totp !== undefined } });
-      setSessionCookie(reply, await createSession(db, id), basePath);
+      setSessionCookie(reply, await createSession(db, id, { userAgent: request.headers["user-agent"] }), basePath);
       return { username, role: "admin" as const, totpEnabled: totp !== undefined, apiTokens: 0 };
     },
   );
@@ -167,13 +191,20 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         tags: ["auth"],
         summary: "Log in with password, plus TOTP code if 2FA is enabled",
         description:
-          "Wrong user name, password or code: 401 `invalid_credentials`. Right password but 2FA enabled and no `code`: 401 `totp_required`.",
-        body: Type.Object({ username: Type.String({ maxLength: 64 }), password: Password, code: Type.Optional(Code) }),
+          "Wrong user name, password or code: 401 `invalid_credentials`. Right password but 2FA enabled and no `code`: 401 `totp_required`. " +
+          "With `remember` the session lasts 30 days and its cookie outlives the browser; without it the session ends " +
+          "with the browser, after 12 hours without a request, or after 7 days.",
+        body: Type.Object({
+          username: Type.String({ maxLength: 64 }),
+          password: Password,
+          code: Type.Optional(Code),
+          remember: Type.Optional(Type.Boolean()),
+        }),
         response: { 200: User, 401: ErrorBody, 429: ErrorBody, 503: ErrorBody },
       },
     },
     async (request, reply) => {
-      const { username, password, code } = request.body;
+      const { username, password, code, remember = false } = request.body;
       if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
 
       const user = await db.selectFrom("users").selectAll().where("username", "=", username).executeTakeFirst();
@@ -195,8 +226,9 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
         await db.updateTable("users").set({ totp_last_counter: counter }).where("id", "=", user.id).execute();
       }
 
-      await audit(db, { action: "auth.login", target: username, userId: user.id, details: { ok: true } });
-      setSessionCookie(reply, await createSession(db, user.id), basePath);
+      await audit(db, { action: "auth.login", target: username, userId: user.id, details: { ok: true, remember } });
+      const token = await createSession(db, user.id, { remember, userAgent: request.headers["user-agent"] });
+      setSessionCookie(reply, token, basePath, remember);
       return {
         username: user.username,
         role: user.role,
@@ -215,6 +247,74 @@ export const authRoutes: FastifyPluginAsyncTypebox<AuthRouteOptions> = async (ap
       if (request.user)
         await audit(db, { action: "auth.logout", target: request.user.username, userId: request.user.id });
       clearSessionCookie(reply, basePath);
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.get(
+    "/sessions",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "The logged-in user's sessions that are still valid, newest first",
+        security: [{ session: [] }],
+        response: { 200: Type.Array(SessionEntry), 401: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      return listSessions(db, current.id, request.cookies[SESSION_COOKIE]);
+    },
+  );
+
+  app.delete(
+    "/sessions",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Log out the user's other sessions; this one stays",
+        security: [{ session: [] }],
+        response: { 204: Type.Null(), 401: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      const count = await deleteOtherSessions(db, current.id, request.cookies[SESSION_COOKIE]);
+      await audit(db, { action: "auth.session_end", target: current.username, userId: current.id, details: { count } });
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.delete(
+    "/sessions/:id",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Log out one of the user's sessions, e.g. on a lost device",
+        description:
+          "Only the user's own sessions; any other id answers 404. Ending this session logs out like /logout.",
+        security: [{ session: [] }],
+        params: Type.Object({ id: Type.String({ maxLength: 64 }) }),
+        response: { 204: Type.Null(), 401: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const current = requireUser(request, reply);
+      if (!current) return reply;
+      const token = request.cookies[SESSION_COOKIE];
+      const isCurrent = token !== undefined && sessionId(token) === request.params.id;
+      if (!(await deleteSessionById(db, current.id, request.params.id))) {
+        return reply.code(404).send({ error: "not_found" });
+      }
+      await audit(db, {
+        action: "auth.session_end",
+        target: current.username,
+        userId: current.id,
+        details: { count: 1, ...(isCurrent ? { current: true } : {}) },
+      });
+      if (isCurrent) clearSessionCookie(reply, basePath);
       return reply.code(204).send(null);
     },
   );

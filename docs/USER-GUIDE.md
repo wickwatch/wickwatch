@@ -12,6 +12,8 @@ Only an **admin** can change things (start, stop, set up, emergency stop). A **v
 
 Your user menu (top right) leads to **Profile**: set up or turn off 2FA (turning it off needs your password and a current code) and change the password there. Changing the password logs you out everywhere else.
 
+At login, **Stay logged in** (on by default) keeps you logged in for 30 days, also after closing the browser. Without it the session ends with the browser, after 12 hours without use, or after 7 days. **Profile → Sessions** lists where you are logged in (browser and system, since when, until when) and logs out a single session, e.g. on a lost phone, or all others.
+
 On a phone, wickwatch can go on the home screen like an app: in Safari **Share → Add to Home Screen**, in Chrome on Android **⋮ → Add to Home screen**. It then opens without the browser bar, with the wickwatch icon.
 
 ## 2. Connect a broker account

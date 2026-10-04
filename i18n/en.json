@@ -103,7 +103,19 @@
     "deleteTokensHint": "Tokens stay valid after a password change. Delete them if the password may have leaked; scripts and AI clients using them lose access.",
     "showTokens": "Show API tokens",
     "passwordChangedTokensKept": "Password changed. Other sessions are logged out; your API token still works. | Password changed. Other sessions are logged out; your {count} API tokens still work.",
-    "passwordChangedTokensDeleted": "Password changed. Other sessions are logged out and your API tokens are deleted."
+    "passwordChangedTokensDeleted": "Password changed. Other sessions are logged out and your API tokens are deleted.",
+    "sessions": {
+      "title": "Sessions",
+      "hint": "Where you are logged in. “Stay logged in” lasts 30 days; otherwise a session ends with the browser or after 12 hours without use.",
+      "times": "since {since} · ends {until} at the latest",
+      "remembered": "stay logged in",
+      "current": "This session",
+      "end": "Log out",
+      "endOthers": "Log out all others",
+      "ended": "Session logged out.",
+      "endedOthers": "All other sessions are logged out.",
+      "unknownDevice": "Unknown device"
+    }
   },
   "challenge": {
     "label": "Challenge",
@@ -407,7 +419,10 @@
     "masterKeyMissing": "MASTER_KEY is not set on the server. Set it (openssl rand -base64 32) and restart wickwatch.",
     "login": {
       "title": "Log in",
-      "submit": "Log in"
+      "submit": "Log in",
+      "remember": "Stay logged in",
+      "rememberAbout": "About “Stay logged in”",
+      "rememberHint": "Keeps you logged in for 30 days, also after closing the browser. Without it the session ends with the browser or after 12 hours without use."
     },
     "setup": {
       "title": "Set up wickwatch",
@@ -859,6 +874,7 @@
       "auth_login": "Login",
       "auth_logout": "Logout",
       "auth_password_change": "Password changed",
+      "auth_session_end": "Session logged out",
       "auth_setup": "First admin created",
       "auth_totp_disable": "2FA turned off",
       "auth_totp_enable": "2FA turned on",

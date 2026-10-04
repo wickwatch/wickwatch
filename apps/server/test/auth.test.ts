@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
+import { createSession, findSession } from "../src/auth/sessions";
 import { auth } from "../src/plugins/auth";
 import { totpCode, totpCounter } from "../src/security/totp";
 import {
@@ -188,6 +189,112 @@ describe("login", () => {
     await createUser(t, "anna", "admin", { totp: false });
     const res = await post("/bots/api/v1/auth/login", { username: "anna", password: PASSWORD });
     expect(res.cookies[0]).toMatchObject({ path: "/bots/" });
+  });
+});
+
+describe("stay logged in", () => {
+  const HOUR = 60 * 60 * 1000;
+  const userId = async (username: string) =>
+    (await t.db.selectFrom("users").select("id").where("username", "=", username).executeTakeFirstOrThrow()).id;
+
+  it("sets a lasting cookie only with remember, and audits the choice", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "viewer", { totp: false });
+    const plain = await post("/api/v1/auth/login", { username: "anna", password: PASSWORD });
+    const plainCookie = plain.cookies.find((c) => c.name === "ww_session");
+    expect(plainCookie?.maxAge).toBeUndefined();
+    expect(plainCookie?.expires).toBeUndefined();
+
+    const remembered = await post("/api/v1/auth/login", { username: "anna", password: PASSWORD, remember: true });
+    expect(remembered.cookies.find((c) => c.name === "ww_session")?.maxAge).toBe(30 * 24 * 60 * 60);
+    expect((await auditActions()).map((a) => a.details)).toEqual([
+      { ok: true, remember: false },
+      { ok: true, remember: true },
+    ]);
+  });
+
+  it("keeps a remembered session past the idle timeout, up to 30 days", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "viewer", { totp: false });
+    const id = await userId("anna");
+    const start = new Date("2026-10-01T08:00:00Z");
+    const plain = await createSession(t.db, id, {}, start);
+    const remembered = await createSession(t.db, id, { remember: true }, start);
+    const later = (ms: number) => new Date(start.getTime() + ms);
+
+    expect(await findSession(t.db, plain, later(13 * HOUR))).toBeUndefined();
+    expect(await findSession(t.db, remembered, later(13 * HOUR))).toMatchObject({ username: "anna" });
+    expect(await findSession(t.db, remembered, later(29 * 24 * HOUR))).toMatchObject({ username: "anna" });
+    expect(await findSession(t.db, remembered, later(30 * 24 * HOUR + 1))).toBeUndefined();
+  });
+});
+
+describe("listing and ending sessions", () => {
+  const login = async (username: string, userAgent: string) =>
+    sessionCookie(
+      await t.app.inject({
+        method: "POST",
+        url: "/api/v1/auth/login",
+        payload: { username, password: PASSWORD },
+        headers: { "user-agent": userAgent },
+      }),
+    );
+  const list = (cookie: string) => t.app.inject({ url: "/api/v1/auth/sessions", headers: { cookie } });
+  const end = (cookie: string, id = "") =>
+    t.app.inject({ method: "DELETE", url: `/api/v1/auth/sessions${id ? `/${id}` : ""}`, headers: { cookie } });
+
+  it("lists the user's own sessions, marks this one and names the device", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "viewer", { totp: false });
+    await createUser(t, "ben", "viewer", { totp: false });
+    await login("anna", "Laptop");
+    const phone = await login("anna", "Phone");
+    await login("ben", "Other");
+
+    const sessions = (await list(phone)).json<{ userAgent: string; current: boolean; remember: boolean }[]>();
+    expect(sessions.map((s) => [s.userAgent, s.current, s.remember]).sort()).toEqual([
+      ["Laptop", false, false],
+      ["Phone", true, false],
+    ]);
+  });
+
+  it("ends one session, all others, or answers 404 for another user's", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "viewer", { totp: false });
+    await createUser(t, "ben", "viewer", { totp: false });
+    const laptop = await login("anna", "Laptop");
+    const phone = await login("anna", "Phone");
+    const tablet = await login("anna", "Tablet");
+    const ben = await login("ben", "Other");
+    const ids = async (cookie: string) =>
+      (await list(cookie)).json<{ id: string; userAgent: string }[]>().map((s) => [s.userAgent, s.id] as const);
+    const laptopId = (await ids(phone)).find(([agent]) => agent === "Laptop")?.[1] ?? "";
+
+    expect((await end(ben, laptopId)).statusCode).toBe(404);
+    expect((await list(laptop)).statusCode).toBe(200);
+
+    expect((await end(phone, laptopId)).statusCode).toBe(204);
+    expect((await list(laptop)).statusCode).toBe(401);
+
+    expect((await end(phone)).statusCode).toBe(204);
+    expect((await list(tablet)).statusCode).toBe(401);
+    expect((await list(phone)).statusCode).toBe(200);
+    expect((await list(ben)).statusCode).toBe(200);
+    expect((await auditActions()).filter((a) => a.action === "auth.session_end").map((a) => a.details)).toEqual([
+      { count: 1 },
+      { count: 1 },
+    ]);
+  });
+
+  it("logs out when the current session is ended", async () => {
+    t = await startApp();
+    await createUser(t, "anna", "viewer", { totp: false });
+    const phone = await login("anna", "Phone");
+    const [own] = (await list(phone)).json<{ id: string }[]>();
+    const res = await end(phone, own?.id);
+    expect(res.statusCode).toBe(204);
+    expect(res.cookies.find((c) => c.name === "ww_session")?.value).toBe("");
+    expect((await list(phone)).statusCode).toBe(401);
   });
 });
 

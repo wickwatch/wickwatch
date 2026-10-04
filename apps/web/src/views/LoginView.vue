@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { nextTick, ref } from "vue";
+import { nextTick, ref, useId } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { api, ApiError, errorKey } from "../api";
 import AuthCard from "../components/AuthCard.vue";
 import CodeInput from "../components/CodeInput.vue";
 import FieldError from "../components/FieldError.vue";
+import IconButton from "../components/IconButton.vue";
 import { loadSession, session } from "../session";
 import { checks, useValidation } from "../validation";
 
@@ -13,6 +14,11 @@ const route = useRoute();
 const username = ref("");
 const password = ref("");
 const code = ref("");
+/** "Stay logged in", on by default: 30 days instead of the browser session (ending after 12 hours idle at the latest). */
+const remember = ref(true);
+/** The explanation behind the info button, opened by a click or tap (touch has no hover), as in ParameterName. */
+const rememberInfo = ref(false);
+const rememberInfoId = useId();
 /** Shown once the server says 2FA is enabled for this user. */
 const needsCode = ref(false);
 const error = ref<string>();
@@ -36,6 +42,7 @@ async function submit() {
     await api.login({
       username: username.value,
       password: password.value,
+      remember: remember.value,
       ...(needsCode.value ? { code: code.value } : {}),
     });
     await loadSession();
@@ -98,6 +105,27 @@ async function submit() {
         :field="codeField"
         required
       />
+      <div class="remember">
+        <label class="check">
+          <input v-model="remember" type="checkbox" />
+          {{ $t("auth.login.remember") }}
+        </label>
+        <IconButton
+          icon="info"
+          :label="$t('auth.login.rememberAbout')"
+          :tooltip="$t('auth.login.rememberHint')"
+          variant="ghost"
+          small
+          class="remember__info"
+          data-tooltip-wrap
+          :aria-expanded="rememberInfo"
+          :aria-controls="rememberInfoId"
+          @click="rememberInfo = !rememberInfo"
+        />
+      </div>
+      <p v-show="rememberInfo" :id="rememberInfoId" class="muted remember__hint">
+        {{ $t("auth.login.rememberHint") }}
+      </p>
       <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
       <button type="submit" class="btn btn--primary" :disabled="busy" :aria-busy="busy">
         {{ $t("auth.login.submit") }}
@@ -115,5 +143,45 @@ async function submit() {
 
 p {
   margin: 0;
+}
+
+.check {
+  display: flex;
+  gap: var(--ww-space-2);
+  align-items: center;
+  font-size: var(--ww-size-sm);
+}
+
+.check input {
+  accent-color: var(--ww-accent);
+}
+
+.remember {
+  display: flex;
+  gap: var(--ww-space-1);
+  align-items: center;
+}
+
+/* Smaller than a row action: it sits inside the text line, like ParameterName's info button. */
+.remember__info {
+  flex: none;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  color: var(--ww-text-muted);
+}
+
+.remember__hint {
+  margin-top: calc(-1 * var(--ww-space-2));
+  font-size: var(--ww-size-xs);
+}
+
+@media (pointer: coarse) {
+  .remember__info {
+    width: var(--ww-control-sm-touch);
+    height: var(--ww-control-sm-touch);
+  }
 }
 </style>

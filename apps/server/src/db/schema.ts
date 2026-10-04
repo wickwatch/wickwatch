@@ -48,6 +48,10 @@ export interface SessionsTable {
   created_at: string;
   expires_at: string;
   last_seen_at: string;
+  /** 1 for "stay logged in": longer lifetime, no idle timeout. */
+  remember: Generated<number>;
+  /** Of the login request, cut to 200 characters; names the device in the list of sessions. */
+  user_agent: string | null;
 }
 
 export interface ApiTokensTable {
