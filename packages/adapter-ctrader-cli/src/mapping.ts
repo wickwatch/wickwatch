@@ -1,6 +1,7 @@
 import {
   AdapterError,
   isObject,
+  isSecretParameterName,
   isTimeZone,
   sessionsToUtc,
   type AccountStats,
@@ -359,14 +360,13 @@ export function checkParameterNames(parameters: ParameterValues): void {
 
 // `run` prints every parameter at start: "| Name                 | Value                     | Source |".
 const TABLE_ROW = /^(\|\s*([A-Za-z_][A-Za-z0-9_]*)\s*\|)([^|]*)(\|\s*(?:cbotset|cmd arg|default value)\s*\|\s*)$/;
-const SECRET_NAME = /key|token|secret|passw|licen[cs]e|credential|api/i;
 const HIDDEN = " ••••••";
 
 /** The value of parameters that look like secrets (licence keys, tokens) in the start table. */
 export function redactStartupTable(text: string): string {
   const row = TABLE_ROW.exec(text);
   const cell = row?.[3];
-  if (!row?.[2] || !SECRET_NAME.test(row[2]) || !cell?.trim()) return text;
+  if (!row?.[2] || !isSecretParameterName(row[2]) || !cell?.trim()) return text;
   // The whole cell, so the columns keep their width.
   return `${row[1] ?? ""}${HIDDEN.padEnd(cell.length)}${row[4] ?? ""}`;
 }

@@ -890,6 +890,7 @@
       "instance_delete": "Instanz gelöscht",
       "instance_deploy": "Konfiguration übernommen",
       "instance_parameter_file": "Parameterdatei heruntergeladen",
+      "instance_parameters_read": "Parameterwerte gelesen",
       "order_cancel": "Order storniert",
       "position_close": "Position geschlossen",
       "instance_start": "Gestartet",

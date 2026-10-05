@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- MCP tool `get_instance_parameters` (admin tokens only): algo, symbol, period and the parameter values of an instance's configuration version, with the version it runs with. Text values whose parameter name looks like a secret (licence key, token, password) are left out and named in `hidden`; each call is audit-logged (`instance.parameters_read`).
+
 ### Fixed
 - Schedule form: the preview of the next pauses did not ask again when the weekend's day or time changed.
 

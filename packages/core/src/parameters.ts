@@ -131,6 +131,20 @@ function fromFile(value: unknown, param: ParameterSchema): unknown {
   }
 }
 
+const SECRET_NAME = /key|token|secret|passw|licen[cs]e|credential|api/i;
+
+/** Whether a parameter's name looks like it holds a secret (licence key, token). */
+export const isSecretParameterName = (name: string): boolean => SECRET_NAME.test(name);
+
+/**
+ * Parameter values without the text values whose name looks like a secret; `hidden` names those left out.
+ * Numbers and switches stay: a key or token is text.
+ */
+export function withoutSecretValues(values: ParameterValues): { values: ParameterValues; hidden: string[] } {
+  const hidden = Object.keys(values).filter((name) => typeof values[name] === "string" && isSecretParameterName(name));
+  return { values: Object.fromEntries(Object.entries(values).filter(([name]) => !hidden.includes(name))), hidden };
+}
+
 /** The number a platform stores for an enum option (`optionValues`, else the option's position). */
 export function enumNumber(param: ParameterSchema, option: unknown): number | undefined {
   const at = param.options?.indexOf(String(option)) ?? -1;

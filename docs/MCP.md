@@ -1,6 +1,6 @@
 # MCP endpoint
 
-wickwatch has a read-only [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `<your wickwatch>/mcp`. AI clients that speak MCP can read the overview, accounts with their challenge status, instances with positions and deals, logs, alerts and the host status, and, with an admin token, the audit log. They cannot start, stop, change or trade anything.
+wickwatch has a read-only [Model Context Protocol](https://modelcontextprotocol.io) endpoint at `<your wickwatch>/mcp`. AI clients that speak MCP can read the overview, accounts with their challenge status, instances with positions and deals, logs, alerts and the host status, and, with an admin token, the audit log and the parameter values of instance configurations. They cannot start, stop, change or trade anything.
 
 ## Set it up
 
@@ -32,7 +32,7 @@ The endpoint is on by default. `MCP=off` switches it off ([CONFIGURATION.md](CON
 
 ## Tools
 
-All tools only read and give the same data as the REST API for the token's role. None returns parameter values of instance configurations or parameter templates (they may hold licence keys) or broker credentials. Each answers with one JSON text. Times are UTC, money is in the account currency.
+All tools only read and give the same data as the REST API for the token's role. None returns broker credentials or the parameter values of parameter templates. The parameter values of instance configurations go to admin tokens only (`get_instance_parameters`), without text values whose name looks like a secret, since they may hold licence keys. Each answers with one JSON text. Times are UTC, money is in the account currency.
 
 | Tool | Arguments | What it returns | Role |
 | --- | --- | --- | --- |
@@ -42,6 +42,7 @@ All tools only read and give the same data as the REST API for the token's role.
 | `get_instance` | `ref`, `days` (1–366, default 30) | One instance: status, open positions, pending orders, the deals of the range with realised P&L curve and key figures (win rate, profit factor, drawdown, risk per trade). | viewer |
 | `get_instance_logs` | `ref`, `lines` (1–1000, default 200), `since` (ISO time), `contains` (text, case ignored), `filter` (`problems` or `setups`) | The last log lines of an instance, oldest first, each with its time; with `LOG_ARCHIVE` also the kept lines of containers replaced by a redeploy. With `contains` or `filter` it searches the whole log since `since` (default: the last 24 hours) and returns the last `lines` matches. | viewer |
 | `list_parameter_templates` | `algo` (only its templates) | The named parameter sets of the algos: name, algo, the names of the parameters each sets (never their values), where it came from and when it was changed. | viewer |
+| `get_instance_parameters` | `ref`, `version` (default: the current one) | The configuration of an instance set up in wickwatch: algo, symbol, period and the parameter values of a configuration version, with `deployedVersion`, the version the instance runs with. Text values whose parameter name contains `key`, `token`, `secret`, `passw`, `licence`/`license`, `credential` or `api` are left out and named in `hidden`. Each call is in the audit log (`instance.parameters_read`). | admin |
 | `get_host_status` | – | CPU, memory and disk of the host, and whether its clock is in sync. | viewer |
 | `get_audit_log` | `action` (exact, or a prefix ending in `.`), `target` (part of it), `since`, `before` (id, to page back), `limit` (1–200, default 50) | Audit log entries, newest first: who did what (`user`, and `token` when it came through an API token), and what wickwatch did by itself. | admin |
 
@@ -85,5 +86,5 @@ More on tokens and roles: [SECURITY.md](../SECURITY.md).
 - **`404`.** The endpoint is switched off (`MCP=off`), or the address lacks the base path (`BASE_PATH`): take the address from the API tokens page.
 - **`403 forbidden_origin`.** The request came with an `Origin` of another host, e.g. from a web page. Desktop and command-line clients send none.
 - **Behind a reverse proxy.** The proxy must pass `/mcp` (with the base path) and the `Authorization` header on to wickwatch. The answers are plain JSON, so no buffering settings are needed.
-- **No audit log tool.** It is offered to admin tokens only, and only while their user is still an admin: a token never has more rights than its user.
+- **No audit log or instance parameters tool.** They are offered to admin tokens only, and only while their user is still an admin: a token never has more rights than its user.
 - **No "Create token" button.** The server allows tokens only to users with 2FA (`API_TOKENS_REQUIRE_2FA=on`): set up 2FA in your profile first. Creating a token also fails with a wrong password or code; it asks for both again on purpose.

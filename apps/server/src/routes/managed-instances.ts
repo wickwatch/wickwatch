@@ -5,13 +5,12 @@ import {
   InstanceConfigInput,
   InstanceStatus,
   ManagedInstance,
+  deployedConfigVersion,
   ManagedInstanceDetail,
   managedLabels,
   parameterDefaults,
   ParameterIssue,
-  ParameterValues,
   readLabels,
-  type AttributionMode,
   type Deployment,
   type InstanceConfig,
   type RuntimeInstance,
@@ -20,11 +19,9 @@ import { groupBy } from "@wickwatch/core/group-by";
 import { INSTANCE_NAME, isUp } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
-import Value from "typebox/value";
 import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import type { InstanceConfigsTable } from "../db/schema";
 import { actor, isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
@@ -34,9 +31,12 @@ import { parameterChecks } from "../services/parameter-checks";
 import { setLinks } from "../services/schedules";
 import {
   canonicalParameters,
-  decryptParameters,
+  configQuery,
   encryptParameters,
   latestConfigIds,
+  loadConfigVersion,
+  toConfig,
+  type ConfigRow,
 } from "../services/instance-configs";
 import { endPause, setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
@@ -51,28 +51,6 @@ const ConfigErrorBody = Type.Object({
 type ConfigErrorBody = Type.Static<typeof ConfigErrorBody>;
 
 const NameParams = Type.Object({ name: Type.String({ pattern: INSTANCE_NAME.source }) });
-
-type ConfigRow = Omit<InstanceConfigsTable, "id" | "instance_id"> & { created_by_name?: string | null };
-
-/** Without the master key, encrypted parameter values cannot be read and are left out. */
-function toConfig(row: ConfigRow, cipher: Cipher | undefined): InstanceConfig {
-  const json = decryptParameters(cipher, row.parameters);
-  const parameters: unknown = json === undefined ? {} : JSON.parse(json);
-  return {
-    version: row.version,
-    algo: { id: row.algo_id, name: row.algo_name, version: row.algo_version },
-    symbol: row.symbol,
-    period: row.period,
-    parameters: Value.Check(ParameterValues, parameters) ? parameters : {},
-    attribution: {
-      mode: row.attribution as AttributionMode,
-      ...(row.order_label ? { orderLabel: row.order_label } : {}),
-    },
-    ...(row.comment ? { comment: row.comment } : {}),
-    createdAt: row.created_at,
-    ...(row.created_by_name ? { createdBy: row.created_by_name } : {}),
-  };
-}
 
 /** For viewers: parameter values may hold licence keys. */
 const withoutParameters = (config: InstanceConfig): InstanceConfig => ({ ...config, parameters: {} });
@@ -99,35 +77,13 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
 ) => {
   /** The runtime's rules for parameter values, e.g. no empty text for the cTrader CLI. */
   const validateOptions = { requireText: adapters.broker.capabilities().requiresTextValues === true };
-  const configs = () =>
-    db
-      .selectFrom("instance_configs")
-      .leftJoin("users", "users.id", "instance_configs.created_by")
-      .select([
-        "instance_configs.instance_id",
-        "instance_configs.version",
-        "instance_configs.algo_id",
-        "instance_configs.algo_name",
-        "instance_configs.algo_version",
-        "instance_configs.symbol",
-        "instance_configs.period",
-        "instance_configs.parameters",
-        "instance_configs.attribution",
-        "instance_configs.order_label",
-        "instance_configs.comment",
-        "instance_configs.created_by",
-        "instance_configs.created_at",
-        "users.username as created_by_name",
-      ]);
-
   function deployment(runtime: RuntimeInstance | undefined): Deployment | undefined {
     if (!runtime) return undefined;
-    const labels = readLabels(labelPrefix, runtime.labels);
-    const version = Number(labels["config-version"]);
+    const version = deployedConfigVersion(labelPrefix, runtime.labels);
     return {
       status: runtime.status,
-      managed: labels.managed === "true",
-      ...(Number.isInteger(version) && version > 0 ? { configVersion: version } : {}),
+      managed: readLabels(labelPrefix, runtime.labels).managed === "true",
+      ...(version !== undefined ? { configVersion: version } : {}),
     };
   }
 
@@ -144,7 +100,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     const rows = (await query.execute()).filter((r) => entries.has(r.account_id));
     if (!rows.length) return [];
     const [latest, links] = await Promise.all([
-      configs().where("instance_configs.id", "in", latestConfigIds(db)).execute(),
+      configQuery(db).where("instance_configs.id", "in", latestConfigIds(db)).execute(),
       // All links, or one instance's; few rows either way.
       (name === undefined
         ? db.selectFrom("instance_schedules")
@@ -276,21 +232,16 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
     async (request, reply) => {
       if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
-      const [instance] = await load(request.params.name);
-      if (!instance) return reply.code(404).send({ error: "not_found" });
-      const version = request.query.version ?? instance.config.version;
-      const row = await configs()
-        .where("instance_configs.instance_id", "=", instance.id)
-        .where("instance_configs.version", "=", version)
-        .executeTakeFirst();
-      if (!row) return reply.code(404).send({ error: "not_found" });
+      const { name } = request.params;
+      const config = await loadConfigVersion({ db, accounts, cipher }, name, request.query.version);
+      if (!config) return reply.code(404).send({ error: "not_found" });
+      const { version } = config;
       // Enums are stored as numbers in platform files, so the algo's schema is needed.
       const algo =
-        row.algo_id === null
+        config.algo.id === null
           ? undefined
-          : await db.selectFrom("algos").select("metadata").where("id", "=", row.algo_id).executeTakeFirst();
+          : await db.selectFrom("algos").select("metadata").where("id", "=", config.algo.id).executeTakeFirst();
       if (!algo) return reply.code(409).send({ error: "algo_not_found" });
-      const config = toConfig(row, cipher);
       const bytes = adapters.config.serialize(config.parameters, schemaOf(algo.metadata), {
         symbol: config.symbol,
         period: config.period,
@@ -298,14 +249,14 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const extension = adapters.config.formats()[0] ?? "txt";
       await audit(db, {
         action: "instance.parameter_file",
-        target: instance.name,
+        target: name,
         details: { version },
         ...actor(request),
       });
       return (
         reply
           .header("content-type", "application/octet-stream")
-          .header("content-disposition", `attachment; filename="${instance.name}-v${String(version)}.${extension}"`)
+          .header("content-disposition", `attachment; filename="${name}-v${String(version)}.${extension}"`)
           // No response schema for 200 on purpose: the file goes out as it is, not serialised as JSON.
           .send(Buffer.from(bytes) as never)
       );
@@ -326,7 +277,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     async (request, reply) => {
       const [instance] = await load(request.params.name);
       if (!instance) return reply.code(404).send({ error: "not_found" });
-      const history = await configs()
+      const history = await configQuery(db)
         .where("instance_configs.instance_id", "=", instance.id)
         .orderBy("instance_configs.version", "desc")
         .execute();

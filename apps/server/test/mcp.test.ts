@@ -47,6 +47,15 @@ async function callTool(token: string, name: string, args: object = {}) {
 }
 const parsed = (result: ToolResult): unknown => JSON.parse(result.content[0]?.text ?? "null");
 
+/** Needs ALGOS_DIR. */
+const uploadAlgo = (cookie: string) =>
+  t.app.inject({
+    method: "POST",
+    url: "/api/v1/algos?fileName=alpha.algo",
+    headers: { cookie, "content-type": "application/octet-stream" },
+    payload: Buffer.from("alpha-v1"),
+  });
+
 describe("MCP endpoint", () => {
   it("initializes, negotiates the protocol version and answers notifications with 202", async () => {
     const { token } = await setup();
@@ -113,6 +122,82 @@ describe("MCP endpoint", () => {
     expect(audit.json()).toMatchObject({ error: { code: -32602 } });
   });
 
+  // Regression: parameter values may hold licence keys, so they go to admin tokens only and never with such a key.
+  it("returns an instance's parameter values to admin tokens only, without secrets, and audits the call", async () => {
+    const { token, cookie } = await setup("admin", { ALGOS_DIR: mkdtempSync(join(tmpdir(), "ww-algos-")) });
+    const algo = await uploadAlgo(cookie);
+    const account = await t.db
+      .selectFrom("accounts")
+      .select("id")
+      .where("number", "=", "1111111")
+      .executeTakeFirstOrThrow();
+    const created = await t.app.inject({
+      method: "POST",
+      url: "/api/v1/managed-instances",
+      headers: { cookie },
+      payload: {
+        name: "x1",
+        accountId: account.id,
+        config: {
+          algoId: algo.json<{ id: number }>().id,
+          symbol: "GER40",
+          period: "m5",
+          parameters: { RiskPercent: 0.5, EntryMode: "Pullback" },
+          attribution: { mode: "auto" },
+        },
+      },
+    });
+    expect(created.statusCode).toBe(201);
+
+    const config = parsed(await callTool(token, "get_instance_parameters", { ref: "x1" })) as {
+      parameters: Record<string, unknown>;
+    };
+    expect(config).toMatchObject({ name: "x1", version: 1, symbol: "GER40", period: "M5", hidden: [] });
+    expect(config.parameters).toMatchObject({ RiskPercent: 0.5, EntryMode: "Pullback" });
+    expect(config).not.toHaveProperty("deployedVersion");
+
+    // A version as earlier releases stored it (plain JSON), with a text value that looks like a secret.
+    await t.db
+      .updateTable("instance_configs")
+      .set({ parameters: JSON.stringify({ RiskPercent: 0.5, KeyLevel: 3, LicenceKey: "placeholder-key" }) })
+      .execute();
+    const secret = await callTool(token, "get_instance_parameters", { ref: "x1", version: 1 });
+    expect(secret.content[0]?.text).not.toContain("placeholder-key");
+    expect(parsed(secret)).toMatchObject({ parameters: { RiskPercent: 0.5, KeyLevel: 3 }, hidden: ["LicenceKey"] });
+
+    expect((await callTool(token, "get_instance_parameters", { ref: "x1", version: 2 })).isError).toBe(true);
+    expect(await callTool(token, "get_instance_parameters", { ref: "nope" })).toMatchObject({
+      content: [{ text: "Error: not_found" }],
+      isError: true,
+    });
+
+    const log = await t.db
+      .selectFrom("audit_log")
+      .select(["target", "details", "user_id", "api_token"])
+      .where("action", "=", "instance.parameters_read")
+      .execute();
+    expect(log).toEqual([
+      { target: "x1", details: '{"version":1}', user_id: expect.any(Number) as number, api_token: "mcp" },
+      { target: "x1", details: '{"version":1}', user_id: expect.any(Number) as number, api_token: "mcp" },
+    ]);
+
+    // A viewer token of the same user neither sees the tool nor can call it by name.
+    const viewer = await t.app.inject({
+      method: "POST",
+      url: "/api/v1/api-tokens",
+      headers: { cookie },
+      payload: { name: "viewer", role: "viewer", password: PASSWORD },
+    });
+    const denied = await rpc(viewer.json<CreatedApiToken>().token, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "get_instance_parameters", arguments: { ref: "x1" } },
+    });
+    expect(denied.json()).toMatchObject({ error: { code: -32602 } });
+    expect(denied.body).not.toContain("RiskPercent");
+  });
+
   it("returns the overview, an account, an instance, its log and the host status", async () => {
     const { token } = await setup();
     const overview = parsed(await callTool(token, "get_overview")) as { accounts: { number: string }[] };
@@ -147,12 +232,7 @@ describe("MCP endpoint", () => {
 
   it("lists parameter templates with their parameter names, never their values, also for admins", async () => {
     const { token, cookie } = await setup("admin", { ALGOS_DIR: mkdtempSync(join(tmpdir(), "ww-algos-")) });
-    await t.app.inject({
-      method: "POST",
-      url: "/api/v1/algos?fileName=alpha.algo",
-      headers: { cookie, "content-type": "application/octet-stream" },
-      payload: Buffer.from("alpha-v1"),
-    });
+    await uploadAlgo(cookie);
     await t.app.inject({
       method: "POST",
       url: "/api/v1/parameter-templates",

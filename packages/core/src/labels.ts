@@ -45,6 +45,12 @@ export function readLabels(prefix: string, labels: Labels): LabelValues {
   return values;
 }
 
+/** The configuration version an instance runs with, by its labels; undefined when wickwatch did not set it. */
+export function deployedConfigVersion(prefix: string, labels: Labels): number | undefined {
+  const version = Number(readLabels(prefix, labels)["config-version"]);
+  return Number.isInteger(version) && version > 0 ? version : undefined;
+}
+
 export interface ManagedLabelInput {
   name: string;
   account: string;

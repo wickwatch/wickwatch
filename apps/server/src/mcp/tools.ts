@@ -1,12 +1,13 @@
-import { AdapterError, type LogLine } from "@wickwatch/core";
+import { AdapterError, deployedConfigVersion, withoutSecretValues, type LogLine } from "@wickwatch/core";
 import Type from "typebox";
 import type { AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import { Ref } from "../routes/instances";
-import { AUDIT_MAX_LIMIT, readAuditLog } from "../services/audit";
+import { audit, AUDIT_MAX_LIMIT, readAuditLog } from "../services/audit";
 import type { DealHistory } from "../services/deal-history";
 import { loadHostStatus } from "../services/host-status";
+import { loadConfigVersion } from "../services/instance-configs";
 import { loadInstanceDetail } from "../services/instance-detail";
 import { searchLog, type LogReader } from "../services/log-archive";
 import type { LogTracker } from "../services/log-tracker";
@@ -27,7 +28,7 @@ export interface ToolDeps {
   readLog: LogReader;
   history: DealHistory;
   marketHours: MarketHoursCache;
-  /** Reads the parameter names of templates; without the master key they have none. */
+  /** Reads parameter values and the parameter names of templates; without the master key there are none. */
   cipher: Cipher | undefined;
 }
 
@@ -164,6 +165,43 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         algo: Type.Optional(Type.String({ maxLength: 100, description: "Only this algo's templates." })),
       }),
       run: async ({ algo }) => (await listTemplates(db, algo)).map((row) => withParameterNames(row, cipher)),
+    }),
+    defineTool({
+      name: "get_instance_parameters",
+      title: "Instance parameters",
+      description:
+        "The configuration of an instance set up in wickwatch: algo, symbol, period and the parameter values of a " +
+        "configuration version (default: the current one). `deployedVersion` is the version the instance runs with; " +
+        "a newer saved version takes effect only when it is applied. Text values whose parameter name looks like a " +
+        "secret (licence key, token, password) are left out and named in `hidden`. Each call is in the audit log.",
+      adminOnly: true,
+      input: Type.Object({
+        ref: Ref,
+        version: Type.Optional(
+          Type.Integer({ minimum: 1, description: "Configuration version; default the current." }),
+        ),
+      }),
+      run: async ({ ref, version }, context) => {
+        if (!cipher) throw new AdapterError("unavailable", "No master key to read parameter values");
+        const config = await loadConfigVersion({ db, accounts, cipher }, ref, version);
+        if (!config) throw new AdapterError("not_found", `No configuration of ${ref}`);
+        const runtime = (await adapters.runtime.list().catch(() => undefined))?.find((i) => i.ref === ref);
+        const deployedVersion = runtime && deployedConfigVersion(labelPrefix, runtime.labels);
+        const { values, hidden } = withoutSecretValues(config.parameters);
+        await audit(db, {
+          action: "instance.parameters_read",
+          target: ref,
+          details: { version: config.version },
+          ...context.actor,
+        });
+        return {
+          name: ref,
+          ...config,
+          parameters: values,
+          hidden,
+          ...(deployedVersion !== undefined ? { deployedVersion } : {}),
+        };
+      },
     }),
     defineTool({
       name: "get_host_status",

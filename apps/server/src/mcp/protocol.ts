@@ -3,6 +3,7 @@ import type { FastifyBaseLogger } from "fastify";
 import type { Static, TSchema } from "typebox";
 import Value from "typebox/value";
 import type { SessionUser } from "../auth/sessions";
+import type { AuditEntry } from "../services/audit";
 
 // A small Model Context Protocol server: JSON-RPC 2.0 over Streamable HTTP, stateless, tools only. Enough for MCP
 // clients to list and call read-only tools; no sessions, no server-sent requests, no resources or prompts.
@@ -17,6 +18,8 @@ const INVALID_PARAMS = -32602;
 
 export interface ToolContext {
   user: SessionUser;
+  /** Who calls, for the audit log: the user and the API token (`actor()` in plugins/auth.ts). */
+  actor: Pick<AuditEntry, "userId" | "token">;
   log: FastifyBaseLogger;
 }
 
