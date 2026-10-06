@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Question or idea
+    url: https://github.com/wickwatch/wickwatch/discussions
+    about: Ask how to do something or talk an idea through in the Discussions.
   - name: Security vulnerability
     url: https://github.com/wickwatch/wickwatch/security/advisories/new
     about: Report security problems privately, never in a public issue.
