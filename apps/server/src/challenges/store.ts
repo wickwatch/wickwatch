@@ -52,6 +52,7 @@ export async function evaluateForAccount(
     .selectAll()
     .where("account_id", "=", accountId)
     .where("day", ">=", profile.startDate)
+    .orderBy("day")
     .execute();
   const synced = await db
     .selectFrom("challenge_profiles")
@@ -80,12 +81,7 @@ export async function evaluateForAccount(
     todayRow?.traded !== 1 && tradingDays(dealsToday, state.positions ?? [], resetTime, timeZone).includes(today);
 
   const traded = rows.filter((r) => r.traded === 1);
-  const lastTradingDay = tradedToday
-    ? today
-    : traded
-        .map((r) => r.day)
-        .sort()
-        .at(-1);
+  const lastTradingDay = tradedToday ? today : traded.at(-1)?.day;
 
   return evaluateChallenge({
     now,

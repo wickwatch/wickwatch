@@ -17,7 +17,7 @@ import type {
   Position,
   RuntimeInstance,
 } from "./schemas";
-import { shownPause } from "./rules";
+import { isAlertOnlyRule, shownPause } from "./rules";
 import { toIsoTime } from "./schemas";
 import { dealResult, round2 } from "./stats";
 
@@ -228,7 +228,7 @@ function alerts(
     const breached = challenge.rules.find((r) => r.status === "breached");
     const nearing = challenge.rules.filter((r) => r.status === "danger" || r.status === "warning");
     // Inactivity has an alert of its own: it says days, and a loss limit must not hide it (or be hidden by it).
-    const near = nearing.filter((r) => r.id !== "inactivity").sort((a, b) => b.usage - a.usage)[0];
+    const near = nearing.filter((r) => !isAlertOnlyRule(r.id)).sort((a, b) => b.usage - a.usage)[0];
     const inactive = nearing.find((r) => r.id === "inactivity");
     if (inactive && !breached) {
       const params = { days: inactive.value, limit: inactive.limit };

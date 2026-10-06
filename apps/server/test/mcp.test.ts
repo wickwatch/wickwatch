@@ -199,7 +199,7 @@ describe("MCP endpoint", () => {
     expect(denied.body).not.toContain("RiskPercent");
   });
 
-  it("returns the overview, an account, an instance, its log and the host status", async () => {
+  it("returns the overview, the alerts and an account", async () => {
     const { token } = await setup();
     const overview = parsed(await callTool(token, "get_overview")) as { accounts: { number: string }[] };
     expect(overview.accounts.map((a) => a.number)).toEqual(["1111111", "2222222", "3333333"]);
@@ -214,8 +214,10 @@ describe("MCP endpoint", () => {
     // The same account with the number sent as a JSON number, as clients do with all-digit numbers.
     const byNumber = parsed(await callTool(token, "get_account", { number: 1111111 })) as typeof account;
     expect(byNumber.positions).toEqual(account.positions);
+  });
 
-    // What two loads saw of a position; account and position id as numbers or strings.
+  it("returns what two loads saw of a position, with account and position id as numbers or strings", async () => {
+    const { token } = await setup();
     const [position] = await t.adapters.broker.positions({ login: "demo", secret: "demo" }, "1111111");
     const positions = vi.spyOn(t.adapters.broker, "positions");
     for (const sl of [1, 2]) {
@@ -228,7 +230,10 @@ describe("MCP endpoint", () => {
     const changes = parsed(await callTool(token, "get_position_changes", { account: 1111111, positionId: 4711 }));
     expect(changes).toEqual([{ at: expect.any(String) as string, field: "sl", from: 1, to: 2 }]);
     expect(parsed(await callTool(token, "get_position_changes", { account: "1111111", positionId: "0" }))).toEqual([]);
+  });
 
+  it("returns an instance, its log and the host status", async () => {
+    const { token } = await setup();
     const instance = parsed(await callTool(token, "get_instance", { ref: "alpha-ger40-a", days: 7 })) as {
       instance: { name: string };
     };

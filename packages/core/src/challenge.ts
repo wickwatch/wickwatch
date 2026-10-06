@@ -9,6 +9,7 @@ import type {
   RuleResult,
   RuleStatus,
 } from "./schemas";
+import { isAlertOnlyRule } from "./rules";
 import { toIsoTime } from "./schemas";
 import { daysBetween, tradingDayKey, tradingDayStart } from "./trading-day";
 
@@ -217,7 +218,7 @@ function overall(results: RuleResult[]): ChallengeStatus {
   if (results.some((r) => r.status === "breached")) return "breached";
   const goals = results.filter((r) => r.id === "profitTarget" || r.id === "tradingDays");
   if (goals.length > 0 && goals.every((r) => r.status === "reached")) return "passed";
-  // Days without a trade have an alert of their own and no bar: they do not make the challenge "near a limit".
-  if (results.some((r) => r.id !== "inactivity" && (r.status === "warning" || r.status === "danger"))) return "warning";
+  if (results.some((r) => !isAlertOnlyRule(r.id) && (r.status === "warning" || r.status === "danger")))
+    return "warning";
   return "running";
 }
