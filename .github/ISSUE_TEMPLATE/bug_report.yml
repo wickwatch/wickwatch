@@ -1,0 +1,54 @@
+name: Bug report
+description: Something in wickwatch does not work as described
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Security problems do **not** belong here: report them privately under Security → "Report a vulnerability".
+        Please remove account numbers, passwords, tokens and licence keys from logs and screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Click …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: wickwatch version
+      description: Shown in the dashboard's footer, or the image tag.
+      placeholder: "0.6.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: adapter
+    attributes:
+      label: Adapters in use
+      options:
+        - Demo
+        - Docker + cTrader CLI
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Host OS, Docker version, reverse proxy, browser (where it matters).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server log
+      description: The lines around the error, without secrets.
+      render: text
