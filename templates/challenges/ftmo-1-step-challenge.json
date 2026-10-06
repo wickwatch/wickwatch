@@ -19,6 +19,7 @@
     "type": "trailing-eod-balance"
   },
   "durationDays": null,
+  "maxInactiveDays": 30,
   "tradingDayDefinition": "at-least-one-position-opened",
   "source": "https://ftmo.com/en/trading-objectives/",
   "asOf": "2026-09-30"
