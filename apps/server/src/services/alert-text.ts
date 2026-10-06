@@ -1,4 +1,5 @@
 import type { Alert, ApiToken, Overview, RuleResult } from "@wickwatch/core";
+import { isAlertOnlyRule } from "@wickwatch/core/rules";
 import de from "../../../../i18n/de.json" with { type: "json" };
 import en from "../../../../i18n/en.json" with { type: "json" };
 import type { Locale } from "../config";
@@ -110,7 +111,7 @@ export function summaryText(overview: Overview, locale: Locale, day: string): st
     if (a.challenge) {
       block.push(
         fill(t("summary.challenge"), { status: t(`challenge.status.${a.challenge.status}`), day: a.challenge.day }),
-        ...a.challenge.rules.map((r) => `• ${ruleText(r, locale, t)}`),
+        ...a.challenge.rules.filter((r) => !isAlertOnlyRule(r.id)).map((r) => `• ${ruleText(r, locale, t)}`),
       );
     }
   }
