@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.7.0 – 2026-10-06
+
 ### Added
 - Challenge rule **Days without a trade**: a profile can hold the number of days without an executed trade after which the firm closes the account. wickwatch counts the days since a position was last opened: an alert (also to the webhook) warns from half of them on and clears when the account trades again, and the rule counts as breached on the last day. It has no bar on the account and no line in the daily summary; the API lists the days. The Trading Pit templates carry its 21 days, the FTMO Challenge and Verification templates 30; set the field in existing profiles yourself (they keep the rules they were saved with).
 - MCP tool `get_position_changes`: what changed on one position while it was open (stop loss, take profit, volume, entry), by account number and position id, also for a closed position.
