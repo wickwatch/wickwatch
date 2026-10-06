@@ -38,6 +38,8 @@ export interface ChallengeInput {
   tradingDays: number;
   /** The trading days since the start are not all marked yet (new profile, earlier start date). */
   tradingDaysPending?: boolean;
+  /** The latest trading day since the start (YYYY-MM-DD, see tradingDayKey); missing when there is none yet. */
+  lastTradingDay?: string;
 }
 
 /**
@@ -182,6 +184,22 @@ export function evaluateChallenge(input: ChallengeInput): ChallengeEvaluation {
       limit: rules.durationDays,
       usage: day / rules.durationDays,
       unit: "days",
+    });
+  }
+
+  if (rules.maxInactiveDays) {
+    // Counted from the last day a position was opened: a pending order that never filled is no trade.
+    const value = Math.max(0, daysBetween(input.lastTradingDay ?? profile.startDate, today));
+    const usage = value / rules.maxInactiveDays;
+    results.push({
+      id: "inactivity",
+      // While the trading days are still loading, the last one may be missing: no warning from a partial count.
+      status: input.tradingDaysPending ? "ok" : limitStatus(usage),
+      value,
+      limit: rules.maxInactiveDays,
+      usage,
+      unit: "days",
+      ...(input.tradingDaysPending ? { pending: true } : {}),
     });
   }
 

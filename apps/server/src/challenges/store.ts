@@ -79,6 +79,14 @@ export async function evaluateForAccount(
   const tradedToday =
     todayRow?.traded !== 1 && tradingDays(dealsToday, state.positions ?? [], resetTime, timeZone).includes(today);
 
+  const traded = rows.filter((r) => r.traded === 1);
+  const lastTradingDay = tradedToday
+    ? today
+    : traded
+        .map((r) => r.day)
+        .sort()
+        .at(-1);
+
   return evaluateChallenge({
     now,
     profile,
@@ -96,7 +104,8 @@ export async function evaluateForAccount(
       : {}),
     ...(peaks.length ? { peakEquity: Math.max(...peaks, state.equity) } : { peakEquity: state.equity }),
     ...(peakDayStartBalance ? { peakDayStartBalance } : {}),
-    tradingDays: rows.filter((r) => r.traded === 1).length + (tradedToday ? 1 : 0),
+    tradingDays: traded.length + (tradedToday ? 1 : 0),
+    ...(lastTradingDay ? { lastTradingDay } : {}),
     ...(!synced?.trading_days_from || synced.trading_days_from > profile.startDate ? { tradingDaysPending: true } : {}),
   });
 }

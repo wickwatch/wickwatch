@@ -61,6 +61,7 @@ const SUCCESSORS: Partial<Record<Alert["code"], Alert["code"][]>> = {
   instance_error: INSTANCE_STATES,
   instance_disconnected: INSTANCE_STATES,
   challenge_limit: ["challenge_breached"],
+  challenge_inactive: ["challenge_breached"],
 };
 
 /** How a gone alert went away, judged from the overview it is missing from. */

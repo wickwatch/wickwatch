@@ -316,6 +316,16 @@ describe("alertText", () => {
       params: { rule: "dailyLoss", used: 85 },
     };
     expect(alertText(limit, "de", "recovered")).toBe("Behoben: Konto 1: Tagesverlust wieder unter der Warnschwelle");
+    const inactive: Alert = {
+      level: "warning",
+      code: "challenge_inactive",
+      subject: "1",
+      params: { days: 14, limit: 21 },
+    };
+    expect(alertText(inactive, "de")).toBe(
+      "Achtung: Konto 1: seit 14 Tagen kein Trade – der Anbieter schließt das Konto nach 21 Tagen ohne Trade",
+    );
+    expect(alertText(inactive, "en", "recovered")).toBe("Resolved: Account 1 has traded again");
     const breached: Alert = { level: "error", code: "challenge_breached", subject: "1", params: { rule: "dailyLoss" } };
     expect(alertText(breached, "en", "recovered")).toBe("Resolved: Account 1: challenge rule breached – Daily loss");
     expect(alertText(stopped, "de", "removed")).toBe("Erledigt: alpha wurde entfernt");

@@ -226,9 +226,14 @@ function alerts(
     const challenge = account.challenge;
     if (!challenge) continue;
     const breached = challenge.rules.find((r) => r.status === "breached");
-    const near = challenge.rules
-      .filter((r) => r.status === "danger" || r.status === "warning")
-      .sort((a, b) => b.usage - a.usage)[0];
+    const nearing = challenge.rules.filter((r) => r.status === "danger" || r.status === "warning");
+    // Inactivity has an alert of its own: it says days, and a loss limit must not hide it (or be hidden by it).
+    const near = nearing.filter((r) => r.id !== "inactivity").sort((a, b) => b.usage - a.usage)[0];
+    const inactive = nearing.find((r) => r.id === "inactivity");
+    if (inactive && !breached) {
+      const params = { days: inactive.value, limit: inactive.limit };
+      result.push({ level: "warning", code: "challenge_inactive", subject: account.number, params });
+    }
     if (breached) {
       result.push({
         level: "error",

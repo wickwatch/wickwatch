@@ -178,6 +178,32 @@ describe("evaluateChallenge", () => {
     expect(rule(result, "duration")).toMatchObject({ status: "breached", value: 32 });
   });
 
+  it("counts the days since the last trading day and warns before the firm closes an inactive account", () => {
+    const inactive: ChallengeProfile = { ...profile, rules: { ...profile.rules, maxInactiveDays: 21 } };
+    // Today is 2026-09-25 in Prague.
+    const at = (lastTradingDay?: string) =>
+      rule(
+        evaluateChallenge(input({ profile: inactive, ...(lastTradingDay ? { lastTradingDay } : {}) })),
+        "inactivity",
+      );
+    expect(at("2026-09-25")).toMatchObject({ status: "ok", value: 0, limit: 21, unit: "days" });
+    expect(at("2026-09-15")).toMatchObject({ status: "ok", value: 10 });
+    expect(at("2026-09-14")).toMatchObject({ status: "warning", value: 11 });
+    expect(at("2026-09-08")).toMatchObject({ status: "danger", value: 17 });
+    expect(at("2026-09-04")).toMatchObject({ status: "breached", value: 21 });
+    // No trade yet: counted from the start of the profile (2026-09-20).
+    expect(at()).toMatchObject({ status: "ok", value: 5 });
+    const late = evaluateChallenge(input({ profile: inactive, lastTradingDay: "2026-09-04" }));
+    expect(late.status).toBe("breached");
+  });
+
+  it("does not warn about inactivity while the trading days are still loading", () => {
+    const inactive: ChallengeProfile = { ...profile, startDate: "2026-08-01", rules: { maxInactiveDays: 21 } };
+    const result = evaluateChallenge(input({ profile: inactive, tradingDaysPending: true }));
+    expect(rule(result, "inactivity")).toMatchObject({ status: "ok", pending: true });
+    expect(result.status).toBe("running");
+  });
+
   it("evaluates only the rules a profile has", () => {
     const minimal: ChallengeProfile = {
       name: "Own",

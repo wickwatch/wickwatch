@@ -20,6 +20,7 @@
   },
   "minTradingDays": 3,
   "durationDays": null,
+  "maxInactiveDays": 21,
   "tradingDayDefinition": "at-least-one-trade-placed",
   "source": "https://www.thetradingpit.com/cfds-prop-trading",
   "asOf": "2026-09-30"

@@ -1804,6 +1804,12 @@
                                           "enum": [
                                             "duration"
                                           ]
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "inactivity"
+                                          ]
                                         }
                                       ]
                                     },
@@ -2229,6 +2235,12 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "challenge_inactive"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "challenge_passed"
                                 ]
                               },
@@ -2577,6 +2589,12 @@
                                         "type": "string",
                                         "enum": [
                                           "duration"
+                                        ]
+                                      },
+                                      {
+                                        "type": "string",
+                                        "enum": [
+                                          "inactivity"
                                         ]
                                       }
                                     ]
@@ -3151,6 +3169,12 @@
                                 "type": "string",
                                 "enum": [
                                   "challenge_limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "challenge_inactive"
                                 ]
                               },
                               {
@@ -7583,6 +7607,11 @@
                             "minimum": 1,
                             "maximum": 3650,
                             "nullable": true
+                          },
+                          "maxInactiveDays": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 3650
                           }
                         }
                       },
@@ -7838,6 +7867,11 @@
                           "minimum": 1,
                           "maximum": 3650,
                           "nullable": true
+                        },
+                        "maxInactiveDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 3650
                         }
                       }
                     },
@@ -8057,6 +8091,11 @@
                         "minimum": 1,
                         "maximum": 3650,
                         "nullable": true
+                      },
+                      "maxInactiveDays": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3650
                       }
                     }
                   },
@@ -8247,6 +8286,11 @@
                           "minimum": 1,
                           "maximum": 3650,
                           "nullable": true
+                        },
+                        "maxInactiveDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 3650
                         }
                       }
                     },

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildLabels, buildOverview, type Deal, type Position, type RuntimeInstance } from "../src";
+import {
+  buildLabels,
+  buildOverview,
+  type ChallengeEvaluation,
+  type Deal,
+  type Position,
+  type RuleResult,
+  type RuntimeInstance,
+} from "../src";
 
 const time = new Date("2026-09-25T12:00:00.000Z");
 const instance = (name: string, account: string, status: RuntimeInstance["status"]): RuntimeInstance => ({
@@ -153,6 +161,40 @@ describe("buildOverview", () => {
         subject: "alpha",
         params: { count: 3, last: "2026-09-25T11:30:00.000Z", detail: "Error | Crashed in OnBar event with X: boom" },
       },
+    ]);
+  });
+
+  it("warns about an inactive account next to a loss limit, and only reports the breach once it is closed", () => {
+    const rule = (id: RuleResult["id"], status: RuleResult["status"], value: number, limit: number): RuleResult => ({
+      id,
+      status,
+      value,
+      limit,
+      usage: value / limit,
+      unit: id === "inactivity" ? "days" : "percent",
+    });
+    const alerts = (status: ChallengeEvaluation["status"], rules: RuleResult[]) =>
+      buildOverview({
+        time,
+        labelPrefix: "ww",
+        instances: [],
+        lastLogs: new Map(),
+        accounts: [
+          {
+            number: "111",
+            displayName: "Main",
+            challenge: { name: "Prop", day: 20, status, rules, tradingDayStart: "2026-09-25T00:00:00.000Z" },
+          },
+        ],
+      }).alerts;
+
+    expect(alerts("warning", [rule("dailyLoss", "warning", 3, 5), rule("inactivity", "danger", 17, 21)])).toEqual([
+      { level: "warning", code: "challenge_inactive", subject: "111", params: { days: 17, limit: 21 } },
+      { level: "warning", code: "challenge_limit", subject: "111", params: { rule: "dailyLoss", used: 60 } },
+    ]);
+    expect(alerts("running", [rule("inactivity", "ok", 10, 21)])).toEqual([]);
+    expect(alerts("breached", [rule("inactivity", "breached", 21, 21)])).toEqual([
+      { level: "error", code: "challenge_breached", subject: "111", params: { rule: "inactivity" } },
     ]);
   });
 });

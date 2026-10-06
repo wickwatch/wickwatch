@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { tradingDayKey, type ChallengeProfile, type Overview } from "@wickwatch/core";
+import { tradingDayKey, type ChallengeProfile, type Overview, type Position } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dbAccountDirectory } from "../src/accounts";
 import { createAdapters } from "../src/adapters";
@@ -243,6 +243,58 @@ describe("challenge evaluation from the recorded days", () => {
         .execute();
       const late = await evaluateForAccount(t.db, id, eod, state, now);
       expect(late.rules.find((r) => r.id === "maxLoss")).toMatchObject({ value: 5, approximate: true });
+    } finally {
+      await t.app.close();
+    }
+  });
+});
+
+describe("inactivity from the recorded trading days", () => {
+  it("counts the days since the last day a position was opened, and today's trade at once", async () => {
+    const t = await startApp();
+    try {
+      await seedDemoChallenges(t.db);
+      const { id } = await t.db.selectFrom("accounts").select("id").orderBy("id").executeTakeFirstOrThrow();
+      const inactive: ChallengeProfile = {
+        name: "Funded",
+        startDate: "2026-09-01",
+        startBalance: 100_000,
+        rules: { maxInactiveDays: 21 },
+      };
+      await t.db.deleteFrom("daily_stats").where("account_id", "=", id).execute();
+      await t.db
+        .insertInto("daily_stats")
+        .values([
+          { account_id: id, day: "2026-09-03", traded: 1 },
+          { account_id: id, day: "2026-09-08", traded: 1 },
+          // Sampled, but no position opened.
+          { account_id: id, day: "2026-09-20", traded: 0 },
+        ])
+        .execute();
+      await t.db
+        .updateTable("challenge_profiles")
+        .set({ trading_days_from: "2026-09-01" })
+        .where("account_id", "=", id)
+        .execute();
+      const now = new Date("2026-09-25T10:00:00Z");
+      const rule = async (positions: Position[] = []) =>
+        (
+          await evaluateForAccount(t.db, id, inactive, { balance: 100_000, equity: 100_000, deals: [], positions }, now)
+        ).rules.find((r) => r.id === "inactivity");
+
+      expect(await rule()).toMatchObject({ status: "danger", value: 17, limit: 21 });
+      expect((await rule())?.pending).toBeUndefined();
+      // A position opened today ends the count before the poller marks the day.
+      const opened: Position = {
+        id: "p1",
+        symbol: "GER40",
+        side: "buy",
+        volume: 1,
+        entry: 19_400,
+        pnl: 0,
+        openedAt: "2026-09-25T09:00:00.000Z",
+      };
+      expect(await rule([opened])).toMatchObject({ status: "ok", value: 0 });
     } finally {
       await t.app.close();
     }

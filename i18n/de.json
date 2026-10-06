@@ -126,7 +126,8 @@
       "dailyLoss": "Tagesverlust",
       "maxLoss": "Max-Drawdown",
       "tradingDays": "Handelstage",
-      "duration": "Laufzeit"
+      "duration": "Laufzeit",
+      "inactivity": "Tage ohne Trade"
     },
     "status": {
       "running": "Läuft",
@@ -176,6 +177,7 @@
       "trailingEodBalance": "Trailing (ab höchster Balance zu Tagesbeginn)"
     },
     "durationDays": "Laufzeit (Tage)",
+    "maxInactiveDays": "Schließung nach Tagen ohne Trade",
     "delete": "Profil entfernen",
     "deleteConfirm": "Challenge-Profil von Konto {account} entfernen? Erfasste Handelstage bleiben erhalten.",
     "guard": {
@@ -375,6 +377,7 @@
       "instance_disconnected": "{subject} ist wieder mit dem Broker verbunden",
       "account_error": "Konto {subject} ist wieder erreichbar",
       "challenge_limit": "Konto {subject}: {rule} wieder unter der Warnschwelle",
+      "challenge_inactive": "Konto {subject} hat wieder gehandelt",
       "host_clock": "Die Server-Uhr geht wieder richtig"
     },
     "removed": {
@@ -388,6 +391,7 @@
     "account_error": "Konto {subject} nicht erreichbar: {reason}",
     "challenge_breached": "Konto {subject}: Challenge-Regel verletzt – {rule}",
     "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",
+    "challenge_inactive": "Konto {subject}: seit {days} Tagen kein Trade – der Anbieter schließt das Konto nach {limit} Tagen ohne Trade",
     "challenge_passed": "Konto {subject}: Challenge-Ziele erreicht",
     "attribution_ambiguous": "Konto {subject}: Trades auf {symbol} nicht zuordenbar – {instances} teilen sich das Symbol, eine nutzt account-symbol",
     "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}",

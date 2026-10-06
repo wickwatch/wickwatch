@@ -23,7 +23,8 @@ const TONES: Record<RuleStatus, string> = {
   reached: "positive",
 };
 /** Elapsed time is neither good nor bad: neutral until it runs out. */
-const tone = (rule: RuleResult) => (rule.id === "duration" && rule.status === "ok" ? "info" : TONES[rule.status]);
+const ELAPSING: RuleResult["id"][] = ["duration", "inactivity"];
+const tone = (rule: RuleResult) => (ELAPSING.includes(rule.id) && rule.status === "ok" ? "info" : TONES[rule.status]);
 const STATUS_TONES = {
   running: "tone-muted",
   warning: "tone-warning",
