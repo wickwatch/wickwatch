@@ -86,14 +86,20 @@ describe("OverviewLoader", () => {
     const stats = vi.spyOn(t.adapters.broker, "stats");
     const list = vi.spyOn(t.adapters.runtime, "list");
     const now = new Date();
-    const [, joined] = await Promise.all([loader.overview(now), loader.accountDetail("1111111", now)]);
-    expect(stats).toHaveBeenCalledTimes(accounts);
-    expect(list).toHaveBeenCalledTimes(1);
+    // The demo broker's prices move with the clock: hold it still, or the two loads may differ by a tick.
+    vi.useFakeTimers({ toFake: ["Date"], now });
+    try {
+      const [, joined] = await Promise.all([loader.overview(now), loader.accountDetail("1111111", now)]);
+      expect(stats).toHaveBeenCalledTimes(accounts);
+      expect(list).toHaveBeenCalledTimes(1);
 
-    loader.invalidate();
-    const own = await loader.accountDetail("1111111", now);
-    expect(stats).toHaveBeenCalledTimes(accounts + 1);
-    expect(joined).toEqual(own);
+      loader.invalidate();
+      const own = await loader.accountDetail("1111111", now);
+      expect(stats).toHaveBeenCalledTimes(accounts + 1);
+      expect(joined).toEqual(own);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not join a load that started too long ago, e.g. behind a hanging broker session", async () => {
