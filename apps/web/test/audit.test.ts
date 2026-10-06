@@ -52,4 +52,27 @@ describe("AuditView", () => {
     ]);
     wrapper.unmount();
   });
+
+  it("loads 25 entries at a time and the older ones on demand", async () => {
+    const urls: string[] = [];
+    const older = { ...PAGE, entries: [{ ...PAGE.entries[1]!, id: 0 }] };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) => {
+        if (input.pathname.endsWith("/audit")) urls.push(input.search);
+        const page = input.searchParams.has("before") ? older : { ...PAGE, more: true };
+        return Promise.resolve(new Response(JSON.stringify(page)));
+      }),
+    );
+    const wrapper = mount(AuditView, { global: { plugins: [i18n, router] }, attachTo: document.body });
+    await flushPromises();
+    expect(wrapper.findAll("tbody tr")).toHaveLength(2);
+
+    await wrapper.find("button.more").trigger("click");
+    await flushPromises();
+    expect(urls).toEqual(["?limit=25", "?before=1&limit=25"]);
+    expect(wrapper.findAll("tbody tr")).toHaveLength(3);
+    expect(wrapper.find("button.more").exists()).toBe(false);
+    wrapper.unmount();
+  });
 });
