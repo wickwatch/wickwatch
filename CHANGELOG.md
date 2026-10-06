@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- MCP tool `get_position_changes`: what changed on one position while it was open (stop loss, take profit, volume, entry), by account number and position id, also for a closed position.
+
 ## 0.6.0 – 2026-10-06
 
 ### Added

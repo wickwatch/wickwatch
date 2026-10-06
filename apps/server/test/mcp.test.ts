@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CreatedApiToken } from "@wickwatch/core";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loginAs, PASSWORD, startApp, type TestApp } from "./helpers";
 
 let t: TestApp;
@@ -108,6 +108,7 @@ describe("MCP endpoint", () => {
       "get_overview",
       "get_alerts",
       "get_account",
+      "get_position_changes",
       "get_instance",
       "get_instance_logs",
       "list_parameter_templates",
@@ -213,6 +214,20 @@ describe("MCP endpoint", () => {
     // The same account with the number sent as a JSON number, as clients do with all-digit numbers.
     const byNumber = parsed(await callTool(token, "get_account", { number: 1111111 })) as typeof account;
     expect(byNumber.positions).toEqual(account.positions);
+
+    // What two loads saw of a position; account and position id as numbers or strings.
+    const [position] = await t.adapters.broker.positions({ login: "demo", secret: "demo" }, "1111111");
+    const positions = vi.spyOn(t.adapters.broker, "positions");
+    for (const sl of [1, 2]) {
+      positions.mockResolvedValue([{ ...position!, id: "4711", sl, tp: 5 }]);
+      t.app.overview.invalidate();
+      await callTool(token, "get_account", { number: "1111111" });
+    }
+    positions.mockRestore();
+    t.app.overview.invalidate();
+    const changes = parsed(await callTool(token, "get_position_changes", { account: 1111111, positionId: 4711 }));
+    expect(changes).toEqual([{ at: expect.any(String) as string, field: "sl", from: 1, to: 2 }]);
+    expect(parsed(await callTool(token, "get_position_changes", { account: "1111111", positionId: "0" }))).toEqual([]);
 
     const instance = parsed(await callTool(token, "get_instance", { ref: "alpha-ger40-a", days: 7 })) as {
       instance: { name: string };

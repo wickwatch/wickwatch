@@ -1,6 +1,6 @@
 import { AdapterError, deployedConfigVersion, withoutSecretValues, type LogLine } from "@wickwatch/core";
 import Type from "typebox";
-import type { AccountDirectory } from "../accounts";
+import { findAccountId, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
 import { Ref } from "../routes/instances";
@@ -14,6 +14,7 @@ import type { LogTracker } from "../services/log-tracker";
 import type { MarketHoursCache } from "../services/market-hours";
 import type { OverviewLoader } from "../services/overview";
 import { listTemplates, withParameterNames } from "../services/parameter-templates";
+import type { PositionHistory } from "../services/position-history";
 import type { Cipher } from "../security/cipher";
 import { defineTool, type McpTool } from "./protocol";
 
@@ -28,6 +29,7 @@ export interface ToolDeps {
   readLog: LogReader;
   history: DealHistory;
   marketHours: MarketHoursCache;
+  positionHistory: PositionHistory;
   /** Reads parameter values and the parameter names of templates; without the master key there are none. */
   cipher: Cipher | undefined;
 }
@@ -48,7 +50,8 @@ const Since = Type.String({ format: "date-time", description: "ISO 8601 time in 
 
 /** The read-only tools of the MCP endpoint; they give the same data as the REST API, for the token's role. */
 export function wickwatchTools(deps: ToolDeps): McpTool[] {
-  const { adapters, accounts, db, overview, labelPrefix, logTracker, history, marketHours, cipher } = deps;
+  const { adapters, accounts, db, overview, labelPrefix, logTracker, history, marketHours, positionHistory, cipher } =
+    deps;
 
   return [
     defineTool({
@@ -88,6 +91,32 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         const detail = await overview.accountDetail(number);
         if (!detail) throw new AdapterError("not_found", `Unknown account ${number}`);
         return detail;
+      },
+    }),
+    defineTool({
+      name: "get_position_changes",
+      title: "Position changes",
+      description:
+        "What changed on one position while it was open, oldest first: its stop loss (`sl`), take profit (`tp`), " +
+        "`volume` in lots (a partial close, or more added) and `entry` price, each with `from` and `to` (missing: " +
+        "none set) and the time `at`. Also for a closed position, by the `positionId` of its deals. It does not say " +
+        "who changed it (the bot, a trailing stop, by hand); the instance log may. wickwatch compares the values " +
+        "about once a minute: `at` is when a change was noticed, several within a minute show as one, and changes " +
+        "from before it first saw the position are missing. Empty: none noticed.",
+      input: Type.Object({
+        // All digits, so sent as a JSON number just as often as a string (see get_account).
+        account: Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], {
+          description: "Account number.",
+        }),
+        positionId: Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], {
+          description: "The position's `id` (get_account, get_instance) or a deal's `positionId` (get_instance).",
+        }),
+      }),
+      run: async (args) => {
+        const number = String(args.account);
+        const id = await findAccountId(accounts, number);
+        if (id === undefined) throw new AdapterError("not_found", `Unknown account ${number}`);
+        return positionHistory.changes(id, String(args.positionId));
       },
     }),
     defineTool({

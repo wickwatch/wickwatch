@@ -202,6 +202,7 @@ export async function buildApp({
       readLog,
       history,
       marketHours,
+      positionHistory,
       cipher,
     });
   }
