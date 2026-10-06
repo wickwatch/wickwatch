@@ -4,6 +4,15 @@
 
 **wickwatch** is a self-hosted dashboard to monitor and control trading bots: see what runs where and with which parameters, start and stop instances, follow positions and deals live, and keep prop-firm challenge limits in view.
 
+It is free and open source (AGPL-3.0). The first adapters run **cTrader bots (cBots) in Docker** through the cTrader CLI and track the limits of prop-firm challenges such as FTMO; the core is broker- and strategy-neutral. Project page: [wickwatch.github.io](https://wickwatch.github.io) ([Deutsch](https://wickwatch.github.io/de/)).
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/img/overview-light.webp">
+    <img src="docs/img/overview-dark.webp" alt="wickwatch overview: three accounts with balance, equity and today's P&amp;L, an alert for a bot that failed to log in, and the table of bot instances with status, uptime and last log line." width="900">
+  </picture>
+</p>
+
 > **Status:** early development, used on demo and prop-challenge accounts. Phase 1 of the [roadmap](docs/ROADMAP.md) is built and in trial operation: wickwatch runs cTrader bots in Docker containers through the cTrader CLI, reads accounts, positions and deals, and can stop everything on an account.
 
 ## Try it
