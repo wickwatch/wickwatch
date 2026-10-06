@@ -4,8 +4,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.6.0 – 2026-10-06
+
 ### Added
 - Position changes: the details panel of an open position lists when its stop loss, take profit, volume (a partial close, or more added) or entry price changed (from → to), whoever did it: the bot, a trailing stop or you in the broker's platform. A closed trade shows the list when there were changes. wickwatch compares the values it loads anyway (about once a minute, by the alert check) and asks the broker nothing extra, so the time is when a change was noticed, several changes between two loads show as one, and changes from before this version are missing. API: `GET /accounts/:number/positions/:positionId/changes` (migration 0024, table `position_history`).
+- Stay logged in: the login has **Stay logged in** (on by default), which keeps the session for 30 days, also after closing the browser. Without it the session ends with the browser, after 12 hours without use, or after 7 days. **Profile → Sessions** lists where you are logged in (browser and system, since when, until when) and logs out a single session, e.g. on a lost phone, or all others. API: `POST /auth/login` takes `remember`; `GET /auth/sessions`, `DELETE /auth/sessions/:id` and `DELETE /auth/sessions` (migration 0023).
 - MCP tool `get_instance_parameters` (admin tokens only): algo, symbol, period and the parameter values of an instance's configuration version, with the version it runs with. Text values whose parameter name looks like a secret (licence key, token, password) are left out and named in `hidden`; each call is audit-logged (`instance.parameters_read`).
 
 ### Fixed
