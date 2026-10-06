@@ -10,6 +10,9 @@ import { isAdmin } from "../session";
 /** The audit log for admins: who did what, and what wickwatch did by itself (loss guard, autostart). */
 const { t, te, locale } = useI18n();
 
+/** Entries per load: a screenful to read, older ones on demand ("Show older entries"). */
+const PAGE_SIZE = 25;
+
 const entries = ref<AuditRecord[]>([]);
 const actions = ref<string[]>([]);
 const more = ref(false);
@@ -51,6 +54,7 @@ async function load(append = false) {
       ...(from ? { since: from } : {}),
       ...(target.value.trim() ? { target: target.value.trim() } : {}),
       ...(before !== undefined ? { before } : {}),
+      limit: PAGE_SIZE,
     });
     entries.value = append ? [...entries.value, ...page.entries] : page.entries;
     actions.value = page.actions;
