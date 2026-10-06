@@ -87,6 +87,8 @@ export const AlertCode = Type.Union([
   Type.Literal("account_error"),
   Type.Literal("challenge_breached"),
   Type.Literal("challenge_limit"),
+  /** No executed trade for a while: the firm closes inactive accounts (rule `inactivity`). */
+  Type.Literal("challenge_inactive"),
   Type.Literal("challenge_passed"),
   Type.Literal("challenge_guard"),
   /** The server clock is off (subject "host"); bots, trading days and daily resets depend on it. */

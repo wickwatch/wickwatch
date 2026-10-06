@@ -14,6 +14,7 @@
   "maxLoss": { "limitPct": 0, "type": "static" },
   "minTradingDays": 0,
   "durationDays": null,
+  "maxInactiveDays": 0,
   "tradingDayDefinition": "at-least-one-trade-opened",
   "source": "https://example.com/rules",
   "asOf": "YYYY-MM-DD"

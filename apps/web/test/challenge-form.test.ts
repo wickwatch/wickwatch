@@ -65,6 +65,20 @@ describe("ChallengeForm", () => {
     expect(puts[1]).toMatchObject({ guard: { usagePct: 80 } });
   });
 
+  it("saves the days without a trade only when they are entered", async () => {
+    const wrapper = mount(ChallengeForm, { props: { number: "1111111" }, global: { plugins: [i18n] } });
+    await flushPromises();
+    const field = wrapper.findAll("label.field").find((l) => l.text().startsWith("Closed after days without a trade"));
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect((puts[0] as ChallengeProfile).rules).not.toHaveProperty("maxInactiveDays");
+
+    await field?.find("input").setValue("21");
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+    expect((puts[1] as ChallengeProfile).rules).toMatchObject({ maxInactiveDays: 21 });
+  });
+
   it("tells whether inputs changed, and reports a save instead of navigating", async () => {
     const wrapper = mount(ChallengeForm, { props: { number: "1111111" }, global: { plugins: [i18n] } });
     await flushPromises();

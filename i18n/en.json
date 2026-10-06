@@ -126,7 +126,8 @@
       "dailyLoss": "Daily loss",
       "maxLoss": "Max drawdown",
       "tradingDays": "Trading days",
-      "duration": "Duration"
+      "duration": "Duration",
+      "inactivity": "Days without a trade"
     },
     "status": {
       "running": "Running",
@@ -176,6 +177,7 @@
       "trailingEodBalance": "Trailing (from the highest day-start balance)"
     },
     "durationDays": "Duration (days)",
+    "maxInactiveDays": "Closed after days without a trade",
     "delete": "Remove profile",
     "deleteConfirm": "Remove the challenge profile of account {account}? Recorded trading days are kept.",
     "guard": {
@@ -375,6 +377,7 @@
       "instance_disconnected": "{subject} is connected to the broker again",
       "account_error": "Account {subject} is reachable again",
       "challenge_limit": "Account {subject}: {rule} is below the warning level again",
+      "challenge_inactive": "Account {subject} has traded again",
       "host_clock": "Server clock is in sync again"
     },
     "removed": {
@@ -388,6 +391,7 @@
     "account_error": "Account {subject} not reachable: {reason}",
     "challenge_breached": "Account {subject}: challenge rule breached – {rule}",
     "challenge_limit": "Account {subject}: {used} % of the {rule} limit used",
+    "challenge_inactive": "Account {subject}: no trade for {days} days – the firm closes the account after {limit} days without one",
     "challenge_passed": "Account {subject}: challenge goals reached",
     "attribution_ambiguous": "Account {subject}: trades on {symbol} cannot be attributed – {instances} share the symbol and one uses account-symbol",
     "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}",

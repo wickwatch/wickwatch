@@ -42,6 +42,8 @@ export const ChallengeRules = Type.Object({
   ),
   minTradingDays: Type.Optional(Type.Integer({ minimum: 0, maximum: 1000 })),
   durationDays: Type.Optional(Type.Union([Type.Integer({ minimum: 1, maximum: 3650 }), Type.Null()])),
+  /** The firm closes the account after this many days without an executed trade; missing: no such rule. */
+  maxInactiveDays: Type.Optional(Type.Integer({ minimum: 1, maximum: 3650 })),
 });
 export type ChallengeRules = Type.Static<typeof ChallengeRules>;
 
@@ -89,6 +91,7 @@ export const RuleId = Type.Union([
   Type.Literal("maxLoss"),
   Type.Literal("tradingDays"),
   Type.Literal("duration"),
+  Type.Literal("inactivity"),
 ]);
 export type RuleId = Type.Static<typeof RuleId>;
 
@@ -117,7 +120,7 @@ export const RuleResult = Type.Object({
   unit: Type.Union([Type.Literal("percent"), Type.Literal("days")]),
   /** Based on an estimate, e.g. day-start equity was not recorded at the reset. */
   approximate: Type.Optional(Type.Boolean()),
-  /** Still being loaded, e.g. the trading days before the start of a new profile: the value may rise. */
+  /** Still being loaded, e.g. the trading days before the start of a new profile: the value may change. */
   pending: Type.Optional(Type.Boolean()),
 });
 export type RuleResult = Type.Static<typeof RuleResult>;

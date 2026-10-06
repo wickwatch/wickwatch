@@ -39,6 +39,18 @@ describe("ChallengeRules", () => {
     expect(text).not.toContain("Running");
   });
 
+  it("shows the days without a trade as neutral until they need attention", () => {
+    const inactive = (status: "ok" | "danger", value: number) =>
+      render(challenge({ rules: [{ id: "inactivity", status, value, limit: 21, usage: value / 21, unit: "days" }] }));
+    const fine = inactive("ok", 3);
+    expect(fine.text()).toContain("Days without a trade");
+    expect(fine.text()).toContain("3 of 21");
+    expect(fine.find(".rule__fill").classes()).toContain("fill--info");
+    const late = inactive("danger", 17);
+    expect(late.find(".rule__fill").classes()).toContain("fill--negative");
+    expect(late.text()).toContain("81 % of the limit used");
+  });
+
   it("shows the overall state when it matters", () => {
     expect(render(challenge({ status: "breached" })).text()).toContain("Breached");
     expect(render(challenge({ status: "passed" })).text()).toContain("Goals reached");

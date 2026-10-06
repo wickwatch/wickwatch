@@ -45,6 +45,7 @@ const form = reactive({
   maxLossType: "static" as NonNullable<ChallengeRules["maxLoss"]>["type"],
   minTradingDays: undefined as number | undefined,
   durationDays: undefined as number | undefined,
+  maxInactiveDays: undefined as number | undefined,
   guardOn: false,
   guardPct: 80 as number | undefined,
 });
@@ -63,6 +64,7 @@ function applyRules(rules: ChallengeRules) {
   form.maxLossType = rules.maxLoss?.type ?? "static";
   form.minTradingDays = rules.minTradingDays || undefined;
   form.durationDays = rules.durationDays ?? undefined;
+  form.maxInactiveDays = rules.maxInactiveDays;
 }
 
 const selectedTemplate = computed(() => templates.value.find((t) => t.id === form.templateId));
@@ -102,6 +104,7 @@ function toProfile(): ChallengeProfile {
     ...(isSet(form.maxLossPct) ? { maxLoss: { limitPct: form.maxLossPct, type: form.maxLossType } } : {}),
     ...(isSet(form.minTradingDays) && form.minTradingDays > 0 ? { minTradingDays: form.minTradingDays } : {}),
     ...(isSet(form.durationDays) && form.durationDays > 0 ? { durationDays: form.durationDays } : {}),
+    ...(isSet(form.maxInactiveDays) && form.maxInactiveDays > 0 ? { maxInactiveDays: form.maxInactiveDays } : {}),
   };
   return {
     ...(form.templateId ? { templateId: form.templateId } : {}),
@@ -154,6 +157,7 @@ const fields = {
   maxLoss: v.field(() => form.maxLossPct, checks.number({ min: 0.1, max: 100 })),
   tradingDays: v.field(() => form.minTradingDays, checks.number({ min: 0, integer: true })),
   duration: v.field(() => form.durationDays, checks.number({ min: 1, integer: true })),
+  inactiveDays: v.field(() => form.maxInactiveDays, checks.number({ min: 1, integer: true })),
   guardPct: v.field(
     () => form.guardPct,
     (value) => (form.guardOn ? checks.required(value) : undefined),
@@ -357,6 +361,18 @@ const remove = () =>
               step="1"
             />
             <FieldError :field="fields.duration" />
+          </label>
+          <label class="field">
+            {{ $t("challenge.maxInactiveDays") }}
+            <input
+              v-model.number="form.maxInactiveDays"
+              v-bind="fields.inactiveDays.attrs.value"
+              class="input mono"
+              type="number"
+              min="1"
+              step="1"
+            />
+            <FieldError :field="fields.inactiveDays" />
           </label>
         </div>
       </fieldset>
