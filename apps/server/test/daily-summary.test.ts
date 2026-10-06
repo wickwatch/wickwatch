@@ -26,6 +26,8 @@ const overview: Overview = {
         rules: [
           { id: "dailyLoss", status: "ok", value: 1, limit: 5, usage: 0.2, unit: "percent" },
           { id: "tradingDays", status: "reached", value: 48, limit: 4, usage: 12, unit: "days" },
+          // Reported by an alert of its own: no line in the summary.
+          { id: "inactivity", status: "ok", value: 3, limit: 30, usage: 0.1, unit: "days" },
         ],
       },
     },

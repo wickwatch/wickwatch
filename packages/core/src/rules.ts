@@ -24,8 +24,8 @@ export const INSTANCE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 /**
- * Challenge rules reported by an alert of their own (the days without a trade): they get no bar on the account and do
- * not make the challenge "near a limit". A breach still counts like any other.
+ * Challenge rules reported by an alert of their own (the days without a trade): they get no bar on the account and no
+ * line in the daily summary, and do not make the challenge "near a limit". A breach still counts like any other.
  */
 export const isAlertOnlyRule = (id: RuleId): boolean => id === "inactivity";
 
