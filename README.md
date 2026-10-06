@@ -21,7 +21,7 @@ wickwatch starts with a **demo adapter**: fake accounts, instances, positions an
 With Docker:
 
 ```sh
-docker run --rm -p 3000:3000 -e MASTER_KEY="$(openssl rand -base64 32)" -v wickwatch-data:/app/data ghcr.io/wickwatch/wickwatch:0.6.0
+docker run --rm -p 3000:3000 -e MASTER_KEY="$(openssl rand -base64 32)" -v wickwatch-data:/app/data ghcr.io/wickwatch/wickwatch:0.7.0
 ```
 
 To build the image yourself instead: `docker build -t wickwatch .` and run `wickwatch` in place of the image name.
