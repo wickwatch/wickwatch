@@ -217,6 +217,7 @@ function overall(results: RuleResult[]): ChallengeStatus {
   if (results.some((r) => r.status === "breached")) return "breached";
   const goals = results.filter((r) => r.id === "profitTarget" || r.id === "tradingDays");
   if (goals.length > 0 && goals.every((r) => r.status === "reached")) return "passed";
-  if (results.some((r) => r.status === "warning" || r.status === "danger")) return "warning";
+  // Days without a trade have an alert of their own and no bar: they do not make the challenge "near a limit".
+  if (results.some((r) => r.id !== "inactivity" && (r.status === "warning" || r.status === "danger"))) return "warning";
   return "running";
 }
