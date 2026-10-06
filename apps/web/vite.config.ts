@@ -46,6 +46,7 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     environmentOptions: { happyDOM: { url: "http://localhost/" } },
+    setupFiles: ["./test/setup.ts"],
   },
   server: {
     proxy: {
