@@ -173,6 +173,7 @@ const meta = computed(() => {
         <TradeTables
           v-else
           kind="positions"
+          :account="data.account.number"
           :positions="data.positions"
           :instances="data.instances"
           :can-close="isAdmin"

@@ -1,4 +1,4 @@
-import { Account, EmergencyStopReport, isTimeZone } from "@wickwatch/core";
+import { Account, EmergencyStopReport, isTimeZone, PositionChange } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import { decryptCredential, findAccount, findAccountById, findAccountId, type AccountDirectory } from "../accounts";
@@ -10,6 +10,7 @@ import type { Cipher } from "../security/cipher";
 import { accountReferences } from "../services/parameter-checks";
 import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
+import type { PositionHistory } from "../services/position-history";
 import type { SymbolCache } from "../services/symbols";
 
 const PositionParams = Type.Object({
@@ -24,11 +25,12 @@ export interface AccountRouteOptions {
   cipher: Cipher | undefined;
   labelPrefix: string;
   symbols: SymbolCache;
+  positionHistory: PositionHistory;
 }
 
 export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = async (
   app,
-  { adapters, accounts, db, cipher, labelPrefix, symbols },
+  { adapters, accounts, db, cipher, labelPrefix, symbols, positionHistory },
 ) => {
   /** Accounts of the active broker adapter; rows of another adapter (e.g. demo) are not usable. */
   async function loadAccounts(id?: number): Promise<Account[]> {
@@ -236,6 +238,27 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const entry = await findAccountById(accounts, request.params.id);
       if (!entry) return reply.code(404).send({ error: "not_found" });
       return [...(await symbols.get(entry))].sort((a, b) => a.localeCompare(b));
+    },
+  );
+
+  app.get(
+    "/accounts/:number/positions/:positionId/changes",
+    {
+      schema: {
+        tags: ["accounts"],
+        summary: "Changes wickwatch noticed on a position (stop loss, take profit, volume, entry), oldest first",
+        description:
+          "Also for a closed position. The broker is not asked: wickwatch compares the values of each load, so `at` " +
+          "is when a change was noticed and changes from before it first saw the position are missing.",
+        params: PositionParams,
+        response: { 200: Type.Array(PositionChange), 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, positionId } = request.params;
+      const id = await findAccountId(accounts, number);
+      if (id === undefined) return reply.code(404).send({ error: "not_found" });
+      return positionHistory.changes(id, positionId);
     },
   );
 

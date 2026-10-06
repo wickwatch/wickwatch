@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { AccountOrder, AccountPosition, TradeDeal } from "@wickwatch/core";
+import type { AccountOrder, AccountPosition, PositionChange, TradeDeal } from "@wickwatch/core";
 import { dealResult } from "@wickwatch/core/money";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { api, errorKey } from "../api";
 import { durationParts, formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
 import SignedValue from "./SignedValue.vue";
 
@@ -12,7 +13,12 @@ export type TradeItem =
   | { kind: "deal"; value: TradeDeal };
 
 /** Everything known about one position, order or closed trade; shown in the drawer next to TradeTables. */
-const props = defineProps<{ item: TradeItem; now: number }>();
+const props = defineProps<{
+  item: TradeItem;
+  now: number;
+  /** The account the trade is on; without it a position's changes are not asked for. */
+  account?: string | undefined;
+}>();
 const { t, locale } = useI18n();
 
 const price = (value: number | undefined) =>
@@ -26,6 +32,39 @@ const held = (from: string | undefined, to: number) => {
 
 const deal = computed(() => (props.item.kind === "deal" ? props.item.value : undefined));
 const net = computed(() => (deal.value ? dealResult(deal.value) : 0));
+
+/** The position whose changes are shown: the open one, or the one a closed trade was. */
+const positionId = computed(() => (props.item.kind === "position" ? props.item.value.id : deal.value?.positionId));
+/** Undefined while loading and for an order. */
+const changes = ref<PositionChange[]>();
+const changesError = ref<string>();
+watch(
+  [() => props.account, positionId],
+  async ([account, id], _, onCleanup) => {
+    changes.value = undefined;
+    changesError.value = undefined;
+    if (!account || !id) return;
+    // Another trade may be shown by the time the answer is there.
+    let current = true;
+    onCleanup(() => (current = false));
+    try {
+      const loaded = await api.positionChanges(account, id);
+      if (current) changes.value = loaded;
+    } catch (e) {
+      if (current) changesError.value = errorKey(e);
+    }
+  },
+  { immediate: true },
+);
+const CHANGE_LABEL = { volume: "trade.lots", entry: "trade.entry", sl: "trade.sl", tp: "trade.tp" } as const;
+/** Lots as a number, everything else as a price. */
+const shown = (change: PositionChange, value: number | undefined) =>
+  change.field === "volume" && value !== undefined ? formatNumber(locale.value, value) : price(value);
+/** An open position always says whether something changed; a closed trade only when wickwatch saw a change. */
+const showChanges = computed(
+  () =>
+    changesError.value !== undefined || (changes.value && (props.item.kind === "position" || changes.value.length > 0)),
+);
 </script>
 
 <template>
@@ -125,6 +164,22 @@ const net = computed(() => (deal.value ? dealResult(deal.value) : 0));
     <dt>{{ $t("trade.id") }}</dt>
     <dd class="mono">{{ item.value.id }}</dd>
   </dl>
+
+  <section v-if="showChanges" class="changes" aria-labelledby="trade-changes-title">
+    <h3 id="trade-changes-title">{{ $t("trade.changes") }}</h3>
+    <p v-if="changesError" class="tone-negative" role="alert">{{ $t(changesError) }}</p>
+    <p v-else-if="!changes?.length" class="muted">{{ $t("trade.noChanges") }}</p>
+    <ol v-else>
+      <li v-for="(change, index) in changes" :key="index">
+        <span class="mono muted">{{ date(change.at) }}</span>
+        <span>{{ $t(CHANGE_LABEL[change.field]) }}</span>
+        <span class="mono">{{
+          $t("format.fromTo", { from: shown(change, change.from), to: shown(change, change.to) })
+        }}</span>
+      </li>
+    </ol>
+    <p class="field__hint">{{ $t("trade.changesHint") }}</p>
+  </section>
 </template>
 
 <style scoped>
@@ -144,5 +199,40 @@ const net = computed(() => (deal.value ? dealResult(deal.value) : 0));
   margin: 0;
   text-align: right;
   overflow-wrap: anywhere;
+}
+
+.changes {
+  margin-top: var(--ww-space-5);
+  font-size: var(--ww-size-sm);
+}
+
+.changes h3 {
+  margin: 0 0 var(--ww-space-2);
+  font-size: var(--ww-size-sm);
+}
+
+.changes ol {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  gap: var(--ww-space-2) var(--ww-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changes li {
+  display: contents;
+}
+
+.changes li > :last-child {
+  text-align: right;
+}
+
+.changes p {
+  margin: 0;
+}
+
+.changes .field__hint {
+  margin-top: var(--ww-space-3);
 }
 </style>

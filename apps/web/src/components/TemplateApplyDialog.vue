@@ -142,7 +142,7 @@ function save() {
                 />
                 <span class="change__name">{{ label(n) }}</span>
                 <span class="mono change__values">{{
-                  $t("templates.change", { from: show(current[n]), to: show(result.values[n]) })
+                  $t("format.fromTo", { from: show(current[n]), to: show(result.values[n]) })
                 }}</span>
               </label>
             </fieldset>

@@ -119,6 +119,19 @@ export type AccountPosition = Type.Static<typeof AccountPosition>;
 export const AccountOrder = Type.Object({ ...PendingOrder.properties, instance: Type.Optional(Type.String()) });
 export type AccountOrder = Type.Static<typeof AccountOrder>;
 
+/**
+ * Something that changed on an open position, whoever did it (the bot, a trailing stop, by hand): its stop loss or
+ * take profit, its volume in lots (a partial close, or more added) or with that its entry price. `from` or `to`
+ * missing: no stop loss or take profit was set. `at` is when wickwatch noticed, up to a poll after the change itself.
+ */
+export const PositionChange = Type.Object({
+  at: IsoTime,
+  field: Type.Union([Type.Literal("volume"), Type.Literal("entry"), Type.Literal("sl"), Type.Literal("tp")]),
+  from: Type.Optional(Type.Number()),
+  to: Type.Optional(Type.Number()),
+});
+export type PositionChange = Type.Static<typeof PositionChange>;
+
 /** One account with its instances and all its open positions and pending orders, built by buildAccountDetail(). */
 export const AccountDetail = Type.Object({
   time: IsoTime,

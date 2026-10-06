@@ -24,6 +24,8 @@ const props = defineProps<{
   busy?: ReadonlyMap<string, TradeAction>;
   /** Adds an "Instance" column (account page): each trade's `instance`, linked to its page. */
   instances?: InstanceSummary[] | undefined;
+  /** The account the trades are on; with it the details show what changed on a position. */
+  account?: string | undefined;
 }>();
 defineEmits<{ close: [position: AccountPosition]; cancel: [order: AccountOrder]; attribution: [positionId: string] }>();
 const { t, locale } = useI18n();
@@ -283,7 +285,7 @@ const detailTitle = computed(() => {
       @prev="step(-1)"
       @next="step(1)"
     >
-      <TradeDetail v-if="selected" :item="selected.item" :now="selected.now" />
+      <TradeDetail v-if="selected" :item="selected.item" :now="selected.now" :account="account" />
     </AppModal>
   </div>
 </template>

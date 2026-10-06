@@ -408,7 +408,8 @@
     "daysHours": "{d} d {h} h",
     "hoursMinutes": "{h} h {m} min",
     "minutes": "{m} min",
-    "none": "–"
+    "none": "–",
+    "fromTo": "{from} → {to}"
   },
   "auth": {
     "username": "User name",
@@ -510,7 +511,10 @@
     "positionId": "Position ID",
     "id": "ID",
     "noExpiry": "Until cancelled",
-    "riskShare": "({pct} of the balance)"
+    "riskShare": "({pct} of the balance)",
+    "changes": "Changes",
+    "noChanges": "None noticed so far.",
+    "changesHint": "Stop loss, take profit, lots and entry, compared about once a minute; the time is when a change was noticed."
   },
   "log": {
     "filter": "Filter log",
@@ -768,7 +772,6 @@
     "none": "No templates for {algo} yet. Save one with \"Save as template…\" on a version below, or from a file on the Algos page.",
     "changes": "1 value changes | {count} values change",
     "changesHint": "Untick a value to keep the current one, e.g. a licence key that belongs to this account.",
-    "change": "{from} → {to}",
     "noChanges": "The template matches the current values; there is nothing to save.",
     "rejected": "Not taken, they do not fit this algo version: {names}",
     "unknown": "Not taken, the algo does not know them: {names}",

@@ -33,6 +33,7 @@ import { LogTracker } from "./services/log-tracker";
 import { MarketHoursCache } from "./services/market-hours";
 import { NewsCalendar } from "./services/news-calendar";
 import { OverviewLoader, withChangeNotice } from "./services/overview";
+import { PositionHistory, withPositionHistory } from "./services/position-history";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
 
@@ -90,11 +91,15 @@ export async function buildApp({
   const { basePath, labelPrefix } = config;
   const logArchive = config.logArchive ? new LogArchive(config.logArchive) : undefined;
   // Every action that changes what the overview shows drops its shared load, whoever runs it.
-  const adapters = withChangeNotice({ ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) }, () => {
-    overview.invalidate();
-  });
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
-  const accounts = dbAccountDirectory(db, cipher, adapters.broker.id);
+  const accounts = dbAccountDirectory(db, cipher, given.broker.id);
+  const positionHistory = new PositionHistory({ db, accounts, log: app.log });
+  const adapters = withPositionHistory(
+    withChangeNotice({ ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) }, () => {
+      overview.invalidate();
+    }),
+    positionHistory,
+  );
   const symbols = createSymbolCache(adapters.broker);
   const history = createDealHistory(adapters.broker, app.log);
   const readLog = logReader(adapters.runtime, logArchive);
@@ -141,7 +146,16 @@ export async function buildApp({
     prefix: api,
   });
   await app.register(credentialRoutes, { db, cipher, adapters, prefix: api });
-  await app.register(accountRoutes, { adapters, accounts, db, cipher, labelPrefix, symbols, prefix: api });
+  await app.register(accountRoutes, {
+    adapters,
+    accounts,
+    db,
+    cipher,
+    labelPrefix,
+    symbols,
+    positionHistory,
+    prefix: api,
+  });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);
   await app.register(challengeRoutes, {
     db,

@@ -408,7 +408,8 @@
     "daysHours": "{d} T {h} h",
     "hoursMinutes": "{h} h {m} min",
     "minutes": "{m} min",
-    "none": "–"
+    "none": "–",
+    "fromTo": "{from} → {to}"
   },
   "auth": {
     "username": "Benutzername",
@@ -510,7 +511,10 @@
     "positionId": "Positions-ID",
     "id": "ID",
     "noExpiry": "Bis storniert",
-    "riskShare": "({pct} der Balance)"
+    "riskShare": "({pct} der Balance)",
+    "changes": "Änderungen",
+    "noChanges": "Bisher keine bemerkt.",
+    "changesHint": "Stop-Loss, Take-Profit, Lots und Einstieg, etwa einmal pro Minute verglichen; die Zeit ist die, zu der eine Änderung bemerkt wurde."
   },
   "log": {
     "filter": "Log filtern",
@@ -768,7 +772,6 @@
     "none": "Für {algo} gibt es noch keine Vorlage. Speichere eine mit „Als Vorlage speichern…“ an einer Version unten oder auf der Algos-Seite aus einer Datei.",
     "changes": "1 Wert ändert sich | {count} Werte ändern sich",
     "changesHint": "Nimm den Haken weg, um den aktuellen Wert zu behalten, z. B. einen Lizenzschlüssel, der zu diesem Konto gehört.",
-    "change": "{from} → {to}",
     "noChanges": "Die Vorlage stimmt mit den aktuellen Werten überein; es gibt nichts zu speichern.",
     "rejected": "Nicht übernommen, passen nicht zu dieser Algo-Version: {names}",
     "unknown": "Nicht übernommen, der Algo kennt sie nicht: {names}",

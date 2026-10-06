@@ -1,6 +1,7 @@
 import type { InstanceDetail } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../src/api";
 import { formatDateTime } from "../src/format";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
@@ -331,6 +332,36 @@ describe("InstanceView", () => {
     const head = drawer?.findAll(".modal__head button") ?? [];
     expect(head.map((b) => b.attributes("aria-label"))).toEqual(["Previous entry", "Next entry", "Close"]);
     expect(head.every((b) => b.attributes("data-tooltip") === undefined)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("shows what changed on a position in the drawer", async () => {
+    const changes = vi.spyOn(api, "positionChanges").mockResolvedValue([
+      { at: "2026-09-25T10:07:00.000Z", field: "sl", from: 19380, to: 19412.5 },
+      { at: "2026-09-25T10:20:00.000Z", field: "tp", to: 19500 },
+      { at: "2026-09-25T10:30:00.000Z", field: "volume", from: 1, to: 0.5 },
+    ]);
+    const wrapper = await render();
+    const drawer = () => wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"));
+    await wrapper.find(".table-wrap tbody tr").trigger("click");
+    await flushPromises();
+    expect(changes).toHaveBeenCalledWith("1111111", "p1");
+    const rows = drawer()!
+      .findAll(".changes li")
+      .map((li) => li.findAll("span").map((s) => s.text()));
+    expect(rows).toEqual([
+      [formatDateTime("en", "2026-09-25T10:07:00.000Z"), "SL", "19,380 → 19,412.5"],
+      [formatDateTime("en", "2026-09-25T10:20:00.000Z"), "TP", "– → 19,500"],
+      [formatDateTime("en", "2026-09-25T10:30:00.000Z"), "Lots", "1.00 → 0.50"],
+    ]);
+
+    // An open position says so when nothing moved; a closed trade then shows no section at all.
+    changes.mockResolvedValue([]);
+    await drawer()!.find("dialog").trigger("keydown", { key: "Escape" });
+    await wrapper.find(".table-wrap tbody tr").trigger("click");
+    await flushPromises();
+    expect(drawer()!.find(".changes").text()).toContain("None noticed so far.");
+    changes.mockRestore();
     wrapper.unmount();
   });
 

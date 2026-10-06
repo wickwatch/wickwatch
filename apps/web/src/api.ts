@@ -28,6 +28,7 @@ import type {
   LogSearchResult,
   Overview,
   PauseWindow,
+  PositionChange,
   Schedule,
   ScheduleInput,
   ScheduleRules,
@@ -183,6 +184,11 @@ export const api = {
     post<undefined>(`accounts/${encodeURIComponent(account)}/orders/${encodeURIComponent(orderId)}/cancel`, {
       confirm: orderId,
     }),
+  /** Changes noticed on a position, open or closed (stop loss, take profit, volume, entry), oldest first. */
+  positionChanges: (account: string, positionId: string) =>
+    request<PositionChange[]>(
+      `accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/changes`,
+    ),
   algos: () => request<Algo[]>("algos"),
   audit: (query: { action?: string; target?: string; since?: string; before?: number }) => {
     const params = new URLSearchParams();

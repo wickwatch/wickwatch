@@ -263,6 +263,21 @@ export interface GuardTripsTable {
   at: string;
 }
 
+/** What can change on an open position, as seen over time; a row per first sight and per change. */
+export interface PositionHistoryTable {
+  id: Generated<number>;
+  account_id: number;
+  /** The broker's position id; unique per account only. */
+  position_id: string;
+  /** In lots. */
+  volume: number;
+  entry: number;
+  sl: number | null;
+  tp: number | null;
+  /** When wickwatch saw these values first, not when the broker set them. */
+  at: string;
+}
+
 export interface Database {
   users: UsersTable;
   credentials: CredentialsTable;
@@ -282,6 +297,7 @@ export interface Database {
   market_hours: MarketHoursTable;
   daily_summaries: DailySummariesTable;
   guard_trips: GuardTripsTable;
+  position_history: PositionHistoryTable;
   schedules: SchedulesTable;
   instance_schedules: InstanceSchedulesTable;
   news_events: NewsEventsTable;

@@ -22,6 +22,7 @@ import { algoRiskParameter } from "./0020-algo-risk-parameter";
 import { schedules } from "./0021-schedules";
 import { instanceSchedules } from "./0022-instance-schedules";
 import { sessionRemember } from "./0023-session-remember";
+import { positionHistory } from "./0024-position-history";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -49,4 +50,5 @@ export const migrations: Record<string, Migration> = {
   "0021-schedules": schedules,
   "0022-instance-schedules": instanceSchedules,
   "0023-session-remember": sessionRemember,
+  "0024-position-history": positionHistory,
 };

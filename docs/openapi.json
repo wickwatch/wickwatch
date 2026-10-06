@@ -6493,6 +6493,145 @@
         }
       }
     },
+    "/api/v1/accounts/{number}/positions/{positionId}/changes": {
+      "get": {
+        "summary": "Changes wickwatch noticed on a position (stop loss, take profit, volume, entry), oldest first",
+        "tags": [
+          "accounts"
+        ],
+        "description": "Also for a closed position. The broker is not asked: wickwatch compares the values of each load, so `at` is when a change was noticed and changes from before it first saw the position are missing.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "number",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "positionId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "at",
+                      "field"
+                    ],
+                    "properties": {
+                      "at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "Z$"
+                      },
+                      "field": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "volume"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "entry"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "sl"
+                            ]
+                          },
+                          {
+                            "type": "string",
+                            "enum": [
+                              "tp"
+                            ]
+                          }
+                        ]
+                      },
+                      "from": {
+                        "type": "number"
+                      },
+                      "to": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/accounts/{number}/positions/{positionId}/close": {
       "post": {
         "summary": "Close one open position at the broker",

@@ -101,6 +101,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
       <TradeTables
         v-else
         kind="positions"
+        :account="data.account?.number"
         :positions="data.positions"
         :can-close="isAdmin"
         :can-attribute="isAdmin"
@@ -129,6 +130,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
       <TradeTables
         v-else
         kind="deals"
+        :account="data.account?.number"
         :deals="data.deals"
         :can-attribute="isAdmin"
         :busy="busy"
@@ -151,6 +153,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
         <TradeTables
           v-if="data.excludedPositions.length"
           kind="positions"
+          :account="data.account?.number"
           :positions="data.excludedPositions"
           :can-attribute="isAdmin"
           excluded
@@ -160,6 +163,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
         <TradeTables
           v-if="data.excludedDeals.length"
           kind="deals"
+          :account="data.account?.number"
           :deals="data.excludedDeals"
           :can-attribute="isAdmin"
           excluded
