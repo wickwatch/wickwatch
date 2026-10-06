@@ -55,5 +55,6 @@ This adds `Signed-off-by: Your Name <you@example.com>`. See https://developercer
 - English for code, comments, commits (Conventional Commits) and docs.
 - UI strings go into `i18n/en.json` and `i18n/de.json`, never inline.
 - Use design tokens (`--ww-*`), support dark and light mode.
+- Keep the interface accessible: keyboard, focus ring, accessible names, no meaning by colour alone. What the project aims for is in [`ACCESSIBILITY.md`](ACCESSIBILITY.md).
 - Add or update tests; adapters must pass the contract test suite.
 - No secrets, real account numbers or credentials in code, tests or screenshots.
