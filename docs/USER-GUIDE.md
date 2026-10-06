@@ -98,7 +98,7 @@ The account card and page then show each rule with a bar and its state: in words
 
 **Trading days** count the days on which a position was opened, as prop firms do. After you save a profile, wickwatch loads the days since the start date; until then the count says "loading …".
 
-**Days without a trade** count from the last day a position was opened, or from the start date while there was none. Firms close accounts that stay inactive (The Trading Pit after 21 days, for example), and only an executed trade counts: a pending order that did not fill and a position that is merely held do not. wickwatch warns from half of the allowed days on ("no trade for 11 days") and reports the rule as breached on the last one. The firm's own count decides; open a trade in time rather than on the last day.
+**Days without a trade** count from the last day a position was opened, or from the start date while there was none. Firms close accounts that stay inactive (The Trading Pit after 21 days, for example), and only an executed trade counts: a pending order that did not fill and a position that is merely held do not. This rule has no bar on the account: wickwatch raises an alert from half of the allowed days on ("no trade for 11 days"), clears it when the account trades again, and reports the rule as breached on the last day. The firm's own count decides; open a trade in time rather than on the last day.
 
 wickwatch watches the account every minute. The hard daily stop still belongs into the bot ([BOT-CONTRACT.md](BOT-CONTRACT.md)).
 

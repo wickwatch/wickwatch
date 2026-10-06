@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChallengeEvaluation, RuleResult, RuleStatus } from "@wickwatch/core";
-import { ref, useId } from "vue";
+import { computed, ref, useId } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatPercentValue } from "../format";
 import AppIcon from "./AppIcon.vue";
@@ -23,8 +23,9 @@ const TONES: Record<RuleStatus, string> = {
   reached: "positive",
 };
 /** Elapsed time is neither good nor bad: neutral until it runs out. */
-const ELAPSING: RuleResult["id"][] = ["duration", "inactivity"];
-const tone = (rule: RuleResult) => (ELAPSING.includes(rule.id) && rule.status === "ok" ? "info" : TONES[rule.status]);
+const tone = (rule: RuleResult) => (rule.id === "duration" && rule.status === "ok" ? "info" : TONES[rule.status]);
+/** The days without a trade get no bar: nothing to watch day by day, an alert says when it is time to trade. */
+const shown = computed(() => props.challenge.rules.filter((r) => r.id !== "inactivity"));
 const STATUS_TONES = {
   running: "tone-muted",
   warning: "tone-warning",
@@ -70,7 +71,7 @@ function value(rule: RuleResult): string {
     <div :id="`${id}-rules`" class="challenge__rules" :class="{ 'challenge__rules--closed': !open }" :inert="!open">
       <div class="challenge__clip">
         <div class="challenge__list">
-          <div v-for="rule in challenge.rules" :key="rule.id" class="rule">
+          <div v-for="rule in shown" :key="rule.id" class="rule">
             <div class="rule__row">
               <span>{{ $t(`challenge.rule.${rule.id}`) }}</span>
               <span class="mono">
@@ -100,7 +101,7 @@ function value(rule: RuleResult): string {
               {{ $t(`challenge.ruleStatus.${rule.status}`, { used: Math.round(rule.usage * 100) }) }}
             </span>
           </div>
-          <p v-if="challenge.rules.some((r) => r.approximate)" class="challenge__note muted">
+          <p v-if="shown.some((r) => r.approximate)" class="challenge__note muted">
             ≈ {{ $t("challenge.approximate") }}
           </p>
         </div>

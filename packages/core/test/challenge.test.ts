@@ -193,8 +193,9 @@ describe("evaluateChallenge", () => {
     expect(at("2026-09-04")).toMatchObject({ status: "breached", value: 21 });
     // No trade yet: counted from the start of the profile (2026-09-20).
     expect(at()).toMatchObject({ status: "ok", value: 5 });
-    const late = evaluateChallenge(input({ profile: inactive, lastTradingDay: "2026-09-04" }));
-    expect(late.status).toBe("breached");
+    // Only the breach shows in the challenge's state; the warning is an alert of its own.
+    expect(evaluateChallenge(input({ profile: inactive, lastTradingDay: "2026-09-08" })).status).toBe("running");
+    expect(evaluateChallenge(input({ profile: inactive, lastTradingDay: "2026-09-04" })).status).toBe("breached");
   });
 
   it("does not warn about inactivity while the trading days are still loading", () => {
