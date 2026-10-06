@@ -2,6 +2,8 @@
 
 Thanks for helping! wickwatch is a hobby project; please be patient with reviews.
 
+Questions and ideas are welcome in the [Discussions](https://github.com/wickwatch/wickwatch/discussions); bugs and concrete feature requests go to the issues. Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Before you start
 - Open an issue for larger changes so we can agree on the approach.
 - Read `BRAND.md` (design tokens, colours, voice) and `docs/ADAPTERS.md` (the core must stay broker- and strategy-neutral).
