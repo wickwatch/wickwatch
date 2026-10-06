@@ -47,6 +47,9 @@ const STATUS =
   "(stop, emergency stop, loss guard, a schedule's pause), which is no alert; `paused` (until, reasons) means its " +
   "schedule holds it stopped for a weekend, holiday or news.";
 const Since = Type.String({ format: "date-time", description: "ISO 8601 time in UTC, e.g. 2026-10-01T00:00:00Z." });
+/** An all-digit id such as an account number: clients and models send it as a JSON number just as often as a string. */
+const Digits = (description: string) =>
+  Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], { description });
 
 /** The read-only tools of the MCP endpoint; they give the same data as the REST API, for the token's role. */
 export function wickwatchTools(deps: ToolDeps): McpTool[] {
@@ -81,10 +84,7 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         "One account by its number: summary with prop-challenge evaluation (profit target, daily loss, max drawdown, " +
         `trading days), its instances, all open positions and pending orders with the instance they belong to. ${UNTRUSTED}`,
       input: Type.Object({
-        // Clients and models send an all-digit number as a JSON number just as often as a string.
-        number: Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], {
-          description: "Account number.",
-        }),
+        number: Digits("Account number."),
       }),
       run: async (args) => {
         const number = String(args.number);
@@ -104,13 +104,8 @@ export function wickwatchTools(deps: ToolDeps): McpTool[] {
         "about once a minute: `at` is when a change was noticed, several within a minute show as one, and changes " +
         "from before it first saw the position are missing. Empty: none noticed.",
       input: Type.Object({
-        // All digits, so sent as a JSON number just as often as a string (see get_account).
-        account: Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], {
-          description: "Account number.",
-        }),
-        positionId: Type.Union([Type.String({ minLength: 1, maxLength: 64 }), Type.Integer({ minimum: 0 })], {
-          description: "The position's `id` (get_account, get_instance) or a deal's `positionId` (get_instance).",
-        }),
+        account: Digits("Account number."),
+        positionId: Digits("The position's `id` (get_account, get_instance) or a deal's `positionId` (get_instance)."),
       }),
       run: async (args) => {
         const number = String(args.account);

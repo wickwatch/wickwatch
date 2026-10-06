@@ -282,8 +282,9 @@ describe("inactivity from the recorded trading days", () => {
           await evaluateForAccount(t.db, id, inactive, { balance: 100_000, equity: 100_000, deals: [], positions }, now)
         ).rules.find((r) => r.id === "inactivity");
 
-      expect(await rule()).toMatchObject({ status: "danger", value: 17, limit: 21 });
-      expect((await rule())?.pending).toBeUndefined();
+      const late = await rule();
+      expect(late).toMatchObject({ status: "danger", value: 17, limit: 21 });
+      expect(late?.pending).toBeUndefined();
       // A position opened today ends the count before the poller marks the day.
       const opened: Position = {
         id: "p1",

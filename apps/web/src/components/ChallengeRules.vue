@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChallengeEvaluation, RuleResult, RuleStatus } from "@wickwatch/core";
+import { isAlertOnlyRule } from "@wickwatch/core/rules";
 import { computed, ref, useId } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatPercentValue } from "../format";
@@ -24,8 +25,8 @@ const TONES: Record<RuleStatus, string> = {
 };
 /** Elapsed time is neither good nor bad: neutral until it runs out. */
 const tone = (rule: RuleResult) => (rule.id === "duration" && rule.status === "ok" ? "info" : TONES[rule.status]);
-/** The days without a trade get no bar: nothing to watch day by day, an alert says when it is time to trade. */
-const shown = computed(() => props.challenge.rules.filter((r) => r.id !== "inactivity"));
+/** Nothing to watch day by day: an alert says when it is time to trade. */
+const shown = computed(() => props.challenge.rules.filter((r) => !isAlertOnlyRule(r.id)));
 const STATUS_TONES = {
   running: "tone-muted",
   warning: "tone-warning",

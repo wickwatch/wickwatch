@@ -1,6 +1,7 @@
 // Input rules shared by the server and the dashboard. Dependency-free, so the SPA can import them at runtime
 // (`@wickwatch/core/rules`) without pulling in the rest of the core.
 
+import type { RuleId } from "./schemas/challenge";
 import type { InstanceStatus, LogFilter, LogLine } from "./schemas/runtime";
 import type { InstancePause } from "./schemas/schedule";
 
@@ -21,6 +22,12 @@ export const INSTANCE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 /** Algo names and versions end up in folder names and paths; keep them to safe characters. */
 export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+
+/**
+ * Challenge rules reported by an alert of their own (the days without a trade): they get no bar on the account and do
+ * not make the challenge "near a limit". A breach still counts like any other.
+ */
+export const isAlertOnlyRule = (id: RuleId): boolean => id === "inactivity";
 
 /** Running, or about to run again: counts as meant to run. */
 export const isUp = (status: InstanceStatus | undefined): boolean => status === "running" || status === "restarting";
