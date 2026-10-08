@@ -28,7 +28,7 @@ body:
     attributes:
       label: wickwatch version
       description: Shown in the dashboard's footer, or the image tag.
-      placeholder: "0.7.0"
+      placeholder: "0.7.1"
     validations:
       required: true
   - type: dropdown
