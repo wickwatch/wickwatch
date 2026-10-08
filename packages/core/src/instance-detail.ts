@@ -2,7 +2,7 @@ import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
 import { withRisk } from "./risk";
-import { orderItem, positionItem, summarizeInstance } from "./overview";
+import { byTime, orderItem, positionItem, summarizeInstance } from "./overview";
 import type {
   Deal,
   InstanceDetail,
@@ -76,7 +76,6 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
       );
     }) ?? [];
   const asItem = (d: Deal): TradeItem => d;
-  const byTime = (a: Deal, b: Deal) => a.time.localeCompare(b.time);
   const own = mine(data?.deals, asItem).sort(byTime);
   // The first deal that changed the P&L; deals before it (e.g. openings without costs) add nothing.
   const changesPnl = (d: Deal) => dealResult(d) !== 0;

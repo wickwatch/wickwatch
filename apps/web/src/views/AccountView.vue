@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import type { AccountDeals } from "@wickwatch/core";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { api, errorKey } from "../api";
 import AlertList from "../components/AlertList.vue";
 import AppModal from "../components/AppModal.vue";
+import AttributionDialog, { type AttributedTrade } from "../components/AttributionDialog.vue";
 import ChallengeForm from "../components/ChallengeForm.vue";
 import ChallengeRules from "../components/ChallengeRules.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -24,9 +26,10 @@ import { system } from "../system";
 import AppSpinner from "../components/AppSpinner.vue";
 
 /**
- * One trading account: its instances, all its open positions and pending orders (manual ones included, each with the
- * instance it belongs to), and its challenge profile, edited in a modal.
+ * One trading account: its instances, all its open positions, pending orders and closed trades (manual ones included,
+ * each with the instance it belongs to, which admins can set by hand), and its challenge profile, edited in a modal.
  */
+const HISTORY_DAYS = 30;
 const route = useRoute();
 const router = useRouter();
 const { t, locale } = useI18n();
@@ -53,6 +56,43 @@ const canStop = computed(
 const accountNames = computed(() => new Map(account.value ? [[account.value.number, account.value.displayName]] : []));
 
 const { busy: instanceBusy, runAction } = useInstanceActions(notice, refresh);
+
+const deals = shallowRef<AccountDeals>();
+const dealsError = shallowRef<unknown>();
+async function loadDeals() {
+  const asked = number.value;
+  try {
+    const loaded = await api.accountDeals(asked, HISTORY_DAYS);
+    if (asked !== number.value) return;
+    deals.value = loaded;
+    dealsError.value = undefined;
+  } catch (e) {
+    if (asked === number.value) dealsError.value = e;
+  }
+}
+watch(number, () => (deals.value = undefined));
+/**
+ * The closed trades cost one more broker query, so they are not loaded with every poll: when the page opens and when
+ * a trade closed, which shows in the balance and the open positions.
+ */
+const dealsKey = computed(() => {
+  const d = data.value;
+  if (!d || d.account.number !== number.value) return undefined;
+  return [d.account.balance, ...d.positions.map((p) => p.id)].join("|");
+});
+watch(dealsKey, (key) => {
+  if (key !== undefined) void loadDeals();
+});
+
+const assigning = ref<AttributedTrade>();
+async function assigned(message: string) {
+  const { positionId } = assigning.value ?? {};
+  assigning.value = undefined;
+  notice.value = { tone: "positive", text: message };
+  // The closed trades only change if the position has some: they cost a broker query.
+  const listed = deals.value?.deals.some((d) => d.positionId === positionId) ?? false;
+  await Promise.all([refresh(), listed ? loadDeals() : undefined]);
+}
 
 /** The challenge modal; `?challenge=edit` (the old editor's address) opens it. */
 const editing = ref(false);
@@ -177,8 +217,10 @@ const meta = computed(() => {
           :positions="data.positions"
           :instances="data.instances"
           :can-close="isAdmin"
+          :can-assign="isAdmin"
           :busy="busy"
           @close="closing = $event"
+          @assign="assigning = $event"
         />
       </section>
 
@@ -193,6 +235,23 @@ const meta = computed(() => {
           :can-cancel="isAdmin"
           :busy="busy"
           @cancel="cancelling = $event"
+        />
+      </section>
+
+      <section class="panel card" aria-labelledby="history-title">
+        <h2 id="history-title">{{ $t("account.closedTrades") }}</h2>
+        <p class="muted card__hint">{{ $t("account.closedTradesHint", { days: HISTORY_DAYS }) }}</p>
+        <p v-if="dealsError && !deals" class="tone-negative" role="alert">{{ $t(errorKey(dealsError)) }}</p>
+        <AppSpinner v-else-if="!deals" />
+        <p v-else-if="!deals.deals.length" class="muted">{{ $t("chart.noTrades") }}</p>
+        <TradeTables
+          v-else
+          kind="deals"
+          :account="data.account.number"
+          :deals="deals.deals"
+          :instances="data.instances"
+          :can-assign="isAdmin"
+          @assign="assigning = $event"
         />
       </section>
     </template>
@@ -220,6 +279,14 @@ const meta = computed(() => {
       :confirm-label="$t('emergencyStop.confirmAction')"
       @confirm="stop"
       @cancel="confirming = undefined"
+    />
+    <AttributionDialog
+      :open="assigning !== undefined"
+      :account="number"
+      :trade="assigning"
+      :instances="data?.instances ?? []"
+      @saved="assigned"
+      @close="assigning = undefined"
     />
     <AppModal
       :open="editing"
@@ -318,6 +385,10 @@ h1 {
 
 .card p {
   margin: 0;
+}
+
+.card__hint {
+  font-size: var(--ww-size-xs);
 }
 
 @media (max-width: 1000px) {

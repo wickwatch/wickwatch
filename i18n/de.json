@@ -67,6 +67,8 @@
     "dayPnl": "Tages-P&L",
     "number": "Konto {number}",
     "openPositions": "Offene Positionen",
+    "closedTrades": "Geschlossene Trades",
+    "closedTradesHint": "Die letzten {days} Tage, auch Trades ohne Instanz.",
     "instancesActive": "{running} von {total} Instanz aktiv | {running} von {total} Instanzen aktiv",
     "state": {
       "running": "Läuft",
@@ -598,7 +600,15 @@
     "excluded": "Position {id} zählt nicht mehr für diese Instanz.",
     "restored": "Position {id} zählt wieder für diese Instanz.",
     "excludedTitle": "Ausgeschlossene Trades ({count})",
-    "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen."
+    "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen.",
+    "assign": "Instanz zuordnen",
+    "assignTitle": "Trade einer Instanz zuordnen",
+    "assignHint": "Position {id} ({symbol}) mit allen ihren Deals. Sie zählt dann für Kennzahlen, Chart und Verlauf der gewählten Instanz.",
+    "automatic": "Automatisch (die Regeln entscheiden)",
+    "byHand": "von Hand",
+    "to": "Position {id} zählt jetzt für {instance}.",
+    "toNone": "Position {id} gehört jetzt zu keiner Instanz.",
+    "byRules": "Position {id} wird wieder nach den Regeln zugeordnet."
   },
   "algos": {
     "intro": "Bot-Dateien ({formats}), pro Version abgelegt mit ihren Parametern. Alte Versionen bleiben für ein Rollback erhalten.",
@@ -876,8 +886,8 @@
       "algo_delete": "Algo gelöscht",
       "algo_upload": "Algo hochgeladen",
       "algo_settings": "Algo-Einstellungen geändert",
-      "attribution_clear": "Trade der Instanz wieder zugeordnet",
-      "attribution_set": "Trade aus der Instanz genommen",
+      "attribution_clear": "Zuordnung von Hand aufgehoben",
+      "attribution_set": "Trade von Hand zugeordnet",
       "auth_login": "Anmeldung",
       "auth_logout": "Abmeldung",
       "auth_password_change": "Passwort geändert",

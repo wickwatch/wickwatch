@@ -1,4 +1,4 @@
-import type { AccountDetail } from "@wickwatch/core";
+import type { AccountDeals, AccountDetail } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, setLocale } from "../src/i18n";
@@ -50,6 +50,33 @@ const detail = (over: Partial<AccountDetail["account"]> = {}): AccountDetail => 
   alerts: [],
 });
 
+const deals = (): AccountDeals => ({
+  range: { from: "2026-08-31T12:00:00.000Z", to: "2026-09-30T12:00:00.000Z" },
+  deals: [
+    {
+      id: "d1",
+      positionId: "p8",
+      symbol: "GER40",
+      side: "sell",
+      volume: 1,
+      price: 19450,
+      pnl: 50,
+      time: "2026-09-29T09:00:00Z",
+      instance: "alpha",
+    },
+    {
+      id: "d2",
+      positionId: "p9",
+      symbol: "GER40",
+      side: "sell",
+      volume: 1,
+      price: 19470,
+      pnl: 70,
+      time: "2026-09-30T08:00:00Z",
+    },
+  ],
+});
+
 let body: AccountDetail;
 beforeEach(() => {
   setLocale("en", false);
@@ -85,7 +112,13 @@ beforeEach(() => {
       Promise.resolve(
         new Response(
           JSON.stringify(
-            input.pathname.endsWith("/detail") ? body : input.pathname.endsWith("/system") ? system.value : [],
+            input.pathname.endsWith("/detail")
+              ? body
+              : input.pathname.endsWith("/deals")
+                ? deals()
+                : input.pathname.endsWith("/system")
+                  ? system.value
+                  : [],
           ),
           { status: 200 },
         ),
@@ -135,6 +168,46 @@ describe("AccountView", () => {
     // The challenge modal only, no trade details drawer.
     expect(shown.map((m) => m.props("drawer"))).toEqual([false]);
     expect(wrapper.findComponent({ name: "ChallengeForm" }).exists()).toBe(true);
+    wrapper.unmount();
+  });
+
+  it("lists the closed trades, also those of no instance, and assigns one to an instance", async () => {
+    const wrapper = await open();
+    const history = wrapper.find("section[aria-labelledby=history-title]");
+    // Newest first.
+    expect(history.findAll("tbody tr").map((r) => r.find("td").text())).toEqual(["No instance", "alpha"]);
+
+    await history.find("tbody tr button[aria-label='Assign instance']").trigger("click");
+    const dialog = wrapper.findComponent({ name: "AttributionDialog" });
+    expect(dialog.props("trade")).toMatchObject({ positionId: "p9", symbol: "GER40" });
+    const select = dialog.find("select");
+    expect(select.findAll("option").map((o) => o.text())).toEqual([
+      "Automatic (the rules decide)",
+      "No instance",
+      "alpha",
+    ]);
+    // Nothing chosen yet: the rules decide, as before.
+    expect(dialog.find("button[type=submit]").attributes("disabled")).toBeDefined();
+    await select.setValue("=alpha");
+    await dialog.find("form").trigger("submit");
+    await flushPromises();
+
+    const fetch = vi.mocked(globalThis.fetch);
+    const put = fetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(String(put?.[0])).toMatch(/accounts\/1111111\/positions\/p9\/attribution$/);
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ instance: "alpha" });
+    expect(wrapper.find(".notice").text()).toBe("Position p9 now counts for alpha.");
+    expect(dialog.props("open")).toBe(false);
+    // The trades are asked again, not on every poll.
+    expect(fetch.mock.calls.filter(([url]) => String(url).includes("/deals"))).toHaveLength(2);
+    wrapper.unmount();
+  });
+
+  it("offers no attribution to viewers", async () => {
+    session.value = { ...session.value!, user: { ...session.value!.user!, role: "viewer" } };
+    const wrapper = await open();
+    expect(wrapper.find("section[aria-labelledby=history-title] tbody tr").exists()).toBe(true);
+    expect(wrapper.find("button[aria-label='Assign instance']").exists()).toBe(false);
     wrapper.unmount();
   });
 });

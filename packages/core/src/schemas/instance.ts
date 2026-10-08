@@ -2,7 +2,7 @@ import Type from "typebox";
 import { AdapterErrorCode } from "../errors";
 import { IsoTime, Labels } from "./common";
 import { Deal, PendingOrder, Position } from "./broker";
-import { InstanceSummary } from "./overview";
+import { Attributed, InstanceSummary } from "./overview";
 
 /** Key figures over closed trades; averages and ratios are missing when there is no data for them. */
 export const DealStats = Type.Object({
@@ -37,6 +37,15 @@ export const TradeDeal = Type.Object({
   r: Type.Optional(Type.Number()),
 });
 export type TradeDeal = Type.Static<typeof TradeDeal>;
+/** A deal of the account with the instance it belongs to, as for AccountPosition. */
+export const AccountDeal = Type.Object({ ...TradeDeal.properties, ...Attributed.properties });
+export type AccountDeal = Type.Static<typeof AccountDeal>;
+/** The deals of one account in a time range, oldest first, whatever instance they belong to. */
+export const AccountDeals = Type.Object({
+  range: Type.Object({ from: IsoTime, to: IsoTime }),
+  deals: Type.Array(AccountDeal),
+});
+export type AccountDeals = Type.Static<typeof AccountDeals>;
 
 export const InstanceDetail = Type.Object({
   time: IsoTime,

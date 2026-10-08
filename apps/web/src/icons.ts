@@ -44,6 +44,12 @@ export const ICONS = {
   exclude: [{ tag: "circle", cx: 12, cy: 12, r: 8.5 }, path("M6 6l12 12")],
   /** Undo an exclusion. */
   restore: [path("M9 14.5L4 9.5l5-5"), path("M4 9.5h10a5.5 5.5 0 0 1 0 11h-3")],
+  /** Attribute a trade to an instance by hand: an arrow into a box. */
+  assign: [
+    path("M14 4.5h4a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-4"),
+    path("M4.5 12h10"),
+    path("M10.5 8l4 4-4 4"),
+  ],
   /** "More actions" menu. */
   more: [
     { tag: "circle", cx: 5.5, cy: 12, r: 1 },

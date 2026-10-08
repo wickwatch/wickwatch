@@ -83,6 +83,8 @@ The **Overview** tab of an instance shows:
 
 Admins can **Close position** and **Cancel order** from the rows (with confirmation). **Not from this bot** removes a trade from this instance, e.g. a manual one; it is listed under "Excluded trades" and can be restored.
 
+The account page lists all open positions, pending orders and the **closed trades** of the last 30 days of the account, each with its instance, also the trades of no instance (e.g. one you opened by hand in the broker's platform while two bots trade the same symbol, which the rules cannot place). There admins can **Assign instance** on a position or closed trade: choose one of the account's instances, **No instance**, or **Automatic** to let the rules decide again. The trade then counts for that instance's figures, chart and history; a trade attributed by hand is marked "by hand". The change is written to the audit log.
+
 The **status** badge says whether the bot runs, is stopped, has no container yet, or has lost its broker connection (the container keeps running meanwhile). Errors the bot throws while it keeps running are counted and shown with the latest message.
 
 ## 7. Prop challenges

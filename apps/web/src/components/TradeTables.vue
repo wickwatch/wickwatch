@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "@wickwatch/core";
+import type { AccountDeal, AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "@wickwatch/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { TradeAction } from "../composables/useTradeActions";
 import { formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
 import AppModal from "./AppModal.vue";
+import type { AttributedTrade } from "./AttributionDialog.vue";
 import IconButton from "./IconButton.vue";
 import InstanceName from "./InstanceName.vue";
 import SignedValue from "./SignedValue.vue";
@@ -14,20 +15,28 @@ const props = defineProps<{
   kind: "positions" | "orders" | "deals";
   positions?: AccountPosition[];
   orders?: AccountOrder[];
-  deals?: TradeDeal[];
+  /** With `instance` and `manual` on the account page. */
+  deals?: AccountDeal[];
   canClose?: boolean;
   /** Offer "cancel order" on pending orders. */
   canCancel?: boolean;
   /** Offer "not from this bot" (or "restore" when `excluded`). */
   canAttribute?: boolean;
   excluded?: boolean;
+  /** Offer "assign instance" on positions and deals (account page). */
+  canAssign?: boolean;
   busy?: ReadonlyMap<string, TradeAction>;
   /** Adds an "Instance" column (account page): each trade's `instance`, linked to its page. */
   instances?: InstanceSummary[] | undefined;
   /** The account the trades are on; with it the details show what changed on a position. */
   account?: string | undefined;
 }>();
-defineEmits<{ close: [position: AccountPosition]; cancel: [order: AccountOrder]; attribution: [positionId: string] }>();
+defineEmits<{
+  close: [position: AccountPosition];
+  cancel: [order: AccountOrder];
+  attribution: [positionId: string];
+  assign: [trade: AttributedTrade];
+}>();
 const { t, locale } = useI18n();
 
 const price = (value: number | undefined) =>
@@ -42,7 +51,8 @@ const dealRows = computed(() => (showAll.value ? allDeals.value : allDeals.value
 const costs = (d: TradeDeal) => (d.commission ?? 0) + (d.swap ?? 0);
 /** Risk and R columns only when at least one trade knows its initial stop. */
 const withRisk = computed(() => props.deals?.some((d) => d.risk !== undefined) ?? false);
-const refOf = (name: string | undefined) => props.instances?.find((i) => i.name === name)?.ref;
+const refs = computed(() => new Map(props.instances?.map((i) => [i.name, i.ref])));
+const refOf = (name: string | undefined) => (name === undefined ? undefined : refs.value.get(name));
 
 /** The row shown in the details drawer, with the time it was opened (for the holding time of open positions). */
 const selected = ref<{ item: TradeItem; now: number }>();
@@ -106,7 +116,9 @@ const detailTitle = computed(() => {
           :class="{ selected: selectedId === p.id }"
           @click="showRow($event, { kind: 'position', value: p })"
         >
-          <td v-if="instances"><InstanceName :name="p.instance" :instance-ref="refOf(p.instance)" /></td>
+          <td v-if="instances">
+            <InstanceName :name="p.instance" :instance-ref="refOf(p.instance)" :manual="p.manual" />
+          </td>
           <td class="mono">{{ formatDateTime(locale, p.openedAt) }}</td>
           <td>{{ $t(`trade.${p.side}`) }}</td>
           <td class="mono num">{{ formatNumber(locale, p.volume) }}</td>
@@ -132,6 +144,14 @@ const detailTitle = computed(() => {
                 :disabled="busy?.has(p.id)"
                 :aria-busy="busy?.get(p.id) === 'attribution'"
                 @click="$emit('attribution', p.id)"
+              />
+              <IconButton
+                v-if="canAssign"
+                icon="assign"
+                :label="$t('attribution.assign')"
+                variant="ghost"
+                small
+                @click="$emit('assign', { ...p, positionId: p.id })"
               />
               <IconButton
                 v-if="canClose && !excluded"
@@ -210,6 +230,7 @@ const detailTitle = computed(() => {
     <table v-else class="table">
       <thead>
         <tr>
+          <th v-if="instances" scope="col">{{ $t("table.instance") }}</th>
           <th scope="col">{{ $t("trade.time") }}</th>
           <th scope="col">{{ $t("trade.side") }}</th>
           <th scope="col" class="num">{{ $t("trade.lots") }}</th>
@@ -230,6 +251,9 @@ const detailTitle = computed(() => {
           :class="{ selected: selectedId === d.id }"
           @click="showRow($event, { kind: 'deal', value: d })"
         >
+          <td v-if="instances">
+            <InstanceName :name="d.instance" :instance-ref="refOf(d.instance)" :manual="d.manual" />
+          </td>
           <td class="mono">{{ formatDateTime(locale, d.time) }}</td>
           <td>{{ $t(`trade.${d.side}`) }}</td>
           <td class="mono num">{{ formatNumber(locale, d.volume) }}</td>
@@ -261,6 +285,14 @@ const detailTitle = computed(() => {
                 :disabled="busy?.has(d.positionId)"
                 :aria-busy="busy?.get(d.positionId) === 'attribution'"
                 @click="$emit('attribution', d.positionId)"
+              />
+              <IconButton
+                v-if="canAssign"
+                icon="assign"
+                :label="$t('attribution.assign')"
+                variant="ghost"
+                small
+                @click="$emit('assign', d)"
               />
             </div>
           </td>

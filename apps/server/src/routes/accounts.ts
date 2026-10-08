@@ -1,4 +1,12 @@
-import { Account, EmergencyStopReport, isTimeZone, PositionChange } from "@wickwatch/core";
+import {
+  Account,
+  AccountDeals,
+  attributeDeals,
+  EmergencyStopReport,
+  isTimeZone,
+  PositionChange,
+  toIsoTime,
+} from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import { decryptCredential, findAccount, findAccountById, findAccountId, type AccountDirectory } from "../accounts";
@@ -10,7 +18,10 @@ import type { Cipher } from "../security/cipher";
 import { accountReferences } from "../services/parameter-checks";
 import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
+import { RECENT_DAYS } from "../services/deal-history";
+import { loadOverrides } from "../services/overrides";
 import type { PositionHistory } from "../services/position-history";
+import { DAY_MS } from "../services/schedules";
 import type { SymbolCache } from "../services/symbols";
 
 const PositionParams = Type.Object({
@@ -238,6 +249,40 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const entry = await findAccountById(accounts, request.params.id);
       if (!entry) return reply.code(404).send({ error: "not_found" });
       return [...(await symbols.get(entry))].sort((a, b) => a.localeCompare(b));
+    },
+  );
+
+  app.get(
+    "/accounts/:number/deals",
+    {
+      schema: {
+        tags: ["accounts"],
+        summary: "The account's deals of the last days, each with the instance it belongs to",
+        description:
+          "Also the deals of no instance (manual trades, unclear ones), which no instance page shows. Asks the " +
+          "broker, so it is loaded when needed and not with every poll.",
+        params: Type.Object({ number: Type.String({ minLength: 1, maxLength: 64 }) }),
+        querystring: Type.Object({
+          days: Type.Optional(Type.Integer({ minimum: 1, maximum: RECENT_DAYS, default: 30 })),
+        }),
+        response: { 200: AccountDeals, 404: ErrorBody, 502: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number } = request.params;
+      const account = await findAccount(accounts, number);
+      if (!account) return reply.code(404).send({ error: "not_found" });
+      const now = new Date();
+      const from = new Date(now.getTime() - (request.query.days ?? 30) * DAY_MS);
+      const [instances, overrides, deals] = await Promise.all([
+        adapters.runtime.list(),
+        loadOverrides(db, adapters.broker.id),
+        account.credentials().then((c) => adapters.broker.deals(c, number, from.toISOString(), now.toISOString())),
+      ]);
+      return {
+        range: { from: toIsoTime(from), to: toIsoTime(now) },
+        deals: attributeDeals({ instances, labelPrefix, overrides }, number, deals),
+      };
     },
   );
 

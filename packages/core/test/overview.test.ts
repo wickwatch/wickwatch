@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  attributeDeals,
+  buildAccountDetail,
   buildLabels,
   buildOverview,
+  overrideKey,
   type ChallengeEvaluation,
   type Deal,
   type Position,
@@ -195,6 +198,57 @@ describe("buildOverview", () => {
     expect(alerts("running", [rule("inactivity", "ok", 10, 21)])).toEqual([]);
     expect(alerts("breached", [rule("inactivity", "breached", 21, 21)])).toEqual([
       { level: "error", code: "challenge_breached", subject: "111", params: { rule: "inactivity" } },
+    ]);
+  });
+});
+
+describe("trades of no instance on the account page", () => {
+  // Two bots on one account and symbol: a trade opened by hand carries no label of theirs, so the rules cannot place it.
+  const instances = [instance("m30", "111", "running"), instance("h1", "111", "stopped")];
+  const byHand: Deal = { ...deal("", 60), id: "d-hand", positionId: "p-hand" };
+  const input = { instances, labelPrefix: "ww" };
+
+  it("lists every deal of the account, oldest first, with its instance where the rules know one", () => {
+    const later = { ...deal("m30", 20), positionId: "p-bot", time: "2026-09-25T11:00:00.000Z" };
+    expect(attributeDeals(input, "111", [later, byHand]).map((d) => [d.id, d.instance, d.manual])).toEqual([
+      ["d-hand", undefined, undefined],
+      ["d-m30-20", "m30", undefined],
+    ]);
+  });
+
+  it("gives a deal attributed by hand to its instance and marks it, also when set to no instance", () => {
+    const to = (owner: string | null) =>
+      attributeDeals({ ...input, overrides: new Map([[overrideKey("111", "p-hand"), owner]]) }, "111", [byHand])[0];
+    expect(to("h1")).toMatchObject({ instance: "h1", manual: true });
+    expect(to(null)).toMatchObject({ manual: true });
+    expect(to(null)).not.toHaveProperty("instance");
+  });
+
+  it("marks an open position attributed by hand", () => {
+    const open = { ...position("", 5), id: "p-hand" };
+    const detail = buildAccountDetail(
+      {
+        ...input,
+        time,
+        lastLogs: new Map(),
+        overrides: new Map([[overrideKey("111", "p-hand"), "h1"]]),
+        accounts: [
+          {
+            number: "111",
+            displayName: "A",
+            data: {
+              stats: { balance: 1000, equity: 1005, time: time.toISOString() },
+              positions: [open, position("m30", 1)],
+              dealsToday: [],
+            },
+          },
+        ],
+      },
+      "111",
+    );
+    expect(detail?.positions.map((p) => [p.id, p.instance, p.manual])).toEqual([
+      ["p-hand", "h1", true],
+      ["p-m30", "m30", undefined],
     ]);
   });
 });

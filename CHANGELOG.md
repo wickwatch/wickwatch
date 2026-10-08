@@ -4,6 +4,12 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Assign a trade to an instance by hand: the account page lists the **closed trades** of the last 30 days, also those of no instance (e.g. a trade opened by hand next to two bots on the same symbol, which so far showed nowhere once it had closed), with risk and R as on the instance page. Admins can **Assign instance** there and on open positions: one of the account's instances, no instance, or back to the rules. The trade then counts for that instance's figures, chart and history and is marked "by hand". API: `GET /accounts/:number/deals` (`days`, up to 90); `AccountPosition` has `manual`. The attribution route itself (`PUT /accounts/:number/positions/:positionId/attribution`) took an instance name before.
+
+### Changed
+- Audit log: `attribution.set` and `attribution.clear` read "Trade attributed by hand" and "Manual trade attribution removed", as they also cover a trade moved to an instance.
+
 ## 0.7.0 – 2026-10-06
 
 ### Added

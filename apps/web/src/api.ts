@@ -15,6 +15,7 @@ import type {
   ParameterTemplate,
   ParameterTemplateInput,
   ParameterTemplateUpdate,
+  AccountDeals,
   AccountDetail,
   ChallengeProfile,
   ChallengeTemplate,
@@ -157,6 +158,9 @@ export const api = {
   system: () => request<SystemInfo>("system"),
   overview: () => request<Overview>("overview"),
   accountDetail: (number: string) => request<AccountDetail>(`accounts/${encodeURIComponent(number)}/detail`),
+  /** The account's deals of the last `days`, also those of no instance. Asks the broker: not for every poll. */
+  accountDeals: (number: string, days: number) =>
+    request<AccountDeals>(`accounts/${encodeURIComponent(number)}/deals?days=${String(days)}`),
   host: () => request<HostStatus>("host"),
   instanceAction: (ref: string, action: InstanceAction) =>
     post<undefined>(`instances/${encodeURIComponent(ref)}/${action}`),

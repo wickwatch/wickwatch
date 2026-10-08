@@ -115,9 +115,18 @@ export const Overview = Type.Object({
 });
 export type Overview = Type.Static<typeof Overview>;
 
-/** `instance` names the instance a position or order belongs to; missing for manual trades and unclear ones. */
-export const AccountPosition = Type.Object({ ...Position.properties, instance: Type.Optional(Type.String()) });
+/**
+ * `instance` names the instance a trade belongs to; missing for manual trades and unclear ones. `manual` marks a trade
+ * attributed by hand (to an instance or to none) instead of by the rules.
+ */
+export const Attributed = Type.Object({
+  instance: Type.Optional(Type.String()),
+  manual: Type.Optional(Type.Boolean()),
+});
+export type Attributed = Type.Static<typeof Attributed>;
+export const AccountPosition = Type.Object({ ...Position.properties, ...Attributed.properties });
 export type AccountPosition = Type.Static<typeof AccountPosition>;
+/** Orders carry no position id, so no override applies to them and they have no `manual`. */
 export const AccountOrder = Type.Object({ ...PendingOrder.properties, instance: Type.Optional(Type.String()) });
 export type AccountOrder = Type.Static<typeof AccountOrder>;
 

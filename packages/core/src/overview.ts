@@ -1,8 +1,11 @@
 import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type Attributor, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
+import { withRisk } from "./risk";
 import type {
+  AccountDeal,
   AccountDetail,
+  Attributed,
   AccountStats,
   AccountSummary,
   Alert,
@@ -59,6 +62,8 @@ const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
 export const positionItem = (p: Position): TradeItem => ({ label: p.label, symbol: p.symbol, positionId: p.id });
 /** Pending orders have no position yet, so no manual override applies to them. */
 export const orderItem = (o: PendingOrder): TradeItem => ({ label: o.label, symbol: o.symbol });
+/** Oldest first. */
+export const byTime = (a: Deal, b: Deal) => a.time.localeCompare(b.time);
 
 /** One instance with its positions and today's P&L; shared by the overview and the detail view. */
 export function summarizeInstance(
@@ -165,21 +170,47 @@ export function buildAccountDetail(input: OverviewInput, number: string): Accoun
   const account = overview.accounts.find((a) => a.number === number);
   if (!account) return undefined;
   const data = input.accounts.find((a) => a.number === number)?.data;
-  const owner = (item: TradeItem) => attributor.owner(number, item);
   const instances = overview.instances.filter((i) => i.account === number);
   const names = new Set([number, ...instances.map((i) => i.name)]);
   return {
     time: overview.time,
     account,
     instances,
-    positions: (data?.positions ?? []).map((p) => withInstance(p, owner(positionItem(p)))),
-    pendingOrders: (data?.pendingOrders ?? []).map((o) => withInstance(o, owner(orderItem(o)))),
+    positions: (data?.positions ?? []).map((p) => attributed(attributor, number, p, positionItem(p))),
+    pendingOrders: (data?.pendingOrders ?? []).map((o) => attributed(attributor, number, o, orderItem(o))),
     alerts: overview.alerts.filter((a) => names.has(a.subject)),
   };
 }
 
-const withInstance = <T extends object>(item: T, instance: string | undefined): T & { instance?: string } =>
-  instance ? { ...item, instance } : item;
+/**
+ * The deals of one account, oldest first, each with the instance it belongs to (same attribution as everywhere):
+ * for the account page, where also the trades of no instance show and can be attributed by hand.
+ */
+export function attributeDeals(
+  input: Pick<OverviewInput, "instances" | "labelPrefix" | "overrides">,
+  number: string,
+  deals: Deal[],
+): AccountDeal[] {
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
+  // Without a balance: risk and R, as on the instance page, but no risk in %.
+  return withRisk(deals, deals, undefined)
+    .map((d) => attributed(attributor, number, d, d))
+    .sort(byTime);
+}
+
+function attributed<T extends object>(
+  attributor: Attributor,
+  account: string,
+  item: T,
+  trade: TradeItem,
+): T & Attributed {
+  const instance = attributor.owner(account, trade);
+  return {
+    ...item,
+    ...(instance ? { instance } : {}),
+    ...(attributor.isManual(account, trade) ? { manual: true } : {}),
+  };
+}
 
 function accountState(account: AccountSnapshot, total: number, running: number): AccountSummary["state"] {
   if (account.error) return "error";

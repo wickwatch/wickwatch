@@ -1,6 +1,6 @@
-import type { InstanceDetail, LogLine } from "@wickwatch/core";
+import type { AccountDeals, InstanceDetail, LogLine } from "@wickwatch/core";
 import { Value } from "typebox/value";
-import { InstanceDetail as InstanceDetailSchema } from "@wickwatch/core";
+import { AccountDeals as AccountDealsSchema, InstanceDetail as InstanceDetailSchema } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
@@ -214,6 +214,35 @@ describe("manual attribution", () => {
       .where("action", "like", "attribution.%")
       .execute();
     expect(actions.map((a) => a.action)).toEqual(["attribution.set", "attribution.clear"]);
+  });
+
+  it("lists the account's deals with their instance and moves one to another instance by hand", async () => {
+    const res = await get("/api/v1/accounts/1111111/deals?days=7");
+    expect(res.statusCode).toBe(200);
+    const listed = res.json<AccountDeals>();
+    expect(Value.Errors(AccountDealsSchema, listed)).toEqual([]);
+    expect(Date.parse(listed.range.to) - Date.parse(listed.range.from)).toBe(7 * DAY_MS);
+    expect(listed.deals.map((d) => d.time)).toEqual(listed.deals.map((d) => d.time).sort());
+    const deal = listed.deals.find((d) => d.instance === "alpha-ger40-a");
+    expect(deal).toBeDefined();
+    expect(deal!.manual).toBeUndefined();
+
+    expect((await set(deal!.positionId, "beta-nas100-a")).statusCode).toBe(204);
+    const moved = (await get("/api/v1/accounts/1111111/deals?days=7"))
+      .json<AccountDeals>()
+      .deals.filter((d) => d.positionId === deal!.positionId);
+    expect(moved.length).toBeGreaterThan(0);
+    expect(moved.every((d) => d.instance === "beta-nas100-a" && d.manual === true)).toBe(true);
+    const ids = (ref: string) => get(`/api/v1/instances/${ref}?days=7`).then((r) => r.json<InstanceDetail>());
+    expect((await ids("beta-nas100-a")).deals.map((d) => d.id)).toContain(deal!.id);
+    const from = await ids("alpha-ger40-a");
+    expect(from.deals.map((d) => d.id)).not.toContain(deal!.id);
+    expect(from.excludedDeals.map((d) => d.id)).toContain(deal!.id);
+  });
+
+  it("answers 404 for the deals of an unknown account and validates the range", async () => {
+    expect((await get("/api/v1/accounts/999/deals")).statusCode).toBe(404);
+    expect((await get("/api/v1/accounts/1111111/deals?days=91")).statusCode).toBe(400);
   });
 
   it("is admin-only and needs a known account", async () => {

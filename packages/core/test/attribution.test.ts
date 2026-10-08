@@ -52,6 +52,9 @@ describe("createAttributor", () => {
     expect(a.owner("1", { symbol: "US100", positionId: "p-moved" })).toBe("dax");
     expect(a.owner("1", { symbol: "US100", positionId: "other" })).toBe("nas");
     expect(a.isExcluded("1", { symbol: "US100", positionId: "other" })).toBe(false);
+    expect(a.isManual("1", manual)).toBe(true);
+    expect(a.isManual("1", { symbol: "US100", positionId: "p-moved" })).toBe(true);
+    expect(a.isManual("1", { symbol: "US100", positionId: "other" })).toBe(false);
     // Overrides are per account.
     expect(a.owner("2", manual)).toBeUndefined();
   });

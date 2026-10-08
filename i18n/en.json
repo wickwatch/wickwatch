@@ -67,6 +67,8 @@
     "dayPnl": "Today's P&L",
     "number": "Account {number}",
     "openPositions": "Open positions",
+    "closedTrades": "Closed trades",
+    "closedTradesHint": "The last {days} days, also trades of no instance.",
     "instancesActive": "{running} of {total} instance active | {running} of {total} instances active",
     "state": {
       "running": "Running",
@@ -598,7 +600,15 @@
     "excluded": "Position {id} no longer counts for this instance.",
     "restored": "Position {id} counts for this instance again.",
     "excludedTitle": "Excluded trades ({count})",
-    "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures."
+    "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures.",
+    "assign": "Assign instance",
+    "assignTitle": "Assign trade to an instance",
+    "assignHint": "Position {id} ({symbol}) with all its deals. It then counts for the figures, chart and history of the instance chosen.",
+    "automatic": "Automatic (the rules decide)",
+    "byHand": "by hand",
+    "to": "Position {id} now counts for {instance}.",
+    "toNone": "Position {id} belongs to no instance now.",
+    "byRules": "Position {id} is attributed by the rules again."
   },
   "algos": {
     "intro": "Bot files ({formats}), stored per version with their parameters. Old versions stay for rollbacks.",
@@ -876,8 +886,8 @@
       "algo_delete": "Algo deleted",
       "algo_upload": "Algo uploaded",
       "algo_settings": "Algo settings changed",
-      "attribution_clear": "Trade restored to the instance",
-      "attribution_set": "Trade removed from the instance",
+      "attribution_clear": "Manual trade attribution removed",
+      "attribution_set": "Trade attributed by hand",
       "auth_login": "Login",
       "auth_logout": "Logout",
       "auth_password_change": "Password changed",
