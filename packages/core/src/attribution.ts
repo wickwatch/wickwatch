@@ -53,7 +53,10 @@ export interface Attributor {
   owner(account: string, item: TradeItem): string | undefined;
   /** The owner by the rules alone, ignoring manual overrides. */
   automaticOwner(account: string, item: TradeItem): string | undefined;
-  /** Whether a manual override removed the trade from the instance the rules would pick. */
+  /**
+   * Whether a manual override took the trade from the instance the rules would pick and gave it to no instance.
+   * A trade moved to another instance by hand is not excluded: it counts there.
+   */
   isExcluded(account: string, item: TradeItem): boolean;
   /** Whether a manual override decides the trade's owner, whatever the rules would pick. */
   isManual(account: string, item: TradeItem): boolean;
@@ -147,8 +150,7 @@ export function createAttributor(
       return automaticOwner(account, item);
     },
     isExcluded(account, item) {
-      const override = manual(account, item);
-      return override !== undefined && override !== automaticOwner(account, item);
+      return manual(account, item) === null && automaticOwner(account, item) !== undefined;
     },
     isManual: (account, item) => manual(account, item) !== undefined,
   };

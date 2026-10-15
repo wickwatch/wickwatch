@@ -50,6 +50,8 @@ describe("createAttributor", () => {
     expect(a.automaticOwner("1", manual)).toBe("nas");
     expect(a.isExcluded("1", manual)).toBe(true);
     expect(a.owner("1", { symbol: "US100", positionId: "p-moved" })).toBe("dax");
+    // Moved to another instance is not excluded: it counts there.
+    expect(a.isExcluded("1", { symbol: "US100", positionId: "p-moved" })).toBe(false);
     expect(a.owner("1", { symbol: "US100", positionId: "other" })).toBe("nas");
     expect(a.isExcluded("1", { symbol: "US100", positionId: "other" })).toBe(false);
     expect(a.isManual("1", manual)).toBe(true);

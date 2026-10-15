@@ -113,7 +113,10 @@ describe("buildInstanceDetail", () => {
       from: new Date("2026-08-26T12:00:00.000Z"),
       labelPrefix: "ww",
       instance: alpha,
-      overrides: new Map([[overrideKey("111", "manual-pos"), null]]),
+      overrides: new Map([
+        [overrideKey("111", "manual-pos"), null],
+        [overrideKey("111", "moved-pos"), "beta"],
+      ]),
       account: {
         number: "111",
         displayName: "Main",
@@ -123,6 +126,8 @@ describe("buildInstanceDetail", () => {
           deals: [
             deal(30, { positionId: "bot-pos" }),
             deal(-80, { positionId: "manual-pos", label: "", time: "2026-09-24T08:00:00.000Z" }),
+            // Assigned by hand to another instance: it counts there, so it is not excluded here.
+            deal(-20, { positionId: "moved-pos", label: "", time: "2026-09-24T09:00:00.000Z" }),
           ],
         },
       },

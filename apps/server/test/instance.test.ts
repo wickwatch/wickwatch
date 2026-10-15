@@ -237,7 +237,8 @@ describe("manual attribution", () => {
     expect((await ids("beta-nas100-a")).deals.map((d) => d.id)).toContain(deal!.id);
     const from = await ids("alpha-ger40-a");
     expect(from.deals.map((d) => d.id)).not.toContain(deal!.id);
-    expect(from.excludedDeals.map((d) => d.id)).toContain(deal!.id);
+    // It counts for the other instance, so it is not excluded here; the account page moves it back.
+    expect(from.excludedDeals.map((d) => d.id)).not.toContain(deal!.id);
   });
 
   it("answers 404 for the deals of an unknown account and validates the range", async () => {

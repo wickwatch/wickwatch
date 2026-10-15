@@ -600,7 +600,7 @@
     "excluded": "Position {id} zählt nicht mehr für diese Instanz.",
     "restored": "Position {id} zählt wieder für diese Instanz.",
     "excludedTitle": "Ausgeschlossene Trades ({count})",
-    "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen.",
+    "excludedHint": "Trades, die die automatische Zuordnung dieser Instanz geben würde, von Hand entfernt und keiner Instanz zugeordnet (z. B. manuelle Trades). Sie zählen nicht zu den Kennzahlen.",
     "assign": "Instanz zuordnen",
     "assignTitle": "Trade einer Instanz zuordnen",
     "assignHint": "Position {id} ({symbol}) mit allen ihren Deals. Sie zählt dann für Kennzahlen, Chart und Verlauf der gewählten Instanz.",

@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- Instance page: "Excluded trades" lists only trades assigned by hand to no instance. A trade assigned by hand to another instance counts there and no longer shows as excluded on the instance the rules would pick (seen since 0.7.3, when a stopped instance's trade went to the one still running).
+
 ## 0.7.3 – 2026-10-15
 
 ### Changed

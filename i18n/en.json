@@ -600,7 +600,7 @@
     "excluded": "Position {id} no longer counts for this instance.",
     "restored": "Position {id} counts for this instance again.",
     "excludedTitle": "Excluded trades ({count})",
-    "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand (e.g. manual trades). They are not part of the key figures.",
+    "excludedHint": "Trades the automatic attribution would give to this instance, removed by hand and assigned to no instance (e.g. manual trades). They are not part of the key figures.",
     "assign": "Assign instance",
     "assignTitle": "Assign trade to an instance",
     "assignHint": "Position {id} ({symbol}) with all its deals. It then counts for the figures, chart and history of the instance chosen.",
