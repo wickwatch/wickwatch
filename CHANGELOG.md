@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.7.2 – 2026-10-15
+
 ### Added
 - `LOG_LEVEL=debug` also logs what the broker adapter does with its sessions: starts, commands (name and duration), timeouts, closes with their reason, and why a session was replaced. Never the login or password.
 
