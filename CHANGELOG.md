@@ -4,10 +4,14 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.7.3 – 2026-10-15
+
 ### Changed
 - Trade attribution: when several instances share an account and symbol and all but one are stopped, the one not stopped takes the trades without a matching label (so far they stayed without an instance until the stopped one was deleted). It applies to the older trades as well, and ends once a second one runs again; trades assigned by hand stay.
 
 ## 0.7.2 – 2026-10-15
+
+Tagged, but no image was published: the release check failed on an older commit. Its changes ship with 0.7.3.
 
 ### Added
 - `LOG_LEVEL=debug` also logs what the broker adapter does with its sessions: starts, commands (name and duration), timeouts, closes with their reason, and why a session was replaced. Never the login or password.
