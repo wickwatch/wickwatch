@@ -72,6 +72,25 @@ describe("createAttributor", () => {
     expect(a.problems).toEqual([]);
   });
 
+  it("auto: of two bots on one account and symbol, the only one not stopped takes the trades", () => {
+    const stopped = (values: LabelValues): RuntimeInstance => ({ ...instance(values), status: "stopped" });
+    const m30 = { instance: "m30", account: "1", symbol: "US30" };
+    const h1 = { instance: "h1", account: "1", symbol: "US30" };
+    const a = createAttributor([instance(m30), stopped(h1)], "ww");
+    expect(a.owner("1", { label: "123", symbol: "US30" })).toBe("m30");
+    // A label still wins, so trades the stopped bot labelled stay its own.
+    expect(a.owner("1", { label: "h1", symbol: "US30" })).toBe("h1");
+
+    // None running: nothing tells them apart.
+    const none = createAttributor([stopped(m30), stopped(h1)], "ww");
+    expect(none.owner("1", { label: "123", symbol: "US30" })).toBeUndefined();
+
+    // A stopped bot keeps the trades on a symbol that is its alone.
+    const other = createAttributor([instance(m30), stopped({ instance: "dax", account: "1", symbol: "GER40" })], "ww");
+    expect(other.owner("1", { label: "123", symbol: "GER40" })).toBe("dax");
+    expect(createAttributor([stopped(m30)], "ww").owner("1", { label: "123", symbol: "US30" })).toBe("m30");
+  });
+
   it("label: never falls back to the symbol; the expected label can differ from the name", () => {
     const a = createAttributor(
       [instance({ instance: "orb", account: "1", symbol: "GER40", attribution: "label", "order-label": "ORB-1" })],
@@ -118,6 +137,15 @@ describe("createAttributor", () => {
     expect(a.owner("1", { label: "y", symbol: "GER40" })).toBe("y");
     expect(a.owner("1", { label: "z", symbol: "GER40" })).toBeUndefined();
     expect(a.problems).toEqual([{ kind: "ambiguous", account: "1", symbol: "GER40", instances: ["x", "y"] }]);
+
+    // No clash while only one of them is not stopped.
+    const y: RuntimeInstance = { ...instance({ instance: "y", account: "1", symbol: "GER40" }), status: "stopped" };
+    const b = createAttributor(
+      [instance({ instance: "x", account: "1", symbol: "GER40", attribution: "account-symbol" }), y],
+      "ww",
+    );
+    expect(b.owner("1", { label: "z", symbol: "GER40" })).toBe("x");
+    expect(b.problems).toEqual([]);
   });
 
   it("reports an invalid pattern and does not match with it", () => {

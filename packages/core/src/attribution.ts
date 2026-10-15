@@ -10,6 +10,7 @@ import type { RuntimeInstance } from "./schemas";
  * - `auto` (default): `label` first; otherwise every trade of the account if the instance is the only
  *   one on the account, or every trade on its symbol if it is the only one on that symbol.
  *   Bots whose labels cannot be chosen (third-party bots) work this way.
+ * Instances sharing an account and symbol: a stopped one opens no trades, so the only one not stopped takes them.
  * Manual overrides per position (e.g. "a manual trade, not from this bot") come first.
  */
 export const ATTRIBUTION_MODES = ["auto", "label", "label-pattern", "account-symbol"] as const;
@@ -32,6 +33,8 @@ interface Target {
   name: string;
   account: string;
   symbol: string | undefined;
+  /** Stopped instances open no trades. */
+  stopped: boolean;
   mode: AttributionMode;
   orderLabel: string;
   pattern: RegExp | undefined;
@@ -85,6 +88,7 @@ export function createAttributor(
         name,
         account: labels.account,
         symbol: labels.symbol,
+        stopped: instance.status === "stopped",
         mode,
         orderLabel: labels["order-label"] ?? name,
         pattern,
@@ -92,14 +96,16 @@ export function createAttributor(
     ];
   });
 
-  // Two instances on the same account and symbol cannot both claim "every trade on the symbol".
+  // Two instances on the same account and symbol cannot both claim "every trade on the symbol",
+  // unless only one of them is not stopped: that one takes them.
   const groups = groupBy(
     targets.filter((t) => t.symbol),
     (t) => `${t.account}\u0000${(t.symbol ?? "").toLowerCase()}`,
   );
   for (const group of groups.values()) {
     const [first] = group;
-    if (first && group.length > 1 && group.some((t) => t.mode === "account-symbol")) {
+    const clash = group.length > 1 && group.filter((t) => !t.stopped).length !== 1;
+    if (first && clash && group.some((t) => t.mode === "account-symbol")) {
       problems.push({
         kind: "ambiguous",
         account: first.account,
@@ -124,7 +130,8 @@ export function createAttributor(
     if (onAccount.length === 1 && single && (single.mode === "auto" || single.mode === "account-symbol"))
       return single.name;
     const onSymbol = onAccount.filter((t) => sameSymbol(t.symbol, item.symbol));
-    const only = onSymbol.length === 1 ? onSymbol[0] : undefined;
+    const candidates = onSymbol.length > 1 ? onSymbol.filter((t) => !t.stopped) : onSymbol;
+    const only = candidates.length === 1 ? candidates[0] : undefined;
     return only && (only.mode === "auto" || only.mode === "account-symbol") ? only.name : undefined;
   }
 

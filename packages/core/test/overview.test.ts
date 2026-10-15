@@ -204,7 +204,7 @@ describe("buildOverview", () => {
 
 describe("trades of no instance on the account page", () => {
   // Two bots on one account and symbol: a trade opened by hand carries no label of theirs, so the rules cannot place it.
-  const instances = [instance("m30", "111", "running"), instance("h1", "111", "stopped")];
+  const instances = [instance("m30", "111", "running"), instance("h1", "111", "running")];
   const byHand: Deal = { ...deal("", 60), id: "d-hand", positionId: "p-hand" };
   const input = { instances, labelPrefix: "ww" };
 

@@ -17,6 +17,7 @@ Notes:
 - In `auto` and `account-symbol` mode, manual trades on the same account and symbol count for the instance.
 - The symbol must be the broker's symbol name (e.g. `US100.cash`), as in `<prefix>.symbol`.
 - Trades that match no instance stay "not attributed"; account totals still include them.
+- **Stopped instances:** when several instances share an account and symbol and all but one are stopped, the one not stopped takes the trades without a matching label, also the older ones. Once a second one runs again, these trades are "not attributed" again, unless you assigned them by hand.
 - **Manual corrections:** on the instance page, admins can mark a position as "not from this bot" (e.g. a manual trade). This applies to the position and all its deals, is audit-logged and can be undone under "Excluded trades". Manual corrections win over every rule.
 
 ## Recommendations for bots you write
