@@ -1,6 +1,7 @@
 import {
   AdapterError,
   type AccountStats,
+  type AdapterLog,
   type AlgoMetadata,
   type BrokerAccount,
   type BrokerAdapter,
@@ -85,6 +86,11 @@ export class CtraderCliBroker implements BrokerAdapter {
   private readonly pool: SessionPool;
   private readonly backoff: LoginBackoff;
   private accountsCache: { key: string; at: number; accounts: BrokerAccount[] } | undefined;
+  private log: AdapterLog = () => undefined;
+  /** Stays the same function, so the pool and sessions created before `useLog` report too. */
+  private readonly report: AdapterLog = (details, message) => {
+    this.log(details, message);
+  };
 
   private readonly image: string;
 
@@ -92,7 +98,11 @@ export class CtraderCliBroker implements BrokerAdapter {
     this.image = image ?? DEFAULT_CTRADER_IMAGE;
     this.options = { ...DEFAULT_CLI_OPTIONS, ...options };
     this.backoff = new LoginBackoff(this.options.loginRetryMs, this.options.loginRetryMaxMs);
-    this.pool = new SessionPool(this.options, this.backoff);
+    this.pool = new SessionPool(this.options, this.backoff, this.report);
+  }
+
+  useLog(log: AdapterLog): void {
+    this.log = log;
   }
 
   capabilities(): Capabilities {
@@ -177,7 +187,7 @@ export class CtraderCliBroker implements BrokerAdapter {
     // the list of its login, so a fresh one is used: a warm session would miss accounts opened since.
     let active: unknown;
     for (const number of numbers) {
-      const session = new CliSession(this.options, c, number, () => undefined, false);
+      const session = new CliSession(this.options, c, number, () => undefined, false, this.report);
       try {
         await this.backoff.login(c, ["session", number], () => session.start());
         active = extractJson(await session.run("accounts"));

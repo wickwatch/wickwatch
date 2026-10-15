@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
-import { AdapterError, type Credentials, type ToolProcess } from "@wickwatch/core";
+import { AdapterError, type AdapterLog, type Credentials, type ToolProcess } from "@wickwatch/core";
 import type { LoginBackoff } from "./backoff";
 import { cliError, passwordFile, runnerOf, type CliOptions } from "./cli";
 
 const PROMPT = "> ";
 /** How long `q`, and then a kill, may take to end the process. */
 const QUIT_MS = 5000;
+
+/** Why a session is closed, for the debug log. */
+type CloseReason = "idle" | "timeout" | "start failed" | "done" | "shutdown";
 
 /** Whether `promise` settles within `ms`. */
 async function within(promise: Promise<unknown>, ms: number): Promise<boolean> {
@@ -48,9 +51,11 @@ export class CliSession {
     private readonly onIdle: () => void,
     /** Off for a session that runs one command that needs no warm history, e.g. `accounts`. */
     private readonly warmUp = true,
+    private readonly log: AdapterLog = () => undefined,
   ) {}
 
   async start(): Promise<void> {
+    const startedAt = Date.now();
     const child = await runnerOf(this.options).start(
       (path) => [`--ctid=${this.credentials.login}`, `--pwd-file=${path("pwd")}`, `--account=${this.account}`],
       [passwordFile(this.credentials.secret)],
@@ -61,7 +66,11 @@ export class CliSession {
       this.buffer += text;
       this.check();
     });
-    void child.exit.then(() => {
+    void child.exit.then((code) => {
+      this.log(
+        { account: this.account, code, closed: this.closed, ageMs: Date.now() - startedAt },
+        "cTrader CLI session ended",
+      );
       this.dead = true;
       this.check();
     });
@@ -70,7 +79,7 @@ export class CliSession {
       await this.untilPrompt(this.options.connectTimeoutMs, true);
     } catch (error) {
       const output = this.buffer;
-      await this.close();
+      await this.close("start failed");
       throw error instanceof AdapterError && error.code === "timeout"
         ? error
         : cliError(output, "cTrader CLI session failed");
@@ -79,6 +88,7 @@ export class CliSession {
     // The first history query of a session comes back empty; this one is thrown away.
     if (this.warmUp) await this.run("orders-history 1").catch(() => undefined);
     this.touch();
+    this.log({ account: this.account, ms: Date.now() - startedAt }, "cTrader CLI session started");
   }
 
   /** Runs one command and returns its raw answer (JSON or an "Error: …" line). */
@@ -88,11 +98,12 @@ export class CliSession {
     return result;
   }
 
-  async close(): Promise<void> {
+  async close(reason: CloseReason = "done"): Promise<void> {
     if (this.closed) return;
     this.closed = true;
     clearTimeout(this.idleTimer);
     const ended = this.dead;
+    this.log({ account: this.account, reason, ended }, "Closing cTrader CLI session");
     // At once, so the pool replaces the session even if the end of the process is never reported
     // (e.g. a tool container killed from outside behind a proxy that dropped the wait).
     this.dead = true;
@@ -100,6 +111,7 @@ export class CliSession {
     const child = this.child;
     child.write("q\n");
     if (!(await within(child.exit, QUIT_MS))) {
+      this.log({ account: this.account }, "cTrader CLI session did not quit; killing it");
       child.kill();
       // The temporary password file goes away with the process.
       await within(child.exit, QUIT_MS);
@@ -109,9 +121,15 @@ export class CliSession {
   private async exec(command: string): Promise<string> {
     if (this.dead || !this.child) throw new AdapterError("unavailable", "cTrader CLI session ended");
     this.buffer = "";
+    const sentAt = Date.now();
     this.child.write(`${command}\n`);
     const text = await this.untilPrompt(this.options.commandTimeoutMs, false);
     this.touch();
+    // Only the command's name: its arguments may be ids.
+    this.log(
+      { account: this.account, command: command.split(" ", 1)[0], ms: Date.now() - sentAt },
+      "cTrader CLI command",
+    );
     // Drop the echo line "[2026-09-27 17:22:39 +02:00] account 123"; keep the answer.
     const answer = text.replace(/^\[[^\]]*\][^\n]*\n/, "").trim();
     if (/^error:/i.test(answer)) throw cliError(answer);
@@ -123,7 +141,8 @@ export class CliSession {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.waiter = undefined;
-        if (!atStartup) void this.close();
+        this.log({ account: this.account, timeoutMs, atStartup }, "cTrader CLI did not answer");
+        if (!atStartup) void this.close("timeout");
         reject(new AdapterError("timeout", `cTrader CLI did not answer within ${String(timeoutMs)} ms`));
       }, timeoutMs);
       this.waiter = (text) => {
@@ -151,7 +170,7 @@ export class CliSession {
   private touch(): void {
     clearTimeout(this.idleTimer);
     this.idleTimer = setTimeout(() => {
-      void this.close().then(this.onIdle);
+      void this.close("idle").then(this.onIdle);
     }, this.options.sessionIdleMs);
     this.idleTimer.unref();
   }
@@ -167,6 +186,7 @@ export class SessionPool {
   constructor(
     private readonly options: CliOptions,
     private readonly backoff: LoginBackoff,
+    private readonly log: AdapterLog = () => undefined,
   ) {}
 
   async run(credentials: Credentials, account: string, command: string): Promise<string> {
@@ -182,7 +202,7 @@ export class SessionPool {
   async closeAll(): Promise<void> {
     const sessions = [...this.sessions.values()];
     this.sessions.clear();
-    await Promise.all(sessions.map(async (s) => (await s.catch(() => undefined))?.close()));
+    await Promise.all(sessions.map(async (s) => (await s.catch(() => undefined))?.close("shutdown")));
   }
 
   private get(credentials: Credentials, account: string, urgent = false): Promise<CliSession> {
@@ -193,16 +213,37 @@ export class SessionPool {
     if (existing) {
       return existing.then((s) => {
         if (!s.dead) return s;
-        this.sessions.delete(key);
+        this.log({ account }, "Replacing a cTrader CLI session that ended");
+        this.forget(key, existing);
         return this.get(credentials, account, urgent);
       });
     }
-    const session = new CliSession(this.options, credentials, account, () => this.sessions.delete(key));
+    const session = new CliSession(
+      this.options,
+      credentials,
+      account,
+      () => {
+        this.forget(key, started);
+      },
+      true,
+      this.log,
+    );
     const started = this.backoff
       .login(credentials, ["session", account], () => session.start(), urgent)
       .then(() => session);
     this.sessions.set(key, started);
-    started.catch(() => this.sessions.delete(key));
+    started.catch(() => {
+      this.forget(key, started);
+    });
+    this.log({ account, sessions: this.sessions.size }, "Starting a cTrader CLI session");
     return started;
+  }
+
+  /**
+   * Drops a session that ended, unless a newer one already took its place: a session that finishes closing after it
+   * was replaced must not drop its successor, which would otherwise live on unused until its own idle close.
+   */
+  private forget(key: string, entry: Promise<CliSession>): void {
+    if (this.sessions.get(key) === entry) this.sessions.delete(key);
   }
 }

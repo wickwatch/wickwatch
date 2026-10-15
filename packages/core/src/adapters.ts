@@ -164,7 +164,15 @@ export interface BrokerAdapter {
   marketHours?(c: Credentials, account: string, symbol: string): Promise<MarketHours>;
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
+  /** Hands over where to report the adapter's own work (logins, sessions) for debugging. */
+  useLog?(log: AdapterLog): void;
 }
+
+/**
+ * Debug details of an adapter's own work, e.g. why a session was replaced. Never credentials or secrets; the server
+ * logs them at level debug.
+ */
+export type AdapterLog = (details: Record<string, unknown>, message: string) => void;
 
 /** Reads and writes the parameter files of a trading platform (e.g. `.cbotset`). */
 export interface ConfigAdapter {

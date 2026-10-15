@@ -48,6 +48,13 @@ try {
     onChallengeSaved: (accountId) => void tradingDays.sync?.(accountId),
   });
 
+  // LOG_LEVEL=debug: what the broker adapter does with logins and sessions.
+  if (config.logLevel === "debug" || config.logLevel === "trace") {
+    adapters.broker.useLog?.((details, message) => {
+      app.log.debug({ adapter: adapters.broker.id, ...details }, message);
+    });
+  }
+
   for (const result of await migrateToLatest(db)) {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
   }

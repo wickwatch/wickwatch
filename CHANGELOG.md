@@ -4,6 +4,12 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- `LOG_LEVEL=debug` also logs what the broker adapter does with its sessions: starts, commands (name and duration), timeouts, closes with their reason, and why a session was replaced. Never the login or password.
+
+### Fixed
+- cTrader CLI: a session that finished closing after it had been replaced dropped its successor from the pool, which then lived on unused for ten minutes while yet another one logged in. Once started, this chain repeated itself: up to 40 logins an hour on one account, several CLI containers at once, full memory and swap on a small host. Two calls that found the same session ended could also start two new ones.
+
 ## 0.7.1 – 2026-10-08
 
 ### Added

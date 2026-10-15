@@ -8,7 +8,7 @@ wickwatch is configured with environment variables only (see [`.env.example`](..
 | `PORT` | `3000` | Port to listen on. |
 | `BASE_PATH` | `/` | Path prefix when served under a sub-path, e.g. `/bots`. UI, API and cookies use it; `/healthz` also answers at the root. |
 | `TRUST_PROXY` | `false` | Behind a reverse proxy: `true`, a hop count (`1`) or a comma-separated list of proxy IPs/CIDRs. Needed for correct client IPs (rate limiting, logs) and for `Secure` cookies behind TLS-terminating proxies. |
-| `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. Logs are JSON on stdout. |
+| `LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. Logs are JSON on stdout. `debug` adds what the broker adapter does with logins and sessions (e.g. why a cTrader CLI session was replaced). |
 | `MASTER_KEY` | – | **Required.** 32 random bytes, base64 (`openssl rand -base64 32`). Encrypts broker credentials, TOTP secrets and the parameter values of instance configurations (values stored in plaintext by earlier versions are encrypted at the first start with a key). Without it, nobody can log in, and instances can be neither saved nor deployed. Back it up: without it, stored secrets cannot be decrypted. Changing it is not supported yet. |
 | `DATABASE_URL` | `file:./data/wickwatch.db` | SQLite file, relative to the working directory (`/app` in the image). Postgres is planned. |
 | `LABEL_PREFIX` | `wickwatch` | Prefix of the container labels used to find instances, e.g. `wickwatch.instance`. |

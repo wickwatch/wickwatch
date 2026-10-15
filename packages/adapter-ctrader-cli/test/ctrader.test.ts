@@ -363,6 +363,81 @@ describe("CtraderCliBroker", () => {
     }
   });
 
+  it("keeps the new session when the old one finishes closing after it was replaced", async () => {
+    // An idle session marks itself dead at once but needs a moment to quit; a call in that moment starts a new
+    // one, which the old session's end must not drop: each dropped session lived on until its own idle close.
+    const local = localRunner(process.execPath, [FAKE]);
+    const releases: (() => void)[] = [];
+    const idle = new CtraderCliBroker({
+      runner: {
+        async start(args, files) {
+          const tool = await local.start(args, files);
+          const released = new Promise<void>((resolve) => releases.push(resolve));
+          return { ...tool, exit: Promise.all([tool.exit, released]).then(([code]) => code) };
+        },
+      },
+      commandTimeoutMs: 5000,
+      priceRetryMs: 10,
+      connectTimeoutMs: 5000,
+      sessionIdleMs: 300,
+    });
+    try {
+      await idle.stats(c, "1111111");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await idle.stats(c, "1111111");
+      releases[0]!();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      await idle.stats(c, "1111111");
+      expect(releases).toHaveLength(2);
+    } finally {
+      for (const release of releases) release();
+      await idle.dispose();
+    }
+  });
+
+  it("reports sessions to the debug log without the login or password", async () => {
+    const entries: [Record<string, unknown>, string][] = [];
+    broker.useLog((details, message) => entries.push([details, message]));
+    await broker.stats(c, "1111111");
+    await broker.dispose();
+    expect(entries.map(([, message]) => message)).toEqual(
+      expect.arrayContaining(["Starting a cTrader CLI session", "cTrader CLI session started", "cTrader CLI command"]),
+    );
+    expect(entries).toContainEqual([
+      expect.objectContaining({ account: "1111111", reason: "shutdown" }),
+      "Closing cTrader CLI session",
+    ]);
+    const text = JSON.stringify(entries);
+    expect(text).not.toContain(c.login);
+    expect(text).not.toContain(c.secret);
+  });
+
+  it("starts one new session when calls at the same time find the old one dead", async () => {
+    const local = localRunner(process.execPath, [FAKE]);
+    const tools: { kill: () => void; exit: Promise<number | null> }[] = [];
+    const counted = new CtraderCliBroker({
+      runner: {
+        async start(args, files) {
+          const tool = await local.start(args, files);
+          tools.push(tool);
+          return tool;
+        },
+      },
+      commandTimeoutMs: 5000,
+      priceRetryMs: 10,
+      connectTimeoutMs: 5000,
+    });
+    try {
+      await counted.stats(c, "1111111");
+      tools[0]!.kill();
+      await tools[0]!.exit;
+      await Promise.all([counted.stats(c, "1111111"), counted.stats(c, "1111111")]);
+      expect(tools).toHaveLength(2);
+    } finally {
+      await counted.dispose();
+    }
+  });
+
   it("replaces a session that stopped answering even if its end is never reported", async () => {
     // As with a tool container killed from outside while a proxy had dropped the wait for its exit.
     const local = localRunner(process.execPath, [FAKE]);
