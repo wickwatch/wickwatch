@@ -1,7 +1,7 @@
 import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type Attributor, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
-import { withRisk } from "./risk";
+import { withPositionR, withRisk } from "./risk";
 import type {
   AccountDeal,
   AccountDetail,
@@ -176,7 +176,7 @@ export function buildAccountDetail(input: OverviewInput, number: string): Accoun
     time: overview.time,
     account,
     instances,
-    positions: (data?.positions ?? []).map((p) => attributed(attributor, number, p, positionItem(p))),
+    positions: (data?.positions ?? []).map((p) => attributed(attributor, number, withPositionR(p), positionItem(p))),
     pendingOrders: (data?.pendingOrders ?? []).map((o) => attributed(attributor, number, o, orderItem(o))),
     alerts: overview.alerts.filter((a) => names.has(a.subject)),
   };

@@ -506,6 +506,7 @@
     },
     "symbol": "Symbol",
     "exit": "Ausstieg",
+    "currentPrice": "Aktueller Kurs",
     "initialSl": "Anfangs-SL",
     "closed": "Geschlossen",
     "held": "Haltedauer",

@@ -2985,13 +2985,28 @@
                           "entry": {
                             "type": "number"
                           },
+                          "price": {
+                            "type": "number"
+                          },
                           "sl": {
                             "type": "number"
                           },
                           "tp": {
                             "type": "number"
                           },
+                          "initialStopLoss": {
+                            "type": "number"
+                          },
                           "pnl": {
+                            "type": "number"
+                          },
+                          "grossPnl": {
+                            "type": "number"
+                          },
+                          "commission": {
+                            "type": "number"
+                          },
+                          "swap": {
                             "type": "number"
                           },
                           "label": {
@@ -3001,6 +3016,9 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "r": {
+                            "type": "number"
                           },
                           "instance": {
                             "type": "string"
@@ -3822,13 +3840,28 @@
                           "entry": {
                             "type": "number"
                           },
+                          "price": {
+                            "type": "number"
+                          },
                           "sl": {
                             "type": "number"
                           },
                           "tp": {
                             "type": "number"
                           },
+                          "initialStopLoss": {
+                            "type": "number"
+                          },
                           "pnl": {
+                            "type": "number"
+                          },
+                          "grossPnl": {
+                            "type": "number"
+                          },
+                          "commission": {
+                            "type": "number"
+                          },
+                          "swap": {
                             "type": "number"
                           },
                           "label": {
@@ -3838,6 +3871,9 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "r": {
+                            "type": "number"
                           }
                         }
                       }
@@ -4060,13 +4096,28 @@
                           "entry": {
                             "type": "number"
                           },
+                          "price": {
+                            "type": "number"
+                          },
                           "sl": {
                             "type": "number"
                           },
                           "tp": {
                             "type": "number"
                           },
+                          "initialStopLoss": {
+                            "type": "number"
+                          },
                           "pnl": {
+                            "type": "number"
+                          },
+                          "grossPnl": {
+                            "type": "number"
+                          },
+                          "commission": {
+                            "type": "number"
+                          },
+                          "swap": {
                             "type": "number"
                           },
                           "label": {
@@ -4076,6 +4127,9 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "Z$"
+                          },
+                          "r": {
+                            "type": "number"
                           }
                         }
                       }

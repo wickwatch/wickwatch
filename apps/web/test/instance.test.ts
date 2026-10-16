@@ -212,6 +212,56 @@ describe("InstanceView", () => {
     wrapper.unmount();
   });
 
+  it("shows the costs and current R of open positions, in the table and the drawer", async () => {
+    const withR: InstanceDetail = {
+      ...detail,
+      positions: [
+        { ...detail.positions[0]!, price: 19440.5, initialStopLoss: 19392.5, commission: -2.5, swap: -0.4, r: 1.37 },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) =>
+        Promise.resolve(
+          input.pathname.includes("/managed-instances/")
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : new Response(JSON.stringify(withR), { status: 200 }),
+        ),
+      ),
+    );
+    const wrapper = await render();
+    const positions = wrapper.find("section[aria-labelledby=positions-title]");
+    expect(positions.findAll("th").map((h) => h.text())).toEqual(expect.arrayContaining(["P&L", "Costs", "R"]));
+    const cells = positions.findAll("tbody td").map((c) => c.text());
+    // P&L before costs next to the costs, as for closed trades: 210.40 = 213.30 - 2.90.
+    expect(cells).toEqual(expect.arrayContaining(["+213.30", "−2.90", "+1.4R"]));
+
+    await positions
+      .findAll("td button")
+      .find((b) => b.attributes("aria-label") === "Details")
+      ?.trigger("click");
+    const drawer = wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"));
+    const text = drawer?.text() ?? "";
+    for (const part of ["Current price19,440.5", "Initial SL19,392.5", "Net+210.40", "R+1.4R"]) {
+      expect(text).toContain(part);
+    }
+    wrapper.unmount();
+  });
+
+  it("shows no costs of open positions the broker reports none for, instead of zero", async () => {
+    const wrapper = await render();
+    const positions = wrapper.find("section[aria-labelledby=positions-title]");
+    expect(positions.findAll("th").map((h) => h.text())).not.toContain("Costs");
+    await positions
+      .findAll("td button")
+      .find((b) => b.attributes("aria-label") === "Details")
+      ?.trigger("click");
+    const drawer = wrapper.findAllComponents({ name: "AppModal" }).find((m) => m.props("open"));
+    expect(drawer?.text()).toContain("P&L+210.40");
+    expect(drawer?.text()).not.toContain("Commission");
+    wrapper.unmount();
+  });
+
   it("offers all trades only when the instance traded before the longest range", async () => {
     const rangeButtons = (w: Awaited<ReturnType<typeof render>>) => w.findAll(".range button").map((b) => b.text());
     const plain = await render();

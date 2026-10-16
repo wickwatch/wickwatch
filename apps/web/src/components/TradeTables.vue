@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { AccountDeal, AccountOrder, AccountPosition, InstanceSummary, TradeDeal } from "@wickwatch/core";
+import type { AccountDeal, AccountOrder, AccountPosition, InstanceSummary } from "@wickwatch/core";
+import { positionCosts, positionGross, tradeCosts } from "@wickwatch/core/money";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { TradeAction } from "../composables/useTradeActions";
@@ -48,9 +49,11 @@ const showAll = ref(false);
 /** Newest first in the table; the chart shows the same deals oldest first. */
 const allDeals = computed(() => [...(props.deals ?? [])].reverse());
 const dealRows = computed(() => (showAll.value ? allDeals.value : allDeals.value.slice(0, COLLAPSED_ROWS)));
-const costs = (d: TradeDeal) => (d.commission ?? 0) + (d.swap ?? 0);
 /** Risk and R columns only when at least one trade knows its initial stop. */
 const withRisk = computed(() => props.deals?.some((d) => d.risk !== undefined) ?? false);
+/** Costs of open positions only when the broker reports them, not as 0. */
+const showPositionCosts = computed(() => props.positions?.some((p) => positionCosts(p) !== undefined) ?? false);
+const showPositionR = computed(() => props.positions?.some((p) => p.r !== undefined) ?? false);
 const refs = computed(() => new Map(props.instances?.map((i) => [i.name, i.ref])));
 const refOf = (name: string | undefined) => (name === undefined ? undefined : refs.value.get(name));
 
@@ -104,6 +107,8 @@ const detailTitle = computed(() => {
           <th scope="col" class="num">{{ $t("trade.sl") }}</th>
           <th scope="col" class="num">{{ $t("trade.tp") }}</th>
           <th scope="col" class="num">{{ $t("trade.pnl") }}</th>
+          <th v-if="showPositionCosts" scope="col" class="num">{{ $t("trade.costs") }}</th>
+          <th v-if="showPositionR" scope="col" class="num">{{ $t("trade.r") }}</th>
           <th scope="col">
             <span class="visually-hidden">{{ $t("table.actions") }}</span>
           </th>
@@ -125,7 +130,10 @@ const detailTitle = computed(() => {
           <td class="mono num">{{ price(p.entry) }}</td>
           <td class="mono num">{{ price(p.sl) }}</td>
           <td class="mono num">{{ price(p.tp) }}</td>
-          <td class="num"><SignedValue :value="p.pnl" /></td>
+          <!-- As for closed trades: the P&L before costs, the costs next to it. -->
+          <td class="num"><SignedValue :value="positionGross(p)" /></td>
+          <td v-if="showPositionCosts" class="num"><SignedValue :value="positionCosts(p)" /></td>
+          <td v-if="showPositionR" class="num"><SignedValue :value="p.r" :digits="1" unit="R" /></td>
           <td class="num">
             <div class="actions">
               <IconButton
@@ -259,7 +267,7 @@ const detailTitle = computed(() => {
           <td class="mono num">{{ formatNumber(locale, d.volume) }}</td>
           <td class="mono num">{{ price(d.price) }}</td>
           <td class="num"><SignedValue :value="d.pnl" /></td>
-          <td class="num"><SignedValue :value="costs(d)" /></td>
+          <td class="num"><SignedValue :value="tradeCosts(d)" /></td>
           <td v-if="withRisk" class="mono num">
             <span v-if="d.risk !== undefined" :data-tooltip="formatNumber(locale, d.risk)">{{
               d.riskPct === undefined ? formatNumber(locale, d.risk) : formatPercentValue(locale, d.riskPct)

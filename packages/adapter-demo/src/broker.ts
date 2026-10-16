@@ -30,6 +30,8 @@ const DAY_MS = 24 * HOUR_MS;
 const MAX_DEAL_RANGE_MS = 400 * DAY_MS;
 const HISTORY_DAYS = 30;
 const LEVERAGE = 100;
+/** Commission of a round turn per lot, negative as a cost. */
+const COMMISSION_PER_LOT = -3;
 
 export class DemoBrokerAdapter implements BrokerAdapter {
   readonly id = "demo";
@@ -186,7 +188,10 @@ export class DemoBrokerAdapter implements BrokerAdapter {
         const entry = this.world.price(instance.symbol, openedAt);
         const direction = seed.side === "buy" ? 1 : -1;
         const { contractSize } = this.world.symbol(instance.symbol);
-        const pnl = (this.world.price(instance.symbol, now) - entry) * direction * instance.volume * contractSize;
+        const price = this.world.price(instance.symbol, now);
+        // Half the round turn, booked at the opening.
+        const commission = round((COMMISSION_PER_LOT / 2) * instance.volume, 2);
+        const pnl = (price - entry) * direction * instance.volume * contractSize + commission;
         return [
           {
             id,
@@ -194,9 +199,12 @@ export class DemoBrokerAdapter implements BrokerAdapter {
             side: seed.side,
             volume: instance.volume,
             entry,
+            price,
             sl: round(entry - direction * seed.slDistance, 2),
             tp: round(entry + direction * seed.tpDistance, 2),
             pnl: round(pnl, 2),
+            commission,
+            swap: 0,
             label: instance.name,
             openedAt: toIsoTime(openedAt),
           },
@@ -260,7 +268,7 @@ export class DemoBrokerAdapter implements BrokerAdapter {
           volume: instance.volume,
           price,
           pnl,
-          commission: round(-3 * instance.volume, 2),
+          commission: round(COMMISSION_PER_LOT * instance.volume, 2),
           swap: 0,
           label: instance.name,
           time: toIsoTime(new Date(time)),

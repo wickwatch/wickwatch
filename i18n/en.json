@@ -506,6 +506,7 @@
     },
     "symbol": "Symbol",
     "exit": "Exit",
+    "currentPrice": "Current price",
     "initialSl": "Initial SL",
     "closed": "Closed",
     "held": "Held for",

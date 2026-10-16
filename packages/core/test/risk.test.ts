@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { dealR, dealResult, dealRisk, dealStats, withRisk, type Deal, type TradeDeal } from "../src";
+import {
+  dealR,
+  dealResult,
+  dealRisk,
+  dealStats,
+  positionRisk,
+  withPositionR,
+  withRisk,
+  type Deal,
+  type Position,
+  type TradeDeal,
+} from "../src";
+import { positionCosts, positionGross } from "../src/money";
 
 const base: Deal = {
   id: "1",
@@ -14,9 +26,73 @@ const base: Deal = {
   entryPrice: 29214.23,
   initialStopLoss: 29164.23,
 };
-/** `undefined` in `over` leaves that field out. */
-const deal = (over: { [K in keyof Deal]?: Deal[K] | undefined } = {}): Deal =>
-  Object.fromEntries(Object.entries({ ...base, ...over }).filter(([, v]) => v !== undefined)) as Deal;
+/** A builder from `defaults`; `undefined` in `over` leaves that field out. */
+const builder =
+  <T extends object>(defaults: T) =>
+  (over: { [K in keyof T]?: T[K] | undefined } = {}): T =>
+    Object.fromEntries(Object.entries({ ...defaults, ...over }).filter(([, v]) => v !== undefined)) as T;
+const deal = builder(base);
+
+const open: Position = {
+  id: "p1",
+  symbol: "US100",
+  side: "buy",
+  volume: 0.62,
+  entry: 29214.23,
+  price: 29293.43,
+  initialStopLoss: 29164.23,
+  // 49.10 before costs, less the commission booked so far.
+  pnl: 47.6,
+  commission: -1.5,
+  sl: 29214.23,
+  openedAt: "2026-09-23T12:00:00.000Z",
+};
+const position = builder(open);
+
+describe("risk and R of open positions", () => {
+  it("values the initial stop like the closed trade would, not the moved stop, and counts the costs in the R", () => {
+    // As for the closed trade: 49.10 before costs for 79.2 points, 50 points to the initial stop are 31.00.
+    expect(positionRisk(position())).toBe(31);
+    expect(withPositionR(position())).toMatchObject({ r: 1.54 });
+  });
+
+  it("goes below zero for a losing sell, with swap counted as a cost", () => {
+    const losing = position({
+      side: "sell",
+      entry: 30000,
+      price: 30025,
+      initialStopLoss: 30050,
+      pnl: -27,
+      commission: -1,
+      swap: -1,
+    });
+    expect(positionRisk(losing)).toBe(50);
+    expect(withPositionR(losing).r).toBe(-0.54);
+  });
+
+  it("takes the gross the broker reports over pnl less commission and swap, and knows costs only when reported", () => {
+    // A broker that already deducts the closing half of the commission from the pnl.
+    const both = position({ pnl: 46.1, grossPnl: 49.1 });
+    expect(positionGross(both)).toBe(49.1);
+    expect(positionCosts(both)).toBe(-3);
+    expect(positionRisk(both)).toBe(31);
+    expect(positionGross(position())).toBe(49.1);
+    expect(positionCosts(position())).toBe(-1.5);
+    expect(positionCosts(position({ commission: undefined }))).toBeUndefined();
+  });
+
+  it("knows no R without current price or initial stop, at the entry price, or with the stop on the winning side", () => {
+    for (const p of [
+      position({ price: undefined }),
+      position({ initialStopLoss: undefined }),
+      position({ price: 29214.23, pnl: -1.5 }),
+      position({ initialStopLoss: 29250 }),
+    ]) {
+      expect(positionRisk(p)).toBeUndefined();
+      expect(withPositionR(p)).not.toHaveProperty("r");
+    }
+  });
+});
 
 describe("risk and R", () => {
   it("values the stop distance like the trade's own price move", () => {

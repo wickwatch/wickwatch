@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AccountOrder, AccountPosition, PositionChange, TradeDeal } from "@wickwatch/core";
-import { dealResult } from "@wickwatch/core/money";
+import { dealResult, positionCosts, positionGross } from "@wickwatch/core/money";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
@@ -32,9 +32,10 @@ const held = (from: string | undefined, to: number) => {
 
 const deal = computed(() => (props.item.kind === "deal" ? props.item.value : undefined));
 const net = computed(() => (deal.value ? dealResult(deal.value) : 0));
+const position = computed(() => (props.item.kind === "position" ? props.item.value : undefined));
 
 /** The position whose changes are shown: the open one, or the one a closed trade was. */
-const positionId = computed(() => (props.item.kind === "position" ? props.item.value.id : deal.value?.positionId));
+const positionId = computed(() => position.value?.id ?? deal.value?.positionId);
 /** Undefined while loading and for an order. */
 const changes = ref<PositionChange[]>();
 const changesError = ref<string>();
@@ -69,25 +70,41 @@ const showChanges = computed(
 
 <template>
   <dl class="facts">
-    <template v-if="item.kind === 'position'">
+    <template v-if="position">
       <dt>{{ $t("trade.symbol") }}</dt>
-      <dd class="mono">{{ item.value.symbol }}</dd>
+      <dd class="mono">{{ position.symbol }}</dd>
       <dt>{{ $t("trade.side") }}</dt>
-      <dd>{{ $t(`trade.${item.value.side}`) }}</dd>
+      <dd>{{ $t(`trade.${position.side}`) }}</dd>
       <dt>{{ $t("trade.lots") }}</dt>
-      <dd class="mono">{{ formatNumber(locale, item.value.volume) }}</dd>
+      <dd class="mono">{{ formatNumber(locale, position.volume) }}</dd>
       <dt>{{ $t("trade.entry") }}</dt>
-      <dd class="mono">{{ price(item.value.entry) }}</dd>
+      <dd class="mono">{{ price(position.entry) }}</dd>
+      <dt>{{ $t("trade.currentPrice") }}</dt>
+      <dd class="mono">{{ price(position.price) }}</dd>
       <dt>{{ $t("trade.sl") }}</dt>
-      <dd class="mono">{{ price(item.value.sl) }}</dd>
+      <dd class="mono">{{ price(position.sl) }}</dd>
       <dt>{{ $t("trade.tp") }}</dt>
-      <dd class="mono">{{ price(item.value.tp) }}</dd>
-      <dt>{{ $t("trade.pnl") }}</dt>
-      <dd><SignedValue :value="item.value.pnl" /></dd>
+      <dd class="mono">{{ price(position.tp) }}</dd>
+      <dt>{{ $t("trade.initialSl") }}</dt>
+      <dd class="mono">{{ price(position.initialStopLoss) }}</dd>
       <dt>{{ $t("trade.opened") }}</dt>
-      <dd class="mono">{{ date(item.value.openedAt) }}</dd>
+      <dd class="mono">{{ date(position.openedAt) }}</dd>
       <dt>{{ $t("trade.held") }}</dt>
-      <dd>{{ held(item.value.openedAt, now) }}</dd>
+      <dd>{{ held(position.openedAt, now) }}</dd>
+      <!-- Split like a closed trade's only when the broker reports the costs, not as 0. -->
+      <template v-if="positionCosts(position) !== undefined">
+        <dt>{{ $t("trade.gross") }}</dt>
+        <dd><SignedValue :value="positionGross(position)" /></dd>
+        <dt>{{ $t("trade.commission") }}</dt>
+        <dd><SignedValue :value="position.commission" /></dd>
+        <dt>{{ $t("trade.swap") }}</dt>
+        <dd><SignedValue :value="position.swap" /></dd>
+        <dt>{{ $t("trade.net") }}</dt>
+      </template>
+      <dt v-else>{{ $t("trade.pnl") }}</dt>
+      <dd><SignedValue :value="position.pnl" /></dd>
+      <dt>{{ $t("trade.r") }}</dt>
+      <dd><SignedValue :value="position.r" :digits="1" unit="R" /></dd>
     </template>
 
     <template v-else-if="item.kind === 'order'">

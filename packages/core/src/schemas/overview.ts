@@ -124,7 +124,10 @@ export const Attributed = Type.Object({
   manual: Type.Optional(Type.Boolean()),
 });
 export type Attributed = Type.Static<typeof Attributed>;
-export const AccountPosition = Type.Object({ ...Position.properties, ...Attributed.properties });
+/** An open position with its current result in multiples of the risk at its initial stop, like TradeDeal. */
+export const TradePosition = Type.Object({ ...Position.properties, r: Type.Optional(Type.Number()) });
+export type TradePosition = Type.Static<typeof TradePosition>;
+export const AccountPosition = Type.Object({ ...TradePosition.properties, ...Attributed.properties });
 export type AccountPosition = Type.Static<typeof AccountPosition>;
 /** Orders carry no position id, so no override applies to them and they have no `manual`. */
 export const AccountOrder = Type.Object({ ...PendingOrder.properties, instance: Type.Optional(Type.String()) });

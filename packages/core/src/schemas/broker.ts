@@ -23,16 +23,31 @@ export const AccountStats = Type.Object({
 });
 export type AccountStats = Type.Static<typeof AccountStats>;
 
-/** Volume is in lots; pnl in the account currency. */
+/** Volume is in lots; pnl in the account currency, after the commission and swap booked so far. */
 export const Position = Type.Object({
   id: Id,
   symbol: Type.String({ minLength: 1 }),
   side: Side,
   volume: Type.Number({ exclusiveMinimum: 0 }),
   entry: Type.Number(),
+  /** Current market price the pnl is valued at. */
+  price: Type.Optional(Type.Number()),
   sl: Type.Optional(Type.Number()),
   tp: Type.Optional(Type.Number()),
+  /**
+   * Stop loss the position was opened with, not a later (moved or trailed) one; the base for its R. Left out by
+   * adapters that cannot tell; the server then fills in the first stop it saw on the position.
+   */
+  initialStopLoss: Type.Optional(Type.Number()),
   pnl: Type.Number(),
+  /**
+   * P&L before costs as the broker reports it. Without it the core takes `pnl` less commission and swap; a broker
+   * that already deducts the closing commission from `pnl` needs it for the costs to come out right.
+   */
+  grossPnl: Type.Optional(Type.Number()),
+  /** Commission and swap booked so far, negative as costs; already in `pnl`. */
+  commission: Type.Optional(Type.Number()),
+  swap: Type.Optional(Type.Number()),
   /** Order label; equals the instance name per the bot contract. */
   label: Type.Optional(Type.String()),
   openedAt: IsoTime,

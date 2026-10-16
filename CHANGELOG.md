@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Open positions show their current R, measured against the stop they opened with (the first stop wickwatch saw on them if it saw them from their opening, so a stop moved to break even or trailed does not change it), and the commission and swap booked so far: P&L before costs and costs as columns like closed trades, and in the details panel current price, initial stop, gross, commission, swap and net.
+
 ### Fixed
 - Instance page: "Excluded trades" lists only trades assigned by hand to no instance. A trade assigned by hand to another instance counts there and no longer shows as excluded on the instance the rules would pick (seen since 0.7.3, when a stopped instance's trade went to the one still running).
 

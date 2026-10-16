@@ -1,7 +1,7 @@
 import type { AdapterErrorCode } from "./errors";
 import { createAttributor, type AttributionOverrides, type TradeItem } from "./attribution";
 import { readLabels } from "./labels";
-import { withRisk } from "./risk";
+import { withPositionR, withRisk } from "./risk";
 import { byTime, orderItem, positionItem, summarizeInstance } from "./overview";
 import type {
   Deal,
@@ -75,6 +75,7 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
         attributor.automaticOwner(accountNumber, trade) === summary.name
       );
     }) ?? [];
+  const positions = data?.positions.map(withPositionR);
   const asItem = (d: Deal): TradeItem => d;
   const own = mine(data?.deals, asItem).sort(byTime);
   // The first deal that changed the P&L; deals before it (e.g. openings without costs) add nothing.
@@ -96,9 +97,9 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
         }
       : {}),
     ...(account?.error ? { brokerError: account.error } : {}),
-    positions: mine(data?.positions, positionItem),
+    positions: mine(positions, positionItem),
     pendingOrders: mine(data?.pendingOrders, orderItem),
-    excludedPositions: excluded(data?.positions, positionItem),
+    excludedPositions: excluded(positions, positionItem),
     excludedDeals: excluded(data?.deals, asItem).sort(byTime),
     deals: withRisk(deals, data?.deals ?? [], account?.balance),
     stats: dealStats(deals),

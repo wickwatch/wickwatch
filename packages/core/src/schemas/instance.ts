@@ -1,8 +1,8 @@
 import Type from "typebox";
 import { AdapterErrorCode } from "../errors";
 import { IsoTime, Labels } from "./common";
-import { Deal, PendingOrder, Position } from "./broker";
-import { Attributed, InstanceSummary } from "./overview";
+import { Deal, PendingOrder } from "./broker";
+import { Attributed, InstanceSummary, TradePosition } from "./overview";
 
 /** Key figures over closed trades; averages and ratios are missing when there is no data for them. */
 export const DealStats = Type.Object({
@@ -55,12 +55,12 @@ export const InstanceDetail = Type.Object({
   ),
   /** Set when the broker could not be queried; positions, orders and deals are then empty. */
   brokerError: Type.Optional(AdapterErrorCode),
-  positions: Type.Array(Position),
+  positions: Type.Array(TradePosition),
   pendingOrders: Type.Array(PendingOrder),
   /** Deals of this instance in the range, oldest first. */
   deals: Type.Array(TradeDeal),
   /** Positions and deals the rules would attribute here, but removed by hand (e.g. manual trades). */
-  excludedPositions: Type.Array(Position),
+  excludedPositions: Type.Array(TradePosition),
   excludedDeals: Type.Array(Deal),
   stats: DealStats,
   range: Type.Object({ from: IsoTime, to: IsoTime }),

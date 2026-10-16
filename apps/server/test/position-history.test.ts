@@ -11,7 +11,8 @@ const position = (values: Partial<Position>, id = "p1"): Position => ({
   volume: 1,
   entry: 100,
   pnl: 0,
-  openedAt: "2026-10-06T06:00:00.000Z",
+  // Opened right before the first load of each test.
+  openedAt: "2026-10-06T09:00:00.000Z",
   ...values,
 });
 
@@ -108,9 +109,32 @@ describe("PositionHistory", () => {
     expect(await history.changes(accountId, "p1")).toHaveLength(1);
   });
 
+  it("answers the first stop it saw on each position, also one set only after the opening", async () => {
+    now = new Date(now.getTime() + 60_000);
+    expect(await history.observe("1111111", [position({ sl: 90 }), position({}, "p2")])).toEqual(new Map([["p1", 90]]));
+    await observe(position({ sl: 100 }), position({ sl: 95 }, "p2"));
+    expect(await history.observe("1111111", [position({ sl: 110 }), position({ sl: 99 }, "p2")])).toEqual(
+      new Map([
+        ["p1", 90],
+        ["p2", 95],
+      ]),
+    );
+  });
+
+  it("answers no stop for a position first seen well after its opening, nor for one the broker names it for", async () => {
+    now = new Date(now.getTime() + 60_000);
+    const late = position({ sl: 95, openedAt: "2026-10-06T08:00:00.000Z" });
+    expect(await history.observe("1111111", [late, position({ sl: 90, initialStopLoss: 80 }, "p2")])).toEqual(
+      new Map(),
+    );
+    // Watched from the opening, it keeps its stop also after a later restart.
+    now = new Date(now.getTime() + 3 * 60 * 60_000);
+    expect(await history.observe("1111111", [position({ sl: 90 }, "p2")])).toEqual(new Map([["p2", 90]]));
+  });
+
   it("logs a failure instead of failing the load", async () => {
     await t.db.schema.dropTable("position_history").execute();
-    await expect(history.observe("1111111", [position({ sl: 90 })])).resolves.toBeUndefined();
+    await expect(history.observe("1111111", [position({ sl: 90 })])).resolves.toEqual(new Map());
     expect(log.warn).toHaveBeenCalledTimes(1);
   });
 });
@@ -135,5 +159,33 @@ describe("GET /accounts/:number/positions/:positionId/changes", () => {
 
   it("needs a login", async () => {
     expect((await t.app.inject({ url: "/api/v1/accounts/1111111/positions/p1/changes" })).statusCode).toBe(401);
+  });
+});
+
+describe("R of open positions", () => {
+  it("measures against the first stop wickwatch saw once the stop moved, unless the broker names the initial one", async () => {
+    const positions = vi.spyOn(t.adapters.broker, "positions");
+    // The app runs on the real clock: opened just now, so wickwatch sees it from its opening.
+    const openedAt = new Date().toISOString();
+    const cookie = await loginAs(t, "viewer");
+    const get = async (url: string) =>
+      (await t.app.inject({ url: `/api/v1/${url}`, headers: { cookie } })).json<{ positions: unknown[] }>();
+
+    positions.mockResolvedValue([position({ sl: 90, price: 105, pnl: 50, openedAt })]);
+    await get("overview");
+    // Stop moved to break even: still 1R is 10 points, so 15 points are 1.5R.
+    positions.mockResolvedValue([position({ sl: 100, price: 115, pnl: 75, openedAt })]);
+    expect((await get("instances/alpha-ger40-a")).positions).toEqual([
+      expect.objectContaining({ id: "p1", sl: 100, initialStopLoss: 90, r: 1.5 }),
+    ]);
+
+    positions.mockResolvedValue([position({ sl: 100, initialStopLoss: 80, price: 115, pnl: 75, openedAt })]);
+    expect((await get("instances/alpha-ger40-a")).positions).toEqual([
+      expect.objectContaining({ initialStopLoss: 80, r: 0.75 }),
+    ]);
+    // The account page, from the overview loaded first.
+    expect((await get("accounts/1111111/detail")).positions).toEqual([
+      expect.objectContaining({ initialStopLoss: 90, r: 0.5 }),
+    ]);
   });
 });

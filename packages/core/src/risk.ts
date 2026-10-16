@@ -1,5 +1,5 @@
-import type { Deal, TradeDeal } from "./schemas";
-import { dealResult, round2 } from "./money";
+import type { Deal, Position, Side, TradeDeal, TradePosition } from "./schemas";
+import { dealResult, positionGross, round2 } from "./money";
 
 /**
  * What a trade stood to lose at its initial stop loss, in the account currency. The stop distance is valued like the
@@ -10,10 +10,36 @@ import { dealResult, round2 } from "./money";
 export function dealRisk(deal: Deal): number | undefined {
   const { entryPrice, initialStopLoss } = deal;
   if (entryPrice === undefined || initialStopLoss === undefined) return undefined;
-  const move = deal.price - entryPrice;
-  if (move === 0 || deal.pnl === 0) return undefined;
-  const perUnit = Math.abs(deal.pnl / move);
-  const stopDistance = (entryPrice - initialStopLoss) * (deal.side === "buy" ? 1 : -1);
+  return stopRisk(deal.side, entryPrice, initialStopLoss, deal.price, deal.pnl);
+}
+
+/**
+ * What an open position stands to lose at its initial stop, valued like dealRisk by its move from entry to the current
+ * price and its pnl before costs. Undefined without current price or initial stop, while the price is at the entry,
+ * or when the stop does not lie on the losing side.
+ */
+export function positionRisk(position: Position): number | undefined {
+  const { price, initialStopLoss } = position;
+  if (price === undefined || initialStopLoss === undefined) return undefined;
+  return stopRisk(position.side, position.entry, initialStopLoss, price, positionGross(position));
+}
+
+/**
+ * The position with its current pnl (including costs) in multiples of its risk, as dealR for a closed trade. Right
+ * after the opening the risk is coarse (a pnl in cents over a small move); that only touches the costs' share of the R,
+ * as the gross share comes out as the price move over the stop distance whatever the risk.
+ */
+export function withPositionR(position: Position): TradePosition {
+  const risk = positionRisk(position);
+  return risk ? { ...position, r: round2(position.pnl / risk) } : position;
+}
+
+/** The stop distance valued at the trade's pnl per price unit (`gross` over the move from `entry` to `price`). */
+function stopRisk(side: Side, entry: number, initialStop: number, price: number, gross: number): number | undefined {
+  const move = price - entry;
+  if (move === 0 || gross === 0) return undefined;
+  const perUnit = Math.abs(gross / move);
+  const stopDistance = (entry - initialStop) * (side === "buy" ? 1 : -1);
   return stopDistance > 0 ? round2(stopDistance * perUnit) : undefined;
 }
 

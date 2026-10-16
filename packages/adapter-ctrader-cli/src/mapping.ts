@@ -236,7 +236,8 @@ export function toPositions(data: unknown): Position[] {
     const direction = side(p["tradeSide"]) ?? side(p["side"]);
     const volume = num(p["volumeLots"]) ?? num(p["volume"]);
     const entry = num(p["entryPrice"]) ?? num(p["openPrice"]) ?? num(p["executionPrice"]);
-    const pnl = num(p["netProfit"]) ?? num(p["grossProfit"]) ?? num(p["profit"]);
+    const gross = num(p["grossProfit"]);
+    const pnl = num(p["netProfit"]) ?? gross ?? num(p["profit"]);
     const openedAt = str(p["openTime"]) ?? str(p["time"]);
     if (!id || !symbol || !direction || volume === undefined || entry === undefined || pnl === undefined || !openedAt) {
       throw unexpected("position", p);
@@ -248,7 +249,11 @@ export function toPositions(data: unknown): Position[] {
       side: direction,
       volume,
       entry,
+      ...optional("price", num(p["currentPrice"])),
       pnl,
+      ...optional("grossPnl", gross),
+      ...optional("commission", num(p["commission"])),
+      ...optional("swap", num(p["swap"])),
       ...optional("sl", num(p["stopLoss"])),
       ...optional("tp", num(p["takeProfit"])),
       ...(label ? { label } : {}),
