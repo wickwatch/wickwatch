@@ -1,4 +1,4 @@
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 export const THEME_MODES = ["system", "dark", "light"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
@@ -30,4 +30,14 @@ watch(
     }
   },
   { immediate: true },
+);
+
+const darkQuery =
+  typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : undefined;
+const systemDark = ref(darkQuery?.matches ?? false);
+darkQuery?.addEventListener("change", (event) => (systemDark.value = event.matches));
+
+/** The theme shown: the choice, or the system's under `system`; for what CSS cannot style, e.g. a canvas. */
+export const appliedTheme = computed(() =>
+  themeMode.value === "system" ? (systemDark.value ? "dark" : "light") : themeMode.value,
 );

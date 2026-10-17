@@ -121,6 +121,32 @@ describe("CtraderCliBroker", () => {
     await expect(broker.marketHours(c, "1111111", "US30 yes")).rejects.toMatchObject({ code: "invalid_input" });
   });
 
+  it("reads candles of a symbol through the account's shell session", async () => {
+    expect(
+      await broker.candles(c, "1111111", "US30.cash", "h1", "2026-10-02T13:00:00.000Z", "2026-10-02T14:00:00.000Z"),
+    ).toEqual([
+      { time: "2026-10-02T13:00:00.000Z", open: 46100.5, high: 46180, low: 46050.2, close: 46160 },
+      { time: "2026-10-02T14:00:00.000Z", open: 46160, high: 46210.7, low: 46120, close: 46200.1 },
+    ]);
+    const range = ["2026-10-02T13:00:00.000Z", "2026-10-02T14:00:00.000Z"] as const;
+    await expect(broker.candles(c, "1111111", "NOPE", "h1", ...range)).rejects.toThrow();
+    await expect(broker.candles(c, "1111111", "US30 yes", "h1", ...range)).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+    await expect(broker.candles(c, "1111111", "US30.cash", "h1 yes", ...range)).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+  });
+
+  it("knows how long the periods based on time are", () => {
+    expect(["m1", "m5", "h4", "D1", "W1"].map((p) => broker.periodSeconds(p))).toEqual([
+      60, 300, 14_400, 86_400, 604_800,
+    ]);
+    expect(["t100", "Re5", "Ra10", "Hm5", "Hh1", "m99", "M5"].map((p) => broker.periodSeconds(p))).toEqual(
+      Array(7).fill(undefined),
+    );
+  });
+
   it("warms the session up, so the first deals query is not empty; asks one day more, filters, adds stop and opening", async () => {
     const deals = await broker.deals(c, "1111111", "2026-09-23T00:00:00.000Z", "2026-09-25T08:59:59.000Z");
     expect(deals).toEqual([

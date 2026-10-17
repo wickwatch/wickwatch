@@ -16,8 +16,11 @@ const props = defineProps<{
   dirty?: boolean;
   /** A panel at the right edge, full height, for details next to a table; the same sheet as the modal on phones. */
   drawer?: boolean;
-  /** Almost the whole window, for content that needs room (the log); its content fills the height and scrolls itself. */
-  full?: boolean;
+  /**
+   * For content that needs room; it fills the height and scrolls itself. `full`: almost the whole window (the log).
+   * `large`: as much up to a size a chart reads well in, instead of stretching across a wide screen.
+   */
+  size?: "full" | "large" | undefined;
   /** Arrows to the previous and next entry (a drawer over a table), also on the up and down keys; which way is open. */
   nav?: { prev: boolean; next: boolean } | undefined;
   /** A drawer stays open on a click inside this element, e.g. the table rows that show in it. */
@@ -113,7 +116,7 @@ function discard() {
   <dialog
     ref="dialog"
     class="modal panel"
-    :class="{ 'modal--drawer': drawer, 'modal--full': full }"
+    :class="{ 'modal--drawer': drawer, 'modal--full': size, 'modal--large': size === 'large' }"
     :aria-labelledby="titleId"
     tabindex="-1"
     @cancel.prevent="requestClose"
@@ -215,6 +218,13 @@ function discard() {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+@media (min-width: 641px) {
+  .modal--large {
+    width: min(1200px, calc(100vw - 64px));
+    height: min(820px, calc(100dvh - 64px));
+  }
 }
 
 /* Not in the top layer (no modal): fixed at the right edge, above the page and below modals. */

@@ -2,11 +2,13 @@ import { SystemInfo } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import type { Adapters } from "../adapters";
 import type { Config } from "../config";
+import { chartBroker } from "../services/trade-chart";
 
 export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters: Adapters; version: string }> = async (
   app,
   { config, adapters, version },
 ) => {
+  const charts = chartBroker(adapters.broker) !== undefined;
   app.get(
     "/system",
     { schema: { tags: ["system"], summary: "Version, adapters and capabilities", response: { 200: SystemInfo } } },
@@ -24,6 +26,7 @@ export const systemRoutes: FastifyPluginAsyncTypebox<{ config: Config; adapters:
       mcp: config.mcp,
       apiTokensRequire2fa: config.apiTokensRequire2fa,
       newsCalendar: config.newsCalendarUrl !== undefined,
+      charts,
       ...(config.supportUrl ? { supportUrl: config.supportUrl.href } : {}),
     }),
   );

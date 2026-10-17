@@ -24,6 +24,7 @@ const info = (extra: Partial<SystemInfo> = {}): SystemInfo => ({
   mcp: true,
   apiTokensRequire2fa: false,
   newsCalendar: false,
+  charts: false,
   ...extra,
 });
 

@@ -1,7 +1,7 @@
 import Type from "typebox";
 import { InstancePause } from "./schedule";
 import { AdapterErrorCode } from "../errors";
-import { MarketHours, PendingOrder, Position } from "./broker";
+import { Candle, MarketHours, PendingOrder, Position } from "./broker";
 import { Capabilities } from "./capabilities";
 import { ChallengeEvaluation } from "./challenge";
 import { IsoTime } from "./common";
@@ -146,6 +146,25 @@ export const PositionChange = Type.Object({
 });
 export type PositionChange = Type.Static<typeof PositionChange>;
 
+/** Stop loss and take profit of a position from `at` on, as wickwatch saw them; unset while none was set. */
+export const PositionLevels = Type.Object({
+  at: IsoTime,
+  sl: Type.Optional(Type.Number()),
+  tp: Type.Optional(Type.Number()),
+});
+export type PositionLevels = Type.Static<typeof PositionLevels>;
+
+/** The candles around one trade and the stops it had over its life, for the chart in its details. */
+export const TradeChart = Type.Object({
+  /** The period of the candles: the one asked for, or a longer one when the trade is too long for it. */
+  period: Type.String(),
+  /** Oldest first. */
+  candles: Type.Array(Candle),
+  /** Oldest first; empty when wickwatch never saw the position open. */
+  levels: Type.Array(PositionLevels),
+});
+export type TradeChart = Type.Static<typeof TradeChart>;
+
 /** One account with its instances and all its open positions and pending orders, built by buildAccountDetail(). */
 export const AccountDetail = Type.Object({
   time: IsoTime,
@@ -191,5 +210,7 @@ export const SystemInfo = Type.Object({
   apiTokensRequire2fa: Type.Boolean(),
   /** Whether schedules can pause around news: a calendar is set (`NEWS_CALENDAR_URL`). */
   newsCalendar: Type.Boolean(),
+  /** Whether the broker adapter has candles: trade details then show a chart. */
+  charts: Type.Boolean(),
 });
 export type SystemInfo = Type.Static<typeof SystemInfo>;

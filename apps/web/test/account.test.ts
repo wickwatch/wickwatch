@@ -104,6 +104,7 @@ beforeEach(() => {
     mcp: true,
     apiTokensRequire2fa: false,
     newsCalendar: false,
+    charts: false,
   };
   body = detail();
   vi.stubGlobal(

@@ -4,8 +4,10 @@ import {
   attributeDeals,
   EmergencyStopReport,
   isTimeZone,
+  IsoTime,
   PositionChange,
   toIsoTime,
+  TradeChart,
 } from "@wickwatch/core";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
@@ -20,9 +22,11 @@ import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
 import { RECENT_DAYS } from "../services/deal-history";
 import { loadOverrides } from "../services/overrides";
+import { findPeriod } from "../services/periods";
 import type { PositionHistory } from "../services/position-history";
 import { DAY_MS } from "../services/schedules";
 import type { SymbolCache } from "../services/symbols";
+import { chartWindow, type CandleCache, type ChartBroker } from "../services/trade-chart";
 
 const PositionParams = Type.Object({
   number: Type.String({ minLength: 1 }),
@@ -37,11 +41,13 @@ export interface AccountRouteOptions {
   labelPrefix: string;
   symbols: SymbolCache;
   positionHistory: PositionHistory;
+  /** Missing when the broker adapter has no candles. */
+  charts: { broker: ChartBroker; candles: CandleCache } | undefined;
 }
 
 export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = async (
   app,
-  { adapters, accounts, db, cipher, labelPrefix, symbols, positionHistory },
+  { adapters, accounts, db, cipher, labelPrefix, symbols, positionHistory, charts },
 ) => {
   /** Accounts of the active broker adapter; rows of another adapter (e.g. demo) are not usable. */
   async function loadAccounts(id?: number): Promise<Account[]> {
@@ -304,6 +310,51 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       const id = await findAccountId(accounts, number);
       if (id === undefined) return reply.code(404).send({ error: "not_found" });
       return positionHistory.changes(id, positionId);
+    },
+  );
+
+  app.get(
+    "/accounts/:number/positions/:positionId/chart",
+    {
+      schema: {
+        tags: ["accounts"],
+        summary: "Candles around a position, open or closed, and its stop loss and take profit over its life",
+        description:
+          "`from` is when the position opened, `to` when it closed (missing while open). The candles start some bars " +
+          "before the opening and end some after the close. `period` is the chart period wanted, e.g. the " +
+          "instance's; a longer one is used when the trade does not fit, any one that fits without it. `levels` are " +
+          "what wickwatch saw, like the changes. 501 when the broker adapter has no candles.",
+        params: PositionParams,
+        querystring: Type.Object({
+          symbol: Type.String({ minLength: 1, maxLength: 64 }),
+          from: IsoTime,
+          to: Type.Optional(IsoTime),
+          period: Type.Optional(Type.String({ minLength: 1, maxLength: 32 })),
+        }),
+        response: { 200: TradeChart, 400: ErrorBody, 404: ErrorBody, 501: ErrorBody, 502: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { number, positionId } = request.params;
+      const { symbol } = request.query;
+      if (!charts) return reply.code(501).send({ error: "unsupported" });
+      // An instance's period from a container label may be spelled otherwise (H1 for h1).
+      const period =
+        request.query.period === undefined ? undefined : findPeriod(charts.broker.periods, request.query.period);
+      const account = await findAccount(accounts, number);
+      if (!account) return reply.code(404).send({ error: "not_found" });
+      const now = Date.now();
+      const opened = Date.parse(request.query.from);
+      const closed = request.query.to === undefined ? undefined : Date.parse(request.query.to);
+      if (opened > now || (closed !== undefined && closed < opened) || (request.query.period && !period)) {
+        return reply.code(400).send({ error: "invalid_input" });
+      }
+      const window = chartWindow({ opened, closed, now }, period, charts.broker.timed);
+      const [bars, levels] = await Promise.all([
+        charts.candles.get(account, symbol, window),
+        positionHistory.levels(account.id, positionId),
+      ]);
+      return { period: window.period, candles: bars, levels };
     },
   );
 

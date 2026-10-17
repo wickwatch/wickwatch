@@ -5,6 +5,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ## Unreleased
 
 ### Added
+- Chart in the details panel of open positions and closed trades: the candles around the trade in its instance's period (a longer one when the trade does not fit), with its entry and its stop loss and take profit over its life, so a stop moved to break even shows as a step marked BE; "Show larger" opens it almost full screen. The candles come from the broker adapter (`candles`, cTrader CLI `candles` command) only when a chart is opened. Uses TradingView Lightweight Charts (Apache-2.0).
 - Open positions show their current R, measured against the stop they opened with (the first stop wickwatch saw on them if it saw them from their opening, so a stop moved to break even or trailed does not change it), and the commission and swap booked so far: P&L before costs and costs as columns like closed trades, and in the details panel current price, initial stop, gross, commission, swap and net.
 
 ### Fixed

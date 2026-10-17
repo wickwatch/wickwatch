@@ -306,6 +306,7 @@ describe("templates on the Algos page", () => {
       mcp: true,
       apiTokensRequire2fa: false,
       newsCalendar: false,
+      charts: false,
     };
     const wrapper = await open(AlgosView, "/algos");
     await click(wrapper, "Template from file…");

@@ -2,6 +2,7 @@ import type {
   AccountStats,
   AlgoMetadata,
   BrokerAccount,
+  Candle,
   Capabilities,
   Deal,
   EmergencyStopResult,
@@ -162,6 +163,20 @@ export interface BrokerAdapter {
    * the server asks at most once a day per account and symbol.
    */
   marketHours?(c: Credentials, account: string, symbol: string): Promise<MarketHours>;
+  /**
+   * Closed bars of a symbol in a period, oldest first, those opening from `from` to `to`. Missing when the broker
+   * cannot tell; then `periodSeconds` is missing too. A chart needs `periods()` as well: the periods it can use. Asked only when a chart is opened, never on a hot path.
+   */
+  candles?(
+    c: Credentials,
+    account: string,
+    symbol: string,
+    period: string,
+    from: IsoTime,
+    to: IsoTime,
+  ): Promise<Candle[]>;
+  /** How long a bar of a period is, in seconds; undefined for one not based on time (ticks, renko, Heikin-Ashi). */
+  periodSeconds?(period: string): number | undefined;
   /** Releases long-lived resources (sessions, processes) on shutdown. */
   dispose?(): Promise<void>;
   /** Hands over where to report the adapter's own work (logins, sessions) for debugging. */

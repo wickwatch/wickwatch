@@ -5,6 +5,7 @@ import {
   type AlgoMetadata,
   type BrokerAccount,
   type BrokerAdapter,
+  type Candle,
   type Capabilities,
   type Credentials,
   type Deal,
@@ -25,6 +26,7 @@ import {
   toAccountStats,
   toAlgoMetadata,
   toBrokerAccounts,
+  toCandles,
   toDeals,
   toMarketHours,
   toOpenings,
@@ -58,6 +60,11 @@ export interface CtraderCliBrokerOptions extends Partial<CliOptions> {
 const ACCOUNTS_CACHE_MS = 60_000;
 
 const dateOnly = (time: number) => new Date(time).toISOString().slice(0, 10);
+/** UTC without offset, as `candles` reads a bare ISO date and time. */
+const dateTime = (time: number) => new Date(time).toISOString().slice(0, 19);
+const SYMBOL = /^[A-Za-z0-9._#&-]{1,40}$/;
+/** Seconds per unit of the periods based on time; tick, range, renko and Heikin-Ashi bars are not. */
+const PERIOD_UNITS: Record<string, number> = { m: 60, h: 3600, D: 86_400, W: 604_800, Month: 2_592_000 };
 
 /** Output of `ctrader-cli periods` (5.9), time-based frames first; tokens are case-insensitive. */
 const PERIODS = [
@@ -123,6 +130,13 @@ export class CtraderCliBroker implements BrokerAdapter {
   }
 
   readonly defaultPeriod = "m5";
+
+  periodSeconds(period: string): number | undefined {
+    if (!PERIODS.includes(period)) return undefined;
+    const [, prefix = "", count] = /^(m|h|D|W|Month)(\d+)$/.exec(period) ?? [];
+    const unit = PERIOD_UNITS[prefix];
+    return unit === undefined ? undefined : unit * Number(count);
+  }
 
   algoFormats(): string[] {
     return ["algo"];
@@ -209,8 +223,27 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   /** `sessions <symbol>` in the account's shell session: the weekly schedule, without holidays. */
   async marketHours(c: Credentials, account: string, symbol: string): Promise<MarketHours> {
-    if (!/^[A-Za-z0-9._#&-]{1,40}$/.test(symbol)) throw new AdapterError("invalid_input", `Invalid symbol ${symbol}`);
+    if (!SYMBOL.test(symbol)) throw new AdapterError("invalid_input", `Invalid symbol ${symbol}`);
     return toMarketHours(extractJson(await this.pool.run(c, account, `sessions ${symbol}`)), new Date());
+  }
+
+  /** `candles <symbol> <period> <from> <to>` in the account's shell session; at most 1000 bars an answer. */
+  async candles(
+    c: Credentials,
+    account: string,
+    symbol: string,
+    period: string,
+    from: IsoTime,
+    to: IsoTime,
+  ): Promise<Candle[]> {
+    const start = Date.parse(from);
+    const end = Date.parse(to);
+    if (!SYMBOL.test(symbol)) throw new AdapterError("invalid_input", `Invalid symbol ${symbol}`);
+    if (!PERIODS.includes(period) || Number.isNaN(start) || Number.isNaN(end) || end < start) {
+      throw new AdapterError("invalid_input", "Invalid candle period or range");
+    }
+    const answer = await this.pool.run(c, account, `candles ${symbol} ${period} ${dateTime(start)} ${dateTime(end)}`);
+    return toCandles(extractJson(answer));
   }
 
   async stats(c: Credentials, account: string): Promise<AccountStats> {

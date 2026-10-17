@@ -324,7 +324,21 @@ createInterface({ input: process.stdin }).on("line", (line) => {
         endSecond: d * 86400 + (ttp ? 86280 : 85800),
       })),
     });
-  } else if (cmd === "symbol" || cmd === "sessions") out(`Error: Symbol not found: ${rest[0]}\n`);
+  } else if (cmd === "candles" && rest[0] === "US30.cash") {
+    // The bar fields are not documented; assumed like the other shell answers (camelCase, UTC with Z).
+    json({
+      symbolName: rest[0],
+      timeframe: rest[1],
+      from: rest[2],
+      to: rest[3],
+      returned: 2,
+      bars: [
+        { time: "2026-10-02T13:00:00Z", open: 46100.5, high: 46180, low: 46050.2, close: 46160, volume: 812 },
+        { time: "2026-10-02T14:00:00Z", open: 46160, high: 46210.7, low: 46120, close: 46200.1, volume: 640 },
+      ],
+    });
+  } else if (cmd === "candles") out(`Error: Symbol not available: ${rest[0]}\n`);
+  else if (cmd === "symbol" || cmd === "sessions") out(`Error: Symbol not found: ${rest[0]}\n`);
   else out(`Error: Unknown command: ${cmd}\n`);
   out("\n> ");
 });

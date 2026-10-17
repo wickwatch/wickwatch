@@ -139,6 +139,23 @@ describe("PositionHistory", () => {
   });
 });
 
+describe("PositionHistory.levels", () => {
+  it("lists stop loss and take profit from the first answer on, and then at each change of either", async () => {
+    await observe(position({ tp: 120 }));
+    await observe(position({ sl: 90, tp: 120 }));
+    await observe(position({ sl: 90, tp: 120, volume: 0.5 }));
+    await observe(position({ sl: 100, tp: 120 }));
+    await observe(position({ sl: 100 }), position({ sl: 50 }, "p2"));
+    expect(await history.levels(accountId, "p1")).toEqual([
+      { at: "2026-10-06T09:01:00.000Z", tp: 120 },
+      { at: "2026-10-06T09:02:00.000Z", sl: 90, tp: 120 },
+      { at: "2026-10-06T09:04:00.000Z", sl: 100, tp: 120 },
+      { at: "2026-10-06T09:05:00.000Z", sl: 100 },
+    ]);
+    expect(await history.levels(accountId, "unknown")).toEqual([]);
+  });
+});
+
 describe("GET /accounts/:number/positions/:positionId/changes", () => {
   it("returns what the answers of the broker showed, whoever asked, also to a viewer", async () => {
     const positions = vi.spyOn(t.adapters.broker, "positions");

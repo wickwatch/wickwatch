@@ -20,7 +20,7 @@ const expanded = ref(false);
     <LogView :lines="lines" :state="state">
       <template #actions>
         <LogDownload :instance-ref="instanceRef" />
-        <IconButton icon="expand" :label="$t('log.expand')" variant="ghost" @click="expanded = true" />
+        <IconButton icon="expand" :label="$t('modal.expand')" variant="ghost" @click="expanded = true" />
       </template>
     </LogView>
     <LogDialog

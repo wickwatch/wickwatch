@@ -80,6 +80,7 @@ beforeEach(() => {
     mcp: true,
     apiTokensRequire2fa: false,
     newsCalendar: false,
+    charts: false,
   };
   fetchMock = vi.fn((input: URL) => {
     const path = input.pathname;

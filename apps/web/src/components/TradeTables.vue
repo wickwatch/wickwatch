@@ -29,8 +29,10 @@ const props = defineProps<{
   busy?: ReadonlyMap<string, TradeAction>;
   /** Adds an "Instance" column (account page): each trade's `instance`, linked to its page. */
   instances?: InstanceSummary[] | undefined;
-  /** The account the trades are on; with it the details show what changed on a position. */
+  /** The account the trades are on; with it the details show what changed on a position and its chart. */
   account?: string | undefined;
+  /** The period of the instance the trades are from (instance page), for the chart; else from `instances`. */
+  period?: string | undefined;
 }>();
 defineEmits<{
   close: [position: AccountPosition];
@@ -54,8 +56,15 @@ const withRisk = computed(() => props.deals?.some((d) => d.risk !== undefined) ?
 /** Costs of open positions only when the broker reports them, not as 0. */
 const showPositionCosts = computed(() => props.positions?.some((p) => positionCosts(p) !== undefined) ?? false);
 const showPositionR = computed(() => props.positions?.some((p) => p.r !== undefined) ?? false);
-const refs = computed(() => new Map(props.instances?.map((i) => [i.name, i.ref])));
-const refOf = (name: string | undefined) => (name === undefined ? undefined : refs.value.get(name));
+const byName = computed(() => new Map(props.instances?.map((i) => [i.name, i])));
+const refOf = (name: string | undefined) => (name === undefined ? undefined : byName.value.get(name)?.ref);
+/** The chart period of a trade: its instance's. */
+const periodOf = (item: TradeItem) => {
+  if (props.period !== undefined) return props.period;
+  // Positions and deals name their instance on the account page.
+  const name = "instance" in item.value ? item.value.instance : undefined;
+  return name === undefined ? undefined : byName.value.get(name)?.period;
+};
 
 /** The row shown in the details drawer, with the time it was opened (for the holding time of open positions). */
 const selected = ref<{ item: TradeItem; now: number }>();
@@ -325,7 +334,13 @@ const detailTitle = computed(() => {
       @prev="step(-1)"
       @next="step(1)"
     >
-      <TradeDetail v-if="selected" :item="selected.item" :now="selected.now" :account="account" />
+      <TradeDetail
+        v-if="selected"
+        :item="selected.item"
+        :now="selected.now"
+        :account="account"
+        :period="periodOf(selected.item)"
+      />
     </AppModal>
   </div>
 </template>

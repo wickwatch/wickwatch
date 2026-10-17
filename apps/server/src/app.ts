@@ -36,6 +36,7 @@ import { OverviewLoader, withChangeNotice } from "./services/overview";
 import { PositionHistory, withPositionHistory } from "./services/position-history";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
+import { chartBroker, createCandleCache } from "./services/trade-chart";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -101,6 +102,8 @@ export async function buildApp({
     positionHistory,
   );
   const symbols = createSymbolCache(adapters.broker);
+  const chartSource = chartBroker(adapters.broker);
+  const charts = chartSource && { broker: chartSource, candles: createCandleCache(chartSource.candles) };
   const history = createDealHistory(adapters.broker, app.log);
   const readLog = logReader(adapters.runtime, logArchive);
   const logTracker = new LogTracker(adapters.runtime);
@@ -154,6 +157,7 @@ export async function buildApp({
     labelPrefix,
     symbols,
     positionHistory,
+    charts,
     prefix: api,
   });
   const templates = await loadChallengeTemplates(config.challengeTemplatesDir, app.log);

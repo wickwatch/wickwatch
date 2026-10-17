@@ -7,6 +7,7 @@ import {
   type AccountStats,
   type AlgoMetadata,
   type BrokerAccount,
+  type Candle,
   type Deal,
   type LogEvent,
   type MarketHours,
@@ -130,6 +131,25 @@ export function toMarketHours(data: unknown, now: Date): MarketHours {
     return { start, end };
   });
   return { alwaysOpen: false, sessions: sessionsToUtc(sessions, zone, now) };
+}
+
+/** The first of `keys` the item has a value for; the CLI's bar fields are not documented. */
+const first = <T>(item: Json, keys: readonly string[], read: (v: unknown) => T | undefined) =>
+  keys.map((key) => read(item[key])).find((value) => value !== undefined);
+
+/** `candles <symbol> <period> <from> <to>`: `{ bars: [...] }`, oldest first. */
+export function toCandles(data: unknown): Candle[] {
+  return list(data, "bars").map((bar) => {
+    const time = first(bar, ["time", "openTime", "timestamp"], isoTime);
+    const open = first(bar, ["open", "o"], num);
+    const high = first(bar, ["high", "h"], num);
+    const low = first(bar, ["low", "l"], num);
+    const close = first(bar, ["close", "c"], num);
+    if (!time || open === undefined || high === undefined || low === undefined || close === undefined) {
+      throw unexpected("bar", bar);
+    }
+    return { time, open, high, low, close };
+  });
 }
 
 export function toAccountStats(data: unknown, time: Date): AccountStats {

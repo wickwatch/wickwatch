@@ -34,6 +34,7 @@ import type {
   ScheduleInput,
   ScheduleRules,
   SystemInfo,
+  TradeChart,
 } from "@wickwatch/core";
 
 /** `code` is an i18n key suffix: error.adapter.* or error.api.* */
@@ -193,6 +194,19 @@ export const api = {
     request<PositionChange[]>(
       `accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/changes`,
     ),
+  /** Candles around a position, open (without `to`) or closed, and its stops over its life. */
+  tradeChart: (
+    account: string,
+    positionId: string,
+    query: { symbol: string; from: string; to?: string | undefined; period?: string | undefined },
+  ) => {
+    const params = new URLSearchParams({ symbol: query.symbol, from: query.from });
+    if (query.to) params.set("to", query.to);
+    if (query.period) params.set("period", query.period);
+    return request<TradeChart>(
+      `accounts/${encodeURIComponent(account)}/positions/${encodeURIComponent(positionId)}/chart?${params.toString()}`,
+    );
+  },
   algos: () => request<Algo[]>("algos"),
   audit: (query: { action?: string; target?: string; since?: string; before?: number; limit?: number }) => {
     const params = new URLSearchParams();

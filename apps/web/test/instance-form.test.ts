@@ -227,6 +227,7 @@ describe("InstanceFormView", () => {
       mcp: true,
       apiTokensRequire2fa: false,
       newsCalendar: false,
+      charts: false,
     };
     response = (url, init) =>
       init?.method === "POST" && url.pathname.endsWith("/parameter-file")
@@ -396,6 +397,7 @@ describe("InstanceView configuration tab", () => {
       mcp: true,
       apiTokensRequire2fa: false,
       newsCalendar: false,
+      charts: false,
     };
     const withLicence = [
       {

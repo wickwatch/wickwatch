@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { AccountOrder, AccountPosition, PositionChange, TradeDeal } from "@wickwatch/core";
 import { dealResult, positionCosts, positionGross } from "@wickwatch/core/money";
-import { computed, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
 import { durationParts, formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
+import { system } from "../system";
 import SignedValue from "./SignedValue.vue";
+
+// The chart library loads with the first chart shown, not with the page.
+const TradeChart = defineAsyncComponent(() => import("./TradeChart.vue"));
 
 export type TradeItem =
   | { kind: "position"; value: AccountPosition }
@@ -16,8 +20,10 @@ export type TradeItem =
 const props = defineProps<{
   item: TradeItem;
   now: number;
-  /** The account the trade is on; without it a position's changes are not asked for. */
+  /** The account the trade is on; without it a position's changes and chart are not asked for. */
   account?: string | undefined;
+  /** The period of the trade's instance, for its chart. */
+  period?: string | undefined;
 }>();
 const { t, locale } = useI18n();
 
@@ -57,6 +63,38 @@ watch(
   },
   { immediate: true },
 );
+/** What the chart shows: an open position or a closed trade whose opening is known. */
+const chart = computed(() => {
+  const account = props.account;
+  if (!account || !system.value?.charts) return undefined;
+  const common = { account, period: props.period };
+  const p = position.value;
+  if (p) {
+    return {
+      ...common,
+      positionId: p.id,
+      symbol: p.symbol,
+      side: p.side,
+      openedAt: p.openedAt,
+      entry: p.entry,
+      initialStopLoss: p.initialStopLoss,
+      sl: p.sl,
+      tp: p.tp,
+    };
+  }
+  const d = deal.value;
+  if (!d?.openedAt) return undefined;
+  return {
+    ...common,
+    positionId: d.positionId,
+    symbol: d.symbol,
+    side: d.side,
+    openedAt: d.openedAt,
+    closedAt: d.time,
+    entry: d.entryPrice,
+    initialStopLoss: d.initialStopLoss,
+  };
+});
 const CHANGE_LABEL = { volume: "trade.lots", entry: "trade.entry", sl: "trade.sl", tp: "trade.tp" } as const;
 /** Lots as a number, everything else as a price. */
 const shown = (change: PositionChange, value: number | undefined) =>
@@ -69,6 +107,7 @@ const showChanges = computed(
 </script>
 
 <template>
+  <TradeChart v-if="chart" :key="chart.positionId" v-bind="chart" />
   <dl class="facts">
     <template v-if="position">
       <dt>{{ $t("trade.symbol") }}</dt>

@@ -6,6 +6,7 @@ import {
   type AlgoMetadata,
   type BrokerAccount,
   type BrokerAdapter,
+  type Candle,
   type Capabilities,
   type Credentials,
   type Deal,
@@ -32,6 +33,19 @@ const HISTORY_DAYS = 30;
 const LEVERAGE = 100;
 /** Commission of a round turn per lot, negative as a cost. */
 const COMMISSION_PER_LOT = -3;
+const PERIOD_SECONDS: Record<string, number> = {
+  M1: 60,
+  M5: 300,
+  M15: 900,
+  M30: 1800,
+  H1: 3600,
+  H4: 14_400,
+  D1: 86_400,
+};
+/** More bars than a broker would answer in one call. */
+const MAX_CANDLES = 1000;
+/** Prices sampled per bar for its high and low. */
+const CANDLE_SAMPLES = 12;
 
 export class DemoBrokerAdapter implements BrokerAdapter {
   readonly id = "demo";
@@ -67,7 +81,48 @@ export class DemoBrokerAdapter implements BrokerAdapter {
   }
 
   periods(): string[] {
-    return ["M1", "M5", "M15", "M30", "H1", "H4", "D1"];
+    return Object.keys(PERIOD_SECONDS);
+  }
+
+  periodSeconds(period: string): number | undefined {
+    return PERIOD_SECONDS[period];
+  }
+
+  /** Bars of the demo price curve; the bar still open is left out, as brokers do. */
+  async candles(
+    c: Credentials,
+    account: string,
+    symbol: string,
+    period: string,
+    from: IsoTime,
+    to: IsoTime,
+  ): Promise<Candle[]> {
+    authenticate(c);
+    this.world.account(account);
+    // An unknown symbol fails as at a broker.
+    this.world.symbol(symbol);
+    const seconds = PERIOD_SECONDS[period];
+    if (seconds === undefined) throw new AdapterError("invalid_input", `Unknown period ${period}`);
+    const ms = seconds * 1000;
+    const first = Math.ceil(Date.parse(from) / ms) * ms;
+    const last = Math.min(Date.parse(to), this.world.now().getTime() - ms);
+    if (Number.isNaN(first) || Number.isNaN(last) || (last - first) / ms > MAX_CANDLES) {
+      throw new AdapterError("invalid_input", "Invalid or too large candle range");
+    }
+    const candles: Candle[] = [];
+    for (let time = first; time <= last; time += ms) {
+      const prices = Array.from({ length: CANDLE_SAMPLES + 1 }, (_, i) =>
+        this.world.price(symbol, new Date(time + (ms * i) / CANDLE_SAMPLES)),
+      );
+      candles.push({
+        time: toIsoTime(new Date(time)),
+        open: prices[0] ?? 0,
+        high: Math.max(...prices),
+        low: Math.min(...prices),
+        close: prices.at(-1) ?? 0,
+      });
+    }
+    return candles;
   }
 
   readonly defaultPeriod = "M5";

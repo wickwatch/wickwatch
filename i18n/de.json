@@ -521,7 +521,14 @@
     "riskShare": "({pct} der Balance)",
     "changes": "Änderungen",
     "noChanges": "Bisher keine bemerkt.",
-    "changesHint": "Stop-Loss, Take-Profit, Lots und Einstieg, etwa einmal pro Minute verglichen; die Zeit ist die, zu der eine Änderung bemerkt wurde."
+    "changesHint": "Stop-Loss, Take-Profit, Lots und Einstieg, etwa einmal pro Minute verglichen; die Zeit ist die, zu der eine Änderung bemerkt wurde.",
+    "chartLabel": "Chart von {symbol} in {period} mit Einstieg, Stop-Loss und Take-Profit",
+    "chartEmpty": "Keine Kerzen für diesen Zeitraum.",
+    "chartPeriod": "Timeframe {period}",
+    "chartBreakEven": "BE",
+    "chartPeriodLonger": "länger als {instance} der Instanz: der Trade passt nicht hinein",
+    "chartPeriodChosen": "passend zum Trade gewählt (kein Timeframe einer Instanz)",
+    "chartTitle": "{symbol} · {period}"
   },
   "log": {
     "filter": "Log filtern",
@@ -542,7 +549,6 @@
       "warn": "WARN",
       "error": "FEHLER"
     },
-    "expand": "Größer anzeigen",
     "download": "Log herunterladen",
     "periods": {
       "24h": "Letzte 24 Stunden",
@@ -849,6 +855,7 @@
   },
   "modal": {
     "close": "Schließen",
+    "expand": "Größer anzeigen",
     "previous": "Vorheriger Eintrag",
     "next": "Nächster Eintrag",
     "discardTitle": "Änderungen verwerfen?",

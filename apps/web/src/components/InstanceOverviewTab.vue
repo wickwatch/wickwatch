@@ -102,6 +102,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
         v-else
         kind="positions"
         :account="data.account?.number"
+        :period="data.instance.period"
         :positions="data.positions"
         :can-close="isAdmin"
         :can-attribute="isAdmin"
@@ -131,6 +132,7 @@ async function toggleAttribution(positionId: string, restore: boolean) {
         v-else
         kind="deals"
         :account="data.account?.number"
+        :period="data.instance.period"
         :deals="data.deals"
         :can-attribute="isAdmin"
         :busy="busy"

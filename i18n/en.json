@@ -521,7 +521,14 @@
     "riskShare": "({pct} of the balance)",
     "changes": "Changes",
     "noChanges": "None noticed so far.",
-    "changesHint": "Stop loss, take profit, lots and entry, compared about once a minute; the time is when a change was noticed."
+    "changesHint": "Stop loss, take profit, lots and entry, compared about once a minute; the time is when a change was noticed.",
+    "chartLabel": "Chart of {symbol} in {period} with entry, stop loss and take profit",
+    "chartEmpty": "No candles for this time range.",
+    "chartPeriod": "Timeframe {period}",
+    "chartBreakEven": "BE",
+    "chartPeriodLonger": "longer than the instance's {instance}: the trade does not fit in it",
+    "chartPeriodChosen": "chosen to fit the trade (no instance timeframe)",
+    "chartTitle": "{symbol} · {period}"
   },
   "log": {
     "filter": "Filter log",
@@ -542,7 +549,6 @@
       "warn": "WARN",
       "error": "ERROR"
     },
-    "expand": "Show larger",
     "download": "Download log",
     "periods": {
       "24h": "Last 24 hours",
@@ -849,6 +855,7 @@
   },
   "modal": {
     "close": "Close",
+    "expand": "Show larger",
     "previous": "Previous entry",
     "next": "Next entry",
     "discardTitle": "Discard changes?",

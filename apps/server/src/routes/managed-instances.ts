@@ -28,6 +28,7 @@ import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
 import { audit, auditOutcome } from "../services/audit";
 import { parameterChecks } from "../services/parameter-checks";
+import { findPeriod } from "../services/periods";
 import { setLinks } from "../services/schedules";
 import {
   canonicalParameters,
@@ -150,9 +151,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     }
 
     const periods = adapters.broker.periods?.();
-    const period = periods
-      ? periods.find((p) => p.toLowerCase() === input.period.toLowerCase())
-      : input.period.trim() || undefined;
+    const period = periods ? findPeriod(periods, input.period) : input.period.trim() || undefined;
     if (!period) return { ok: false, status: 400, body: { error: "invalid_period" } };
 
     const offered = await symbols.get(entry);

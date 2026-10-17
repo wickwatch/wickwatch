@@ -1,4 +1,4 @@
-import type { Credentials, Position, PositionChange } from "@wickwatch/core";
+import type { Credentials, Position, PositionChange, PositionLevels } from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import { findAccountId, type AccountDirectory } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -57,13 +57,7 @@ export class PositionHistory {
 
   /** The changes of one position, oldest first; empty if it never changed or wickwatch never saw it open. */
   async changes(accountId: number, positionId: string): Promise<PositionChange[]> {
-    const rows = await this.options.db
-      .selectFrom("position_history")
-      .select([...FIELDS, "at"])
-      .where("account_id", "=", accountId)
-      .where("position_id", "=", positionId)
-      .orderBy("id")
-      .execute();
+    const rows = await this.rows(accountId, positionId);
     return rows.flatMap((row, index) => {
       const before = rows[index - 1];
       if (!before) return [];
@@ -73,6 +67,28 @@ export class PositionHistory {
         return { at: row.at, field, ...(from !== null ? { from } : {}), ...(to !== null ? { to } : {}) };
       });
     });
+  }
+
+  /**
+   * Stop loss and take profit of one position over its life, oldest first: from when wickwatch first saw it, then at
+   * every change of either. Empty if wickwatch never saw it open.
+   */
+  async levels(accountId: number, positionId: string): Promise<PositionLevels[]> {
+    const rows = await this.rows(accountId, positionId);
+    return rows
+      .filter((row, index) => index === 0 || row.sl !== rows[index - 1]?.sl || row.tp !== rows[index - 1]?.tp)
+      .map(({ at, sl, tp }) => ({ at, ...(sl !== null ? { sl } : {}), ...(tp !== null ? { tp } : {}) }));
+  }
+
+  /** What was noted on one position, oldest first: one row per answer that differed from the one before. */
+  private rows(accountId: number, positionId: string) {
+    return this.options.db
+      .selectFrom("position_history")
+      .select([...FIELDS, "at"])
+      .where("account_id", "=", accountId)
+      .where("position_id", "=", positionId)
+      .orderBy("id")
+      .execute();
   }
 
   private async record(account: string, positions: Position[], at: string): Promise<Map<string, number>> {

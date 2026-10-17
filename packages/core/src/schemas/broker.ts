@@ -117,6 +117,16 @@ export const MarketHours = Type.Object({
 });
 export type MarketHours = Type.Static<typeof MarketHours>;
 
+/** One bar of a price chart; `time` is when it opened. */
+export const Candle = Type.Object({
+  time: IsoTime,
+  open: Type.Number(),
+  high: Type.Number(),
+  low: Type.Number(),
+  close: Type.Number(),
+});
+export type Candle = Type.Static<typeof Candle>;
+
 export const ParameterSchema = Type.Object({
   name: Type.String({ minLength: 1 }),
   type: ParameterType,
