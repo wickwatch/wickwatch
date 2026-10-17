@@ -24,7 +24,7 @@
     "@vitejs/plugin-vue": "^6.0.10",
     "@vue/test-utils": "^2.5.1",
     "@wickwatch/core": "workspace:*",
-    "happy-dom": "^20.14.6",
+    "happy-dom": "^21.0.1",
     "typescript": "catalog:",
     "vite": "^8.3.4",
     "vitest": "catalog:",
