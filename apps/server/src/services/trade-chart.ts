@@ -11,6 +11,10 @@ const MIN_BARS_AFTER = 10;
 const CACHE_SIZE = 50;
 /** Candles of a window that ended long ago do not change; kept this long. */
 const CLOSED_TTL_MS = 6 * 60 * 60 * 1000;
+/** A window reaching the bar still open is asked again after this long: its last bar moves on. */
+const LIVE_TTL_MS = 30_000;
+/** The bar still open is built from at most this many bars of a shorter period; it lags behind by one of them. */
+const MAX_PARTS = 300;
 
 /** A period based on time and the length of its bars, in milliseconds. */
 export interface TimedPeriod {
@@ -48,6 +52,8 @@ export function timedPeriods(
 
 export interface ChartWindow {
   period: string;
+  /** Length of a bar of the period. */
+  ms: number;
   /** Epoch milliseconds, on bar boundaries of the period counted from the epoch. */
   from: number;
   to: number;
@@ -82,38 +88,81 @@ export function chartWindow(
   return {
     // The one asked for under its own name, even when another period has the same length.
     period: wanted !== undefined && wantedMs === chosen.ms ? wanted : chosen.period,
+    ms: chosen.ms,
     from: floor(trade.opened) - before * chosen.ms,
     to: floor(Math.min(end + after * chosen.ms, trade.now)),
   };
 }
 
+/** The shortest period based on time that is shorter than `ms` and makes at most MAX_PARTS of its bars. */
+export function partPeriod(timed: readonly TimedPeriod[], ms: number): TimedPeriod | undefined {
+  return timed.find((p) => p.ms < ms && ms / p.ms <= MAX_PARTS);
+}
+
+/**
+ * The bar still open, from the bars of a shorter period since the last closed one (`last`, its opening in ms): the
+ * bar the newest part falls in, counted from `last` in steps of `ms` (bars of a day may open at the broker's session
+ * boundary, not at midnight). Undefined without parts after the last closed bar.
+ */
+export function openBar(parts: readonly Candle[], last: number, ms: number): Candle | undefined {
+  const newest = parts.at(-1);
+  if (!newest) return undefined;
+  const start = last + Math.floor((Date.parse(newest.time) - last) / ms) * ms;
+  if (start <= last) return undefined;
+  const inBar = parts.filter((p) => Date.parse(p.time) >= start);
+  return {
+    time: new Date(start).toISOString(),
+    open: inBar[0]?.open ?? newest.open,
+    high: Math.max(...inBar.map((p) => p.high)),
+    low: Math.min(...inBar.map((p) => p.low)),
+    close: newest.close,
+  };
+}
+
 export interface CandleCache {
-  /** Candles of the account's symbol in the window; the same window is asked of the broker once while kept. */
+  /**
+   * Candles of the account's symbol in the window; the same window is asked of the broker once while kept. Brokers
+   * give closed bars only: a window reaching the bar still open gets it built from a shorter period.
+   */
   get(account: AccountEntry, symbol: string, window: ChartWindow): Promise<Candle[]>;
 }
 
 /**
- * Keeps the latest answers: stepping through trades in the details goes back and forth. A window that ends at the
- * current bar gets a new key with the next bar, so an open position's chart moves on per bar, not per request.
+ * Keeps the latest answers: stepping through trades in the details goes back and forth. A window reaching the bar
+ * still open is kept only briefly, so an open position's chart follows the price.
  */
-export function createCandleCache(candles: ChartBroker["candles"], now = () => Date.now()): CandleCache {
-  const cache = new Map<string, { at: number; candles: Promise<Candle[]> }>();
+export function createCandleCache(broker: Pick<ChartBroker, "candles" | "timed">, now = () => Date.now()): CandleCache {
+  const cache = new Map<string, { at: number; ttl: number; candles: Promise<Candle[]> }>();
+  const iso = (time: number) => new Date(time).toISOString();
+
+  async function load(account: AccountEntry, symbol: string, { period, ms, from, to }: ChartWindow, at: number) {
+    const c = await account.credentials();
+    const closed = await broker.candles(c, account.number, symbol, period, iso(from), iso(to));
+    const part = partPeriod(broker.timed, ms);
+    const last = closed.at(-1);
+    if (to + ms <= at || !part || !last) return closed;
+    const lastStart = Date.parse(last.time);
+    // The bar still open began after the last closed one and less than a bar ago.
+    const since = Math.max(lastStart + ms, at - ms);
+    const parts = await broker.candles(c, account.number, symbol, part.period, iso(since), iso(at));
+    const open = openBar(parts, lastStart, ms);
+    return open ? [...closed, open] : closed;
+  }
+
   return {
-    get(account, symbol, { period, from, to }) {
+    get(account, symbol, window) {
+      const { period, ms, from, to } = window;
       const key = [account.number, symbol, period, from, to].join("\u0000");
       const hit = cache.get(key);
-      if (hit && now() - hit.at < CLOSED_TTL_MS) {
+      if (hit && now() - hit.at < hit.ttl) {
         // Most recently used last, so the oldest is dropped first.
         cache.delete(key);
         cache.set(key, hit);
         return hit.candles;
       }
-      const loaded = account
-        .credentials()
-        .then((c) =>
-          candles(c, account.number, symbol, period, new Date(from).toISOString(), new Date(to).toISOString()),
-        );
-      cache.set(key, { at: now(), candles: loaded });
+      const at = now();
+      const loaded = load(account, symbol, window, at);
+      cache.set(key, { at, ttl: to + ms > at ? LIVE_TTL_MS : CLOSED_TTL_MS, candles: loaded });
       if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value as string);
       // Failures are not cached.
       loaded.catch(() => {

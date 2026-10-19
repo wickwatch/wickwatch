@@ -28,8 +28,8 @@ import IconButton from "./IconButton.vue";
 
 /**
  * Candles around one position, open or closed, with its entry and its stop loss and take profit over its life (a
- * stop moved to break even shows as a step). Shown in the trade details; loaded when they open. "Show larger" draws
- * the same candles almost full screen, without asking the broker again.
+ * stop moved to break even shows as a step). Shown in the trade details; loaded when they open, an open position's
+ * again every minute. "Show larger" draws the same candles almost full screen, without asking the broker again.
  */
 const props = defineProps<{
   account: string;
@@ -55,12 +55,18 @@ const expanded = ref(false);
 const data = ref<TradeChart>();
 const error = ref<string>();
 let chart: IChartApi | undefined;
+/** Set once the chart was zoomed or scrolled: a refresh keeps that view instead of fitting all candles again. */
+let moved = false;
+const touched = (event: Event) => {
+  if (!(event instanceof PointerEvent) || event.buttons) moved = true;
+};
 
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const seconds = (iso: string) => (Date.parse(iso) / 1000) as UTCTimestamp;
 const iso = (time: Time) => new Date((time as number) * 1000).toISOString();
 
 function draw() {
+  const view = moved ? chart?.timeScale().getVisibleRange() : undefined;
   chart?.remove();
   chart = undefined;
   const loaded = data.value;
@@ -180,25 +186,31 @@ function draw() {
       )
       .sort((a, b) => (a.time as number) - (b.time as number)),
   );
-  c.timeScale().fitContent();
+  if (view) c.timeScale().setVisibleRange(view);
+  else c.timeScale().fitContent();
 }
 
 /** Stepping through trades in the details skips the ones passed by: each would cost the broker a call. */
 const SETTLE_MS = 250;
+/** An open position's chart is asked again this often while the tab is shown: its last bar moves on. */
+const REFRESH_MS = 60_000;
 let mounted = true;
+let refresh: ReturnType<typeof setInterval> | undefined;
 
 async function load() {
-  await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
-  if (!mounted) return;
   try {
-    data.value = await api.tradeChart(props.account, props.positionId, {
+    const loaded = await api.tradeChart(props.account, props.positionId, {
       symbol: props.symbol,
       from: props.openedAt,
       to: props.closedAt,
       period: props.period,
     });
+    if (!mounted) return;
+    data.value = loaded;
+    error.value = undefined;
   } catch (e) {
-    error.value = errorKey(e);
+    // A failed refresh keeps the candles shown.
+    if (mounted && !data.value) error.value = errorKey(e);
   }
 }
 
@@ -222,14 +234,24 @@ const label = computed(() =>
 );
 
 // The details show a snapshot of the row, remounted per trade: the props do not change while mounted.
-onMounted(() => void load());
+onMounted(async () => {
+  await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+  if (!mounted) return;
+  void load();
+  if (props.closedAt !== undefined) return;
+  refresh = setInterval(() => {
+    if (document.visibilityState === "visible") void load();
+  }, REFRESH_MS);
+});
 onBeforeUnmount(() => {
   mounted = false;
+  clearInterval(refresh);
   chart?.remove();
 });
 watch([data, locale], draw, { flush: "post" });
 // On the next frame: after the theme's tokens apply, and after the modal is shown (drawn into a hidden one, the chart
 // fits the candles into no width and keeps that spacing).
+watch(expanded, () => (moved = false));
 watch([appliedTheme, expanded], () => requestAnimationFrame(draw));
 </script>
 
@@ -237,7 +259,14 @@ watch([appliedTheme, expanded], () => requestAnimationFrame(draw));
   <section class="trade-chart">
     <!-- Always laid out, so the chart knows its width when it is drawn; the states lie over it. -->
     <div class="trade-chart__frame">
-      <div ref="el" class="trade-chart__plot" role="img" :aria-label="label" />
+      <div
+        ref="el"
+        class="trade-chart__plot"
+        role="img"
+        :aria-label="label"
+        @wheel.passive="touched"
+        @pointermove="touched"
+      />
       <div v-if="status === 'loading'" class="trade-chart__state"><AppSpinner /></div>
       <p v-else-if="error" class="trade-chart__state tone-negative" role="alert">{{ $t(error) }}</p>
       <p v-else-if="status === 'empty'" class="trade-chart__state muted">{{ $t("trade.chartEmpty") }}</p>
@@ -247,7 +276,14 @@ watch([appliedTheme, expanded], () => requestAnimationFrame(draw));
       <IconButton icon="expand" :label="$t('modal.expand')" variant="ghost" small @click="expanded = true" />
     </div>
     <AppModal :open="expanded" :title="title" size="large" @close="expanded = false">
-      <div ref="bigEl" class="trade-chart__plot trade-chart__plot--big" role="img" :aria-label="label" />
+      <div
+        ref="bigEl"
+        class="trade-chart__plot trade-chart__plot--big"
+        role="img"
+        :aria-label="label"
+        @wheel.passive="touched"
+        @pointermove="touched"
+      />
       <p class="field__hint">{{ periodHint }}</p>
     </AppModal>
   </section>

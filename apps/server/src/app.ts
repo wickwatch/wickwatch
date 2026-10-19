@@ -103,7 +103,7 @@ export async function buildApp({
   );
   const symbols = createSymbolCache(adapters.broker);
   const chartSource = chartBroker(adapters.broker);
-  const charts = chartSource && { broker: chartSource, candles: createCandleCache(chartSource.candles) };
+  const charts = chartSource && { broker: chartSource, candles: createCandleCache(chartSource) };
   const history = createDealHistory(adapters.broker, app.log);
   const readLog = logReader(adapters.runtime, logArchive);
   const logTracker = new LogTracker(adapters.runtime);

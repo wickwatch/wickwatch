@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- Trade chart of an open position: it lagged behind. Brokers give closed bars only, so the bar still open was missing (and a trade opened in it was marked on the bar before), and the server kept the answer until the next bar began. The bar still open is now built from a shorter period (up to 300 of its bars, m1 for an m30 chart), the server asks again after 30 seconds, and the details ask every minute while the chart is shown, keeping a view zoomed or scrolled by hand.
+
 ## 0.8.0 – 2026-10-17
 
 ### Added

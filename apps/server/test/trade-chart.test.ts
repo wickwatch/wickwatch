@@ -1,7 +1,14 @@
 import type { Candle, Position } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DemoBrokerAdapter } from "@wickwatch/adapter-demo";
-import { chartWindow, createCandleCache, MAX_BARS, timedPeriods } from "../src/services/trade-chart";
+import {
+  chartWindow,
+  createCandleCache,
+  MAX_BARS,
+  openBar,
+  partPeriod,
+  timedPeriods,
+} from "../src/services/trade-chart";
 import { loginAs, startApp, type TestApp } from "./helpers";
 
 const MINUTE = 60_000;
@@ -20,6 +27,7 @@ describe("chartWindow", () => {
     // 2 h on M5 are 24 bars: 30 before (at least), 10 after (at least).
     expect(chartWindow(trade, "M5", TIMED)).toEqual({
       period: "M5",
+      ms: 5 * MINUTE,
       from: at("2026-10-16T10:00:00.000Z") - 30 * 5 * MINUTE,
       to: at("2026-10-16T12:50:00.000Z"),
     });
@@ -68,11 +76,12 @@ describe("createCandleCache", () => {
     currency: "USD",
     credentials: async () => ({ login: "l", secret: "s" }),
   };
-  const window = { period: "M5", from: 0, to: 5 * MINUTE };
+  const window = { period: "M5", ms: 5 * MINUTE, from: 0, to: 5 * MINUTE };
+  const later = () => at("2026-10-16T20:00:00.000Z");
 
   it("asks the broker once per window, again after a failure", async () => {
     const candles = vi.fn().mockRejectedValueOnce(new Error("down")).mockResolvedValue([candle]);
-    const cache = createCandleCache(candles);
+    const cache = createCandleCache({ candles, timed: TIMED }, later);
     await expect(cache.get(account, "GER40", window)).rejects.toThrow("down");
     expect(await cache.get(account, "GER40", window)).toEqual([candle]);
     expect(await cache.get(account, "GER40", window)).toEqual([candle]);
@@ -87,6 +96,77 @@ describe("createCandleCache", () => {
       "1970-01-01T00:00:00.000Z",
       "1970-01-01T00:10:00.000Z",
     );
+  });
+  it("adds the bar still open, built from a shorter period, and asks again soon while it is open", async () => {
+    let clock = at("2026-10-16T10:12:30.000Z");
+    const bar = (time: string, open: number, high: number, low: number, close: number): Candle => ({
+      time,
+      open,
+      high,
+      low,
+      close,
+    });
+    const closed = [bar("2026-10-16T10:00:00.000Z", 10, 12, 9, 11), bar("2026-10-16T10:05:00.000Z", 11, 13, 10, 12)];
+    const parts = [bar("2026-10-16T10:10:00.000Z", 12, 14, 11, 13), bar("2026-10-16T10:11:00.000Z", 13, 15, 8, 9)];
+    const candles = vi.fn((_c, _a, _s, period: string) => Promise.resolve(period === "M1" ? parts : closed));
+    const cache = createCandleCache({ candles, timed: TIMED }, () => clock);
+    const live = {
+      period: "M5",
+      ms: 5 * MINUTE,
+      from: at("2026-10-16T10:00:00.000Z"),
+      to: at("2026-10-16T10:10:00.000Z"),
+    };
+
+    expect(await cache.get(account, "GER40", live)).toEqual([...closed, bar("2026-10-16T10:10:00.000Z", 12, 15, 8, 9)]);
+    expect(candles).toHaveBeenLastCalledWith(
+      { login: "l", secret: "s" },
+      "1",
+      "GER40",
+      "M1",
+      "2026-10-16T10:10:00.000Z",
+      "2026-10-16T10:12:30.000Z",
+    );
+    await cache.get(account, "GER40", live);
+    expect(candles).toHaveBeenCalledTimes(2);
+    clock += MINUTE;
+    await cache.get(account, "GER40", live);
+    expect(candles).toHaveBeenCalledTimes(4);
+  });
+
+  it("keeps a window of closed bars and asks no shorter period for it", async () => {
+    const candles = vi.fn().mockResolvedValue([candle]);
+    const cache = createCandleCache({ candles, timed: TIMED }, later);
+    expect(await cache.get(account, "GER40", window)).toEqual([candle]);
+    expect(candles).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("openBar", () => {
+  const part = (time: string, low: number, high: number): Candle => ({ time, open: low, high, low, close: high });
+
+  it("takes the bar the newest part falls in, counted from the last closed one", () => {
+    // Daily bars open at 21:00 UTC; after a gap the parts fall in a later bar.
+    const last = at("2026-10-14T21:00:00.000Z");
+    const parts = [part("2026-10-16T20:00:00.000Z", 5, 6), part("2026-10-16T21:00:00.000Z", 7, 8)];
+    expect(openBar(parts, last, 24 * HOUR)).toEqual({
+      time: "2026-10-16T21:00:00.000Z",
+      open: 7,
+      high: 8,
+      low: 7,
+      close: 8,
+    });
+  });
+
+  it("is undefined without parts after the last closed bar", () => {
+    const last = at("2026-10-16T10:00:00.000Z");
+    expect(openBar([], last, HOUR)).toBeUndefined();
+    expect(openBar([part("2026-10-16T10:30:00.000Z", 1, 2)], last, HOUR)).toBeUndefined();
+  });
+
+  it("builds a bar from at most 300 bars of the shortest period that fits", () => {
+    expect(partPeriod(TIMED, 5 * MINUTE)?.period).toBe("M1");
+    expect(partPeriod(TIMED, 24 * HOUR)?.period).toBe("M5");
+    expect(partPeriod(TIMED, MINUTE)).toBeUndefined();
   });
 });
 
@@ -122,8 +202,9 @@ describe("GET /accounts/:number/positions/:positionId/chart", () => {
     expect(res.statusCode).toBe(200);
     const chart = res.json<{ period: string; candles: Candle[]; levels: unknown[] }>();
     expect(chart.period).toBe("M5");
-    // 30 bars before the opening, 24 since, the one still open left out.
+    // 30 bars before the opening, 24 since; the one still open is built from M1 once a minute of it has passed.
     expect(chart.candles.length).toBeGreaterThanOrEqual(50);
+    expect(Date.now() - Date.parse(chart.candles.at(-1)?.time ?? "")).toBeLessThan(6 * MINUTE);
     expect(Date.parse(chart.candles[0]?.time ?? "")).toBeLessThan(Date.parse(opened) - 29 * 5 * MINUTE);
     expect(chart.levels).toEqual([{ at: expect.any(String) as string, sl: 90 }]);
     // A period from a container label in another case is the broker's own.
