@@ -13,7 +13,7 @@ It is free and open source (AGPL-3.0). The first adapters run **cTrader bots (cB
   </picture>
 </p>
 
-> **Status:** early development, used on demo and prop-challenge accounts. Phase 1 of the [roadmap](docs/ROADMAP.md) is built and in trial operation: wickwatch runs cTrader bots in Docker containers through the cTrader CLI, reads accounts, positions and deals, and can stop everything on an account.
+> **Status:** early development, used on demo and prop-challenge accounts. Phase 1 of the [roadmap](docs/ROADMAP.md) is done and in daily use: wickwatch runs cTrader bots in Docker containers through the cTrader CLI, reads accounts, positions and deals, and can stop everything on an account.
 
 ## Try it
 wickwatch starts with a **demo adapter**: fake accounts, instances, positions and logs, so you can look around without a broker or bots.
