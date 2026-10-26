@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.8.1 – 2026-10-26
+
 ### Security
 - The image runs on Node.js 24.22.1, which fixes CVE-2026-111497 ("Node2Shell", out-of-bounds write in the bundled Brotli decoder). wickwatch does not decode Brotli request bodies itself, but `fetch` decodes Brotli responses from the servers it calls (news calendar, clock check, notifications, webhooks). The Dockerfile now names the exact Node.js version instead of `24`, and Dependabot raises it.
 
