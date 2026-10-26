@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Changes of a position in the details panel: consecutive changes of the same value in the same direction, such as a trailing stop's moves about once a minute, show as one line with the first and last value, the time span and the number of steps; the single steps open on request. Manual changes no longer get lost among them.
+
 ## 0.8.1 – 2026-10-26
 
 ### Security
