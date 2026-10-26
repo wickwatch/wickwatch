@@ -6,6 +6,7 @@ import { useI18n } from "vue-i18n";
 import { api, errorKey } from "../api";
 import { durationParts, formatDateTime, formatNumber, formatPercentValue, formatPrice } from "../format";
 import { system } from "../system";
+import AppIcon from "./AppIcon.vue";
 import SignedValue from "./SignedValue.vue";
 
 // The chart library loads with the first chart shown, not with the page.
@@ -45,11 +46,14 @@ const positionId = computed(() => position.value?.id ?? deal.value?.positionId);
 /** Undefined while loading and for an order. */
 const changes = ref<PositionChange[]>();
 const changesError = ref<string>();
+/** Indexes of the runs whose steps are shown. */
+const openRuns = ref(new Set<number>());
 watch(
   [() => props.account, positionId],
   async ([account, id], _, onCleanup) => {
     changes.value = undefined;
     changesError.value = undefined;
+    openRuns.value = new Set();
     if (!account || !id) return;
     // Another trade may be shown by the time the answer is there.
     let current = true;
@@ -99,6 +103,47 @@ const CHANGE_LABEL = { volume: "trade.lots", entry: "trade.entry", sl: "trade.sl
 /** Lots as a number, everything else as a price. */
 const shown = (change: PositionChange, value: number | undefined) =>
   change.field === "volume" && value !== undefined ? formatNumber(locale.value, value) : price(value);
+/** A run of changes shown as one line: the first `from`, the last `to`; `steps` has more than one when combined. */
+interface ChangeRun {
+  change: PositionChange;
+  steps: PositionChange[];
+}
+const direction = (change: PositionChange) =>
+  change.from === undefined || change.to === undefined ? 0 : Math.sign(change.to - change.from);
+/**
+ * A trailing stop moves the stop every minute or so; listed one by one, a manual change would drown in them.
+ * Consecutive changes of the same field in the same direction make one line, its steps shown on request.
+ */
+const runs = computed(() =>
+  (changes.value ?? []).reduce<ChangeRun[]>((all, change) => {
+    const run = all.at(-1);
+    const previous = run?.steps.at(-1);
+    if (
+      run &&
+      previous?.field === change.field &&
+      direction(change) !== 0 &&
+      direction(change) === direction(previous)
+    ) {
+      run.steps.push(change);
+      // Both ends are set: only a change between two values has a direction.
+      run.change = { ...run.change, ...(change.to !== undefined && { to: change.to }) };
+    } else {
+      all.push({ change, steps: [change] });
+    }
+    return all;
+  }, []),
+);
+const toggleRun = (index: number) => {
+  const open = new Set(openRuns.value);
+  if (!open.delete(index)) open.add(index);
+  openRuns.value = open;
+};
+/** When a run's last change was noticed, for a run of several: the time of day if on the day it started. */
+const runEnd = ({ change, steps }: ChangeRun) => {
+  const last = steps.at(-1)?.at ?? change.at;
+  const sameDay = formatDateTime(locale.value, change.at, "day") === formatDateTime(locale.value, last, "day");
+  return sameDay ? formatDateTime(locale.value, last, "clock") : date(last);
+};
 /** An open position always says whether something changed; a closed trade only when wickwatch saw a change. */
 const showChanges = computed(
   () =>
@@ -226,13 +271,42 @@ const showChanges = computed(
     <p v-if="changesError" class="tone-negative" role="alert">{{ $t(changesError) }}</p>
     <p v-else-if="!changes?.length" class="muted">{{ $t("trade.noChanges") }}</p>
     <ol v-else>
-      <li v-for="(change, index) in changes" :key="index">
-        <span class="mono muted">{{ date(change.at) }}</span>
-        <span>{{ $t(CHANGE_LABEL[change.field]) }}</span>
-        <span class="mono">{{
-          $t("format.fromTo", { from: shown(change, change.from), to: shown(change, change.to) })
-        }}</span>
-      </li>
+      <template v-for="(run, index) in runs" :key="index">
+        <li>
+          <!-- End and step count go on a line of their own, so the values keep their room in the narrow drawer. -->
+          <span class="mono muted">
+            {{ date(run.change.at) }}
+            <template v-if="run.steps.length > 1"><br />{{ $t("trade.changeUntil", { time: runEnd(run) }) }}</template>
+          </span>
+          <button
+            v-if="run.steps.length > 1"
+            type="button"
+            class="changes__toggle"
+            :aria-expanded="openRuns.has(index)"
+            @click="toggleRun(index)"
+          >
+            <AppIcon name="chevronDown" class="changes__chevron" :size="16" />
+            <span>
+              {{ $t(CHANGE_LABEL[run.change.field]) }}<br /><span class="muted">{{
+                $t("trade.changeSteps", run.steps.length)
+              }}</span>
+            </span>
+          </button>
+          <span v-else>{{ $t(CHANGE_LABEL[run.change.field]) }}</span>
+          <span class="mono">{{
+            $t("format.fromTo", { from: shown(run.change, run.change.from), to: shown(run.change, run.change.to) })
+          }}</span>
+        </li>
+        <template v-if="run.steps.length > 1 && openRuns.has(index)">
+          <li v-for="(step, stepIndex) in run.steps" :key="`${index}-${stepIndex}`" class="changes__step">
+            <span class="mono muted">{{ date(step.at) }}</span>
+            <span class="muted">{{ $t(CHANGE_LABEL[step.field]) }}</span>
+            <span class="mono muted">{{
+              $t("format.fromTo", { from: shown(step, step.from), to: shown(step, step.to) })
+            }}</span>
+          </li>
+        </template>
+      </template>
     </ol>
     <p class="field__hint">{{ $t("trade.changesHint") }}</p>
   </section>
@@ -286,6 +360,40 @@ const showChanges = computed(
 
 .changes p {
   margin: 0;
+}
+
+.changes__toggle {
+  display: flex;
+  gap: var(--ww-space-1);
+  align-items: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.changes__chevron {
+  flex: none;
+  margin-top: 2px;
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+
+.changes__toggle[aria-expanded="true"] .changes__chevron {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .changes__chevron {
+    transition: none;
+  }
+}
+
+.changes__step > :nth-child(2) {
+  padding-left: calc(16px + var(--ww-space-1));
 }
 
 .changes .field__hint {

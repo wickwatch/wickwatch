@@ -405,6 +405,38 @@ describe("InstanceView", () => {
       [formatDateTime("en", "2026-09-25T10:30:00.000Z"), "Lots", "1.00 → 0.50"],
     ]);
 
+    // A trailing stop's moves make one line; the manual change after it stands on its own.
+    changes.mockResolvedValue([
+      { at: "2026-09-25T10:07:00.000Z", field: "sl", from: 19380, to: 19390 },
+      { at: "2026-09-25T10:08:00.000Z", field: "sl", from: 19390, to: 19395 },
+      { at: "2026-09-25T10:09:00.000Z", field: "sl", from: 19395, to: 19398 },
+      { at: "2026-09-25T10:10:00.000Z", field: "sl", from: 19398, to: 19385 },
+    ]);
+    await drawer()!.find("dialog").trigger("keydown", { key: "Escape" });
+    await wrapper.find(".table-wrap tbody tr").trigger("click");
+    await flushPromises();
+    const lines = () =>
+      drawer()!
+        .findAll(".changes li")
+        .map((li) => li.findAll(":scope > span, :scope > button").map((s) => s.text()));
+    expect(lines()).toEqual([
+      [
+        `${formatDateTime("en", "2026-09-25T10:07:00.000Z")} until ${formatDateTime("en", "2026-09-25T10:09:00.000Z", "clock")}`,
+        "SL3 steps",
+        "19,380 → 19,398",
+      ],
+      [formatDateTime("en", "2026-09-25T10:10:00.000Z"), "SL", "19,398 → 19,385"],
+    ]);
+    const toggle = drawer()!.find(".changes__toggle");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+    await toggle.trigger("click");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
+    expect(
+      lines()
+        .slice(1, 4)
+        .map((line) => line[2]),
+    ).toEqual(["19,380 → 19,390", "19,390 → 19,395", "19,395 → 19,398"]);
+
     // An open position says so when nothing moved; a closed trade then shows no section at all.
     changes.mockResolvedValue([]);
     await drawer()!.find("dialog").trigger("keydown", { key: "Escape" });
