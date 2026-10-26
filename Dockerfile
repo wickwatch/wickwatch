@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 # wickwatch dashboard: API server + built SPA in one image.
-ARG NODE_VERSION=24
-
-FROM node:${NODE_VERSION}-slim AS build
+# Exact Node.js version, so a rebuild cannot silently keep an old one; Dependabot raises it.
+FROM node:24.22.1-slim AS build
 WORKDIR /repo
 RUN corepack enable
 # Manifests first, so the dependency layer is cached until they change.
@@ -17,7 +16,7 @@ RUN pnpm --filter @wickwatch/web build \
  && pnpm --filter @wickwatch/server build \
  && pnpm --filter @wickwatch/server deploy --prod /out
 
-FROM node:${NODE_VERSION}-slim
+FROM node:24.22.1-slim
 ARG VERSION=dev
 ENV NODE_ENV=production \
     WICKWATCH_VERSION=${VERSION} \

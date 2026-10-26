@@ -4,6 +4,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Node.js majors are raised by hand, together with CI and @types/node.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -12,7 +20,7 @@ updates:
       dev-tooling:
         dependency-type: development
     ignore:
-      # Types follow the Node.js major the image and CI run on (NODE_VERSION); raise them together.
+      # Types follow the Node.js major the image and CI run on (Dockerfile, ci.yml); raise them together.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # vue-tsc does not support TypeScript 7 yet.

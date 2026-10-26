@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Security
+- The image runs on Node.js 24.22.1, which fixes CVE-2026-111497 ("Node2Shell", out-of-bounds write in the bundled Brotli decoder). wickwatch does not decode Brotli request bodies itself, but `fetch` decodes Brotli responses from the servers it calls (news calendar, clock check, notifications, webhooks). The Dockerfile now names the exact Node.js version instead of `24`, and Dependabot raises it.
+
 ### Fixed
 - Trade chart of an open position: it lagged behind. Brokers give closed bars only, so the bar still open was missing (and a trade opened in it was marked on the bar before), and the server kept the answer until the next bar began. The bar still open is now built from a shorter period (up to 300 of its bars, m1 for an m30 chart), the server asks again after 30 seconds, and the details ask every minute while the chart is shown, keeping a view zoomed or scrolled by hand.
 
