@@ -251,8 +251,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       kysely:
-        specifier: ^0.29.6
-        version: 0.29.6
+        specifier: ^0.29.7
+        version: 0.29.7
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -2022,8 +2022,8 @@ packages:
     resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
     engines: {node: '>=0.10.0'}
 
-  kysely@0.29.6:
-    resolution: {integrity: sha512-hHaB8C/rfzDDtr/t8YZwxAuPJTT0zHyaPoVzcXwDYhYNAgH/4sIfVhi/XLLIY+bL/FqaIJnjATDbi8ObSELmxg==}
+  kysely@0.29.7:
+    resolution: {integrity: sha512-fmIq+7kv4WbFm2tcfznRzikqB4cuNpgZ40PSU2fAJ2/OO5XhojqnTPrmgrCjYSRJVwBln03XcRXJGnw9H099IQ==}
     engines: {node: '>=22.0.0'}
 
   levn@0.4.1:
@@ -3678,7 +3678,7 @@ snapshots:
       '@vue/shared': 3.5.43
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.29
+      postcss: 8.5.31
       source-map-js: 1.2.2
     optional: true
 
@@ -4492,7 +4492,7 @@ snapshots:
 
   kind-of@6.0.3: {}
 
-  kysely@0.29.6: {}
+  kysely@0.29.7: {}
 
   levn@0.4.1:
     dependencies:
