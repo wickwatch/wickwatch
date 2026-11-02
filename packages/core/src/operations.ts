@@ -1,6 +1,9 @@
 import type { BrokerAdapter, Credentials, RuntimeAdapter } from "./adapters";
 import { readLabels } from "./labels";
-import type { EmergencyStopReport } from "./schemas";
+import type { EmergencyStopReport, RuntimeInstance } from "./schemas";
+
+/** An instance that may trade: anything not stopped, also one restarting or in an unknown state. */
+export const isActiveInstance = (instance: RuntimeInstance): boolean => instance.status !== "stopped";
 
 export interface EmergencyStopOptions {
   runtime: RuntimeAdapter;
@@ -18,7 +21,7 @@ export interface EmergencyStopOptions {
 export async function emergencyStopAccount(options: EmergencyStopOptions): Promise<EmergencyStopReport> {
   const { runtime, broker, credentials, account, labelPrefix } = options;
   const instances = (await runtime.list()).filter(
-    (i) => i.status !== "stopped" && readLabels(labelPrefix, i.labels).account === account,
+    (i) => isActiveInstance(i) && readLabels(labelPrefix, i.labels).account === account,
   );
   const results = await Promise.allSettled(instances.map((i) => runtime.stop(i.ref)));
   const stoppedInstances = instances.filter((_, n) => results[n]?.status === "fulfilled").map((i) => i.ref);

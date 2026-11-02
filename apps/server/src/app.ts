@@ -32,6 +32,7 @@ import { LogArchive, logReader, withLogArchive } from "./services/log-archive";
 import { LogTracker } from "./services/log-tracker";
 import { MarketHoursCache } from "./services/market-hours";
 import { NewsCalendar } from "./services/news-calendar";
+import { IdleAccounts } from "./services/idle-accounts";
 import { OverviewLoader, withChangeNotice } from "./services/overview";
 import { PositionHistory, withPositionHistory } from "./services/position-history";
 import { createSecurityNotifier } from "./services/security-notice";
@@ -95,10 +96,27 @@ export async function buildApp({
   const cipher = config.masterKey ? createCipher(config.masterKey) : undefined;
   const accounts = dbAccountDirectory(db, cipher, given.broker.id);
   const positionHistory = new PositionHistory({ db, accounts, log: app.log });
+  const idle =
+    config.idleAccountPollSeconds > 0
+      ? new IdleAccounts({
+          broker: given.broker,
+          runtime: given.runtime,
+          labelPrefix,
+          refreshMs: config.idleAccountPollSeconds * 1000,
+        })
+      : undefined;
   const adapters = withPositionHistory(
-    withChangeNotice({ ...given, runtime: withLogArchive(given.runtime, logArchive, app.log) }, () => {
-      overview.invalidate();
-    }),
+    withChangeNotice(
+      {
+        ...given,
+        broker: idle?.broker ?? given.broker,
+        runtime: withLogArchive(given.runtime, logArchive, app.log),
+      },
+      () => {
+        overview.invalidate();
+        idle?.forget();
+      },
+    ),
     positionHistory,
   );
   const symbols = createSymbolCache(adapters.broker);

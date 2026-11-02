@@ -29,6 +29,7 @@ describe("loadConfig", () => {
       challengeTemplatesDir: "/srv/wickwatch/templates/challenges",
       algosDir: "/srv/wickwatch/data/algos",
       accountPollSeconds: 60,
+      idleAccountPollSeconds: 1800,
       alertCheckSeconds: 60,
       alertDisconnectGraceSeconds: 180,
       alertDisconnectGraceClosedSeconds: 1800,

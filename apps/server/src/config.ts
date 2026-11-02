@@ -38,6 +38,8 @@ export interface Config {
   algosDir: string;
   /** How often balance and equity of every account are sampled. */
   accountPollSeconds: number;
+  /** How long the broker answers for an idle account are reused, in seconds; 0 asks every time. */
+  idleAccountPollSeconds: number;
   /** How often alerts are checked for ALERT_WEBHOOK_URL and HEARTBEAT_URL. */
   alertCheckSeconds: number;
   /** A lost broker connection or an unreachable account is only notified once it lasted this long. */
@@ -146,6 +148,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     return value;
   };
   const accountPollSeconds = integer("ACCOUNT_POLL_SECONDS", 60, 10, 3600);
+  const idleAccountPollSeconds = integer("IDLE_ACCOUNT_POLL_SECONDS", 1800, 0, 86400);
   const backupIntervalHours = integer("BACKUP_INTERVAL_HOURS", 24, 0, 24 * 30);
   const backupKeep = integer("BACKUP_KEEP", 7, 1, 1000);
   const auditRetentionDays = integer("AUDIT_RETENTION_DAYS", 365, 0, 36500);
@@ -188,6 +191,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     adapterSettings,
     instanceRestartPolicy,
     accountPollSeconds,
+    idleAccountPollSeconds,
     alertCheckSeconds,
     alertDisconnectGraceSeconds,
     alertDisconnectGraceClosedSeconds,

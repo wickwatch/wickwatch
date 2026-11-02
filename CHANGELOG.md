@@ -5,6 +5,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ## Unreleased
 
 ### Changed
+- Idle accounts (no running bot, no open position or pending order) are asked at the broker only every 30 minutes instead of every minute (`IDLE_ACCOUNT_POLL_SECONDS`, `0` keeps the old behaviour). Their cTrader CLI session now closes in between instead of running for good, which saves memory on the host, and the overview no longer waits on a session of an account that has nothing to show. A trade by hand on such an account shows within that time; starting a bot or any action in wickwatch asks again right away.
 - Changes of a position in the details panel: consecutive changes of the same value in the same direction, such as a trailing stop's moves about once a minute, show as one line with the first and last value, the time span and the number of steps; the single steps open on request. Manual changes no longer get lost among them.
 
 ## 0.8.1 – 2026-10-26

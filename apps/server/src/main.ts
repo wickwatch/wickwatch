@@ -75,7 +75,8 @@ try {
 
   const poller = new AccountPoller({
     db,
-    adapters,
+    // The app's adapters: they reuse the answers for idle accounts (IDLE_ACCOUNT_POLL_SECONDS).
+    adapters: app.adapters,
     accounts,
     log: app.log,
     statsIntervalMs: config.accountPollSeconds * 1000,

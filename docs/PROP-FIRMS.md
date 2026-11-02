@@ -9,7 +9,7 @@ wickwatch is meant to be self-hosted for **your own accounts**. Running it for o
 With the cTrader adapter, everything runs on your server, so the broker sees one IP address:
 
 - **Logins:** one long-lived CLI session per account for reading and trading actions, plus one login per running bot (each instance is its own `ctrader-cli run`). Listing the accounts of a login, or the symbols of an account, logs in briefly once more. After a failed login (wrong password, broker maintenance) wickwatch waits 1 minute before the next one, doubling up to 5 minutes (a rejected password holds every login of that cTrader ID); trading actions such as the emergency stop log in regardless.
-- **Reading:** balance and equity every `ACCOUNT_POLL_SECONDS` (default 60), deals and positions every 5 minutes, and the overview's figures every 30 seconds while a dashboard page is open and visible. All of this runs one command at a time in the account's session; it reads the same data every cTrader client and every cBot receives.
+- **Reading:** balance and equity every `ACCOUNT_POLL_SECONDS` (default 60), deals and positions every 5 minutes, and the overview's figures every 30 seconds while a dashboard page is open and visible. Accounts without a running bot, open position or pending order are asked only every `IDLE_ACCOUNT_POLL_SECONDS` (default 30 minutes); their session closes in between, so each of these queries logs in once. All of this runs one command at a time in the account's session; it reads the same data every cTrader client and every cBot receives.
 - **Trading:** only when you (or the loss guard of a challenge profile) close a position, cancel an order or run the emergency stop. Polling sends no orders.
 
 ## What to check with your firm
