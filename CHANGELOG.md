@@ -4,6 +4,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.8.3 – 2026-11-03
+
+### Fixed
+- Idle accounts without a challenge profile still kept their broker session running: the poller asks for the deals of the last 30 days, a start that moves on with every query, and the reuse of 0.8.2 only matched a query with the same start. A later start is now answered from an earlier answer, cut to the range asked.
+
 ## 0.8.2 – 2026-11-03
 
 ### Changed

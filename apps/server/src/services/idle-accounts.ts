@@ -47,11 +47,22 @@ export class IdleAccounts {
       stats: (c, account) => this.keep(account, "stats", () => target.stats(c, account)),
       positions: (c, account) => this.keep(account, "positions", () => target.positions(c, account)),
       pendingOrders: (c, account) => this.keep(account, "pendingOrders", () => target.pendingOrders(c, account)),
-      // By the start of the range: the poller, the loss guard and the overview each ask from their own day.
+      // Kept by the start of the range; a later start is answered from an earlier one, cut to the range: the
+      // poller, the loss guard and the overview each ask from their own day, some from a start that moves on.
       deals: async (c, account, from, to) => {
-        const deals = await this.keep(account, `deals ${from}`, () => target.deals(c, account, from, to));
+        const start = Date.parse(from);
         const until = Date.parse(to);
-        return deals.filter((deal) => Date.parse(deal.time) <= until);
+        const query = `deals ${from}`;
+        const deals = await this.keep(
+          account,
+          query,
+          () => target.deals(c, account, from, to),
+          this.coveringDeals(account, start) ?? query,
+        );
+        return deals.filter((deal) => {
+          const time = Date.parse(deal.time);
+          return time >= start && time <= until;
+        });
       },
     };
     this.broker = new Proxy(target, {
@@ -70,10 +81,10 @@ export class IdleAccounts {
     this.generation += 1;
   }
 
-  /** The kept answer while the account is idle, else the broker's, kept for later. */
-  private async keep<T>(account: string, query: string, ask: () => Promise<T>): Promise<T> {
+  /** The answer kept under `reuse` while the account is idle, else the broker's, kept as `query`. */
+  private async keep<T>(account: string, query: string, ask: () => Promise<T>, reuse = query): Promise<T> {
     const now = this.now();
-    const kept = this.known.get(account)?.get(query);
+    const kept = this.known.get(account)?.get(reuse);
     if (kept && this.fresh(kept, now) && (await this.idle(account, now))) return kept.value as T;
     const generation = this.generation;
     const value = await ask();
@@ -84,6 +95,15 @@ export class IdleAccounts {
       answers.set(query, { at: now, value });
     }
     return value;
+  }
+
+  /** A fresh kept deals answer whose range starts at `start` or before. */
+  private coveringDeals(account: string, start: number): string | undefined {
+    const now = this.now();
+    for (const [query, kept] of this.known.get(account) ?? []) {
+      if (query.startsWith("deals ") && this.fresh(kept, now) && Date.parse(query.slice(6)) <= start) return query;
+    }
+    return undefined;
   }
 
   private fresh(kept: Kept, now: number): boolean {

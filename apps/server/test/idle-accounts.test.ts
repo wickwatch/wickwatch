@@ -143,6 +143,15 @@ describe("IdleAccounts", () => {
     expect(broker.deals).toHaveBeenCalledTimes(2);
   });
 
+  it("answers a later start from an earlier one, e.g. the poller's last 30 days that move on", async () => {
+    await round();
+    await idle.broker.deals(c, "1001", "2026-10-04T09:00:00.000Z", "2026-11-03T09:00:00.000Z");
+    now += 5 * MINUTE;
+    const moved = await idle.broker.deals(c, "1001", "2026-11-03T08:00:00.000Z", "2026-11-03T09:05:00.000Z");
+    expect(moved.map((d) => d.id)).toEqual(["d2"]);
+    expect(broker.deals).toHaveBeenCalledTimes(1);
+  });
+
   it("passes trading actions through", async () => {
     await idle.broker.closePosition(c, "1001", "p1");
     expect(broker.closePosition).toHaveBeenCalledWith(c, "1001", "p1");
