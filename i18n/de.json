@@ -79,7 +79,8 @@
     },
     "pendingOrders": "Pending Orders",
     "open": "Offene Positionen: {positions} · Pending Orders: {orders}",
-    "page": "Konto {name}"
+    "page": "Konto {name}",
+    "asOf": "Stand {time}: der Broker hat noch nicht geantwortet."
   },
   "profile": {
     "title": "Profil",

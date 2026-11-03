@@ -21,7 +21,10 @@ import AppSpinner from "../components/AppSpinner.vue";
 const POLL_MS = 30_000;
 
 const { locale } = useI18n();
-const { data, error, updatedAt, now, stale, refresh } = usePolling(api.overview, POLL_MS);
+const { data, error, updatedAt, now, stale, refresh } = usePolling(api.overview, POLL_MS, (overview) =>
+  // An account shows an old state: its broker had not answered yet.
+  overview.accounts.some((a) => a.asOf),
+);
 
 const notice = ref<Notice>();
 const filterAccount = ref("");

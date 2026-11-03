@@ -1,10 +1,14 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
+/** How soon a load asks again when its data says it is not current yet. */
+const AGAIN_MS = 5000;
+
 /**
  * Loads data now and every `intervalMs` while the tab is visible, and again when it becomes visible.
  * Keeps the last good data on errors and flags it as stale once it is older than two intervals.
+ * Loads once more after AGAIN_MS when `again` says the data is not current yet (e.g. the server showed an old state).
  */
-export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
+export function usePolling<T>(load: () => Promise<T>, intervalMs: number, again?: (value: T) => boolean) {
   const data = shallowRef<T>();
   const error = shallowRef<unknown>();
   const updatedAt = ref<number>();
@@ -12,6 +16,7 @@ export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
   let timer: ReturnType<typeof setInterval> | undefined;
   let clock: ReturnType<typeof setInterval> | undefined;
   let inFlight: Promise<void> | undefined;
+  let soon: ReturnType<typeof setTimeout> | undefined;
 
   const refresh = () =>
     (inFlight ??= load()
@@ -19,6 +24,12 @@ export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
         data.value = value;
         error.value = undefined;
         updatedAt.value = Date.now();
+        clearTimeout(soon);
+        if (again?.(value)) {
+          soon = setTimeout(() => {
+            if (visible()) void refresh();
+          }, AGAIN_MS);
+        }
       })
       .catch((e: unknown) => {
         error.value = e;
@@ -48,6 +59,7 @@ export function usePolling<T>(load: () => Promise<T>, intervalMs: number) {
   onUnmounted(() => {
     clearInterval(timer);
     clearInterval(clock);
+    clearTimeout(soon);
     document.removeEventListener("visibilitychange", onVisible);
   });
 

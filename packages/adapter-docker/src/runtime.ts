@@ -17,6 +17,7 @@ import {
   type ToolProcess,
   type ToolSpec,
   type UpdateOptions,
+  settle,
 } from "@wickwatch/core";
 import {
   createDockerClient,
@@ -447,21 +448,4 @@ export function mapError(error: unknown): AdapterError {
   if (code === "ETIMEDOUT" || code === "ESOCKETTIMEDOUT") return new AdapterError("timeout", message, { cause: error });
   // 403 comes from docker-socket-proxy when an endpoint is not enabled.
   return new AdapterError("unavailable", message, { cause: error });
-}
-
-/** The value of `promise`, or undefined if it fails or takes longer than `ms`. */
-async function settle<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise.catch(() => undefined),
-      new Promise<undefined>((resolve) => {
-        timer = setTimeout(() => {
-          resolve(undefined);
-        }, ms);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
 }

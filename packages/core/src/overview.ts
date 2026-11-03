@@ -36,6 +36,8 @@ export interface AccountSnapshot {
   challenge?: ChallengeEvaluation;
   /** The loss guard stopped the account in the current trading day. */
   guardTripped?: { at: string; rule: string };
+  /** When `data` was asked, if well before the overview's time: the broker had not answered in time. */
+  asOf?: string;
 }
 
 export interface OverviewInput {
@@ -141,6 +143,7 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
       ...(account.broker ? { broker: account.broker } : {}),
       ...(account.currency ? { currency: account.currency } : {}),
       ...(account.error ? { error: account.error } : {}),
+      ...(account.asOf ? { asOf: account.asOf } : {}),
       ...(account.challenge ? { challenge: account.challenge } : {}),
       ...(data
         ? {

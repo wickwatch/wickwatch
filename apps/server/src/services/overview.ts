@@ -3,6 +3,7 @@ import {
   buildOverview,
   profileDay,
   readLabels,
+  settle,
   tradingDayStart,
   type AccountDetail,
   type AccountSnapshot,
@@ -33,11 +34,18 @@ import { loadOverrides } from "./overrides";
 const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * How long after its start a load is shared, running or done: several browser tabs polling on their own cycles, the
- * notifier and MCP clients then cost one broker query. Short, so the data stays fresh, and a hanging broker session
- * does not hand out old data under a caller's fresh time: later callers start a load of their own. Actions of
- * wickwatch drop it (withChangeNotice).
+ * notifier and MCP clients then cost one broker query. Short, so the data stays fresh. Actions of wickwatch drop it
+ * (withChangeNotice). An account's broker answer is reused for as long.
  */
 const REUSE_WITHIN_MS = 15_000;
+/**
+ * How long a load waits for an account's broker answer before it shows the account's last answer instead; the query
+ * goes on and its answer is shown from the next load on. A hanging or slow broker session then does not hold up the
+ * overview: it answers in seconds even while a command waits for its timeout or a session logs in again.
+ */
+const ANSWER_WAIT_MS = 3000;
+/** The last answer stands in for this long after it was asked; without a younger one the load waits for the broker. */
+const LAST_ANSWER_MAX_AGE_MS = 5 * 60_000;
 
 /** Runtime and broker actions that change what the overview shows. */
 const RUNTIME_CHANGES = ["create", "update", "remove", "start", "stop", "restart"] as const;
@@ -85,6 +93,8 @@ export interface OverviewLoaderOptions {
   log: FastifyBaseLogger;
   /** Adds the trading hours of the instances' symbols, where known. */
   marketHours?: MarketHoursCache;
+  /** ANSWER_WAIT_MS, for tests. */
+  answerWaitMs?: number;
 }
 
 /** What runtime and broker answered in one load, as of `time`. */
@@ -100,12 +110,28 @@ interface RecentLoad {
   fetched: Promise<Fetched>;
 }
 
+type BrokerAnswer =
+  { stats: AccountStats; positions: Position[]; deals: Deal[]; pendingOrders?: PendingOrder[] } | AdapterErrorCode;
+
+/** A broker query of an account, asked at `time`: running (a promise) or done. */
+interface Asked<A> {
+  time: Date;
+  answer: A;
+}
+
+/** Per account: the query running, one at a time as the broker runs an account's commands one by one, and the last. */
+interface AccountAnswers {
+  running?: Asked<Promise<BrokerAnswer>>;
+  last?: Asked<BrokerAnswer>;
+}
+
 interface FetchedAccount {
   entry: AccountEntry;
   profile: ChallengeProfile | undefined;
-  /** Deals since dealsFrom(time); the error of a failed query is already logged. */
-  answer:
-    { stats: AccountStats; positions: Position[]; deals: Deal[]; pendingOrders?: PendingOrder[] } | AdapterErrorCode;
+  /** Deals since dealsFrom(the time asked); the error of a failed query is already logged. */
+  answer: BrokerAnswer;
+  /** Set when the last answer stands in, as the broker did not answer in time: when it was asked, and the query. */
+  standIn?: { asOf: Date; pending: Promise<unknown> };
 }
 
 /**
@@ -117,15 +143,18 @@ interface FetchedAccount {
 export class OverviewLoader {
   /** Recent loads by the one account asked for; `undefined` for all accounts. */
   private readonly recent = new Map<string | undefined, RecentLoad>();
+  /** Broker answers by account id. */
+  private readonly answers = new Map<number, AccountAnswers>();
 
   constructor(private readonly options: OverviewLoaderOptions) {}
 
   /**
-   * Forgets the recent loads, after something changed (a position closed, an instance started): the next caller asks
-   * again. Loads still running finish for the callers that joined them.
+   * Forgets the recent loads and broker answers, after something changed (a position closed, an instance started):
+   * the next caller asks again and waits for that answer. Loads still running finish for the callers that joined them.
    */
   invalidate(): void {
     this.recent.clear();
+    this.answers.clear();
   }
 
   /** Runtime and broker are queried in parallel; failures per account become alerts. */
@@ -206,8 +235,13 @@ export class OverviewLoader {
       const drop = () => {
         if (this.recent.get(only)?.fetched === fetched) this.recent.delete(only);
       };
-      // Not kept past its use: a failed load at once, a done one once it is too old to share.
-      void fetched.then(() => setTimeout(drop, REUSE_WITHIN_MS).unref(), drop);
+      // Not kept past its use: a failed load at once, a done one once it is too old to share, one with stand-ins also
+      // once the first of their queries is done, so the next caller gets its answer.
+      void fetched.then((done) => {
+        setTimeout(drop, REUSE_WITHIN_MS).unref();
+        const pending = done.accounts.flatMap((account) => (account.standIn ? [account.standIn.pending] : []));
+        if (pending.length) void Promise.race(pending).then(drop);
+      }, drop);
     }
     return fetched;
   }
@@ -225,7 +259,7 @@ export class OverviewLoader {
       Promise.all(
         entries.map(async (entry): Promise<FetchedAccount> => {
           const profile = profiles.get(entry.id);
-          return { entry, profile, answer: await this.ask(entry, profile, now) };
+          return { entry, profile, ...(await this.answer(entry, profile, now)) };
         }),
       ),
     ]);
@@ -249,11 +283,59 @@ export class OverviewLoader {
     };
   }
 
-  private async ask(
+  /**
+   * The account's broker answer for a load at `now`: the last one if asked at most REUSE_WITHIN_MS before; else that of
+   * the query running for the account if it started no later (its deals then start no later either), or of a new one.
+   * If that takes longer than ANSWER_WAIT_MS from the query's start, the last answer stands in while it is younger than
+   * LAST_ANSWER_MAX_AGE_MS; the query goes on and its answer replaces the last one.
+   */
+  private async answer(
     entry: AccountEntry,
     profile: ChallengeProfile | undefined,
     now: Date,
-  ): Promise<FetchedAccount["answer"]> {
+  ): Promise<Pick<FetchedAccount, "answer" | "standIn">> {
+    const state = this.answers.get(entry.id) ?? {};
+    this.answers.set(entry.id, state);
+    const { last } = state;
+    const age = (asked: Asked<unknown>) => now.getTime() - asked.time.getTime();
+    if (!state.running && last && last.time <= now && age(last) <= REUSE_WITHIN_MS) return { answer: last.answer };
+    const asked =
+      state.running && state.running.time <= now ? state.running : this.startQuery(entry, profile, now, state);
+    if (!last || last.time > asked.time || age(last) > LAST_ANSWER_MAX_AGE_MS) return { answer: await asked.answer };
+    const wait = (this.options.answerWaitMs ?? ANSWER_WAIT_MS) - age(asked);
+    const answer = wait > 0 ? await settle(asked.answer, wait) : undefined;
+    return answer !== undefined
+      ? { answer }
+      : { answer: last.answer, standIn: { asOf: last.time, pending: asked.answer } };
+  }
+
+  /**
+   * Starts a query and keeps it as the running one unless one is running (a query of a later time: this caller asked
+   * for an earlier one); its answer becomes the last one unless a younger one is there.
+   */
+  private startQuery(
+    entry: AccountEntry,
+    profile: ChallengeProfile | undefined,
+    now: Date,
+    state: AccountAnswers,
+  ): Asked<Promise<BrokerAnswer>> {
+    const asked = { time: now, answer: this.askBroker(entry, profile, now) };
+    state.running ??= asked;
+    void asked.answer.then((answer) => {
+      // Dropped by invalidate() meanwhile: the answer may be from before the change, so it is not kept.
+      if (this.answers.get(entry.id) !== state) return;
+      if (state.running === asked) delete state.running;
+      if (!state.last || state.last.time <= asked.time) state.last = { time: asked.time, answer };
+    });
+    return asked;
+  }
+
+  /** Never rejects: a failed query answers with its error code. */
+  private async askBroker(
+    entry: AccountEntry,
+    profile: ChallengeProfile | undefined,
+    now: Date,
+  ): Promise<BrokerAnswer> {
     const { broker } = this.options.adapters;
     try {
       const c = await entry.credentials();
@@ -280,7 +362,11 @@ function dealsFrom(now: Date, profile: ChallengeProfile | undefined): Date {
   return new Date(Math.min(utcDayStart(now).getTime(), tradingDayStart(now, resetTime, timeZone).getTime()));
 }
 
-async function snapshot(db: Db, { entry, profile, answer }: FetchedAccount, now: Date): Promise<AccountSnapshot> {
+async function snapshot(
+  db: Db,
+  { entry, profile, answer, standIn }: FetchedAccount,
+  now: Date,
+): Promise<AccountSnapshot> {
   // Shown even when the broker cannot be asked right now.
   const guardTripped = profile ? await guardTripToday(db, entry.id, profile.rules, now) : undefined;
   const base = {
@@ -307,6 +393,7 @@ async function snapshot(db: Db, { entry, profile, answer }: FetchedAccount, now:
     broker: entry.broker,
     currency: entry.currency,
     data: { stats, positions, dealsToday, ...(pendingOrders ? { pendingOrders } : {}) },
+    ...(standIn ? { asOf: standIn.asOf.toISOString() } : {}),
     ...(challenge ? { challenge } : {}),
   };
 }

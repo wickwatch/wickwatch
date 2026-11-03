@@ -20,7 +20,7 @@ import { hasSomethingToStop, useEmergencyStop } from "../composables/useEmergenc
 import { useInstanceActions } from "../composables/useInstanceActions";
 import { usePolling } from "../composables/usePolling";
 import { useTradeActions } from "../composables/useTradeActions";
-import { formatNumber } from "../format";
+import { formatDateTime, formatNumber } from "../format";
 import { isAdmin } from "../session";
 import { system } from "../system";
 import AppSpinner from "../components/AppSpinner.vue";
@@ -35,7 +35,11 @@ const router = useRouter();
 const { t, locale } = useI18n();
 const number = computed(() => String(route.params["number"]));
 
-const { data, error, now, refresh } = usePolling(() => api.accountDetail(number.value), 30_000);
+const { data, error, now, refresh } = usePolling(
+  () => api.accountDetail(number.value),
+  30_000,
+  (detail) => detail.account.asOf !== undefined,
+);
 watch(number, () => void refresh());
 const account = computed(() => data.value?.account);
 
@@ -162,6 +166,9 @@ const meta = computed(() => {
       </p>
       <AlertList :alerts="data.alerts" />
       <p v-if="account.error" class="tone-negative" role="alert">{{ $t(`error.adapter.${account.error}`) }}</p>
+      <p v-if="account.asOf" class="muted">
+        {{ $t("account.asOf", { time: formatDateTime(locale, account.asOf, "time") }) }}
+      </p>
 
       <div class="summary">
         <dl class="panel kpis" :class="{ 'kpis--list': account.challenge }">

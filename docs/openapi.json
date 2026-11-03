@@ -1682,6 +1682,11 @@
                               }
                             ]
                           },
+                          "asOf": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "Z$"
+                          },
                           "balance": {
                             "type": "number"
                           },
@@ -2467,6 +2472,11 @@
                               ]
                             }
                           ]
+                        },
+                        "asOf": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
                         },
                         "balance": {
                           "type": "number"

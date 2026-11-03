@@ -2,7 +2,7 @@
 import type { AccountSummary } from "@wickwatch/core";
 import { useI18n } from "vue-i18n";
 import { hasSomethingToStop } from "../composables/useEmergencyStop";
-import { formatNumber } from "../format";
+import { formatDateTime, formatNumber } from "../format";
 import ChallengeRules from "./ChallengeRules.vue";
 import SignedValue from "./SignedValue.vue";
 import StatusBadge from "./StatusBadge.vue";
@@ -31,6 +31,9 @@ const { locale } = useI18n();
     </div>
 
     <p v-if="account.error" class="tone-negative card__error">{{ $t(`error.adapter.${account.error}`) }}</p>
+    <p v-if="account.asOf" class="muted card__note">
+      {{ $t("account.asOf", { time: formatDateTime(locale, account.asOf, "time") }) }}
+    </p>
     <dl class="card__kpis">
       <div>
         <dt>{{ $t("account.balance") }}</dt>
@@ -112,7 +115,8 @@ h3 {
   font-size: var(--ww-size-xs);
 }
 
-.card__error {
+.card__error,
+.card__note {
   margin: 0;
   font-size: var(--ww-size-sm);
 }
