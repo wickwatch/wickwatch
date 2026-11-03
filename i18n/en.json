@@ -296,7 +296,8 @@
       "schedule_not_found": "This schedule no longer exists.",
       "invalid_holiday": "A holiday ends before it starts.",
       "instance_not_found": "An instance in the list no longer exists.",
-      "invalid_pause_period": "A one-off pause ends before it starts."
+      "invalid_pause_period": "A one-off pause ends before it starts.",
+      "log_rule_invalid": "A pattern is not a valid regular expression."
     }
   },
   "parameterIssue": {
@@ -391,6 +392,11 @@
     "instance_stopped": "{subject} is stopped",
     "instance_disconnected": "{subject}: connection to the broker lost since {since}",
     "instance_crashed": "{subject}: the bot threw an error {count} times since its start, last at {last}",
+    "instance_log_rule_restarted": "{subject} was restarted by a log rule: its log showed “{pattern}” ({count} today, last at {last})",
+    "instance_log_rule_stopped": "{subject} was stopped by a log rule: its log showed “{pattern}”",
+    "instance_log_rule_failed": "{subject}: a log rule could not restart or stop it (its log showed “{pattern}”)",
+    "instance_log_rule_limit": "{subject}: its log showed “{pattern}” again, but the rule's daily limit is reached ({count} today); it acts again tomorrow",
+    "instance_log_rule_open_position": "{subject}: its log showed “{pattern}”; a log rule left it alone because of an open position",
     "account_error": "Account {subject} not reachable: {reason}",
     "challenge_breached": "Account {subject}: challenge rule breached – {rule}",
     "challenge_limit": "Account {subject}: {used} % of the {rule} limit used",
@@ -843,6 +849,35 @@
     "save": "Save",
     "saved": "Account size and risk parameters of {algo} saved.",
     "noVersion": "Upload a version of this algo to choose its parameters."
+  },
+  "logRules": {
+    "title": "Log rules",
+    "state": "no rules | one rule | {count} rules",
+    "hint": "Restart or stop an instance of {algo} when a line in its log matches. Text matches anywhere in the line, in any case; a regular expression likewise ignores case. With a recovery pattern, wickwatch waits for that line first and acts only if it does not come in time. Lines from before wickwatch started are left alone.",
+    "pattern": "Line contains",
+    "regex": "Regular expression",
+    "recoveryPattern": "Unless followed by (optional)",
+    "waitSeconds": "Wait for it (seconds)",
+    "action": "Action",
+    "actions": {
+      "restart": "Restart",
+      "stop": "Stop"
+    },
+    "withOpenPosition": "Also with an open position",
+    "cooldownMinutes": "Not again within (minutes)",
+    "maxPerDay": "At most per day",
+    "rule": "Rule {n}",
+    "add": "Add rule",
+    "remove": "Remove rule",
+    "save": "Save rules",
+    "saved": "Log rules of {algo} saved.",
+    "summary": "{action} on “{pattern}”",
+    "instanceHint": "The log rules of the algo restart or stop this instance when its log shows a matching line. They are set on the Algos page.",
+    "apply": "Apply the log rules of {algo}",
+    "noRules": "{algo} has no log rules.",
+    "manage": "Edit on the Algos page",
+    "instanceOn": "Log rules apply to {name} again.",
+    "instanceOff": "Log rules no longer apply to {name}."
   },
   "risk": {
     "title": "Risk per trade",

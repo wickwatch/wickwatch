@@ -14,6 +14,7 @@ import { refreshAlgoMetadata } from "./services/algo-metadata";
 import { encryptStoredParameters } from "./services/instance-configs";
 import { InstanceKeeper } from "./services/instance-keeper";
 import { Scheduler } from "./services/scheduler";
+import { LogRules } from "./services/log-rules";
 import { LossGuardService } from "./services/loss-guard";
 import { Maintenance } from "./services/maintenance";
 import { AlertNotifier } from "./services/notifier";
@@ -125,6 +126,18 @@ try {
           log: app.log,
         })
       : undefined;
+  const logRules = new LogRules({
+    db,
+    runtime: app.adapters.runtime,
+    // Unknown while the account's broker cannot be asked: its instances then show none.
+    openPositions: async (name) => {
+      const { instances, accounts } = await overview.overview();
+      const instance = instances.find((i) => i.name === name);
+      const account = accounts.find((a) => a.number === instance?.account);
+      return instance && account && !account.error ? instance.openPositions : undefined;
+    },
+    log: app.log,
+  });
   // Starts managed instances again that a host or Docker restart ended (see the class for the rules).
   const keeper = new InstanceKeeper({ db, runtime: app.adapters.runtime, log: app.log });
   const scheduler = new Scheduler({ db, runtime: app.adapters.runtime, news: app.newsCalendar, log: app.log });
@@ -137,6 +150,7 @@ try {
     notifier.stop();
     maintenance.stop();
     lossGuard.stop();
+    logRules.stop();
   });
 
   if (await needsSetup(db)) {
@@ -161,6 +175,7 @@ try {
   notifier.start();
   maintenance.start();
   lossGuard.start();
+  logRules.start();
   keeper.start();
   scheduler.start();
   clock?.start();

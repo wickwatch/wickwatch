@@ -89,6 +89,12 @@ export const AlertCode = Type.Union([
   Type.Literal("instance_stopped"),
   Type.Literal("instance_disconnected"),
   Type.Literal("instance_crashed"),
+  /** A log rule of the instance's algo restarted or stopped it, failed to, or held back (daily limit, open position). */
+  Type.Literal("instance_log_rule_restarted"),
+  Type.Literal("instance_log_rule_stopped"),
+  Type.Literal("instance_log_rule_failed"),
+  Type.Literal("instance_log_rule_limit"),
+  Type.Literal("instance_log_rule_open_position"),
   Type.Literal("account_error"),
   Type.Literal("challenge_breached"),
   Type.Literal("challenge_limit"),

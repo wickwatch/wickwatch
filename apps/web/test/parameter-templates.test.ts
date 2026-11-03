@@ -54,6 +54,8 @@ const detail: ManagedInstanceDetail = {
   name: "alpha-ger40",
   account: { id: 7, number: "1111111", displayName: "Prop A" },
   scheduleIds: [],
+  logRules: true,
+  algoLogRules: [],
   createdAt: "2026-09-21T10:00:00.000Z",
   config,
   history: [config, { ...config, version: 1 }],

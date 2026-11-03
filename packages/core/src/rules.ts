@@ -1,6 +1,7 @@
 // Input rules shared by the server and the dashboard. Dependency-free, so the SPA can import them at runtime
 // (`@wickwatch/core/rules`) without pulling in the rest of the core.
 
+import type { LogRule } from "./schemas/algo";
 import type { RuleId } from "./schemas/challenge";
 import type { InstanceStatus, LogFilter, LogLine } from "./schemas/runtime";
 import type { InstancePause } from "./schemas/schedule";
@@ -39,3 +40,23 @@ export const shownPause = (status: InstanceStatus, pause: InstancePause | undefi
 /** Whether a log filter keeps a line: problems are warnings and errors, setups the lines with setup features. */
 export const keepsLogLine = (line: Pick<LogLine, "level" | "setup">, filter: LogFilter): boolean =>
   filter === "problems" ? line.level === "warn" || line.level === "error" : filter === "setups" ? !!line.setup : true;
+
+/**
+ * Tests a log line against a log rule's pattern or its recovery pattern: contained text in any case, or a regular
+ * expression (case-insensitive too). Throws for a regular expression that does not compile.
+ */
+export function logRuleMatchers(rule: Pick<LogRule, "pattern" | "regex" | "recoveryPattern">): {
+  matches: (text: string) => boolean;
+  recovers: (text: string) => boolean;
+} {
+  const matcher = (pattern: string | undefined): ((text: string) => boolean) => {
+    if (pattern === undefined) return () => false;
+    if (rule.regex) {
+      const expression = new RegExp(pattern, "i");
+      return (text) => expression.test(text);
+    }
+    const needle = pattern.toLowerCase();
+    return (text) => text.toLowerCase().includes(needle);
+  };
+  return { matches: matcher(rule.pattern), recovers: matcher(rule.recoveryPattern) };
+}

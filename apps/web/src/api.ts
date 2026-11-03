@@ -269,6 +269,8 @@ export const api = {
   /** The pauses of the next 14 days that rules would make, before they are saved. */
   previewSchedule: (rules: ScheduleRules) => post<PauseWindow[]>("schedules/preview", { rules }),
   /** The schedules that pause an instance; it is paused while any of them pauses. */
+  setInstanceLogRules: (name: string, enabled: boolean) =>
+    send<undefined>("PUT", `managed-instances/${encodeURIComponent(name)}/log-rules`, { enabled }),
   setInstanceSchedules: (name: string, scheduleIds: number[]) =>
     send<undefined>("PUT", `managed-instances/${encodeURIComponent(name)}/schedules`, { scheduleIds }),
   managedInstances: () => request<ManagedInstance[]>("managed-instances"),

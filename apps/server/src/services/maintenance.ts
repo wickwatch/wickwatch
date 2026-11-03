@@ -63,6 +63,11 @@ export class Maintenance {
         const before = new Date(now.getTime() - auditRetentionDays * DAY_MS).toISOString();
         await db.deleteFrom("audit_log").where("time", "<", before).execute();
       }
+      // Read back for a day at most (cooldown, daily limit, alert); the audit log keeps the actions.
+      await db
+        .deleteFrom("log_rule_actions")
+        .where("at", "<", new Date(now.getTime() - 2 * DAY_MS).toISOString())
+        .execute();
     } catch (error) {
       log.error({ err: error }, "Cleaning up the database failed");
     }

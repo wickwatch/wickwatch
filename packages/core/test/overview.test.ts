@@ -167,6 +167,40 @@ describe("buildOverview", () => {
     ]);
   });
 
+  it("reports what a log rule did within the last hour, as an error when it could not act", () => {
+    const event = (variant: "restarted" | "limit", at: string) => ({ variant, pattern: "Takt hängt", at, count: 2 });
+    const result = buildOverview({
+      time,
+      labelPrefix: "ww",
+      instances: [
+        instance("alpha", "111", "running"),
+        instance("delta", "111", "running"),
+        instance("gamma", "111", "running"),
+      ],
+      lastLogs: new Map(),
+      logRuleEvents: new Map([
+        ["ww-alpha", event("restarted", "2026-09-25T11:30:00.000Z")],
+        ["ww-delta", event("limit", "2026-09-25T11:45:00.000Z")],
+        ["ww-gamma", event("restarted", "2026-09-25T10:30:00.000Z")],
+      ]),
+      accounts: [],
+    });
+    expect(result.alerts).toEqual([
+      {
+        level: "warning",
+        code: "instance_log_rule_restarted",
+        subject: "alpha",
+        params: { pattern: "Takt hängt", last: "2026-09-25T11:30:00.000Z", count: 2 },
+      },
+      {
+        level: "error",
+        code: "instance_log_rule_limit",
+        subject: "delta",
+        params: { pattern: "Takt hängt", last: "2026-09-25T11:45:00.000Z", count: 2 },
+      },
+    ]);
+  });
+
   it("warns about an inactive account next to a loss limit, and only reports the breach once it is closed", () => {
     const rule = (id: RuleResult["id"], status: RuleResult["status"], value: number, limit: number): RuleResult => ({
       id,

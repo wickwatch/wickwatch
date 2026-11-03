@@ -16,6 +16,7 @@ import { system } from "../system";
 import AppBanner from "./AppBanner.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import IconButton from "./IconButton.vue";
+import LogRuleList from "./LogRuleList.vue";
 import ParameterList from "./ParameterList.vue";
 import RiskNote from "./RiskNote.vue";
 import TemplateApplyDialog from "./TemplateApplyDialog.vue";
@@ -57,6 +58,8 @@ const scheduleNames = computed(
       .join(", ") || t("schedules.noneChosen"),
 );
 
+const logRules = computed(() => props.managed?.algoLogRules ?? []);
+
 onMounted(async () => {
   try {
     [algos.value, schedules.value] = await Promise.all([api.algos(), api.schedules()]);
@@ -64,6 +67,18 @@ onMounted(async () => {
     error.value = errorKey(e);
   }
 });
+
+function setLogRules(enabled: boolean) {
+  const name = props.managed?.name;
+  if (name === undefined) return;
+  void run(
+    async () => {
+      await api.setInstanceLogRules(name, enabled);
+      emit("changed");
+    },
+    { as: "logRules", done: () => t(enabled ? "logRules.instanceOn" : "logRules.instanceOff", { name }) },
+  );
+}
 
 function saveSchedules() {
   const name = props.managed?.name;
@@ -299,6 +314,28 @@ function changes(index: number): string[] {
           </div>
         </template>
         <p v-else>{{ scheduleNames }}</p>
+      </section>
+
+      <section class="panel card" aria-labelledby="log-rules-title">
+        <div class="card__head">
+          <h2 id="log-rules-title">{{ $t("logRules.title") }}</h2>
+          <RouterLink :to="{ name: 'algos' }" class="muted">{{ $t("logRules.manage") }}</RouterLink>
+        </div>
+        <p class="muted card__hint">{{ $t("logRules.instanceHint") }}</p>
+        <p v-if="!logRules.length" class="muted">{{ $t("logRules.noRules", { algo: managed.config.algo.name }) }}</p>
+        <template v-else>
+          <LogRuleList :rules="logRules" />
+          <label class="check">
+            <input
+              type="checkbox"
+              :checked="managed.logRules"
+              :disabled="!isAdmin || busy"
+              :aria-busy="deploying === 'logRules'"
+              @change="setLogRules(($event.target as HTMLInputElement).checked)"
+            />
+            {{ $t("logRules.apply", { algo: managed.config.algo.name }) }}
+          </label>
+        </template>
       </section>
 
       <section class="panel card" aria-labelledby="current-title">

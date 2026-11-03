@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- Log rules: wickwatch restarts or stops an instance when a line in its log matches a rule of its algo, e.g. a bot that reports it hangs. Rules are set per algo on the Algos page (for all its versions), several per algo: a text the line contains or a regular expression (both ignore case), restart or stop, and optionally a recovery pattern with a waiting time, so wickwatch acts only if the bot does not report itself fine again in time. A cooldown (default 30 minutes) and a daily limit (default 6) per instance and rule keep a bot from being restarted over and over; a rule can leave instances with an open position alone. Each instance can switch its algo's rules off in its configuration tab. What a rule did shows as an alert for an hour (and goes out as a notification) and is in the audit log; lines written before wickwatch started are left alone.
+
 ### Changed
 - Starting, stopping or restarting a bot no longer makes the overview and the account pages wait for the broker: such an action changes nothing at the broker, so its last answers keep serving and only the instances are read again. An account whose session was closed while idle logged in again first, which held up the page for 10 seconds and more. After an action at the broker (closing a position, cancelling an order, the emergency stop) the page waits for the broker's new answer as before.
 

@@ -296,7 +296,8 @@
       "schedule_not_found": "Diesen Zeitplan gibt es nicht mehr.",
       "invalid_holiday": "Ein Feiertag endet vor seinem Beginn.",
       "instance_not_found": "Eine Instanz der Liste gibt es nicht mehr.",
-      "invalid_pause_period": "Eine einmalige Pause endet vor ihrem Beginn."
+      "invalid_pause_period": "Eine einmalige Pause endet vor ihrem Beginn.",
+      "log_rule_invalid": "Ein Muster ist kein gültiger regulärer Ausdruck."
     }
   },
   "parameterIssue": {
@@ -391,6 +392,11 @@
     "instance_stopped": "{subject} ist gestoppt",
     "instance_disconnected": "{subject}: Verbindung zum Broker seit {since} unterbrochen",
     "instance_crashed": "{subject}: Der Bot hat seit dem Start {count}-mal einen Fehler geworfen, zuletzt um {last}",
+    "instance_log_rule_restarted": "{subject} wurde von einer Log-Regel neu gestartet: Im Log stand „{pattern}“ ({count}-mal heute, zuletzt um {last})",
+    "instance_log_rule_stopped": "{subject} wurde von einer Log-Regel gestoppt: Im Log stand „{pattern}“",
+    "instance_log_rule_failed": "{subject}: Eine Log-Regel konnte den Bot nicht neu starten oder stoppen (im Log stand „{pattern}“)",
+    "instance_log_rule_limit": "{subject}: Im Log stand wieder „{pattern}“, aber das Tageslimit der Regel ist erreicht ({count}-mal heute); sie greift morgen wieder",
+    "instance_log_rule_open_position": "{subject}: Im Log stand „{pattern}“; wegen einer offenen Position hat die Log-Regel nichts getan",
     "account_error": "Konto {subject} nicht erreichbar: {reason}",
     "challenge_breached": "Konto {subject}: Challenge-Regel verletzt – {rule}",
     "challenge_limit": "Konto {subject}: {used} % des Limits {rule} verbraucht",
@@ -843,6 +849,35 @@
     "save": "Speichern",
     "saved": "Parameter für Kontogröße und Risiko von {algo} gespeichert.",
     "noVersion": "Lade eine Version dieses Algos hoch, um seine Parameter zu wählen."
+  },
+  "logRules": {
+    "title": "Log-Regeln",
+    "state": "keine Regel | eine Regel | {count} Regeln",
+    "hint": "Eine Instanz von {algo} neu starten oder stoppen, wenn eine Zeile in ihrem Log passt. Text passt irgendwo in der Zeile, ohne Rücksicht auf Groß- und Kleinschreibung; ein regulärer Ausdruck ebenso. Mit einem Erholungsmuster wartet wickwatch erst auf diese Zeile und greift nur ein, wenn sie nicht rechtzeitig kommt. Zeilen von vor dem Start von wickwatch bleiben unbeachtet.",
+    "pattern": "Zeile enthält",
+    "regex": "Regulärer Ausdruck",
+    "recoveryPattern": "Außer es folgt (optional)",
+    "waitSeconds": "Darauf warten (Sekunden)",
+    "action": "Aktion",
+    "actions": {
+      "restart": "Neu starten",
+      "stop": "Stoppen"
+    },
+    "withOpenPosition": "Auch bei offener Position",
+    "cooldownMinutes": "Nicht erneut innerhalb (Minuten)",
+    "maxPerDay": "Höchstens pro Tag",
+    "rule": "Regel {n}",
+    "add": "Regel hinzufügen",
+    "remove": "Regel entfernen",
+    "save": "Regeln speichern",
+    "saved": "Log-Regeln von {algo} gespeichert.",
+    "summary": "{action} bei „{pattern}“",
+    "instanceHint": "Die Log-Regeln des Algos starten diese Instanz neu oder stoppen sie, wenn ihr Log eine passende Zeile zeigt. Eingestellt werden sie auf der Seite Algos.",
+    "apply": "Log-Regeln von {algo} anwenden",
+    "noRules": "{algo} hat keine Log-Regeln.",
+    "manage": "Auf der Seite Algos bearbeiten",
+    "instanceOn": "Log-Regeln gelten wieder für {name}.",
+    "instanceOff": "Log-Regeln gelten nicht mehr für {name}."
   },
   "risk": {
     "title": "Risiko pro Trade",

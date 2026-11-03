@@ -1,6 +1,7 @@
 import {
   buildAccountDetail,
   buildOverview,
+  CRASH_ALERT_MS,
   profileDay,
   readLabels,
   settle,
@@ -29,6 +30,7 @@ import type { LogTracker } from "./log-tracker";
 import { pauseOf } from "./schedules";
 import { guardTripToday } from "./loss-guard";
 import type { MarketHoursCache } from "./market-hours";
+import { logRuleEvents } from "./log-rules";
 import { loadOverrides } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -190,9 +192,10 @@ export class OverviewLoader {
   /** The input of the overview, and the accounts it was loaded for. */
   private async input(now: Date, only?: string): Promise<{ input: OverviewInput; entries: AccountEntry[] }> {
     const { adapters, db, labelPrefix } = this.options;
-    const [fetched, overrides, stopped] = await Promise.all([
+    const [fetched, overrides, ruled, stopped] = await Promise.all([
       this.fetch(now, only),
       loadOverrides(db, adapters.broker.id),
+      logRuleEvents(db, now, CRASH_ALERT_MS),
       // Managed instances are named after their runtime ref.
       db
         .selectFrom("instances")
@@ -210,6 +213,7 @@ export class OverviewLoader {
       logStates: fetched.logs.states,
       accounts,
       overrides,
+      logRuleEvents: ruled,
       stoppedByUser: new Set(stopped.filter((row) => row.stopped_by_user === 1).map((row) => row.name)),
       paused: new Map(
         stopped.flatMap((row) => {

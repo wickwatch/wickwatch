@@ -56,6 +56,20 @@ export interface OverviewInput {
   stoppedByUser?: ReadonlySet<string>;
   /** Instances their schedule holds stopped, by runtime ref. */
   paused?: ReadonlyMap<string, InstancePause>;
+  /** What a log rule last did to an instance, within the last CRASH_ALERT_MS, by runtime ref. */
+  logRuleEvents?: ReadonlyMap<string, LogRuleEvent>;
+}
+
+/**
+ * A log rule's action on an instance: `restarted` or `stopped`; `failed` when that did not work; `limit` when its
+ * daily limit held it back; `open_position` when the instance had an open position and the rule leaves those alone.
+ */
+export interface LogRuleEvent {
+  variant: "restarted" | "stopped" | "failed" | "limit" | "open_position";
+  pattern: string;
+  at: string;
+  /** Restarts and stops by this rule on this instance today (UTC). */
+  count: number;
 }
 
 const sum = (values: number[]) => round2(values.reduce((a, b) => a + b, 0));
@@ -159,7 +173,7 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
     time: toIsoTime(input.time),
     accounts,
     instances,
-    alerts: alerts(instances, input.accounts, attributor, input.time, input.clockOffsetMs),
+    alerts: alerts(instances, input, attributor),
   };
 }
 
@@ -229,10 +243,8 @@ export const CLOCK_TOLERANCE_MS = 2000;
 
 function alerts(
   instances: InstanceSummary[],
-  accounts: AccountSnapshot[],
+  { accounts, time, clockOffsetMs, logRuleEvents }: OverviewInput,
   attributor: Attributor,
-  time: Date,
-  clockOffsetMs?: number,
 ): Alert[] {
   const result: Alert[] = [];
   if (clockOffsetMs !== undefined && Math.abs(clockOffsetMs) > CLOCK_TOLERANCE_MS) {
@@ -292,6 +304,12 @@ function alerts(
     } else if (i.connectionLostSince) {
       const params = { since: i.connectionLostSince };
       result.push({ level: "warning", code: "instance_disconnected", subject: i.name, params });
+    }
+    const ruled = logRuleEvents?.get(i.ref);
+    if (ruled && time.getTime() - Date.parse(ruled.at) < CRASH_ALERT_MS) {
+      const level = ruled.variant === "failed" || ruled.variant === "limit" ? "error" : "warning";
+      const params = { pattern: ruled.pattern, last: ruled.at, count: ruled.count };
+      result.push({ level, code: `instance_log_rule_${ruled.variant}`, subject: i.name, params });
     }
     if (i.status === "running" && i.crashes && time.getTime() - Date.parse(i.crashes.lastAt) < CRASH_ALERT_MS) {
       const params = { count: i.crashes.count, last: i.crashes.lastAt, detail: i.crashes.lastText };

@@ -1,6 +1,7 @@
 import Type from "typebox";
 import { ATTRIBUTION_MODES } from "../attribution";
 import { AccountSize, LossLimits } from "./account";
+import { LogRule } from "./algo";
 import { ParameterValues } from "./config";
 import { InstanceStatus } from "./runtime";
 
@@ -60,6 +61,8 @@ export const ManagedInstance = Type.Object({
   deployment: Type.Optional(Deployment),
   /** The schedules that pause it (weekends, holidays, news); paused while any of them pauses. */
   scheduleIds: Type.Array(Type.Integer()),
+  /** Whether the log rules of its algo (AlgoSettings.logRules) apply to it. */
+  logRules: Type.Boolean(),
 });
 export type ManagedInstance = Type.Static<typeof ManagedInstance>;
 
@@ -89,6 +92,8 @@ export const ManagedInstanceDetail = Type.Intersect([
     accountSizeCheck: Type.Optional(AccountSizeCheck),
     /** Present when the algo names a risk parameter. */
     riskCheck: Type.Optional(RiskCheck),
+    /** The log rules of its algo, whether they apply to it or not (`logRules`). */
+    algoLogRules: Type.Array(LogRule),
   }),
 ]);
 export type ManagedInstanceDetail = Type.Static<typeof ManagedInstanceDetail>;

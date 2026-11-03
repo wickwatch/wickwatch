@@ -51,13 +51,63 @@ async function lastLogLine(runtime: RuntimeAdapter, ref: string): Promise<LogLin
   return last;
 }
 
-interface Seen {
+/** Where a log was read up to, per instance start. */
+interface Cursor {
   startedAt: IsoTime | undefined;
   /** Time of the last line read; the next call reads from here. */
   cursor: IsoTime | undefined;
   /** Texts of the lines read at `cursor`, so the ones the runtime sends again are skipped. */
   atCursor: string[];
-  state: InstanceLogState;
+}
+
+/**
+ * Reads per running instance the lines of its log that are new since the previous call; a new start of the instance
+ * begins from scratch. An instance that is not running is forgotten.
+ */
+export class LogFollower {
+  private readonly cursors = new Map<string, Cursor>();
+
+  constructor(private readonly runtime: RuntimeAdapter) {}
+
+  /**
+   * The new lines and the last line read (also one read before), or "unreadable"; none for a stopped instance. `fresh`:
+   * read from the instance's start, as it started again (or was not read before), so what was known about it is gone.
+   */
+  async read(instance: RuntimeInstance): Promise<{ lines: LogLine[]; last?: LogLine; fresh: boolean } | "unreadable"> {
+    if (instance.status !== "running") {
+      this.cursors.delete(instance.ref);
+      return { lines: [], fresh: true };
+    }
+    const previous = this.cursors.get(instance.ref);
+    const known = previous?.startedAt === instance.startedAt ? previous : undefined;
+    const since = known ? known.cursor : instance.startedAt;
+    let cursor = since;
+    // Lines already read at the cursor; the runtime sends them again.
+    let expected = [...(known?.atCursor ?? [])];
+    let atCursor: string[] = [];
+    let last: LogLine | undefined;
+    const lines: LogLine[] = [];
+    try {
+      for await (const line of this.runtime.logs(instance.ref, { tail: MAX_LINES, ...(since ? { since } : {}) })) {
+        last = line;
+        // The runtime may round `since` down and send earlier lines again.
+        if (cursor && line.time < cursor) continue;
+        if (line.time !== cursor) {
+          cursor = line.time;
+          expected = [];
+          atCursor = [];
+        }
+        atCursor.push(line.text);
+        const again = expected.indexOf(line.text);
+        if (again >= 0) expected.splice(again, 1);
+        else lines.push(line);
+      }
+    } catch {
+      return "unreadable";
+    }
+    this.cursors.set(instance.ref, { startedAt: instance.startedAt, cursor, atCursor: [...atCursor, ...expected] });
+    return { lines, ...(last ? { last } : {}), fresh: !known };
+  }
 }
 
 /**
@@ -66,9 +116,12 @@ interface Seen {
  * Each call reads only the lines since the previous one; a new start of the instance begins from scratch.
  */
 export class LogTracker {
-  private readonly seen = new Map<string, Seen>();
+  private readonly states = new Map<string, InstanceLogState>();
+  private readonly follower: LogFollower;
 
-  constructor(private readonly runtime: RuntimeAdapter) {}
+  constructor(private readonly runtime: RuntimeAdapter) {
+    this.follower = new LogFollower(runtime);
+  }
 
   /**
    * The log state of each of these instances that has something to report, and the last line of each instance's log.
@@ -93,7 +146,7 @@ export class LogTracker {
   private reported(instances: RuntimeInstance[]): Map<string, InstanceLogState> {
     const result = new Map<string, InstanceLogState>();
     for (const { ref } of instances) {
-      const state = this.seen.get(ref)?.state;
+      const state = this.states.get(ref);
       if (state && (state.connectionLostSince || state.crashes)) result.set(ref, state);
     }
     return result;
@@ -101,40 +154,17 @@ export class LogTracker {
 
   /** Reads what is new in a running instance's log; returns the last line read, if any. */
   private async update(instance: RuntimeInstance): Promise<LogLine | undefined | "unreadable"> {
+    const read = await this.follower.read(instance);
     if (instance.status !== "running") {
-      this.seen.delete(instance.ref);
+      this.states.delete(instance.ref);
       return undefined;
     }
-    const previous = this.seen.get(instance.ref);
-    const known = previous?.startedAt === instance.startedAt ? previous : undefined;
-    const since = known ? known.cursor : instance.startedAt;
-    let cursor = since;
-    // Lines already applied at the cursor; the runtime sends them again.
-    let expected = [...(known?.atCursor ?? [])];
-    let atCursor: string[] = [];
-    let last: LogLine | undefined;
-    const state: InstanceLogState = { ...known?.state };
-    try {
-      for await (const line of this.runtime.logs(instance.ref, { tail: MAX_LINES, ...(since ? { since } : {}) })) {
-        last = line;
-        // The runtime may round `since` down and send earlier lines again.
-        if (cursor && line.time < cursor) continue;
-        if (line.time !== cursor) {
-          cursor = line.time;
-          expected = [];
-          atCursor = [];
-        }
-        atCursor.push(line.text);
-        const again = expected.indexOf(line.text);
-        if (again >= 0) expected.splice(again, 1);
-        else apply(state, line);
-      }
-    } catch {
-      // Unreadable log: keep what was known.
-      return "unreadable";
-    }
-    this.seen.set(instance.ref, { startedAt: instance.startedAt, cursor, atCursor: [...atCursor, ...expected], state });
-    return last;
+    // Unreadable log: keep what was known.
+    if (read === "unreadable") return read;
+    const state: InstanceLogState = { ...(read.fresh ? {} : this.states.get(instance.ref)) };
+    for (const line of read.lines) apply(state, line);
+    this.states.set(instance.ref, state);
+    return read.last;
   }
 }
 

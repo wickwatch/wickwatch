@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api } from "../api";
+import AlgoLogRules from "../components/AlgoLogRules.vue";
 import AlgoSizing from "../components/AlgoSizing.vue";
 import AlgoTemplates from "../components/AlgoTemplates.vue";
 import AppModal from "../components/AppModal.vue";
@@ -188,6 +189,12 @@ const confirmRemove = () => {
           v-if="versions.length || sizing"
           :algo-name="name"
           :newest="versions[0]"
+          :settings="sizing"
+          @changed="changed"
+        />
+        <AlgoLogRules
+          v-if="versions.length || sizing?.logRules"
+          :algo-name="name"
           :settings="sizing"
           @changed="changed"
         />

@@ -1,3 +1,4 @@
+import type { LogRuleEvent } from "@wickwatch/core";
 import type { Generated } from "kysely";
 
 // Table types for Kysely. Timestamps are ISO 8601 strings in UTC.
@@ -151,6 +152,20 @@ export interface InstancesTable {
   paused_until: string | null;
   /** Why it is paused, comma-separated PauseReasons. */
   pause_reasons: string | null;
+  /** 1 when the log rules of its algo do not apply to it. */
+  log_rules_off: Generated<number>;
+}
+
+/** What a log rule did to an instance, for its cooldown, daily limit and alert. */
+export interface LogRuleActionsTable {
+  id: Generated<number>;
+  instance_id: number;
+  /** The rule across saves: its action and pattern (services/log-rules.ts ruleKey). */
+  rule: string;
+  /** Shown in the alert. */
+  pattern: string;
+  variant: LogRuleEvent["variant"];
+  at: string;
 }
 
 /** Which schedules pause an instance; it is paused while any of them pauses. */
@@ -218,6 +233,8 @@ export interface AlgoSettingsTable {
   account_size_parameter: string | null;
   /** The parameter holding the risk per trade in percent of the algo's capital, for the risk preview. */
   risk_parameter: string | null;
+  /** LogRule[] as JSON; null without rules. */
+  log_rules: string | null;
   updated_by: number | null;
   updated_at: string;
 }
@@ -301,4 +318,5 @@ export interface Database {
   schedules: SchedulesTable;
   instance_schedules: InstanceSchedulesTable;
   news_events: NewsEventsTable;
+  log_rule_actions: LogRuleActionsTable;
 }

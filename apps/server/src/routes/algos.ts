@@ -8,9 +8,10 @@ import {
   isAdapterError,
   ParameterFile,
   type AlgoMetadata,
+  type LogRule,
 } from "@wickwatch/core";
 import { numberParameters } from "@wickwatch/core/parameters";
-import { SAFE_NAME } from "@wickwatch/core/rules";
+import { logRuleMatchers, SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { Adapters } from "../adapters";
@@ -246,7 +247,7 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         tags: ["algos"],
         summary: "Change the settings of an algo, for all its versions",
         description:
-          "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off.",
+          "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off. `logRules` replaces the algo's log rules (an empty list removes them): wickwatch restarts or stops an instance whose log shows a line matching a rule; a regular expression that does not compile is refused.",
         params: Type.Object({ name: Type.String({ minLength: 1, maxLength: 100 }) }),
         body: AlgoSettingsInput,
         response: { 200: AlgoSettings, 400: ErrorBody, 403: ErrorBody, 404: ErrorBody },
@@ -270,9 +271,12 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       const numbers = new Set(numberParameters(schemaOf(newest.metadata)).map((p) => p.name));
       const choose = (value: string | null | undefined, current: string | null = null) =>
         value === undefined ? current : value;
+      const { logRules } = request.body;
+      if (logRules && !logRules.every(validLogRule)) return reply.code(400).send({ error: "log_rule_invalid" });
       const row = {
         account_size_parameter: choose(request.body.accountSizeParameter, stored?.account_size_parameter),
         risk_parameter: choose(request.body.riskParameter, stored?.risk_parameter),
+        log_rules: choose(logRules && (logRules.length ? JSON.stringify(logRules) : null), stored?.log_rules),
         updated_by: request.user?.id ?? null,
         updated_at: new Date().toISOString(),
       };
@@ -292,10 +296,24 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       await audit(db, {
         action: "algo.settings",
         target: algoName,
-        details: { accountSizeParameter: row.account_size_parameter, riskParameter: row.risk_parameter },
+        details: {
+          accountSizeParameter: row.account_size_parameter,
+          riskParameter: row.risk_parameter,
+          ...(logRules ? { logRules } : {}),
+        },
         ...actor(request),
       });
       return algoSettingsOf({ algo_name: algoName, ...row });
     },
   );
 };
+
+/** A log rule whose patterns compile; the schema checks the rest. */
+function validLogRule(rule: LogRule): boolean {
+  try {
+    logRuleMatchers(rule);
+    return true;
+  } catch {
+    return false;
+  }
+}

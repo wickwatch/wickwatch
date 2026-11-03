@@ -127,6 +127,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           config: toConfig(config, cipher),
           ...(deployed ? { deployment: deployed } : {}),
           scheduleIds: (scheduleIdsOf.get(row.id) ?? []).map((l) => l.schedule_id),
+          logRules: row.log_rules_off === 0,
         },
       ];
     });
@@ -558,6 +559,32 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         details: { schedules: schedules.map((s) => s.name) },
         ...actor(request),
       });
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.put(
+    "/managed-instances/:name/log-rules",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Switch the log rules of the instance's algo on or off for this instance",
+        params: Type.Object({ name: Type.String() }),
+        body: Type.Object({ enabled: Type.Boolean() }),
+        response: { 204: Type.Null(), 403: ErrorBody, 404: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const { name } = request.params;
+      const { enabled } = request.body;
+      const updated = await db
+        .updateTable("instances")
+        .set({ log_rules_off: enabled ? 0 : 1 })
+        .where("name", "=", name)
+        .executeTakeFirst();
+      if (!updated.numUpdatedRows) return reply.code(404).send({ error: "not_found" });
+      await audit(db, { action: "instance.log_rules", target: name, details: { enabled }, ...actor(request) });
       return reply.code(204).send(null);
     },
   );

@@ -2226,6 +2226,36 @@
                               {
                                 "type": "string",
                                 "enum": [
+                                  "instance_log_rule_restarted"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_failed"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_open_position"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
                                   "account_error"
                                 ]
                               },
@@ -3186,6 +3216,36 @@
                                 "type": "string",
                                 "enum": [
                                   "instance_crashed"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_restarted"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_stopped"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_failed"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_limit"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "instance_log_rule_open_position"
                                 ]
                               },
                               {
@@ -9917,6 +9977,70 @@
                       },
                       "riskParameter": {
                         "type": "string"
+                      },
+                      "logRules": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "pattern",
+                            "regex",
+                            "waitSeconds",
+                            "action",
+                            "withOpenPosition",
+                            "cooldownMinutes",
+                            "maxPerDay"
+                          ],
+                          "properties": {
+                            "pattern": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 300
+                            },
+                            "regex": {
+                              "type": "boolean"
+                            },
+                            "recoveryPattern": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 300
+                            },
+                            "waitSeconds": {
+                              "type": "integer",
+                              "minimum": 10,
+                              "maximum": 3600
+                            },
+                            "action": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "restart"
+                                  ]
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "stop"
+                                  ]
+                                }
+                              ]
+                            },
+                            "withOpenPosition": {
+                              "type": "boolean"
+                            },
+                            "cooldownMinutes": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1440
+                            },
+                            "maxPerDay": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 50
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -9954,7 +10078,7 @@
         "tags": [
           "algos"
         ],
-        "description": "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off.",
+        "description": "`accountSizeParameter` names the parameter holding the account size the algo calculates with; wickwatch warns when it is far off the account's. `riskParameter` names the one holding the risk per trade in percent; wickwatch shows it in money and against the challenge's loss limits. Both must be number parameters of the newest version; fields left out stay as they are, null switches one off. `logRules` replaces the algo's log rules (an empty list removes them): wickwatch restarts or stops an instance whose log shows a line matching a rule; a regular expression that does not compile is refused.",
         "requestBody": {
           "required": true,
           "content": {
@@ -9973,6 +10097,71 @@
                     "minLength": 1,
                     "maxLength": 200,
                     "nullable": true
+                  },
+                  "logRules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "pattern",
+                        "regex",
+                        "waitSeconds",
+                        "action",
+                        "withOpenPosition",
+                        "cooldownMinutes",
+                        "maxPerDay"
+                      ],
+                      "properties": {
+                        "pattern": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "regex": {
+                          "type": "boolean"
+                        },
+                        "recoveryPattern": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "waitSeconds": {
+                          "type": "integer",
+                          "minimum": 10,
+                          "maximum": 3600
+                        },
+                        "action": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "restart"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "stop"
+                              ]
+                            }
+                          ]
+                        },
+                        "withOpenPosition": {
+                          "type": "boolean"
+                        },
+                        "cooldownMinutes": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
+                        },
+                        "maxPerDay": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 50
+                        }
+                      }
+                    },
+                    "maxItems": 20
                   }
                 }
               }
@@ -10018,6 +10207,70 @@
                     },
                     "riskParameter": {
                       "type": "string"
+                    },
+                    "logRules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "pattern",
+                          "regex",
+                          "waitSeconds",
+                          "action",
+                          "withOpenPosition",
+                          "cooldownMinutes",
+                          "maxPerDay"
+                        ],
+                        "properties": {
+                          "pattern": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "regex": {
+                            "type": "boolean"
+                          },
+                          "recoveryPattern": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "waitSeconds": {
+                            "type": "integer",
+                            "minimum": 10,
+                            "maximum": 3600
+                          },
+                          "action": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "restart"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stop"
+                                ]
+                              }
+                            ]
+                          },
+                          "withOpenPosition": {
+                            "type": "boolean"
+                          },
+                          "cooldownMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          "maxPerDay": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -13663,7 +13916,8 @@
                       "account",
                       "createdAt",
                       "config",
-                      "scheduleIds"
+                      "scheduleIds",
+                      "logRules"
                     ],
                     "properties": {
                       "id": {
@@ -13825,6 +14079,9 @@
                         "items": {
                           "type": "integer"
                         }
+                      },
+                      "logRules": {
+                        "type": "boolean"
                       }
                     }
                   }
@@ -13962,7 +14219,8 @@
                     "account",
                     "createdAt",
                     "config",
-                    "scheduleIds"
+                    "scheduleIds",
+                    "logRules"
                   ],
                   "properties": {
                     "id": {
@@ -14124,6 +14382,9 @@
                       "items": {
                         "type": "integer"
                       }
+                    },
+                    "logRules": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -14505,7 +14766,8 @@
                         "account",
                         "createdAt",
                         "config",
-                        "scheduleIds"
+                        "scheduleIds",
+                        "logRules"
                       ],
                       "properties": {
                         "id": {
@@ -14667,13 +14929,17 @@
                           "items": {
                             "type": "integer"
                           }
+                        },
+                        "logRules": {
+                          "type": "boolean"
                         }
                       }
                     },
                     {
                       "type": "object",
                       "required": [
-                        "history"
+                        "history",
+                        "algoLogRules"
                       ],
                       "properties": {
                         "history": {
@@ -14850,6 +15116,70 @@
                                 "max": {
                                   "type": "number"
                                 }
+                              }
+                            }
+                          }
+                        },
+                        "algoLogRules": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "pattern",
+                              "regex",
+                              "waitSeconds",
+                              "action",
+                              "withOpenPosition",
+                              "cooldownMinutes",
+                              "maxPerDay"
+                            ],
+                            "properties": {
+                              "pattern": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 300
+                              },
+                              "regex": {
+                                "type": "boolean"
+                              },
+                              "recoveryPattern": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 300
+                              },
+                              "waitSeconds": {
+                                "type": "integer",
+                                "minimum": 10,
+                                "maximum": 3600
+                              },
+                              "action": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "restart"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "stop"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "withOpenPosition": {
+                                "type": "boolean"
+                              },
+                              "cooldownMinutes": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1440
+                              },
+                              "maxPerDay": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 50
                               }
                             }
                           }
@@ -15163,7 +15493,8 @@
                     "account",
                     "createdAt",
                     "config",
-                    "scheduleIds"
+                    "scheduleIds",
+                    "logRules"
                   ],
                   "properties": {
                     "id": {
@@ -15325,6 +15656,9 @@
                       "items": {
                         "type": "integer"
                       }
+                    },
+                    "logRules": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -15817,6 +16151,118 @@
                       "type": "integer"
                     },
                     "maxItems": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "name",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/{name}/log-rules": {
+      "put": {
+        "summary": "Switch the log rules of the instance's algo on or off for this instance",
+        "tags": [
+          "instances"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "enabled"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
                   }
                 }
               }

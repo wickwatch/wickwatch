@@ -222,6 +222,8 @@ describe("schedules of an instance", () => {
       account: { id: 7, number: "1111111", displayName: "Prop A" },
       createdAt: "2026-09-21T10:00:00.000Z",
       scheduleIds: [4],
+      logRules: true,
+      algoLogRules: [],
       config: {
         version: 1,
         algo: { id: 1, name: "alpha", version: "1" },
