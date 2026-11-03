@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Starting, stopping or restarting a bot no longer makes the overview and the account pages wait for the broker: such an action changes nothing at the broker, so its last answers keep serving and only the instances are read again. An account whose session was closed while idle logged in again first, which held up the page for 10 seconds and more. After an action at the broker (closing a position, cancelling an order, the emergency stop) the page waits for the broker's new answer as before.
+
 ## 0.8.4 – 2026-11-03
 
 ### Changed

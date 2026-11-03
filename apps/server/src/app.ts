@@ -112,8 +112,8 @@ export async function buildApp({
         broker: idle?.broker ?? given.broker,
         runtime: withLogArchive(given.runtime, logArchive, app.log),
       },
-      () => {
-        overview.invalidate();
+      (change) => {
+        overview.invalidate(change);
         idle?.forget();
       },
     ),

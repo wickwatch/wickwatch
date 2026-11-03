@@ -58,17 +58,30 @@ describe("OverviewLoader", () => {
     expect(stats).toHaveBeenCalledTimes(2 * accounts);
   });
 
-  it("drops the shared load after an action on bots or positions, whoever runs it", async () => {
+  it("drops the shared load after an action on bots or positions, and the broker answers after one on positions", async () => {
     const stats = vi.spyOn(t.adapters.broker, "stats");
+    const list = vi.spyOn(t.adapters.runtime, "list");
     const cookie = await loginAs(t, "admin");
+    const post = (url: string, payload?: object) =>
+      t.app.inject({ method: "POST", url, headers: { cookie }, ...(payload ? { payload } : {}) });
     const overview = () => t.app.inject({ url: "/api/v1/overview", headers: { cookie } });
     await overview();
     await overview();
     expect(stats).toHaveBeenCalledTimes(accounts);
-    expect(
-      (await t.app.inject({ method: "POST", url: "/api/v1/instances/alpha-ger40-a/stop", headers: { cookie } }))
-        .statusCode,
-    ).toBe(204);
+    expect(list).toHaveBeenCalledTimes(1);
+
+    // A bot stopped: its instances are read again, the broker's answers still serve.
+    expect((await post("/api/v1/instances/alpha-ger40-a/stop")).statusCode).toBe(204);
+    await overview();
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(stats).toHaveBeenCalledTimes(accounts);
+
+    // A position closed: the broker is asked again.
+    const detail = await t.app.inject({ url: "/api/v1/accounts/1111111/detail", headers: { cookie } });
+    const [position] = detail.json<{ positions: { id: string }[] }>().positions;
+    expect(position).toBeDefined();
+    const close = await post(`/api/v1/accounts/1111111/positions/${position!.id}/close`, { confirm: position!.id });
+    expect(close.statusCode).toBe(204);
     await overview();
     expect(stats).toHaveBeenCalledTimes(2 * accounts);
   });

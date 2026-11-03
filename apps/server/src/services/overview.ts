@@ -51,6 +51,9 @@ const LAST_ANSWER_MAX_AGE_MS = 5 * 60_000;
 const RUNTIME_CHANGES = ["create", "update", "remove", "start", "stop", "restart"] as const;
 const BROKER_CHANGES = ["closePosition", "cancelOrder", "emergencyStop"] as const;
 
+/** What an action changed: the instances only (a bot started or stopped), or also the account at the broker. */
+export type Change = "runtime" | "broker";
+
 /** `target` with `changed` called after each of `methods`, also after a failed one: it may have changed something. */
 function notifyAfter<T extends object>(target: T, methods: readonly string[], changed: () => void): T {
   return new Proxy(target, {
@@ -75,11 +78,15 @@ function notifyAfter<T extends object>(target: T, methods: readonly string[], ch
  * whoever runs it (a route, the instance keeper, the loss guard), so the next load asks again. Changes outside
  * wickwatch (a stop loss hit, a bot's own trade) show once the shared load is older than REUSE_WITHIN_MS.
  */
-export function withChangeNotice(adapters: Adapters, changed: () => void): Adapters {
+export function withChangeNotice(adapters: Adapters, changed: (change: Change) => void): Adapters {
   return {
     ...adapters,
-    runtime: notifyAfter(adapters.runtime, RUNTIME_CHANGES, changed),
-    broker: notifyAfter(adapters.broker, BROKER_CHANGES, changed),
+    runtime: notifyAfter(adapters.runtime, RUNTIME_CHANGES, () => {
+      changed("runtime");
+    }),
+    broker: notifyAfter(adapters.broker, BROKER_CHANGES, () => {
+      changed("broker");
+    }),
   };
 }
 
@@ -149,12 +156,14 @@ export class OverviewLoader {
   constructor(private readonly options: OverviewLoaderOptions) {}
 
   /**
-   * Forgets the recent loads and broker answers, after something changed (a position closed, an instance started):
-   * the next caller asks again and waits for that answer. Loads still running finish for the callers that joined them.
+   * Forgets the recent loads after something changed, so the next caller asks again; loads still running finish for
+   * the callers that joined them. After a broker action (a position closed) also the broker answers: the next caller
+   * then waits for the broker's new one. Starting or stopping a bot changes nothing at the broker, so its answers stay,
+   * and the next caller does not wait on a session that has to log in first.
    */
-  invalidate(): void {
+  invalidate(change: Change = "broker"): void {
     this.recent.clear();
-    this.answers.clear();
+    if (change === "broker") this.answers.clear();
   }
 
   /** Runtime and broker are queried in parallel; failures per account become alerts. */
