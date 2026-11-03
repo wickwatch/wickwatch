@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Changed
+- Trading days: the 5-minute run asks the broker only for the deals of the last three trading days, after one full run per account since the challenge start (after each server start, and when a profile is saved), which asks in pieces of 30 days. Before, every run asked for the whole challenge, for a long one some 200 days of deals and order history; when the broker was slow, that answer ran into the cTrader CLI's 60-second timeout, which ended the account's session and made it log in again.
+
 ## 0.8.3 – 2026-11-03
 
 ### Fixed

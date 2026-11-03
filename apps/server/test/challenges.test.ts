@@ -1,7 +1,7 @@
 import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { tradingDayKey, type ChallengeProfile, type Overview, type Position } from "@wickwatch/core";
+import { tradingDayKey, type ChallengeProfile, type Deal, type Overview, type Position } from "@wickwatch/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dbAccountDirectory } from "../src/accounts";
 import { createAdapters } from "../src/adapters";
@@ -351,42 +351,91 @@ describe("trading days of a new profile", () => {
   });
 });
 
+/** A poller on account 1111111 with `profile` and a broker whose deals and positions come from `broker`. */
+async function pollerWith(
+  t: TestApp,
+  broker: {
+    deals: (c: unknown, account: string, from: string, to: string) => Promise<Deal[]>;
+    positions?: () => Promise<Position[]>;
+  },
+  accountProfile: ChallengeProfile = profile,
+) {
+  await seedDemoChallenges(t.db);
+  const demo = createAdapters(loadConfig({ DATABASE_URL: "file::memory:" }));
+  const adapters = {
+    ...demo,
+    broker: Object.assign(Object.create(demo.broker) as typeof demo.broker, {
+      positions: async () => [],
+      ...broker,
+    }),
+  };
+  const { id } = await t.db
+    .selectFrom("accounts")
+    .select("id")
+    .where("number", "=", "1111111")
+    .executeTakeFirstOrThrow();
+  await t.db
+    .updateTable("challenge_profiles")
+    .set({ profile: JSON.stringify(accountProfile) })
+    .where("account_id", "=", id)
+    .execute();
+  const poller = new AccountPoller({
+    db: t.db,
+    adapters,
+    accounts: dbAccountDirectory(t.db, t.cipher, "demo"),
+    log,
+    now: () => new Date("2026-09-25T10:00:00Z"),
+  });
+  return { id, poller };
+}
+
+describe("trading days of the regular runs", () => {
+  it("asks the whole history once in pieces, then only the last days, and in full again after a save", async () => {
+    const t = await startApp();
+    try {
+      const ranges: [string, string][] = [];
+      const { id, poller } = await pollerWith(
+        t,
+        {
+          deals: async (_c, account, from, to) => {
+            if (account === "1111111") ranges.push([from, to]);
+            return [];
+          },
+        },
+        { ...profile, startDate: "2026-07-01" },
+      );
+      await poller.pollDeals();
+      const full = ranges.length;
+      await poller.pollDeals();
+      await poller.syncTradingDays(id);
+      const day = 24 * 60 * 60 * 1000;
+      // Whole history: from the start, in pieces of at most 30 days up to now.
+      expect(full).toBe(3);
+      expect(Date.parse(ranges[0]![0])).toBeLessThanOrEqual(Date.parse("2026-07-01T00:00:00Z"));
+      expect(ranges[full - 1]![1]).toBe("2026-09-25T10:00:00.000Z");
+      for (const [from, to] of ranges) expect(Date.parse(to) - Date.parse(from)).toBeLessThanOrEqual(30 * day);
+      // Then the last three trading days: from the start of the 23rd.
+      expect(ranges[full]![0] > "2026-09-22T12:00:00Z" && ranges[full]![0] <= "2026-09-23T12:00:00Z").toBe(true);
+      // A save runs in full again.
+      expect(ranges.slice(full + 1)).toEqual(ranges.slice(0, full));
+    } finally {
+      await t.app.close();
+    }
+  });
+});
+
 describe("trading days by opening day", () => {
   it("marks the day a position opened and clears days marked by closing day before", async () => {
     const t = await startApp();
     try {
-      await seedDemoChallenges(t.db);
-      const config = loadConfig({ DATABASE_URL: "file::memory:" });
-      const demo = createAdapters(config);
       const deal = { id: "1", positionId: "1", symbol: "US100", side: "buy" as const, volume: 1, price: 1, pnl: 10 };
-      const adapters = {
-        ...demo,
-        broker: Object.assign(Object.create(demo.broker) as typeof demo.broker, {
-          // Opened Monday, closed Tuesday.
-          deals: async () => [{ ...deal, time: "2026-09-22T07:00:00.000Z", openedAt: "2026-09-21T19:00:00.000Z" }],
-          positions: async () => [],
-        }),
-      };
-      const { id } = await t.db
-        .selectFrom("accounts")
-        .select("id")
-        .where("number", "=", "1111111")
-        .executeTakeFirstOrThrow();
-      await t.db
-        .updateTable("challenge_profiles")
-        .set({ profile: JSON.stringify(profile) })
-        .where("account_id", "=", id)
-        .execute();
+      // Opened Monday, closed Tuesday.
+      const { id, poller } = await pollerWith(t, {
+        deals: async () => [{ ...deal, time: "2026-09-22T07:00:00.000Z", openedAt: "2026-09-21T19:00:00.000Z" }],
+      });
       await t.db.deleteFrom("daily_stats").where("account_id", "=", id).execute();
       // Marked by an older version on the closing day.
       await t.db.insertInto("daily_stats").values({ account_id: id, day: "2026-09-22", traded: 1 }).execute();
-      const poller = new AccountPoller({
-        db: t.db,
-        adapters,
-        accounts: dbAccountDirectory(t.db, t.cipher, "demo"),
-        log,
-        now: () => new Date("2026-09-25T10:00:00Z"),
-      });
       await poller.syncTradingDays(id);
       const traded = await t.db
         .selectFrom("daily_stats")

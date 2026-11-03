@@ -1,4 +1,11 @@
-import { profileDay, tradingDayKey, tradingDays, tradingDayStartOf, type ChallengeProfile } from "@wickwatch/core";
+import {
+  profileDay,
+  tradingDayKey,
+  tradingDays,
+  tradingDayStart,
+  tradingDayStartOf,
+  type ChallengeProfile,
+} from "@wickwatch/core";
 import type { FastifyBaseLogger } from "fastify";
 import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -8,6 +15,15 @@ import type { Db } from "../db";
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Without a challenge profile, trading days are recorded for this long. */
 const DEFAULT_HISTORY_DAYS = 30;
+/**
+ * After the first full run per account (since the profile start), the regular runs ask only the deals of the last
+ * trading days: earlier days are recorded, and a position still open marks its day through the positions. A whole
+ * challenge's history every 5 minutes made the broker's answer large enough to run into the CLI's timeout whenever the
+ * broker was slow.
+ */
+const RECENT_DAYS = 3;
+/** A full run asks in pieces this long, so no single answer gets large enough to run into the timeout. */
+const PIECE_DAYS = 30;
 
 export interface PollerOptions {
   db: Db;
@@ -39,6 +55,12 @@ function skipWhileRunning(run: () => Promise<void>): () => void {
 export class AccountPoller {
   private timers: ReturnType<typeof setInterval>[] = [];
   private readonly running = new Map<number, Promise<void>>();
+  /**
+   * Per account id, the start of the last full run (profile start date, or "default" for the last 30 days) and when
+   * the last run was done. In memory on purpose, unlike challenge_profiles.trading_days_from: a server start runs in
+   * full again, which catches up on the days it was down.
+   */
+  private readonly synced = new Map<number, { scope: string; at: Date }>();
   private readonly now: () => Date;
 
   constructor(private readonly options: PollerOptions) {
@@ -116,22 +138,25 @@ export class AccountPoller {
     );
   }
 
-  /** Marks the trading days (a position opened, see tradingDays) since the profile start (or the last 30 days). */
+  /**
+   * Marks the trading days (a position opened, see tradingDays) since the profile start (or the last 30 days); after
+   * the first full run per account only the last RECENT_DAYS trading days.
+   */
   async pollDeals(): Promise<void> {
     const [entries, profiles] = await Promise.all([this.options.accounts.list(), readProfiles(this.options.db)]);
     await Promise.all(entries.map((entry) => this.syncDeals(entry, profiles.get(entry.id))));
   }
 
-  /** Marks the trading days of one account right away, e.g. after its challenge profile was saved. */
+  /** Marks the trading days of one account right away and in full, e.g. after its challenge profile was saved. */
   async syncTradingDays(accountId: number): Promise<void> {
     const entry = await findAccountById(this.options.accounts, accountId);
-    if (entry) await this.syncDeals(entry, await readProfile(this.options.db, accountId));
+    if (entry) await this.syncDeals(entry, await readProfile(this.options.db, accountId), true);
   }
 
   /** One run per account at a time: a save during the regular run waits for it and then runs again. */
-  private syncDeals(entry: AccountEntry, profile: ChallengeProfile | undefined): Promise<void> {
+  private syncDeals(entry: AccountEntry, profile: ChallengeProfile | undefined, full = false): Promise<void> {
     const previous = this.running.get(entry.id) ?? Promise.resolve();
-    const run = previous.then(() => this.markTradingDays(entry, profile));
+    const run = previous.then(() => this.markTradingDays(entry, profile, full));
     this.running.set(entry.id, run);
     void run.finally(() => {
       if (this.running.get(entry.id) === run) this.running.delete(entry.id);
@@ -139,19 +164,43 @@ export class AccountPoller {
     return run;
   }
 
-  private async markTradingDays(entry: AccountEntry, profile: ChallengeProfile | undefined): Promise<void> {
+  private async markTradingDays(
+    entry: AccountEntry,
+    profile: ChallengeProfile | undefined,
+    full: boolean,
+  ): Promise<void> {
     const { db, adapters, log } = this.options;
     try {
       const { resetTime, timeZone } = profileDay(profile?.rules ?? {});
       const now = this.now();
-      const from = profile
+      const scope = profile?.startDate ?? "default";
+      const start = profile
         ? tradingDayStartOf(profile.startDate, resetTime, timeZone)
         : new Date(now.getTime() - DEFAULT_HISTORY_DAYS * DAY_MS);
+      const synced = this.synced.get(entry.id);
+      // Since the last run that was done, at least the last RECENT_DAYS trading days.
+      const recentStart =
+        !full && synced?.scope === scope
+          ? Math.min(
+              tradingDayStart(new Date(now.getTime() - (RECENT_DAYS - 1) * DAY_MS), resetTime, timeZone).getTime(),
+              tradingDayStart(synced.at, resetTime, timeZone).getTime(),
+            )
+          : 0;
+      const from = new Date(Math.max(start.getTime(), recentStart));
       const credentials = await entry.credentials();
-      const [deals, positions] = await Promise.all([
-        adapters.broker.deals(credentials, entry.number, from.toISOString(), now.toISOString()),
-        adapters.broker.positions(credentials, entry.number),
-      ]);
+      const deals = [];
+      for (let piece = from.getTime(); piece < now.getTime(); piece += PIECE_DAYS * DAY_MS) {
+        const to = Math.min(piece + PIECE_DAYS * DAY_MS, now.getTime());
+        deals.push(
+          ...(await adapters.broker.deals(
+            credentials,
+            entry.number,
+            new Date(piece).toISOString(),
+            new Date(to).toISOString(),
+          )),
+        );
+      }
+      const positions = await adapters.broker.positions(credentials, entry.number);
       const firstDay = tradingDayKey(from, resetTime, timeZone);
       const days = [...new Set(tradingDays(deals, positions, resetTime, timeZone))].filter((day) => day >= firstDay);
       // Days marked before (e.g. by closing day, as older versions did) that no position was opened on.
@@ -170,13 +219,14 @@ export class AccountPoller {
           .onConflict((oc) => oc.columns(["account_id", "day"]).doUpdateSet({ traded: 1 }))
           .execute();
       }
-      if (profile) {
+      if (profile && !recentStart) {
         await db
           .updateTable("challenge_profiles")
           .set({ trading_days_from: profile.startDate })
           .where("account_id", "=", entry.id)
           .execute();
       }
+      this.synced.set(entry.id, { scope, at: now });
     } catch (error) {
       log.warn({ err: error, account: entry.number }, "Polling account deals failed");
     }
