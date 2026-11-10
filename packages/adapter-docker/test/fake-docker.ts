@@ -131,6 +131,8 @@ export class FakeDocker implements DockerClient {
   private readonly toolEnds = new Map<string, Promise<number>>();
   /** Waits for a tool's exit never answer, as when a proxy dropped the idle connection. */
   lostWaits = false;
+  /** Makes this many kills fail, as while Docker restarts. */
+  failKills = 0;
 
   add(container: FakeContainer): this {
     this.containers.set(container.details.Name.slice(1), container);
@@ -216,6 +218,10 @@ export class FakeDocker implements DockerClient {
       },
       kill: () =>
         Promise.resolve().then(() => {
+          if (this.failKills > 0) {
+            this.failKills -= 1;
+            throw httpError(503);
+          }
           const c = get();
           if (c.tool) c.tool.exit(137);
           else setState("exited", 137);

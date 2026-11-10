@@ -64,6 +64,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly toolLabel: string;
   private readonly labelPrefix: string;
   private orphansRemoved: Promise<void> | undefined;
+  /** Ids of tools whose kill failed; ended before the next tool starts. */
+  private readonly unkilled = new Set<string>();
   private readonly diskPath: string;
   private readonly now: () => Date;
   private readonly restartPolicy: CreateRequest["restartPolicy"];
@@ -211,6 +213,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     // Tools of an earlier run (e.g. shell sessions when wickwatch was killed) are ended once.
     this.orphansRemoved ??= this.removeOrphans();
     await this.orphansRemoved;
+    await this.killUnkilled();
 
     const id = await call(() =>
       this.client.createTool({
@@ -262,7 +265,9 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       }
       if (code !== undefined) return code;
       // Without an exit code the tool may still run (e.g. only the connection broke): it is ended to be sure.
-      await handle.kill().catch(() => undefined);
+      // If Docker cannot be reached (e.g. it is restarting with live-restore), the next tool start tries again;
+      // otherwise the old shell session would stay logged in next to its replacement.
+      await handle.kill().catch(() => this.unkilled.add(id));
       return null;
     })();
     return {
@@ -281,6 +286,24 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     const slug = (text: string) => text.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const base = `${slug(this.labelPrefix) || "tool"}-${slug(purpose) || "tool"}`.slice(0, 120);
     return `${base}-${randomBytes(3).toString("hex")}`;
+  }
+
+  /** Ends tools whose kill failed earlier; forgets those that are gone. */
+  private async killUnkilled(): Promise<void> {
+    if (!this.unkilled.size) return;
+    const present = await call(() => this.client.listByLabel(this.toolLabel)).catch(() => undefined);
+    if (!present) return;
+    const ids = new Set(present.map((c) => c.Id));
+    await Promise.all(
+      [...this.unkilled].map(async (id) => {
+        try {
+          if (ids.has(id)) await this.client.container(id).kill();
+          this.unkilled.delete(id);
+        } catch {
+          // Still not reachable: tried again before the next tool.
+        }
+      }),
+    );
   }
 
   private async removeOrphans(): Promise<void> {
