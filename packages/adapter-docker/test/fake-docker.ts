@@ -133,6 +133,8 @@ export class FakeDocker implements DockerClient {
   lostWaits = false;
   /** Status codes the next kills fail with, one per kill (503 as while Docker restarts). */
   failKills: number[] = [];
+  /** Status codes the next lists by label fail with, one per list. */
+  failLists: number[] = [];
 
   add(container: FakeContainer): this {
     this.containers.set(container.details.Name.slice(1), container);
@@ -140,6 +142,8 @@ export class FakeDocker implements DockerClient {
   }
 
   listByLabel(label: string) {
+    const failure = this.failLists.shift();
+    if (failure !== undefined) return Promise.reject(httpError(failure));
     return Promise.resolve(
       [...this.containers.entries()]
         .filter(([, c]) => c.details.Config.Labels?.[label] !== undefined)

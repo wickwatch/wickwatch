@@ -65,7 +65,9 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly labelPrefix: string;
   private orphansFound: Promise<void> | undefined;
   /** Ids of tools to end (orphans, failed kills); ended before the next tool starts. */
-  private readonly unkilled = new Set<string>();
+  private readonly unkilled = new Map<string, number>();
+  /** Tools this run started and that still run: never orphans, also when the list is taken again. */
+  private readonly ownTools = new Set<string>();
   private readonly diskPath: string;
   private readonly now: () => Date;
   private readonly restartPolicy: CreateRequest["restartPolicy"];
@@ -211,7 +213,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     checkPinned(spec.image);
     await this.ensureImage(spec.image);
     // Tools of an earlier run (e.g. shell sessions when wickwatch was killed) are ended once.
-    // Listed once only: a later list could catch a tool another runTool has just started.
+    // Listed once only, unless the list failed; tools this run started are left out.
     this.orphansFound ??= this.findOrphans();
     await this.orphansFound;
     // Bounded: a kill Docker never answers must not hold up every tool start.
@@ -226,6 +228,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       }),
     );
     const handle = this.client.container(id);
+    this.ownTools.add(id);
     let stream: NodeJS.ReadWriteStream;
     let exited: Promise<number>;
     try {
@@ -234,6 +237,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       exited = handle.wait();
       await handle.start();
     } catch (error) {
+      this.ownTools.delete(id);
       await handle.remove().catch(() => undefined);
       throw mapError(error);
     }
@@ -250,7 +254,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     })().catch(() => undefined);
     // Either the exit code or the end of the output ends the tool: behind a proxy that drops idle
     // connections (docker-socket-proxy after 10 minutes) the wait for the exit is lost without an error.
-    const exit = (async () => {
+    const exit = (async (): Promise<number | null> => {
       const exitedFirst = await Promise.race([
         exited.then(
           (code) => ({ code }),
@@ -269,9 +273,11 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
       // Without an exit code the tool may still run (e.g. only the connection broke): it is ended to be sure.
       // If Docker cannot be reached (e.g. it is restarting with live-restore), the next tool start tries again;
       // otherwise the old shell session would stay logged in next to its replacement.
-      await handle.kill().catch(() => this.unkilled.add(id));
+      await handle.kill().catch((error: unknown) => {
+        this.queueKill(id, error);
+      });
       return null;
-    })();
+    })().finally(() => this.ownTools.delete(id));
     return {
       write: (text) => void stream.write(text),
       onOutput: (listener) => {
@@ -279,7 +285,10 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
         for (const text of early.splice(0)) listener(text);
       },
       exit,
-      kill: () => void handle.kill().catch(() => this.unkilled.add(id)),
+      kill: () =>
+        void handle.kill().catch((error: unknown) => {
+          this.queueKill(id, error);
+        }),
     };
   }
 
@@ -290,28 +299,48 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     return `${base}-${randomBytes(3).toString("hex")}`;
   }
 
-  /** Ends tools whose kill failed earlier; forgets those Docker reports as gone or stopped (404/409). */
+  /**
+   * Queues a tool whose kill failed for killUnkilled, unless Docker reports it as gone or stopped (404/409).
+   * After KILL_ATTEMPTS failures it is given up: a kill Docker keeps refusing (e.g. 403 from the proxy)
+   * must not be sent before every tool start for the rest of the run.
+   */
+  private queueKill(id: string, error?: unknown): void {
+    if (error !== undefined && [404, 409].includes(statusCode(error) ?? 0)) {
+      this.unkilled.delete(id);
+      return;
+    }
+    const attempts = (this.unkilled.get(id) ?? 0) + (error === undefined ? 0 : 1);
+    if (attempts >= KILL_ATTEMPTS) this.unkilled.delete(id);
+    else this.unkilled.set(id, attempts);
+  }
+
+  /** Ends tools whose kill failed earlier. */
   private async killUnkilled(): Promise<void> {
     await Promise.all(
-      [...this.unkilled].map((id) =>
+      [...this.unkilled.keys()].map((id) =>
         this.client
           .container(id)
           .kill()
           .then(
             () => this.unkilled.delete(id),
             (error: unknown) => {
-              // Otherwise Docker is still not reachable: tried again before the next tool.
-              if ([404, 409].includes(statusCode(error) ?? 0)) this.unkilled.delete(id);
+              this.queueKill(id, error);
             },
           ),
       ),
     );
   }
 
-  /** Queues the tools of an earlier run for killUnkilled. */
+  /** Queues the tools of an earlier run for killUnkilled; a failed list is taken again at the next start. */
   private async findOrphans(): Promise<void> {
-    const orphans = await call(() => this.client.listByLabel(this.toolLabel)).catch(() => []);
-    for (const o of orphans) this.unkilled.add(o.Id);
+    let orphans: { Id: string }[];
+    try {
+      orphans = await call(() => this.client.listByLabel(this.toolLabel));
+    } catch {
+      this.orphansFound = undefined;
+      return;
+    }
+    for (const o of orphans) if (!this.ownTools.has(o.Id)) this.queueKill(o.Id);
   }
 
   private check(spec: InstanceSpec): void {
@@ -437,6 +466,8 @@ async function* toIterable<T>(items: T[]): AsyncGenerator<T> {
 }
 
 const KILL_RETRY_MS = 5_000;
+/** Failed kills after which a tool is given up. */
+const KILL_ATTEMPTS = 5;
 
 async function call<T>(fn: () => Promise<T>): Promise<T> {
   try {

@@ -166,6 +166,40 @@ describe("runTool", () => {
     expect(toolsOf(docker)).toHaveLength(2);
   });
 
+  it("lists left-over tools again at the next start when the list failed", async () => {
+    const { docker, adapter } = setup();
+    const earlier = new DockerRuntimeAdapter({ client: docker, diskPath: "/" });
+    const orphan = await earlier.runTool(spec);
+    docker.failLists = [503];
+    await adapter.runTool(spec);
+    expect(toolsOf(docker)).toHaveLength(2);
+    await adapter.runTool(spec);
+    expect(await orphan.exit).toBe(137);
+    expect(toolsOf(docker)).toHaveLength(2);
+  });
+
+  it("gives up a kill Docker keeps refusing", async () => {
+    const { docker, adapter } = setup();
+    const tool = await adapter.runTool(spec);
+    docker.failKills = [403, 403, 403, 403, 403, 403];
+    tool.kill();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let i = 0; i < 5; i++) await adapter.runTool(spec);
+    // One explicit kill and four retries: the sixth failure is never asked for.
+    expect(docker.failKills).toEqual([403]);
+  });
+
+  it("does not try a kill again when the tool is already gone", async () => {
+    const { docker, adapter } = setup();
+    const tool = await adapter.runTool(spec);
+    docker.failKills = [404];
+    tool.kill();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    docker.failKills = [503];
+    await adapter.runTool(spec);
+    expect(docker.failKills).toEqual([503]);
+  });
+
   it("pulls a missing image and refuses unpinned ones", async () => {
     const { docker, adapter } = setup();
     await adapter.runTool({ ...spec, image: "example/other:1.0" });
