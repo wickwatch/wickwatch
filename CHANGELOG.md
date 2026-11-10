@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- A restart of Docker with `live-restore` left the old cTrader CLI shell sessions running and logged in next to the new ones: wickwatch lost its connection to them and opened new sessions, but its kill of the old containers failed while Docker was down and was never tried again (only a restart of wickwatch cleaned them up). A failed kill is now tried again before the next helper container starts.
+
 ## 0.8.5 – 2026-11-03
 
 ### Added

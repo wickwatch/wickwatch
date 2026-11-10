@@ -77,6 +77,34 @@ describe("runTool", () => {
     expect(toolOf(docker)).toBeUndefined();
   });
 
+  it("ends a tool whose kill failed (Docker restarting) before the next tool starts", async () => {
+    const { docker, adapter } = setup();
+    docker.lostWaits = true;
+    docker.failKills = 1;
+    const lost = await adapter.runTool(spec);
+    toolOf(docker)?.tool?.output.end();
+    expect(await lost.exit).toBeNull();
+    // With live-restore the container outlives the restart and stays logged in.
+    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(1);
+
+    await adapter.runTool(spec);
+    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(1);
+  });
+
+  it("tries the kill again at each start while Docker stays unreachable", async () => {
+    const { docker, adapter } = setup();
+    docker.lostWaits = true;
+    docker.failKills = 2;
+    const lost = await adapter.runTool(spec);
+    toolOf(docker)?.tool?.output.end();
+    await lost.exit;
+
+    await adapter.runTool(spec);
+    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(2);
+    await adapter.runTool(spec);
+    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(2);
+  });
+
   it("never lists tools as instances", async () => {
     const { adapter } = setup();
     await adapter.runTool(spec);
