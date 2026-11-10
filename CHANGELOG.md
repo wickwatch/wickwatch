@@ -4,6 +4,11 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.8.6 – 2026-11-10
+
+### Security
+- Dependencies updated: fastify 5.12.7 (header validation bypass, GHSA-389g-gv7q-r4x8), vue-i18n 11.4.16 (escaping and HTML sanitising fixes), Docker base image node:24.22.2-slim.
+
 ### Fixed
 - After a restart of Docker with `live-restore`, old cTrader CLI shell sessions stayed logged in next to their replacements until wickwatch was restarted: a kill that failed while Docker was down was never tried again. Failed kills of helper containers (including those left over from an earlier run) are now tried again before the next one starts, as long as Docker cannot be reached. A kill Docker keeps refusing is given up after 5 attempts and logged as a warning, since that session may still be logged in.
 
