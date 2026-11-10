@@ -7,6 +7,7 @@ import {
   AdapterError,
   DEFAULT_LABEL_PREFIX,
   labelKey,
+  type AdapterLog,
   type HostStatus,
   type InstanceSpec,
   type InstanceStatus,
@@ -68,6 +69,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly unkilled = new Map<string, number>();
   /** Tools this run started and that still run: never orphans, also when the list is taken again. */
   private readonly ownTools = new Set<string>();
+  private log: AdapterLog = () => undefined;
   private readonly diskPath: string;
   private readonly now: () => Date;
   private readonly restartPolicy: CreateRequest["restartPolicy"];
@@ -209,6 +211,10 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
    * A throwaway container with open stdin that removes itself when the tool ends. It carries
    * `<prefix>.tool`, not `<prefix>.instance`, so it never shows up as an instance.
    */
+  useLog(log: AdapterLog): void {
+    this.log = log;
+  }
+
   async runTool(spec: ToolSpec): Promise<ToolProcess> {
     checkPinned(spec.image);
     await this.ensureImage(spec.image);
@@ -301,17 +307,24 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
 
   /**
    * Queues a tool whose kill failed for killUnkilled, unless Docker reports it as gone or stopped (404/409).
-   * After KILL_ATTEMPTS failures it is given up: a kill Docker keeps refusing (e.g. 403 from the proxy)
-   * must not be sent before every tool start for the rest of the run.
+   * Only refusals count (other 4xx, e.g. 403 from the proxy): after KILL_ATTEMPTS of them the tool is given up
+   * and reported, so it is not sent before every tool start for the rest of the run. While Docker cannot be reached
+   * (5xx, no connection) it is tried again without limit: a restart must not use the attempts up.
    */
   private queueKill(id: string, error?: unknown): void {
-    if (error !== undefined && [404, 409].includes(statusCode(error) ?? 0)) {
+    const status = error === undefined ? undefined : statusCode(error);
+    if (status === 404 || status === 409) {
       this.unkilled.delete(id);
       return;
     }
-    const attempts = (this.unkilled.get(id) ?? 0) + (error === undefined ? 0 : 1);
-    if (attempts >= KILL_ATTEMPTS) this.unkilled.delete(id);
-    else this.unkilled.set(id, attempts);
+    const refused = status !== undefined && status >= 400 && status < 500;
+    const attempts = (this.unkilled.get(id) ?? 0) + (refused ? 1 : 0);
+    if (attempts < KILL_ATTEMPTS) {
+      this.unkilled.set(id, attempts);
+      return;
+    }
+    this.unkilled.delete(id);
+    this.log({ container: id, status }, "Docker keeps refusing to end a tool; it may still run");
   }
 
   /** Ends tools whose kill failed earlier. */
