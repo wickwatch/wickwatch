@@ -178,8 +178,10 @@ describe("runTool", () => {
     expect(toolsOf(docker)).toHaveLength(2);
   });
 
-  it("gives up a kill Docker keeps refusing", async () => {
+  it("gives up a kill Docker keeps refusing, and reports it", async () => {
     const { docker, adapter } = setup();
+    const logged: Record<string, unknown>[] = [];
+    adapter.useLog((details) => logged.push(details));
     const tool = await adapter.runTool(spec);
     docker.failKills = [403, 403, 403, 403, 403, 403];
     tool.kill();
@@ -187,6 +189,17 @@ describe("runTool", () => {
     for (let i = 0; i < 5; i++) await adapter.runTool(spec);
     // One explicit kill and four retries: the sixth failure is never asked for.
     expect(docker.failKills).toEqual([403]);
+    expect(logged).toEqual([expect.objectContaining({ status: 403 })]);
+  });
+
+  it("does not give up a kill while Docker is unreachable", async () => {
+    const { docker, adapter } = setup();
+    const tool = await adapter.runTool(spec);
+    docker.failKills = [503, 503, 503, 503, 503, 503];
+    tool.kill();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let i = 0; i < 6; i++) await adapter.runTool(spec);
+    expect(await tool.exit).toBe(137);
   });
 
   it("does not try a kill again when the tool is already gone", async () => {

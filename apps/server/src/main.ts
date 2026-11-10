@@ -56,6 +56,10 @@ try {
     });
   }
 
+  adapters.runtime.useLog?.((details, message) => {
+    app.log.warn({ adapter: adapters.runtime.id, ...details }, message);
+  });
+
   for (const result of await migrateToLatest(db)) {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
   }

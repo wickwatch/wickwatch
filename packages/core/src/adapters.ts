@@ -108,6 +108,8 @@ export interface ToolProcess {
 /** Runs bot instances (e.g. Docker containers). */
 export interface RuntimeAdapter {
   readonly id: string;
+  /** Hands over where to report problems the operator should see, e.g. a tool that could not be ended. */
+  useLog?(log: AdapterLog): void;
   list(): Promise<RuntimeInstance[]>;
   /** Creates a stopped instance. Only instances created this way may be updated or removed. */
   create(spec: InstanceSpec): Promise<RuntimeInstance>;
