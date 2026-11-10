@@ -16,7 +16,8 @@ function setup() {
   return { docker, adapter: new DockerRuntimeAdapter({ client: docker, diskPath: "/" }) };
 }
 
-const toolOf = (docker: FakeDocker) => [...docker.containers.values()].find((c) => c.tool);
+const toolsOf = (docker: FakeDocker) => [...docker.containers.values()].filter((c) => c.tool);
+const toolOf = (docker: FakeDocker) => toolsOf(docker)[0];
 
 describe("runTool", () => {
   it("runs a throwaway container with the files, stdin and output, and reports the exit code", async () => {
@@ -80,29 +81,44 @@ describe("runTool", () => {
   it("ends a tool whose kill failed (Docker restarting) before the next tool starts", async () => {
     const { docker, adapter } = setup();
     docker.lostWaits = true;
-    docker.failKills = 1;
+    docker.failKills = [503];
     const lost = await adapter.runTool(spec);
     toolOf(docker)?.tool?.output.end();
     expect(await lost.exit).toBeNull();
     // With live-restore the container outlives the restart and stays logged in.
-    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(1);
+    expect(toolsOf(docker)).toHaveLength(1);
 
     await adapter.runTool(spec);
-    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(1);
+    expect(toolsOf(docker)).toHaveLength(1);
   });
 
   it("tries the kill again at each start while Docker stays unreachable", async () => {
     const { docker, adapter } = setup();
     docker.lostWaits = true;
-    docker.failKills = 2;
+    docker.failKills = [503, 503];
     const lost = await adapter.runTool(spec);
     toolOf(docker)?.tool?.output.end();
     await lost.exit;
 
     await adapter.runTool(spec);
-    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(2);
+    expect(toolsOf(docker)).toHaveLength(2);
     await adapter.runTool(spec);
-    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(2);
+    expect(toolsOf(docker)).toHaveLength(2);
+  });
+
+  it("forgets a failed kill once Docker says the tool no longer runs", async () => {
+    const { docker, adapter } = setup();
+    docker.lostWaits = true;
+    docker.failKills = [503, 409];
+    const lost = await adapter.runTool(spec);
+    toolOf(docker)?.tool?.output.end();
+    await lost.exit;
+
+    await adapter.runTool(spec);
+    // Not tried again: the next kill would use up this failure.
+    docker.failKills = [503];
+    await adapter.runTool(spec);
+    expect(docker.failKills).toEqual([503]);
   });
 
   it("never lists tools as instances", async () => {
@@ -124,7 +140,30 @@ describe("runTool", () => {
     const orphan = await earlier.runTool(spec);
     await adapter.runTool(spec);
     expect(await orphan.exit).toBe(137);
-    expect([...docker.containers.values()].filter((c) => c.tool)).toHaveLength(1);
+    expect(toolsOf(docker)).toHaveLength(1);
+  });
+
+  it("tries a failed explicit kill again at the next start", async () => {
+    const { docker, adapter } = setup();
+    const tool = await adapter.runTool(spec);
+    docker.failKills = [503];
+    tool.kill();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await adapter.runTool(spec);
+    expect(await tool.exit).toBe(137);
+    expect(toolsOf(docker)).toHaveLength(1);
+  });
+
+  it("tries a failed kill of a left-over tool again at the next start", async () => {
+    const { docker, adapter } = setup();
+    const earlier = new DockerRuntimeAdapter({ client: docker, diskPath: "/" });
+    const orphan = await earlier.runTool(spec);
+    docker.failKills = [503];
+    await adapter.runTool(spec);
+    expect(toolsOf(docker)).toHaveLength(2);
+    await adapter.runTool(spec);
+    expect(await orphan.exit).toBe(137);
+    expect(toolsOf(docker)).toHaveLength(2);
   });
 
   it("pulls a missing image and refuses unpinned ones", async () => {
