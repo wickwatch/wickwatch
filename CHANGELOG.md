@@ -5,7 +5,7 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ## Unreleased
 
 ### Fixed
-- After a restart of Docker with `live-restore`, old cTrader CLI shell sessions stayed logged in next to their replacements until wickwatch was restarted: a kill that failed while Docker was down was never tried again. Failed kills of helper containers (including those left over from an earlier run) are now tried again before the next one starts.
+- After a restart of Docker with `live-restore`, old cTrader CLI shell sessions stayed logged in next to their replacements until wickwatch was restarted: a kill that failed while Docker was down was never tried again. Failed kills of helper containers (including those left over from an earlier run) are now tried again before the next one starts, as long as Docker cannot be reached. A kill Docker keeps refusing is given up after 5 attempts and logged as a warning, since that session may still be logged in.
 
 ## 0.8.5 – 2026-11-03
 
