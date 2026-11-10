@@ -63,8 +63,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly managedLabel: string;
   private readonly toolLabel: string;
   private readonly labelPrefix: string;
-  private orphansRemoved: Promise<void> | undefined;
-  /** Ids of tools whose kill failed; ended before the next tool starts. */
+  private orphansFound: Promise<void> | undefined;
+  /** Ids of tools to end (orphans, failed kills); ended before the next tool starts. */
   private readonly unkilled = new Set<string>();
   private readonly diskPath: string;
   private readonly now: () => Date;
@@ -211,9 +211,11 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     checkPinned(spec.image);
     await this.ensureImage(spec.image);
     // Tools of an earlier run (e.g. shell sessions when wickwatch was killed) are ended once.
-    this.orphansRemoved ??= this.removeOrphans();
-    await this.orphansRemoved;
-    await this.killUnkilled();
+    // Listed once only: a later list could catch a tool another runTool has just started.
+    this.orphansFound ??= this.findOrphans();
+    await this.orphansFound;
+    // Bounded: a kill Docker never answers must not hold up every tool start.
+    await settle(this.killUnkilled(), KILL_RETRY_MS);
 
     const id = await call(() =>
       this.client.createTool({
@@ -277,7 +279,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
         for (const text of early.splice(0)) listener(text);
       },
       exit,
-      kill: () => void handle.kill().catch(() => undefined),
+      kill: () => void handle.kill().catch(() => this.unkilled.add(id)),
     };
   }
 
@@ -288,34 +290,28 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     return `${base}-${randomBytes(3).toString("hex")}`;
   }
 
-  /** Ends tools whose kill failed earlier; forgets those that are gone. */
+  /** Ends tools whose kill failed earlier; forgets those Docker reports as gone or stopped (404/409). */
   private async killUnkilled(): Promise<void> {
-    if (!this.unkilled.size) return;
-    const present = await call(() => this.client.listByLabel(this.toolLabel)).catch(() => undefined);
-    if (!present) return;
-    const ids = new Set(present.map((c) => c.Id));
     await Promise.all(
-      [...this.unkilled].map(async (id) => {
-        try {
-          if (ids.has(id)) await this.client.container(id).kill();
-          this.unkilled.delete(id);
-        } catch {
-          // Still not reachable: tried again before the next tool.
-        }
-      }),
+      [...this.unkilled].map((id) =>
+        this.client
+          .container(id)
+          .kill()
+          .then(
+            () => this.unkilled.delete(id),
+            (error: unknown) => {
+              // Otherwise Docker is still not reachable: tried again before the next tool.
+              if ([404, 409].includes(statusCode(error) ?? 0)) this.unkilled.delete(id);
+            },
+          ),
+      ),
     );
   }
 
-  private async removeOrphans(): Promise<void> {
+  /** Queues the tools of an earlier run for killUnkilled. */
+  private async findOrphans(): Promise<void> {
     const orphans = await call(() => this.client.listByLabel(this.toolLabel)).catch(() => []);
-    await Promise.all(
-      orphans.map((o) =>
-        this.client
-          .container(o.Id)
-          .kill()
-          .catch(() => undefined),
-      ),
-    );
+    for (const o of orphans) this.unkilled.add(o.Id);
   }
 
   private check(spec: InstanceSpec): void {
@@ -439,6 +435,8 @@ async function memAvailable(): Promise<number | undefined> {
 async function* toIterable<T>(items: T[]): AsyncGenerator<T> {
   yield* items;
 }
+
+const KILL_RETRY_MS = 5_000;
 
 async function call<T>(fn: () => Promise<T>): Promise<T> {
   try {
