@@ -1,6 +1,7 @@
 import {
   buildAccountDetail,
   buildOverview,
+  createAttributor,
   CRASH_ALERT_MS,
   profileDay,
   readLabels,
@@ -31,7 +32,7 @@ import { pauseOf } from "./schedules";
 import { guardTripToday } from "./loss-guard";
 import type { MarketHoursCache } from "./market-hours";
 import { logRuleEvents } from "./log-rules";
-import { loadOverrides } from "./overrides";
+import { loadOverrides, loadRemembered, rememberOwners } from "./overrides";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /**
@@ -191,10 +192,11 @@ export class OverviewLoader {
 
   /** The input of the overview, and the accounts it was loaded for. */
   private async input(now: Date, only?: string): Promise<{ input: OverviewInput; entries: AccountEntry[] }> {
-    const { adapters, db, labelPrefix } = this.options;
-    const [fetched, overrides, ruled, stopped] = await Promise.all([
+    const { adapters, db, labelPrefix, directory, log } = this.options;
+    const [fetched, overrides, remembered, ruled, stopped] = await Promise.all([
       this.fetch(now, only),
       loadOverrides(db, adapters.broker.id),
+      loadRemembered(db, adapters.broker.id),
       logRuleEvents(db, now, CRASH_ALERT_MS),
       // Managed instances are named after their runtime ref.
       db
@@ -213,6 +215,7 @@ export class OverviewLoader {
       logStates: fetched.logs.states,
       accounts,
       overrides,
+      remembered,
       logRuleEvents: ruled,
       stoppedByUser: new Set(stopped.filter((row) => row.stopped_by_user === 1).map((row) => row.name)),
       paused: new Map(
@@ -223,6 +226,9 @@ export class OverviewLoader {
       ),
       ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
     };
+    // Owners as of now, kept for positions seen open for the first time.
+    const attributor = createAttributor(fetched.instances, labelPrefix, overrides, remembered);
+    await rememberOwners(db, directory, accounts, attributor, remembered, log, now);
     return { input, entries: fetched.accounts.map((a) => a.entry) };
   }
 

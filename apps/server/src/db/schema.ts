@@ -109,6 +109,14 @@ export interface DailyStatsTable {
   traded: Generated<number>;
 }
 
+/** The instance the rules gave a position when wickwatch first saw it open. */
+export interface AttributionRememberedTable {
+  account_id: number;
+  position_id: string;
+  instance: string;
+  created_at: string;
+}
+
 export interface AttributionOverridesTable {
   account_id: number;
   position_id: string;
@@ -305,6 +313,7 @@ export interface Database {
   challenge_profiles: ChallengeProfilesTable;
   daily_stats: DailyStatsTable;
   attribution_overrides: AttributionOverridesTable;
+  attribution_remembered: AttributionRememberedTable;
   algos: AlgosTable;
   instances: InstancesTable;
   instance_configs: InstanceConfigsTable;

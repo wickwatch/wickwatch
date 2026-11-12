@@ -93,6 +93,27 @@ describe("createAttributor", () => {
     expect(createAttributor([stopped(m30)], "ww").owner("1", { label: "123", symbol: "US30" })).toBe("m30");
   });
 
+  it("a remembered owner stays, whoever runs now; a manual override still wins", () => {
+    const stopped = (values: LabelValues): RuntimeInstance => ({ ...instance(values), status: "stopped" });
+    const m30 = { instance: "m30", account: "1", symbol: "US30" };
+    const h1 = { instance: "h1", account: "1", symbol: "US30" };
+    const remembered = new Map([[overrideKey("1", "p1"), "h1"]]);
+    // h1 stopped: by the rules m30 would take every trade, also the one h1 opened.
+    const a = createAttributor([instance(m30), stopped(h1)], "ww", new Map(), remembered);
+    expect(a.owner("1", { label: "123", symbol: "US30", positionId: "p1" })).toBe("h1");
+    expect(a.ruleOwner("1", { label: "123", symbol: "US30", positionId: "p1" })).toBe("m30");
+    expect(a.isManual("1", { label: "123", symbol: "US30", positionId: "p1" })).toBe(false);
+    expect(a.owner("1", { label: "123", symbol: "US30", positionId: "p2" })).toBe("m30");
+
+    const moved = createAttributor(
+      [instance(m30), stopped(h1)],
+      "ww",
+      new Map([[overrideKey("1", "p1"), "m30"]]),
+      remembered,
+    );
+    expect(moved.owner("1", { label: "123", symbol: "US30", positionId: "p1" })).toBe("m30");
+  });
+
   it("label: never falls back to the symbol; the expected label can differ from the name", () => {
     const a = createAttributor(
       [instance({ instance: "orb", account: "1", symbol: "GER40", attribution: "label", "order-label": "ORB-1" })],

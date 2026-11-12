@@ -48,6 +48,27 @@ describe("OverviewLoader", () => {
     expect(stats).toHaveBeenCalledTimes(2 * accounts);
   });
 
+  it("remembers the owner of a position first seen open and keeps it, whatever the rules say later", async () => {
+    const before = await loader.accountDetail("1111111");
+    const owned = before?.positions.filter((p) => p.instance) ?? [];
+    expect(owned.length).toBeGreaterThan(0);
+    const rows = await t.db.selectFrom("attribution_remembered").select(["position_id", "instance"]).execute();
+    for (const p of owned) expect(rows).toContainEqual({ position_id: p.id, instance: p.instance });
+
+    // The rules would give it to someone else now (another bot started, one stopped): the remembered owner stays.
+    const [first] = owned;
+    await t.db
+      .updateTable("attribution_remembered")
+      .set({ instance: "elsewhere" })
+      .where("position_id", "=", first?.id ?? "")
+      .execute();
+    loader.invalidate();
+    const after = await loader.accountDetail("1111111");
+    const again = after?.positions.find((p) => p.id === first?.id);
+    expect(again?.instance).toBe("elsewhere");
+    expect(again?.manual).toBeUndefined();
+  });
+
   it("asks again once the shared load is older than its time to live", async () => {
     const stats = vi.spyOn(t.adapters.broker, "stats");
     const now = new Date();

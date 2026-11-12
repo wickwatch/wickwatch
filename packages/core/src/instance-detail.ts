@@ -27,6 +27,8 @@ export interface InstanceDetailInput {
   /** All instances, so trades can be attributed (e.g. "only instance on this account and symbol"). */
   allInstances?: RuntimeInstance[];
   overrides?: AttributionOverrides;
+  /** Owners remembered when positions were first seen open, see attribution.ts. */
+  remembered?: ReadonlyMap<string, string>;
   lastLog?: LogLine;
   /** What the instance's log says (lost connection, crashes). */
   logState?: InstanceLogState;
@@ -50,7 +52,12 @@ export function buildInstanceDetail(input: InstanceDetailInput): InstanceDetail 
   const dayStart = Math.floor(time.getTime() / DAY_MS) * DAY_MS;
   const data = account?.data;
 
-  const attributor = createAttributor(input.allInstances ?? [instance], input.labelPrefix, input.overrides);
+  const attributor = createAttributor(
+    input.allInstances ?? [instance],
+    input.labelPrefix,
+    input.overrides,
+    input.remembered,
+  );
   const summary = summarizeInstance(
     instance,
     input.labelPrefix,

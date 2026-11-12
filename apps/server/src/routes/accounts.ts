@@ -21,7 +21,7 @@ import { accountReferences } from "../services/parameter-checks";
 import { audit, auditOutcome } from "../services/audit";
 import { stopAccount } from "../services/instance-keeper";
 import { RECENT_DAYS } from "../services/deal-history";
-import { loadOverrides } from "../services/overrides";
+import { loadOverrides, loadRemembered } from "../services/overrides";
 import { findPeriod } from "../services/periods";
 import type { PositionHistory } from "../services/position-history";
 import { DAY_MS } from "../services/schedules";
@@ -280,14 +280,15 @@ export const accountRoutes: FastifyPluginAsyncTypebox<AccountRouteOptions> = asy
       if (!account) return reply.code(404).send({ error: "not_found" });
       const now = new Date();
       const from = new Date(now.getTime() - (request.query.days ?? 30) * DAY_MS);
-      const [instances, overrides, deals] = await Promise.all([
+      const [instances, overrides, remembered, deals] = await Promise.all([
         adapters.runtime.list(),
         loadOverrides(db, adapters.broker.id),
+        loadRemembered(db, adapters.broker.id),
         account.credentials().then((c) => adapters.broker.deals(c, number, from.toISOString(), now.toISOString())),
       ]);
       return {
         range: { from: toIsoTime(from), to: toIsoTime(now) },
-        deals: attributeDeals({ instances, labelPrefix, overrides }, number, deals),
+        deals: attributeDeals({ instances, labelPrefix, overrides, remembered }, number, deals),
       };
     },
   );

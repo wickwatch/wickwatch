@@ -13,7 +13,7 @@ import { brokerErrorCode } from "./broker-error";
 import type { DealHistory } from "./deal-history";
 import type { LogTracker } from "./log-tracker";
 import type { MarketHoursCache } from "./market-hours";
-import { loadOverrides } from "./overrides";
+import { loadOverrides, loadRemembered } from "./overrides";
 import { pauseOf } from "./schedules";
 import { shownPause } from "@wickwatch/core/rules";
 
@@ -46,10 +46,11 @@ export async function loadInstanceDetail(
   const number = readLabels(labelPrefix, instance.labels).account;
   const entry = number ? await findAccount(directory, number) : undefined;
 
-  const [logs, account, overrides, row] = await Promise.all([
+  const [logs, account, overrides, remembered, row] = await Promise.all([
     logTracker.read([instance]),
     entry ? brokerData(adapters, history, entry, from, now, range === "all", log) : Promise.resolve(undefined),
     loadOverrides(db, adapters.broker.id),
+    loadRemembered(db, adapters.broker.id),
     db.selectFrom("instances").select(["paused_until", "pause_reasons"]).where("name", "=", ref).executeTakeFirst(),
   ]);
   const lastLog = logs.lastLines.get(ref);
@@ -62,6 +63,7 @@ export async function loadInstanceDetail(
     instance,
     allInstances,
     overrides,
+    remembered,
     ...(lastLog ? { lastLog } : {}),
     ...(logState ? { logState } : {}),
     ...(account ? { account } : {}),

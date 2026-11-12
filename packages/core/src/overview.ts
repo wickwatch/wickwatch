@@ -50,6 +50,8 @@ export interface OverviewInput {
   accounts: AccountSnapshot[];
   /** Manual attribution per position, see attribution.ts. */
   overrides?: AttributionOverrides;
+  /** Owners remembered when positions were first seen open, see attribution.ts. */
+  remembered?: ReadonlyMap<string, string>;
   /** Measured offset of the server clock (ms), when the server checks it. */
   clockOffsetMs?: number;
   /** Runtime refs of instances stopped on purpose through wickwatch. */
@@ -117,7 +119,7 @@ export function summarizeInstance(
 
 /** Combines runtime and broker data into the overview. Pure: no I/O. */
 export function buildOverview(input: OverviewInput): Overview {
-  return overviewWith(input, createAttributor(input.instances, input.labelPrefix, input.overrides));
+  return overviewWith(input, createAttributor(input.instances, input.labelPrefix, input.overrides, input.remembered));
 }
 
 function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
@@ -186,7 +188,7 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
  * order with the instance it belongs to (same attribution as everywhere). Undefined if the account is not in `input`.
  */
 export function buildAccountDetail(input: OverviewInput, number: string): AccountDetail | undefined {
-  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides, input.remembered);
   const overview = overviewWith(input, attributor);
   const account = overview.accounts.find((a) => a.number === number);
   if (!account) return undefined;
@@ -208,11 +210,11 @@ export function buildAccountDetail(input: OverviewInput, number: string): Accoun
  * for the account page, where also the trades of no instance show and can be attributed by hand.
  */
 export function attributeDeals(
-  input: Pick<OverviewInput, "instances" | "labelPrefix" | "overrides">,
+  input: Pick<OverviewInput, "instances" | "labelPrefix" | "overrides" | "remembered">,
   number: string,
   deals: Deal[],
 ): AccountDeal[] {
-  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides);
+  const attributor = createAttributor(input.instances, input.labelPrefix, input.overrides, input.remembered);
   // Without a balance: risk and R, as on the instance page, but no risk in %.
   return withRisk(deals, deals, undefined)
     .map((d) => attributed(attributor, number, d, d))

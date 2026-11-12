@@ -11,7 +11,8 @@ import type { RuntimeInstance } from "./schemas";
  *   one on the account, or every trade on its symbol if it is the only one on that symbol.
  *   Bots whose labels cannot be chosen (third-party bots) work this way.
  * Instances sharing an account and symbol: a stopped one opens no trades, so the only one not stopped takes them.
- * Manual overrides per position (e.g. "a manual trade, not from this bot") come first.
+ * Manual overrides per position (e.g. "a manual trade, not from this bot") come first. Then the owner remembered
+ * when the position was first seen open: so starting or stopping another instance later does not move old trades.
  */
 export const ATTRIBUTION_MODES = ["auto", "label", "label-pattern", "account-symbol"] as const;
 export type AttributionMode = (typeof ATTRIBUTION_MODES)[number];
@@ -51,8 +52,10 @@ export interface AttributionProblem {
 export interface Attributor {
   /** Name of the instance a trade belongs to, or undefined when it cannot be attributed. */
   owner(account: string, item: TradeItem): string | undefined;
-  /** The owner by the rules alone, ignoring manual overrides. */
+  /** The owner without manual overrides: the remembered one, else by the rules. */
   automaticOwner(account: string, item: TradeItem): string | undefined;
+  /** The owner by the rules alone, as of the current instances: what is remembered for a newly seen position. */
+  ruleOwner(account: string, item: TradeItem): string | undefined;
   /**
    * Whether a manual override took the trade from the instance the rules would pick and gave it to no instance.
    * A trade moved to another instance by hand is not excluded: it counts there.
@@ -69,6 +72,8 @@ export function createAttributor(
   instances: RuntimeInstance[],
   labelPrefix: string,
   overrides: AttributionOverrides = new Map(),
+  /** Owners remembered when positions were first seen open, keyed like overrides. */
+  remembered: ReadonlyMap<string, string> = new Map(),
 ): Attributor {
   const problems: AttributionProblem[] = [];
   const targets: Target[] = instances.flatMap((instance) => {
@@ -121,6 +126,11 @@ export function createAttributor(
   const byAccount = groupBy(targets, (t) => t.account);
 
   function automaticOwner(account: string, item: TradeItem): string | undefined {
+    const kept = item.positionId === undefined ? undefined : remembered.get(overrideKey(account, item.positionId));
+    return kept ?? ruleOwner(account, item);
+  }
+
+  function ruleOwner(account: string, item: TradeItem): string | undefined {
     const onAccount = byAccount.get(account) ?? [];
     if (item.label) {
       const byLabel = onAccount.find((t) => (t.mode === "auto" || t.mode === "label") && t.orderLabel === item.label);
@@ -144,6 +154,7 @@ export function createAttributor(
   return {
     problems,
     automaticOwner,
+    ruleOwner,
     owner(account, item) {
       const override = manual(account, item);
       if (override !== undefined) return override ?? undefined;
