@@ -117,6 +117,22 @@ describe("buildOverview", () => {
     expect(result.alerts).toEqual([{ level: "warning", code: "instance_stopped", subject: "delta", params: {} }]);
   });
 
+  it("shows an instance stopped on purpose as stopped, even when its exit code reads as an error", () => {
+    const result = buildOverview({
+      time,
+      labelPrefix: "ww",
+      instances: [instance("gamma", "111", "error"), instance("delta", "111", "error")],
+      lastLogs: new Map(),
+      accounts: [],
+      stoppedByUser: new Set(["ww-gamma"]),
+    });
+    expect(result.instances.map((i) => [i.name, i.status])).toEqual([
+      ["gamma", "stopped"],
+      ["delta", "error"],
+    ]);
+    expect(result.alerts.map((a) => [a.code, a.subject])).toEqual([["instance_error", "delta"]]);
+  });
+
   it("marks running instances that lost their broker connection and raises a warning", () => {
     const since = "2026-09-25T11:58:00.000Z";
     const result = buildOverview({

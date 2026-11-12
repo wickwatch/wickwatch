@@ -134,10 +134,14 @@ function overviewWith(input: OverviewInput, attributor: Attributor): Overview {
       attributor,
       input.logStates?.get(instance.ref),
     );
-    const paused = shownPause(summary.status, input.paused?.get(instance.ref));
+    const byUser = input.stoppedByUser?.has(instance.ref) ?? false;
+    // A stop on purpose is no crash, whatever exit code the bot ends with (the cTrader CLI ends with 1).
+    const status = byUser && summary.status === "error" ? "stopped" : summary.status;
+    const paused = shownPause(status, input.paused?.get(instance.ref));
     return {
       ...summary,
-      ...(input.stoppedByUser?.has(instance.ref) ? { stoppedByUser: true } : {}),
+      status,
+      ...(byUser ? { stoppedByUser: true } : {}),
       ...(paused ? { paused } : {}),
     };
   });
