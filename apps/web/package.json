@@ -26,8 +26,8 @@
     "@wickwatch/core": "workspace:*",
     "happy-dom": "^21.0.4",
     "typescript": "catalog:",
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "vitest": "catalog:",
-    "vue-tsc": "^3.3.13"
+    "vue-tsc": "^3.3.14"
   }
 }

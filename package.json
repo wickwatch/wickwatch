@@ -24,17 +24,17 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^5.0.5",
-    "eslint": "^10.13.0",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-vue": "^10.11.1",
-    "globals": "^17.13.0",
+    "eslint-plugin-vue": "^10.12.0",
+    "globals": "^17.14.0",
     "postcss-html": "^2.0.0",
     "prettier": "^3.9.10",
-    "stylelint": "^17.16.0",
+    "stylelint": "^18.0.0",
     "typescript": "catalog:",
-    "typescript-eslint": "^8.72.0",
+    "typescript-eslint": "^8.72.1",
     "vitest": "catalog:",
-    "vue-eslint-parser": "^10.4.1"
+    "vue-eslint-parser": "^10.4.2"
   }
 }
