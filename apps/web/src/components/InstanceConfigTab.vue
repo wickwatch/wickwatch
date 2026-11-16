@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Algo, InstanceConfig, ParameterSchema, ParameterTemplate, Schedule } from "@wickwatch/core";
 import { validateParameters } from "@wickwatch/core/parameters";
-import { isUp } from "@wickwatch/core/rules";
+import { isUp, splitImage } from "@wickwatch/core/rules";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
@@ -66,6 +66,8 @@ onMounted(async () => {
   } catch (e) {
     error.value = errorKey(e);
   }
+  // Only a hint: without it the banner stays away.
+  platformImage.value = (await api.platform().catch(() => undefined))?.platform?.image;
 });
 
 function setLogRules(enabled: boolean) {
@@ -121,6 +123,28 @@ function templateSaved(message: string) {
 }
 
 const deployment = computed(() => props.managed?.deployment);
+
+/** The image new instances get; an instance on another one can be updated to it (it keeps its own otherwise). */
+const platformImage = ref<string>();
+const tagOf = (image: string) => splitImage(image).tag ?? image;
+const otherImage = computed(() => {
+  const own = deployment.value?.managed ? deployment.value.image : undefined;
+  return own && platformImage.value && own !== platformImage.value
+    ? { own: tagOf(own), platform: tagOf(platformImage.value) }
+    : undefined;
+});
+const updatingImage = ref(false);
+async function updateImage() {
+  const name = props.managed?.name;
+  const image = platformImage.value;
+  updatingImage.value = false;
+  if (!name || !image) return;
+  await run(() => api.deployInstance(name, false, image), {
+    done: (result) => t("deploy.imageUpdated", { version: tagOf(image), status: t(`status.${result.status}`) }),
+    as: "image",
+  });
+  emit("changed");
+}
 const version = computed(() => props.managed?.config.version ?? 0);
 /** The container runs another configuration than the saved one. */
 const outdated = computed(() => isOutdated(props.managed));
@@ -289,6 +313,21 @@ function changes(index: number): string[] {
         </template>
       </AppBanner>
 
+      <AppBanner v-if="otherImage" tone="neutral">
+        <span>{{ $t("deploy.otherImage", otherImage) }}</span>
+        <template v-if="isAdmin" #actions>
+          <button
+            type="button"
+            class="btn"
+            :disabled="busy || incomplete.length > 0"
+            :aria-busy="deploying === 'image'"
+            @click="updatingImage = true"
+          >
+            {{ $t("deploy.updateImage", { version: otherImage.platform }) }}
+          </button>
+        </template>
+      </AppBanner>
+
       <!-- Its own panel: between the algo's settings a schedule would be overlooked. -->
       <section class="panel card" aria-labelledby="schedules-title">
         <div class="card__head">
@@ -432,6 +471,20 @@ function changes(index: number): string[] {
       :confirm-label="confirmTitle"
       @confirm="deploy"
       @cancel="pending = undefined"
+    />
+    <!-- After the deploy confirmation, which stays the first dialog of the tab. -->
+    <ConfirmDialog
+      :open="updatingImage"
+      :title="$t('deploy.updateImage', { version: otherImage?.platform ?? '' })"
+      :message="
+        $t(running ? 'deploy.confirmUpdateImageRunning' : 'deploy.confirmUpdateImage', {
+          own: otherImage?.own ?? '',
+          version: otherImage?.platform ?? '',
+        })
+      "
+      :confirm-label="$t('deploy.updateImage', { version: otherImage?.platform ?? '' })"
+      @confirm="updateImage"
+      @cancel="updatingImage = false"
     />
     <!-- After the deploy confirmation, which stays the first dialog of the tab. -->
     <template v-if="managed && isAdmin">

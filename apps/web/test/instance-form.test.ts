@@ -475,6 +475,45 @@ describe("InstanceView configuration tab", () => {
     expect(posted()[0]?.body).toEqual({ confirm: "alpha-ger40", start: false });
   });
 
+  it("offers to update an instance on another platform version, keeping its configuration", async () => {
+    const platformImage = "registry.example/platform:2.0.0";
+    response = (url) => {
+      if (url.pathname.endsWith("/managed-instances/alpha-ger40")) {
+        const deployment = {
+          status: "running",
+          managed: true,
+          configVersion: 2,
+          image: "registry.example/platform:1.0.0",
+        };
+        return new Response(JSON.stringify({ ...detail, deployment }), { status: 200 });
+      }
+      if (url.pathname.endsWith("/platform")) {
+        return new Response(
+          JSON.stringify({
+            platform: { image: platformImage, repository: "registry.example/platform", versions: [] },
+            wickwatch: { current: "0.8.7" },
+            updateCheck: true,
+          }),
+          { status: 200 },
+        );
+      }
+      return undefined;
+    };
+    const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
+    const banner = wrapper.findAll(".banner").find((b) => b.text().includes("platform version"));
+    expect(banner?.text()).toContain("Runs on platform version 1.0.0; new instances get 2.0.0.");
+    await banner
+      ?.findAll("button")
+      .find((b) => b.text() === "Update to 2.0.0")
+      ?.trigger("click");
+    const dialog = wrapper.findAllComponents({ name: "ConfirmDialog" }).find((d) => d.props("open") === true);
+    expect(dialog?.props("message")).toContain("instead of 1.0.0");
+    expect(dialog?.props("message")).toContain("The bot restarts.");
+    await dialog?.vm.$emit("confirm");
+    await flushPromises();
+    expect(posted()[0]?.body).toEqual({ confirm: "alpha-ger40", start: false, image: platformImage });
+  });
+
   it("deletes only after confirmation, with the name as confirmation", async () => {
     const wrapper = await open(InstanceView, "/instances/alpha-ger40/config");
     await wrapper.find('.head [aria-haspopup="menu"]').trigger("click");

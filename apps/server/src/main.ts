@@ -62,6 +62,8 @@ try {
     app.log.info({ migration: result.migrationName, status: result.status }, "Database migration");
   }
   await deleteExpiredSessions(db);
+  // After the migrations: the platform version chosen in the dashboard, for the broker's tools and new instances.
+  await app.images.load();
   // The app's loader, so loads of the notifier, the daily summary and the routes at the same time query the broker once.
   const { overview } = app;
 
@@ -147,6 +149,7 @@ try {
     keeper.stop();
     scheduler.stop();
     clock?.stop();
+    app.images.stop();
     summary?.stop();
     poller.stop();
     notifier.stop();
@@ -181,6 +184,7 @@ try {
   keeper.start();
   scheduler.start();
   clock?.start();
+  app.images.start();
   summary?.start();
   // In the background: reading an algo can take a few seconds (the cTrader CLI may run in a helper container).
   refreshAlgoMetadata({ db, broker: adapters.broker, algosDir: config.algosDir, log: app.log }).catch(

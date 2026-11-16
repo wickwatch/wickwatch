@@ -67,6 +67,8 @@ export interface Config {
   supportUrl?: URL;
   /** The read-only MCP endpoint at <base>/mcp; false with `MCP=off`. */
   mcp: boolean;
+  /** Asks the image registries daily for newer versions of the platform and of wickwatch; false with `UPDATE_CHECK=off`. */
+  updateCheck: boolean;
   /** Only users with 2FA may create API tokens (`API_TOKENS_REQUIRE_2FA=on`). */
   apiTokensRequire2fa: boolean;
   /** Once a day at this local time (HH:MM) a summary goes to the alert webhook; missing when off. */
@@ -118,6 +120,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     return value === "on";
   };
   const mcp = onOff("MCP", "on");
+  const updateCheck = onOff("UPDATE_CHECK", "on");
   const apiTokensRequire2fa = onOff("API_TOKENS_REQUIRE_2FA", "off");
 
   const heartbeatUrl = parseUrl("HEARTBEAT_URL", get("HEARTBEAT_URL"), problems);
@@ -218,6 +221,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     ...(newsCalendarUrl ? { newsCalendarUrl } : {}),
     sourceUrl: sourceUrl ?? new URL(DEFAULT_SOURCE_URL),
     mcp,
+    updateCheck,
     apiTokensRequire2fa,
     ...(supportUrl ? { supportUrl } : {}),
     ...(summaryTime !== undefined ? { dailySummary: { time: summaryTime, timeZone: summaryZone } } : {}),

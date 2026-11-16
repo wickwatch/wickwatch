@@ -83,7 +83,11 @@ const TOOL_DIR = "/mnt/wickwatch";
  * The CLI of the official image, run by the runtime (e.g. a throwaway container), so the
  * wickwatch image does not have to contain the proprietary CLI. Local files are copied in.
  */
-export function toolRunner(runTool: (spec: ToolSpec) => Promise<ToolProcess>, image: string): CliRunner {
+export function toolRunner(
+  runTool: (spec: ToolSpec) => Promise<ToolProcess>,
+  /** Asked at each start, so a changed image (BrokerAdapter.useImage) applies to the next tool. */
+  image: string | (() => string),
+): CliRunner {
   return {
     async start(args, files, purpose) {
       const place = (name: string) => `${TOOL_DIR}/${name}`;
@@ -98,7 +102,7 @@ export function toolRunner(runTool: (spec: ToolSpec) => Promise<ToolProcess>, im
         }),
       );
       return runTool({
-        image,
+        image: typeof image === "string" ? image : image(),
         command: args(place),
         ...(purpose ? { purpose } : {}),
         files: files.map((file, i) => {

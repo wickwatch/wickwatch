@@ -29,6 +29,7 @@ import type {
   LogSearchResult,
   Overview,
   PauseWindow,
+  PlatformInfo,
   PositionChange,
   Schedule,
   ScheduleInput,
@@ -90,6 +91,12 @@ const send = <T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body
 const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
+
+/** What "update all" did: instances with an open position (or unknown positions) are left alone. */
+export interface ImageUpdateResult {
+  updated: string[];
+  skipped: { name: string; reason: "open_position" | "positions_unknown" | "failed"; error?: string }[];
+}
 
 export type {
   ApiToken,
@@ -282,11 +289,16 @@ export const api = {
   deleteManagedInstance: (name: string) =>
     send<undefined>("DELETE", `managed-instances/${encodeURIComponent(name)}`, { confirm: name }),
   /** Creates or replaces the container with the current configuration; `start` also starts it. */
-  deployInstance: (name: string, start: boolean) =>
+  /** `image` updates it to another platform version; without it the instance keeps its image. */
+  deployInstance: (name: string, start: boolean, image?: string) =>
     post<{ status: InstanceStatus; configVersion: number }>(`managed-instances/${encodeURIComponent(name)}/deploy`, {
       confirm: name,
       start,
+      ...(image ? { image } : {}),
     }),
+  platform: () => request<PlatformInfo>("platform"),
+  setPlatformImage: (image: string) => send<PlatformInfo>("PUT", "platform/image", { image }),
+  updateAllImages: () => post<ImageUpdateResult>("managed-instances/update-images", { confirm: "all" }),
   accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
   accounts: () => request<Account[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>

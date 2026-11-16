@@ -25,6 +25,7 @@ import { sessionRemember } from "./0023-session-remember";
 import { positionHistory } from "./0024-position-history";
 import { logRules } from "./0025-log-rules";
 import { attributionRemembered } from "./0026-attribution-remembered";
+import { images } from "./0027-images";
 
 // Migrations are imported statically so they end up in the server bundle.
 // Keys sort lexicographically and define the order; never rename or remove one.
@@ -55,4 +56,5 @@ export const migrations: Record<string, Migration> = {
   "0024-position-history": positionHistory,
   "0025-log-rules": logRules,
   "0026-attribution-remembered": attributionRemembered,
+  "0027-images": images,
 };

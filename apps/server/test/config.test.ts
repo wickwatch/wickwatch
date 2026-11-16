@@ -43,6 +43,7 @@ describe("loadConfig", () => {
       sourceUrl: new URL("https://github.com/wickwatch/wickwatch"),
       supportUrl: new URL("https://ko-fi.com/mmohrx"),
       mcp: true,
+      updateCheck: true,
       apiTokensRequire2fa: false,
     });
   });

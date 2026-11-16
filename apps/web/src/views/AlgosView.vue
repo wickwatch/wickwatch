@@ -20,6 +20,7 @@ import { isAdmin } from "../session";
 import { system } from "../system";
 import { checks, normalizers, useValidation, vNormalize } from "../validation";
 import AppSpinner from "../components/AppSpinner.vue";
+import PlatformVersion from "../components/PlatformVersion.vue";
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -141,6 +142,8 @@ const confirmRemove = () => {
     <AppSpinner v-if="loading" />
 
     <template v-else>
+      <!-- The platform the algos run on, before the algos themselves. -->
+      <PlatformVersion />
       <section v-if="!algos.length" class="panel card">
         <p class="muted">{{ $t("algos.none") }}</p>
       </section>

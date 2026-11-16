@@ -64,7 +64,11 @@ export function createAdapters(config: Config): Adapters {
       // In the wickwatch image: the CLI of the official image, in a throwaway container per call or session.
       const runTool = selectedRuntime?.runTool?.bind(selectedRuntime);
       if (!runTool) problems.push("CTRADER_CLI=container needs a runtime that runs tools, e.g. RUNTIME_ADAPTER=docker");
-      return new CtraderCliBroker({ image, ...(runTool ? { runner: toolRunner(runTool, image) } : {}) });
+      const cli: CtraderCliBroker = new CtraderCliBroker({
+        image,
+        ...(runTool ? { runner: toolRunner(runTool, () => cli.image()) } : {}),
+      });
+      return cli;
     },
   };
   const configAdapters: Registry<ConfigAdapter> = {

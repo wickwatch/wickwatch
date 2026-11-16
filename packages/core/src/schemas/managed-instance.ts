@@ -49,6 +49,8 @@ export const Deployment = Type.Object({
   managed: Type.Boolean(),
   /** Configuration version the instance runs with (from its labels). */
   configVersion: Type.Optional(Type.Integer()),
+  /** Image it runs on; an update to another one is a deploy with `image`. */
+  image: Type.Optional(Type.String()),
 });
 export type Deployment = Type.Static<typeof Deployment>;
 

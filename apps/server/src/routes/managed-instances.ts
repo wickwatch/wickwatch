@@ -18,6 +18,7 @@ import {
 import { groupBy } from "@wickwatch/core/group-by";
 import { INSTANCE_NAME, isUp } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
+import type { FastifyRequest } from "fastify";
 import Type from "typebox";
 import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
@@ -39,6 +40,7 @@ import {
   toConfig,
   type ConfigRow,
 } from "../services/instance-configs";
+import type { Images } from "../services/images";
 import { endPause, setShouldRun } from "../services/instance-keeper";
 import type { SymbolCache } from "../services/symbols";
 
@@ -62,6 +64,8 @@ type Checked =
   | { ok: false; status: 400 | 404; body: ConfigErrorBody };
 
 export interface ManagedInstanceRouteOptions {
+  /** Which images an instance may be updated to. */
+  images: Images;
   adapters: Adapters;
   accounts: AccountDirectory;
   db: Db;
@@ -74,7 +78,7 @@ export interface ManagedInstanceRouteOptions {
 
 export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRouteOptions> = async (
   app,
-  { adapters, accounts, db, cipher, symbols, labelPrefix, algosDir },
+  { images, adapters, accounts, db, cipher, symbols, labelPrefix, algosDir },
 ) => {
   /** The runtime's rules for parameter values, e.g. no empty text for the cTrader CLI. */
   const validateOptions = { requireText: adapters.broker.capabilities().requiresTextValues === true };
@@ -85,6 +89,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       status: runtime.status,
       managed: readLabels(labelPrefix, runtime.labels).managed === "true",
       ...(version !== undefined ? { configVersion: version } : {}),
+      ...(runtime.image ? { image: runtime.image } : {}),
     };
   }
 
@@ -426,6 +431,100 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
   );
 
+  type DeployResult =
+    | { ok: true; status: InstanceStatus; configVersion: number }
+    | { ok: false; code: 400 | 404 | 409 | 501 | 503; error: string };
+
+  /**
+   * Creates or replaces the instance with its current configuration, on `image` if given, else on the image it ran on
+   * so far (so a new configuration does not change the platform version), else on the platform's.
+   */
+  async function deploy(
+    name: string,
+    options: { start: boolean; image?: string | undefined },
+    request: FastifyRequest,
+  ): Promise<DeployResult> {
+    if (!cipher) return { ok: false, code: 503, error: "master_key_missing" };
+    const [instance] = await load(name);
+    const entry = instance && (await findAccountById(accounts, instance.account.id));
+    if (!instance || !entry) return { ok: false, code: 404, error: "not_found" };
+    const launch = adapters.broker.launch?.bind(adapters.broker);
+    if (!launch) return { ok: false, code: 501, error: "launch_unsupported" };
+    if (instance.deployment && !instance.deployment.managed) return { ok: false, code: 409, error: "instance_exists" };
+    if (options.image !== undefined && !images.isAllowed(options.image)) {
+      return { ok: false, code: 400, error: "invalid_image" };
+    }
+    const { config } = instance;
+    const algo =
+      config.algo.id === null
+        ? undefined
+        : await db.selectFrom("algos").selectAll().where("id", "=", config.algo.id).executeTakeFirst();
+    if (!algo) return { ok: false, code: 409, error: "algo_not_found" };
+    const schema = schemaOf(algo.metadata);
+    // Versions saved before the runtime's rules were known, e.g. empty text parameters for the cTrader CLI.
+    if (adapters.config.validate(config.parameters, schema, validateOptions).errors.length) {
+      return { ok: false, code: 400, error: "parameters_incomplete" };
+    }
+
+    const replaced = instance.deployment !== undefined;
+    const row = await db
+      .selectFrom("instances")
+      .select(["paused_until", "image"])
+      .where("name", "=", name)
+      .executeTakeFirst();
+    const paused = row?.paused_until != null;
+    const image = options.image ?? row?.image ?? instance.deployment?.image;
+    const { runtime } = await auditOutcome(
+      db,
+      { action: "instance.deploy", target: name, ...actor(request) },
+      async () => {
+        const launched = await launch({
+          credentials: await entry.credentials(),
+          account: entry.number,
+          algo: {
+            name: algo.name,
+            file: await readFile(join(algosDir, algo.file_path)),
+            fullAccess: algo.full_access === 1,
+            parameters: schema,
+          },
+          symbol: config.symbol,
+          period: config.period,
+          parameters: config.parameters,
+          ...(image ? { image } : {}),
+        });
+        const spec = {
+          ...launched,
+          name,
+          labels: managedLabels(labelPrefix, {
+            name,
+            account: entry.number,
+            symbol: config.symbol,
+            period: config.period,
+            algoVersion: config.algo.version,
+            configVersion: config.version,
+            attribution: config.attribution.mode,
+            orderLabel: config.attribution.orderLabel,
+          }),
+        };
+        let runtime = replaced ? await adapters.runtime.update(name, spec) : await adapters.runtime.create(spec);
+        await db.updateTable("instances").set({ image: launched.image }).where("name", "=", name).execute();
+        const started = options.start && runtime.status !== "running";
+        if (started) {
+          await adapters.runtime.start(name);
+          runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
+        }
+        // A new version for an instance its schedule holds stopped keeps the pause: it starts when the pause ends.
+        if (started || !paused) {
+          await endPause(db, name);
+          await setShouldRun(db, name, isUp(runtime.status), true);
+        }
+        return { runtime, started, image: launched.image };
+      },
+      ({ started, image }) => ({ version: config.version, replaced, started, image }),
+    );
+    return { ok: true, status: runtime.status, configVersion: config.version };
+  }
+
   app.post(
     "/managed-instances/:name/deploy",
     {
@@ -434,11 +533,12 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         tags: ["instances"],
         summary: "Create or replace the instance with its current configuration",
         description:
-          "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one.",
+          "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one. `image` updates it to another version of the platform image (one of `/platform` `versions`); without it the instance keeps the image it runs on.",
         params: NameParams,
         body: Type.Object({
           confirm: Type.String({ description: "The instance name" }),
           start: Type.Optional(Type.Boolean()),
+          image: Type.Optional(Type.String({ minLength: 1, maxLength: 300 })),
         }),
         response: {
           200: Type.Object({ status: InstanceStatus, configVersion: Type.Integer() }),
@@ -453,79 +553,91 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       },
     },
     async (request, reply) => {
-      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
-      const { name } = request.params;
-      const [instance] = await load(name);
-      const entry = instance && (await findAccountById(accounts, instance.account.id));
-      if (!instance || !entry) return reply.code(404).send({ error: "not_found" });
-      const launch = adapters.broker.launch?.bind(adapters.broker);
-      if (!launch) return reply.code(501).send({ error: "launch_unsupported" });
-      if (instance.deployment && !instance.deployment.managed) {
-        return reply.code(409).send({ error: "instance_exists" });
-      }
-      const { config } = instance;
-      const algo =
-        config.algo.id === null
-          ? undefined
-          : await db.selectFrom("algos").selectAll().where("id", "=", config.algo.id).executeTakeFirst();
-      if (!algo) return reply.code(409).send({ error: "algo_not_found" });
-      const schema = schemaOf(algo.metadata);
-      // Versions saved before the runtime's rules were known, e.g. empty text parameters for the cTrader CLI.
-      if (adapters.config.validate(config.parameters, schema, validateOptions).errors.length) {
-        return reply.code(400).send({ error: "parameters_incomplete" });
-      }
-
-      const replaced = instance.deployment !== undefined;
-      const paused =
-        (await db.selectFrom("instances").select("paused_until").where("name", "=", name).executeTakeFirst())
-          ?.paused_until != null;
-      const { runtime } = await auditOutcome(
-        db,
-        { action: "instance.deploy", target: name, ...actor(request) },
-        async () => {
-          const launched = await launch({
-            credentials: await entry.credentials(),
-            account: entry.number,
-            algo: {
-              name: algo.name,
-              file: await readFile(join(algosDir, algo.file_path)),
-              fullAccess: algo.full_access === 1,
-              parameters: schema,
-            },
-            symbol: config.symbol,
-            period: config.period,
-            parameters: config.parameters,
-          });
-          const spec = {
-            ...launched,
-            name,
-            labels: managedLabels(labelPrefix, {
-              name,
-              account: entry.number,
-              symbol: config.symbol,
-              period: config.period,
-              algoVersion: config.algo.version,
-              configVersion: config.version,
-              attribution: config.attribution.mode,
-              orderLabel: config.attribution.orderLabel,
-            }),
-          };
-          let runtime = replaced ? await adapters.runtime.update(name, spec) : await adapters.runtime.create(spec);
-          const started = request.body.start === true && runtime.status !== "running";
-          if (started) {
-            await adapters.runtime.start(name);
-            runtime = (await adapters.runtime.list()).find((i) => i.ref === name) ?? runtime;
-          }
-          // A new version for an instance its schedule holds stopped keeps the pause: it starts when the pause ends.
-          if (started || !paused) {
-            await endPause(db, name);
-            await setShouldRun(db, name, isUp(runtime.status), true);
-          }
-          return { runtime, started, image: launched.image };
-        },
-        ({ started, image }) => ({ version: config.version, replaced, started, image }),
+      const result = await deploy(
+        request.params.name,
+        { start: request.body.start === true, image: request.body.image },
+        request,
       );
-      return { status: runtime.status, configVersion: config.version };
+      if (!result.ok) return reply.code(result.code).send({ error: result.error });
+      return { status: result.status, configVersion: result.configVersion };
+    },
+  );
+
+  app.post(
+    "/managed-instances/update-images",
+    {
+      preHandler: [
+        requireAdmin,
+        async (request, reply) => {
+          if ((request.body as { confirm?: unknown } | undefined)?.confirm !== "all") {
+            await reply.code(400).send({ error: "confirmation_required" });
+          }
+        },
+      ],
+      schema: {
+        tags: ["instances"],
+        summary: "Update all instances to the platform image",
+        description:
+          "Deploys every managed instance that runs on another image than the platform's (`/platform`) again on it, one after the other; running ones restart. Instances with an open position, or whose positions are unknown, are left alone.",
+        body: Type.Object({ confirm: Type.String({ description: "`all`" }) }),
+        response: {
+          200: Type.Object({
+            updated: Type.Array(Type.String()),
+            skipped: Type.Array(
+              Type.Object({
+                name: Type.String(),
+                reason: Type.Union([
+                  Type.Literal("open_position"),
+                  Type.Literal("positions_unknown"),
+                  Type.Literal("failed"),
+                ]),
+                error: Type.Optional(Type.String()),
+              }),
+            ),
+          }),
+          400: ErrorBody,
+          403: ErrorBody,
+          501: ErrorBody,
+        },
+      },
+    },
+    async (request, reply) => {
+      const image = adapters.broker.image?.();
+      if (!image) return reply.code(501).send({ error: "image_unsupported" });
+      const outdated = (await load()).filter((i) => i.deployment?.managed && i.deployment.image !== image);
+      const { instances, accounts: summaries } = await app.overview.overview();
+      const updated: string[] = [];
+      const skipped: { name: string; reason: "open_position" | "positions_unknown" | "failed"; error?: string }[] = [];
+      for (const instance of outdated) {
+        const summary = instances.find((i) => i.name === instance.name);
+        const account = summaries.find((a) => a.number === instance.account.number);
+        if (!summary || !account || account.error) {
+          skipped.push({ name: instance.name, reason: "positions_unknown" });
+          continue;
+        }
+        if (summary.openPositions > 0) {
+          skipped.push({ name: instance.name, reason: "open_position" });
+          continue;
+        }
+        try {
+          const result = await deploy(instance.name, { start: false, image }, request);
+          if (result.ok) updated.push(instance.name);
+          else skipped.push({ name: instance.name, reason: "failed", error: result.error });
+        } catch (error) {
+          skipped.push({
+            name: instance.name,
+            reason: "failed",
+            error: error instanceof AdapterError ? error.code : "internal",
+          });
+        }
+      }
+      await audit(db, {
+        action: "instance.update_images",
+        target: image,
+        details: { updated, skipped: skipped.map((s) => `${s.name}: ${s.reason}`) },
+        ...actor(request),
+      });
+      return { updated, skipped };
     },
   );
 

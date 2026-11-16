@@ -104,6 +104,9 @@ export const AlertCode = Type.Union([
   Type.Literal("challenge_guard"),
   /** The server clock is off (subject "host"); bots, trading days and daily resets depend on it. */
   Type.Literal("host_clock"),
+  /** A newer stable version of the platform image (subject "platform") or of wickwatch (subject "wickwatch"). */
+  Type.Literal("platform_update"),
+  Type.Literal("wickwatch_update"),
   Type.Literal("attribution_ambiguous"),
   Type.Literal("attribution_invalid"),
 ]);

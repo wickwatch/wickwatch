@@ -188,7 +188,12 @@ describe("managed instances", () => {
     expect(runtime).toBeDefined();
     const detail = () =>
       inject("GET", "/managed-instances/x1").then((r) => r.json<Managed & { deployment?: unknown }>());
-    expect((await detail()).deployment).toEqual({ status: "stopped", managed: true, configVersion: 1 });
+    expect((await detail()).deployment).toEqual({
+      status: "stopped",
+      managed: true,
+      configVersion: 1,
+      image: "wickwatch-demo-runtime:1.0.0",
+    });
 
     expect((await deploy({ confirm: "x1", start: true })).json()).toEqual({ status: "running", configVersion: 1 });
     await inject("POST", "/managed-instances/x1/configs", config({ parameters: { RiskPercent: 1 } }));

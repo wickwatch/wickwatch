@@ -100,6 +100,23 @@ describe("buildOverview", () => {
     ]);
   });
 
+  it("tells about newer versions of the platform and of wickwatch", () => {
+    const base = { time, labelPrefix: "ww", instances: [], lastLogs: new Map(), accounts: [] };
+    expect(buildOverview({ ...base, updates: {} }).alerts).toEqual([]);
+    expect(
+      buildOverview({
+        ...base,
+        updates: {
+          platform: { current: "5.9.11", latest: "5.10.6" },
+          wickwatch: { current: "0.8.7", latest: "0.9.0" },
+        },
+      }).alerts,
+    ).toEqual([
+      { level: "info", code: "platform_update", subject: "platform", params: { current: "5.9.11", latest: "5.10.6" } },
+      { level: "info", code: "wickwatch_update", subject: "wickwatch", params: { current: "0.8.7", latest: "0.9.0" } },
+    ]);
+  });
+
   it("raises no alert for an instance stopped on purpose, not even for a lost connection in its log", () => {
     const result = buildOverview({
       time,

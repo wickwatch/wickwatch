@@ -126,6 +126,18 @@ The form shows the pauses of the next 14 days the rules make, and lets you tick 
 
 When the host or Docker restarts, wickwatch starts the instances it set up again if they were running before. A bot that stopped itself (e.g. after its own daily limit), or one that was stopped by you, the emergency stop or the protection, stays stopped. Details: [CONFIGURATION.md](CONFIGURATION.md#bots-after-a-restart).
 
+### Platform version
+
+The Algos page shows the version of the platform new instances run on (for the cTrader CLI, the `ctrader-console` image), whether a newer stable one is available, and which instances still run on another version. An info alert tells about a new version (and about a new wickwatch).
+
+A new version of the platform can change how bots behave, so try it on one bot first:
+
+1. Pick the new version on the Algos page (admins). New instances and wickwatch's own queries use it from now on; running instances keep their version.
+2. On the configuration tab of one instance, choose **Update to …**. The bot restarts on the new version with its configuration.
+3. Watch it for a while. To go on, choose **Update all to …** on the Algos page; instances with an open position are left alone and can be updated later. To go back, pick the old version again and update the instance to it.
+
+Applying a new configuration keeps an instance on its version; only an update changes it.
+
 ## 10. Audit log
 
 Admins find the **Audit log** in the user menu: every login, change and trading action with time, user (and the API token, when it came through one), target and result, and what wickwatch did by itself (the protection, automatic restarts). Filter by action (or a whole group, e.g. all instance actions) and by target; instance and account targets link to their pages. Entries are kept for `AUDIT_RETENTION_DAYS` (default one year).

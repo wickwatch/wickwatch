@@ -40,13 +40,16 @@ beforeEach(() => {
   setLocale("en", false);
   fetchMock = vi.fn((input: URL, init?: RequestInit) =>
     Promise.resolve(
-      input.pathname.endsWith("/parameter-templates") && !init?.method
-        ? new Response(JSON.stringify(templates), { status: 200 })
-        : init?.method === "POST"
-          ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
-          : init?.method === "DELETE"
-            ? new Response(null, { status: 204 })
-            : new Response(JSON.stringify(algos), { status: 200 }),
+      // The platform card has its own tests (platform.test.ts).
+      input.pathname.endsWith("/platform")
+        ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+        : input.pathname.endsWith("/parameter-templates") && !init?.method
+          ? new Response(JSON.stringify(templates), { status: 200 })
+          : init?.method === "POST"
+            ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
+            : init?.method === "DELETE"
+              ? new Response(null, { status: 204 })
+              : new Response(JSON.stringify(algos), { status: 200 }),
     ),
   );
   vi.stubGlobal("fetch", fetchMock);

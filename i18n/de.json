@@ -297,7 +297,9 @@
       "invalid_holiday": "Ein Feiertag endet vor seinem Beginn.",
       "instance_not_found": "Eine Instanz der Liste gibt es nicht mehr.",
       "invalid_pause_period": "Eine einmalige Pause endet vor ihrem Beginn.",
-      "log_rule_invalid": "Ein Muster ist kein gültiger regulärer Ausdruck."
+      "log_rule_invalid": "Ein Muster ist kein gültiger regulärer Ausdruck.",
+      "invalid_image": "Wähle eine Version des eigenen Images der Plattform.",
+      "image_unsupported": "Diese Plattform läuft nicht auf einem Image."
     }
   },
   "parameterIssue": {
@@ -405,7 +407,9 @@
     "attribution_ambiguous": "Konto {subject}: Trades auf {symbol} nicht zuordenbar – {instances} teilen sich das Symbol, eine nutzt account-symbol",
     "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}",
     "challenge_guard": "Konto {subject} wurde um {since} automatisch gestoppt: {rule} hat die Schutzgrenze erreicht",
-    "host_clock": "Die Server-Uhr geht um {offset} s falsch. Bots, Handelstage und der Tagesreset hängen an der Uhrzeit; prüfe die Zeitsynchronisation (NTP) des Hosts."
+    "host_clock": "Die Server-Uhr geht um {offset} s falsch. Bots, Handelstage und der Tagesreset hängen an der Uhrzeit; prüfe die Zeitsynchronisation (NTP) des Hosts.",
+    "platform_update": "Plattform-Version {latest} ist verfügbar (im Einsatz: {current}). Probiere sie zuerst an einer Instanz aus (Seite Algos).",
+    "wickwatch_update": "wickwatch {latest} ist verfügbar (läuft: {current})."
   },
   "emergencyStop": {
     "title": "Notstopp",
@@ -734,7 +738,12 @@
     "elsewhere": "Sicherstellen, dass derselbe Bot nicht zusätzlich woanders auf diesem Konto läuft (z. B. auf einem anderen Server).",
     "done": "Konfigurationsversion {version} übernommen; Status: {status}.",
     "outdatedUnknown": "Version {version} ist gespeichert; welche Version der Container nutzt, ist unbekannt.",
-    "toConfig": "Zur Konfiguration"
+    "toConfig": "Zur Konfiguration",
+    "otherImage": "Läuft auf Plattform-Version {own}; neue Instanzen bekommen {platform}.",
+    "updateImage": "Auf {version} aktualisieren",
+    "confirmUpdateImage": "Rollt die Instanz mit ihrer Konfiguration neu auf Version {version} statt {own} aus.",
+    "confirmUpdateImageRunning": "Rollt die Instanz mit ihrer Konfiguration neu auf Version {version} statt {own} aus. Der Bot startet neu.",
+    "imageUpdated": "Jetzt auf Version {version} ({status})."
   },
   "validation": {
     "required": "Pflichtfeld.",
@@ -969,7 +978,9 @@
       "schedule_delete": "Zeitplan gelöscht",
       "instance_schedule": "Zeitplan gewählt",
       "instance_schedule_pause": "Vom Zeitplan pausiert",
-      "instance_schedule_resume": "Nach der Pause wieder gestartet"
+      "instance_schedule_resume": "Nach der Pause wieder gestartet",
+      "platform_image": "Plattform-Version gewählt",
+      "instance_update_images": "Alle Instanzen auf die Plattform-Version aktualisiert"
     },
     "groups": {
       "account": "Konten",
@@ -983,7 +994,8 @@
       "position": "Positionen",
       "api_token": "API-Tokens",
       "parameter_template": "Parametervorlagen",
-      "schedule": "Zeitpläne"
+      "schedule": "Zeitpläne",
+      "platform": "Plattform"
     },
     "period": "Zeitraum",
     "periods": {
@@ -1116,5 +1128,28 @@
     "periodAdd": "Einmalige Pause hinzufügen",
     "periodRemove": "Einmalige Pause entfernen",
     "periodsSummary": "keine einmaligen Pausen | 1 einmalige Pause | {count} einmalige Pausen"
+  },
+  "platform": {
+    "title": "Plattform-Version",
+    "inUse": "Neue Instanzen laufen auf Version {version}.",
+    "latest": "Version {version} ist verfügbar.",
+    "checkedAt": "Versionen geprüft {time}.",
+    "notChecked": "Noch nicht auf neue Versionen geprüft.",
+    "checkOff": "Die Prüfung auf neue Versionen ist aus (UPDATE_CHECK).",
+    "hint": "Instanzen behalten ihre Version, wenn eine Konfiguration angewendet wird; aktualisiere sie hier oder in ihrem Konfigurations-Tab. Nur stabile Versionen; probiere eine neue zuerst an einer Instanz aus.",
+    "version": "Version für neue Instanzen",
+    "saved": "Neue Instanzen laufen jetzt auf Version {version}. Laufende Instanzen behalten ihre, bis sie aktualisiert werden.",
+    "outdated": "Eine Instanz läuft auf einer anderen Version: {names}. | {count} Instanzen laufen auf einer anderen Version: {names}.",
+    "updateAll": "Alle auf {version} aktualisieren",
+    "confirmUpdateAll": "Rollt {names} nacheinander neu auf Version {version} aus. Laufende Bots starten neu, gestoppte bleiben gestoppt. Instanzen mit offener Position bleiben unberührt.",
+    "updated": "Auf {version} aktualisiert: {names}.",
+    "nothingUpdated": "Keine Instanz aktualisiert.",
+    "skipped": {
+      "open_position": "{name} unberührt: offene Position.",
+      "positions_unknown": "{name} unberührt: ihre Positionen sind gerade unbekannt.",
+      "failed": "{name} fehlgeschlagen: {error}"
+    },
+    "wickwatch": "wickwatch {version}.",
+    "wickwatchLatest": "Version {version} ist verfügbar."
   }
 }

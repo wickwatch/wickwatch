@@ -14,6 +14,7 @@ import {
   type ChallengeProfile,
   type Deal,
   type InstanceSummary,
+  type Updates,
   type Overview,
   type OverviewInput,
   type PendingOrder,
@@ -105,6 +106,8 @@ export interface OverviewLoaderOptions {
   marketHours?: MarketHoursCache;
   /** ANSWER_WAIT_MS, for tests. */
   answerWaitMs?: number;
+  /** Newer versions than those in use, for the info alerts. */
+  updates?: () => Updates;
 }
 
 /** What runtime and broker answered in one load, as of `time`. */
@@ -225,6 +228,7 @@ export class OverviewLoader {
         }),
       ),
       ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
+      ...(this.options.updates ? { updates: this.options.updates() } : {}),
     };
     // Owners as of now, kept for positions seen open for the first time.
     const attributor = createAttributor(fetched.instances, labelPrefix, overrides, remembered);

@@ -57,6 +57,27 @@ describe("toolRunner", () => {
     }
   });
 
+  it("starts tools on the image the broker uses at that moment", async () => {
+    const switching: CtraderCliBroker = new CtraderCliBroker({
+      image: IMAGE,
+      runner: toolRunner(fakeRunTool, () => switching.image()),
+      commandTimeoutMs: 5000,
+      connectTimeoutMs: 5000,
+    });
+    try {
+      await switching.accounts(c);
+      const before = specs.length;
+      switching.useImage("ghcr.io/spotware/ctrader-console:5.10.6");
+      await switching.accounts({ ...c, login: "other@example.com" });
+      expect(new Set(specs.slice(0, before).map((s) => s.image))).toEqual(new Set([IMAGE]));
+      expect(new Set(specs.slice(before).map((s) => s.image))).toEqual(
+        new Set(["ghcr.io/spotware/ctrader-console:5.10.6"]),
+      );
+    } finally {
+      await switching.dispose();
+    }
+  });
+
   it("copies a local algo into the tool under its own name", async () => {
     const algo = join(mkdtempSync(join(tmpdir(), "ww-algo-")), "bot.algo");
     writeFileSync(algo, "compiled");

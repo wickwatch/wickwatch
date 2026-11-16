@@ -54,12 +54,26 @@ export interface OverviewInput {
   remembered?: ReadonlyMap<string, string>;
   /** Measured offset of the server clock (ms), when the server checks it. */
   clockOffsetMs?: number;
+  /** Newer stable versions than those in use, when the server checks for them. */
+  updates?: Updates;
   /** Runtime refs of instances stopped on purpose through wickwatch. */
   stoppedByUser?: ReadonlySet<string>;
   /** Instances their schedule holds stopped, by runtime ref. */
   paused?: ReadonlyMap<string, InstancePause>;
   /** What a log rule last did to an instance, within the last CRASH_ALERT_MS, by runtime ref. */
   logRuleEvents?: ReadonlyMap<string, LogRuleEvent>;
+}
+
+/** A version in use (`current`) and the newest stable one there is (`latest`), as version tags, e.g. `5.10.6`. */
+export interface Update {
+  current: string;
+  latest: string;
+}
+
+export interface Updates {
+  /** The platform image new instances run on (`BrokerAdapter.image()`). */
+  platform?: Update;
+  wickwatch?: Update;
 }
 
 /**
@@ -249,10 +263,15 @@ export const CLOCK_TOLERANCE_MS = 2000;
 
 function alerts(
   instances: InstanceSummary[],
-  { accounts, time, clockOffsetMs, logRuleEvents }: OverviewInput,
+  { accounts, time, clockOffsetMs, logRuleEvents, updates }: OverviewInput,
   attributor: Attributor,
 ): Alert[] {
   const result: Alert[] = [];
+  if (updates?.platform)
+    result.push({ level: "info", code: "platform_update", subject: "platform", params: { ...updates.platform } });
+  if (updates?.wickwatch) {
+    result.push({ level: "info", code: "wickwatch_update", subject: "wickwatch", params: { ...updates.wickwatch } });
+  }
   if (clockOffsetMs !== undefined && Math.abs(clockOffsetMs) > CLOCK_TOLERANCE_MS) {
     const offset = Math.round(clockOffsetMs / 100) / 10;
     result.push({ level: "warning", code: "host_clock", subject: "host", params: { offset } });

@@ -99,10 +99,10 @@ export class CtraderCliBroker implements BrokerAdapter {
     this.log(details, message, level);
   };
 
-  private readonly image: string;
+  private currentImage: string;
 
   constructor({ image, ...options }: CtraderCliBrokerOptions = {}) {
-    this.image = image ?? DEFAULT_CTRADER_IMAGE;
+    this.currentImage = image ?? DEFAULT_CTRADER_IMAGE;
     this.options = { ...DEFAULT_CLI_OPTIONS, ...options };
     this.backoff = new LoginBackoff(this.options.loginRetryMs, this.options.loginRetryMaxMs);
     this.pool = new SessionPool(this.options, this.backoff, this.report);
@@ -110,6 +110,15 @@ export class CtraderCliBroker implements BrokerAdapter {
 
   useLog(log: AdapterLog): void {
     this.log = log;
+  }
+
+  image(): string {
+    return this.currentImage;
+  }
+
+  /** Open shell sessions keep their image until they close (idle, timeout); new ones start on `image`. */
+  useImage(image: string): void {
+    this.currentImage = image;
   }
 
   capabilities(): Capabilities {
@@ -161,7 +170,7 @@ export class CtraderCliBroker implements BrokerAdapter {
     const parametersFile = `${MOUNT}/parameters.cbotset`;
     checkParameterNames(input.parameters);
     return {
-      image: this.image,
+      image: input.image ?? this.currentImage,
       command: [
         "run",
         algoFile,

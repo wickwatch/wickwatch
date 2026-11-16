@@ -21,6 +21,7 @@ import { credentialRoutes } from "./routes/credentials";
 import { healthRoutes } from "./routes/health";
 import { instanceRoutes } from "./routes/instances";
 import { managedInstanceRoutes } from "./routes/managed-instances";
+import { platformRoutes } from "./routes/platform";
 import { mcpRoutes } from "./routes/mcp";
 import { overviewRoutes } from "./routes/overview";
 import { parameterTemplateRoutes } from "./routes/parameter-templates";
@@ -35,6 +36,7 @@ import { NewsCalendar } from "./services/news-calendar";
 import { IdleAccounts } from "./services/idle-accounts";
 import { OverviewLoader, withChangeNotice } from "./services/overview";
 import { PositionHistory, withPositionHistory } from "./services/position-history";
+import { Images } from "./services/images";
 import { createSecurityNotifier } from "./services/security-notice";
 import { createSymbolCache } from "./services/symbols";
 import { chartBroker, createCandleCache } from "./services/trade-chart";
@@ -51,6 +53,8 @@ declare module "fastify" {
     logArchive: LogArchive | undefined;
     /** The economic calendar for the news pauses of schedules, for the scheduler. */
     newsCalendar: NewsCalendar;
+    /** The platform image new instances run on, and newer versions of it and of wickwatch. */
+    images: Images;
   }
 }
 
@@ -126,7 +130,16 @@ export async function buildApp({
   const readLog = logReader(adapters.runtime, logArchive);
   const logTracker = new LogTracker(adapters.runtime);
   const marketHours = new MarketHoursCache({ adapters, log: app.log, db });
+  // The demo has no registry to ask.
+  const images = new Images({
+    db,
+    broker: adapters.broker,
+    log: app.log,
+    version,
+    check: config.updateCheck && adapters.runtime.id !== "demo",
+  });
   const overview = new OverviewLoader({
+    updates: () => images.updates(),
     adapters,
     directory: accounts,
     db,
@@ -138,6 +151,7 @@ export async function buildApp({
   app.decorate("overview", overview);
   app.decorate("adapters", adapters);
   app.decorate("marketHours", marketHours);
+  app.decorate("images", images);
   app.decorate("logArchive", logArchive);
   const newsCalendar = new NewsCalendar({ db, log: app.log, url: config.newsCalendarUrl });
   app.decorate("newsCalendar", newsCalendar);
@@ -154,6 +168,7 @@ export async function buildApp({
   const api = `${basePath}/api/v1`;
   await app.register(authRoutes, { db, cipher, setup, basePath, prefix: `${api}/auth` });
   await app.register(systemRoutes, { config, adapters, version, prefix: api });
+  await app.register(platformRoutes, { db, images, prefix: api });
   await app.register(overviewRoutes, { adapters, overview, prefix: api });
   await app.register(instanceRoutes, {
     adapters,
@@ -201,6 +216,7 @@ export async function buildApp({
   });
   await app.register(scheduleRoutes, { db, news: newsCalendar, brokerId: adapters.broker.id, prefix: api });
   await app.register(managedInstanceRoutes, {
+    images,
     adapters,
     accounts,
     db,

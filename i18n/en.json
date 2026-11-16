@@ -297,7 +297,9 @@
       "invalid_holiday": "A holiday ends before it starts.",
       "instance_not_found": "An instance in the list no longer exists.",
       "invalid_pause_period": "A one-off pause ends before it starts.",
-      "log_rule_invalid": "A pattern is not a valid regular expression."
+      "log_rule_invalid": "A pattern is not a valid regular expression.",
+      "invalid_image": "Choose a version of the platform's own image.",
+      "image_unsupported": "This platform does not run on an image."
     }
   },
   "parameterIssue": {
@@ -405,7 +407,9 @@
     "attribution_ambiguous": "Account {subject}: trades on {symbol} cannot be attributed – {instances} share the symbol and one uses account-symbol",
     "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}",
     "challenge_guard": "Account {subject} was stopped automatically at {since}: {rule} reached the protection limit",
-    "host_clock": "Server clock is off by {offset} s. Bots, trading days and daily loss resets depend on the time; check the time sync (NTP) of the host."
+    "host_clock": "Server clock is off by {offset} s. Bots, trading days and daily loss resets depend on the time; check the time sync (NTP) of the host.",
+    "platform_update": "Platform version {latest} is available (in use: {current}). Try it on one instance first (Algos page).",
+    "wickwatch_update": "wickwatch {latest} is available (running: {current})."
   },
   "emergencyStop": {
     "title": "Emergency stop",
@@ -734,7 +738,12 @@
     "elsewhere": "Make sure the same bot does not also run elsewhere on this account (e.g. on another server).",
     "done": "Configuration version {version} applied; status: {status}.",
     "outdatedUnknown": "Version {version} is saved; which version the container uses is unknown.",
-    "toConfig": "Go to configuration"
+    "toConfig": "Go to configuration",
+    "otherImage": "Runs on platform version {own}; new instances get {platform}.",
+    "updateImage": "Update to {version}",
+    "confirmUpdateImage": "Deploys the instance again on version {version} instead of {own}, with the configuration it has.",
+    "confirmUpdateImageRunning": "Deploys the instance again on version {version} instead of {own}, with the configuration it has. The bot restarts.",
+    "imageUpdated": "Now on version {version} ({status})."
   },
   "validation": {
     "required": "Required.",
@@ -969,7 +978,9 @@
       "schedule_delete": "Schedule deleted",
       "instance_schedule": "Schedule chosen",
       "instance_schedule_pause": "Paused by its schedule",
-      "instance_schedule_resume": "Started again after its pause"
+      "instance_schedule_resume": "Started again after its pause",
+      "platform_image": "Platform version chosen",
+      "instance_update_images": "All instances updated to the platform version"
     },
     "groups": {
       "account": "Accounts",
@@ -983,7 +994,8 @@
       "position": "Positions",
       "api_token": "API tokens",
       "parameter_template": "Parameter templates",
-      "schedule": "Schedules"
+      "schedule": "Schedules",
+      "platform": "Platform"
     },
     "period": "Time range",
     "periods": {
@@ -1116,5 +1128,28 @@
     "periodAdd": "Add one-off pause",
     "periodRemove": "Remove one-off pause",
     "periodsSummary": "no one-off pauses | 1 one-off pause | {count} one-off pauses"
+  },
+  "platform": {
+    "title": "Platform version",
+    "inUse": "New instances run on version {version}.",
+    "latest": "Version {version} is available.",
+    "checkedAt": "Versions checked {time}.",
+    "notChecked": "Not checked for new versions yet.",
+    "checkOff": "The check for new versions is off (UPDATE_CHECK).",
+    "hint": "Instances keep their version when a configuration is applied; update them here or on their configuration tab. Stable versions only; try a new one on one instance first.",
+    "version": "Version for new instances",
+    "saved": "New instances now run on version {version}. Running instances keep theirs until they are updated.",
+    "outdated": "One instance runs on another version: {names}. | {count} instances run on another version: {names}.",
+    "updateAll": "Update all to {version}",
+    "confirmUpdateAll": "Deploys {names} again on version {version}, one after the other. Running bots restart; stopped ones stay stopped. Instances with an open position are left alone.",
+    "updated": "Updated to {version}: {names}.",
+    "nothingUpdated": "No instance updated.",
+    "skipped": {
+      "open_position": "{name} left alone: open position.",
+      "positions_unknown": "{name} left alone: its positions are unknown right now.",
+      "failed": "{name} failed: {error}"
+    },
+    "wickwatch": "wickwatch {version}.",
+    "wickwatchLatest": "Version {version} is available."
   }
 }

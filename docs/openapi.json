@@ -1548,6 +1548,295 @@
         }
       }
     },
+    "/api/v1/platform": {
+      "get": {
+        "summary": "Platform image and available versions",
+        "tags": [
+          "system"
+        ],
+        "description": "Versions come from the image registries, asked once a day (UPDATE_CHECK); wickwatch's own from ghcr.io/wickwatch/wickwatch.",
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "wickwatch",
+                    "updateCheck"
+                  ],
+                  "properties": {
+                    "platform": {
+                      "type": "object",
+                      "required": [
+                        "image",
+                        "repository",
+                        "versions"
+                      ],
+                      "properties": {
+                        "image": {
+                          "type": "string"
+                        },
+                        "repository": {
+                          "type": "string"
+                        },
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "latest": {
+                          "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        }
+                      }
+                    },
+                    "wickwatch": {
+                      "type": "object",
+                      "required": [
+                        "current"
+                      ],
+                      "properties": {
+                        "current": {
+                          "type": "string"
+                        },
+                        "latest": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "updateCheck": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/image": {
+      "put": {
+        "summary": "Set the platform image new instances run on",
+        "tags": [
+          "system"
+        ],
+        "description": "Another version of the platform's own repository. Running instances keep theirs until they are updated; the broker's own tools use it from their next start.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "wickwatch",
+                    "updateCheck"
+                  ],
+                  "properties": {
+                    "platform": {
+                      "type": "object",
+                      "required": [
+                        "image",
+                        "repository",
+                        "versions"
+                      ],
+                      "properties": {
+                        "image": {
+                          "type": "string"
+                        },
+                        "repository": {
+                          "type": "string"
+                        },
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "latest": {
+                          "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        }
+                      }
+                    },
+                    "wickwatch": {
+                      "type": "object",
+                      "required": [
+                        "current"
+                      ],
+                      "properties": {
+                        "current": {
+                          "type": "string"
+                        },
+                        "latest": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "updateCheck": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/overview": {
       "get": {
         "summary": "Accounts, instances and alerts for the overview screen",
@@ -2293,6 +2582,18 @@
                                 "type": "string",
                                 "enum": [
                                   "host_clock"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "platform_update"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "wickwatch_update"
                                 ]
                               },
                               {
@@ -3288,6 +3589,18 @@
                                 "type": "string",
                                 "enum": [
                                   "host_clock"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "platform_update"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "wickwatch_update"
                                 ]
                               },
                               {
@@ -14071,6 +14384,9 @@
                           },
                           "configVersion": {
                             "type": "integer"
+                          },
+                          "image": {
+                            "type": "string"
                           }
                         }
                       },
@@ -14374,6 +14690,9 @@
                         },
                         "configVersion": {
                           "type": "integer"
+                        },
+                        "image": {
+                          "type": "string"
                         }
                       }
                     },
@@ -14921,6 +15240,9 @@
                             },
                             "configVersion": {
                               "type": "integer"
+                            },
+                            "image": {
+                              "type": "string"
                             }
                           }
                         },
@@ -15648,6 +15970,9 @@
                         },
                         "configVersion": {
                           "type": "integer"
+                        },
+                        "image": {
+                          "type": "string"
                         }
                       }
                     },
@@ -15861,7 +16186,7 @@
         "tags": [
           "instances"
         ],
-        "description": "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one.",
+        "description": "Replacing keeps a running instance running with the new configuration (a restart). `start` also starts a stopped one. `image` updates it to another version of the platform image (one of `/platform` `versions`); without it the instance keeps the image it runs on.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15878,6 +16203,11 @@
                   },
                   "start": {
                     "type": "boolean"
+                  },
+                  "image": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
                   }
                 }
               }
@@ -16105,6 +16435,190 @@
             }
           },
           "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/update-images": {
+      "post": {
+        "summary": "Update all instances to the platform image",
+        "tags": [
+          "instances"
+        ],
+        "description": "Deploys every managed instance that runs on another image than the platform's (`/platform`) again on it, one after the other; running ones restart. Instances with an open position, or whose positions are unknown, are left alone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "string",
+                    "description": "`all`"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "updated",
+                    "skipped"
+                  ],
+                  "properties": {
+                    "updated": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "reason"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "open_position"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "positions_unknown"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "failed"
+                                ]
+                              }
+                            ]
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
             "description": "Default Response",
             "content": {
               "application/json": {

@@ -83,6 +83,8 @@ export interface LaunchInput {
   symbol: string;
   period: string;
   parameters: ParameterValues;
+  /** The image to run on instead of `BrokerAdapter.image()`, e.g. the one the instance ran on so far. */
+  image?: string;
 }
 
 /** A helper program run on demand, e.g. a broker CLI in a throwaway container. */
@@ -152,6 +154,13 @@ export interface BrokerAdapter {
   readonly algoMetadataVersion?: number;
   /** How to run an algo on an account; missing when this broker cannot run bots itself. */
   launch?(input: LaunchInput): Promise<Launch>;
+  /**
+   * The pinned image new instances and the adapter's own tools run on, for a platform that ships as an image; missing
+   * otherwise. Its repository is fixed by the adapter's settings; `useImage` switches the version.
+   */
+  image?(): string;
+  /** Runs new instances (without `LaunchInput.image`) and the adapter's own tools on `image` from now on. */
+  useImage?(image: string): void;
   /** Timeframes an instance can run on (e.g. `m5`, `h1`); without it the period is free text. */
   periods?(): string[];
   /** The period a new instance is set up with, one of `periods()`. */

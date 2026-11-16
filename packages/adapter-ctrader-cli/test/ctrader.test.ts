@@ -344,6 +344,22 @@ describe("CtraderCliBroker", () => {
     ).not.toContain("--full-access");
   });
 
+  it("launches on the image set with useImage, or on the one the launch asks for", async () => {
+    const own = new CtraderCliBroker({ image: "example/ctrader:1.0" });
+    const input = {
+      credentials: c,
+      account: "1",
+      algo: { name: "a", file: new Uint8Array(), fullAccess: false, parameters: [] },
+      symbol: "X",
+      period: "h1",
+      parameters: {},
+    };
+    own.useImage("example/ctrader:2.0");
+    expect(own.image()).toBe("example/ctrader:2.0");
+    expect((await own.launch(input)).image).toBe("example/ctrader:2.0");
+    expect((await own.launch({ ...input, image: "example/ctrader:1.0" })).image).toBe("example/ctrader:1.0");
+  });
+
   it("accepts plain parameter names only", () => {
     expect(() => {
       checkParameterNames({ "account=2 --x": 1 });

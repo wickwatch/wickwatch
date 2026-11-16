@@ -60,3 +60,48 @@ export function logRuleMatchers(rule: Pick<LogRule, "pattern" | "regex" | "recov
   };
   return { matches: matcher(rule.pattern), recovers: matcher(rule.recoveryPattern) };
 }
+
+/**
+ * An image reference split into repository and tag: `ghcr.io/org/app:1.2.3` → `ghcr.io/org/app` and `1.2.3`. A
+ * reference by digest (`…@sha256:…`) or without a tag has no tag. A port in the registry host is no tag.
+ */
+export function splitImage(image: string): { repository: string; tag?: string } {
+  const at = image.indexOf("@");
+  if (at >= 0) return { repository: image.slice(0, at) };
+  const colon = image.lastIndexOf(":");
+  if (colon < 0 || colon < image.lastIndexOf("/")) return { repository: image };
+  return { repository: image.slice(0, colon), tag: image.slice(colon + 1) };
+}
+
+/** A stable version tag as numbers: `5.10.6` or `v0.8.7`; undefined for others, e.g. `5.10.5-alpha` or `latest`. */
+export function stableVersion(tag: string): number[] | undefined {
+  const match = /^v?(\d+(?:\.\d+){0,3})$/.exec(tag);
+  return match?.[1]?.split(".").map(Number);
+}
+
+function compareVersions(a: number[], b: number[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** The stable version tags among `tags`, newest first. */
+export function stableVersions(tags: readonly string[]): string[] {
+  return tags
+    .flatMap((tag) => {
+      const version = stableVersion(tag);
+      return version ? [{ tag, version }] : [];
+    })
+    .sort((a, b) => compareVersions(b.version, a.version))
+    .map((v) => v.tag);
+}
+
+/** The newest stable tag among `tags` if it is newer than `current`; undefined when `current` is no stable version. */
+export function newerVersion(current: string, tags: readonly string[]): string | undefined {
+  const own = stableVersion(current);
+  const [latest] = stableVersions(tags);
+  const version = latest === undefined ? undefined : stableVersion(latest);
+  return own && version && compareVersions(version, own) > 0 ? latest : undefined;
+}

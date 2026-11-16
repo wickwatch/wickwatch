@@ -68,13 +68,23 @@ export class DemoBrokerAdapter implements BrokerAdapter {
     return ACCOUNTS.map(({ number, broker, currency, live }) => ({ number, broker, currency, live }));
   }
 
+  private currentImage = DEMO_IMAGE;
+
+  image(): string {
+    return this.currentImage;
+  }
+
+  useImage(image: string): void {
+    this.currentImage = image;
+  }
+
   /** Demo instances run nowhere; the command only carries what the demo runtime shows. */
   async launch(input: LaunchInput): Promise<Launch> {
     authenticate(input.credentials);
     this.world.account(input.account);
     const version = ALGOS[input.algo.name]?.version ?? "0";
     return {
-      image: DEMO_IMAGE,
+      image: input.image ?? this.currentImage,
       command: demoCommand(algoPath(input.algo.name, version), input.account, input.symbol, input.period),
       files: [],
     };

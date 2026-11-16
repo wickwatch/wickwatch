@@ -162,6 +162,15 @@ export interface InstancesTable {
   pause_reasons: string | null;
   /** 1 when the log rules of its algo do not apply to it. */
   log_rules_off: Generated<number>;
+  /** Image it was last deployed on; null before (it then keeps the one it runs on, else the platform's). */
+  image: string | null;
+}
+
+/** Settings changed in the dashboard, by key, e.g. `platform_image`. */
+export interface SettingsTable {
+  key: string;
+  value: string;
+  updated_at: string;
 }
 
 /** What a log rule did to an instance, for its cooldown, daily limit and alert. */
@@ -328,4 +337,5 @@ export interface Database {
   instance_schedules: InstanceSchedulesTable;
   news_events: NewsEventsTable;
   log_rule_actions: LogRuleActionsTable;
+  settings: SettingsTable;
 }
