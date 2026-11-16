@@ -119,11 +119,13 @@ describe("AlgosView", () => {
     asRole("admin");
     fetchMock.mockImplementation((input: URL, init?: RequestInit) =>
       Promise.resolve(
-        init?.method === "POST"
-          ? new Response(JSON.stringify(algos[0]), { status: 201 })
-          : new Response(JSON.stringify(input.pathname.endsWith("/parameter-templates") ? [] : algos), {
-              status: 200,
-            }),
+        input.pathname.endsWith("/platform")
+          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+          : init?.method === "POST"
+            ? new Response(JSON.stringify(algos[0]), { status: 201 })
+            : new Response(JSON.stringify(input.pathname.endsWith("/parameter-templates") ? [] : algos), {
+                status: 200,
+              }),
       ),
     );
     const wrapper = await render();

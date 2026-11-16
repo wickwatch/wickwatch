@@ -86,6 +86,9 @@ beforeEach(() => {
   fetchMock = vi.fn((input: URL, init?: RequestInit) => {
     const path = input.pathname.replace(/^.*\/api\/v1\//, "");
     const method = init?.method ?? "GET";
+    // The platform card on the Algos page has its own tests (platform.test.ts).
+    if (path === "platform")
+      return Promise.resolve(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }));
     if (path.startsWith("instances/")) {
       return Promise.resolve(new Response(JSON.stringify({ error: "not_found" }), { status: 404 }));
     }
