@@ -361,6 +361,11 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     checkPinned(spec.image);
   }
 
+  async prepareImage(image: string): Promise<void> {
+    checkPinned(image);
+    await this.ensureImage(image);
+  }
+
   private async ensureImage(image: string): Promise<void> {
     if (!(await call(() => this.client.hasImage(image)))) await call(() => this.client.pull(image));
   }

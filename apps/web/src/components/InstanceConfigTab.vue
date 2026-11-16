@@ -67,7 +67,9 @@ onMounted(async () => {
     error.value = errorKey(e);
   }
   // Only a hint: without it the banner stays away.
-  platformImage.value = (await api.platform().catch(() => undefined))?.platform?.image;
+  const platform = (await api.platform().catch(() => undefined))?.platform;
+  platformImage.value = platform?.image;
+  downloading.value = platform?.download === "running";
 });
 
 function setLogRules(enabled: boolean) {
@@ -126,6 +128,8 @@ const deployment = computed(() => props.managed?.deployment);
 
 /** The image new instances get; an instance on another one can be updated to it (it keeps its own otherwise). */
 const platformImage = ref<string>();
+/** The runtime is still fetching it: an update would wait for the download (and could run into a proxy timeout). */
+const downloading = ref(false);
 const tagOf = (image: string) => splitImage(image).tag ?? image;
 const otherImage = computed(() => {
   const own = deployment.value?.managed ? deployment.value.image : undefined;
@@ -315,11 +319,12 @@ function changes(index: number): string[] {
 
       <AppBanner v-if="otherImage" tone="neutral">
         <span>{{ $t("deploy.otherImage", otherImage) }}</span>
+        <span v-if="downloading" class="muted">{{ $t("platform.downloading", { version: otherImage.platform }) }}</span>
         <template v-if="isAdmin" #actions>
           <button
             type="button"
             class="btn"
-            :disabled="busy || incomplete.length > 0"
+            :disabled="busy || downloading || incomplete.length > 0"
             :aria-busy="deploying === 'image'"
             @click="updatingImage = true"
           >

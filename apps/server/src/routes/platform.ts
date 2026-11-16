@@ -14,7 +14,11 @@ export const platformRoutes: FastifyPluginAsyncTypebox<{ db: Db; images: Images 
     const wickwatch = images.updates().wickwatch;
     return {
       ...(platform ? { platform } : {}),
-      wickwatch: { current: images.version, ...(wickwatch ? { latest: wickwatch.latest } : {}) },
+      wickwatch: {
+        current: images.version,
+        ...(wickwatch ? { latest: wickwatch.latest } : {}),
+        ...(images.wickwatchCheckedAt ? { checkedAt: images.wickwatchCheckedAt } : {}),
+      },
       updateCheck: images.checking,
     };
   };

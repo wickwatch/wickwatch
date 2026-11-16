@@ -134,6 +134,7 @@ export async function buildApp({
   const images = new Images({
     db,
     broker: adapters.broker,
+    runtime: adapters.runtime,
     log: app.log,
     version,
     check: config.updateCheck && adapters.runtime.id !== "demo",

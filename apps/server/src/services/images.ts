@@ -1,4 +1,4 @@
-import type { BrokerAdapter, Updates } from "@wickwatch/core";
+import type { BrokerAdapter, PlatformImage, RuntimeAdapter, Updates } from "@wickwatch/core";
 import { newerVersion, splitImage, stableVersions } from "@wickwatch/core/rules";
 import type { FastifyBaseLogger } from "fastify";
 import type { Db } from "../db";
@@ -14,18 +14,6 @@ const MAX_VERSIONS = 20;
 export const PLATFORM_IMAGE_KEY = "platform_image";
 export const WICKWATCH_REPOSITORY = "ghcr.io/wickwatch/wickwatch";
 
-/** The platform image as the dashboard shows it, for brokers whose platform ships as an image. */
-export interface PlatformImage {
-  /** The image new instances run on. */
-  image: string;
-  repository: string;
-  /** Stable versions in the repository, newest first; empty before the first check or with UPDATE_CHECK=off. */
-  versions: string[];
-  /** The newest stable version, when newer than the one in use. */
-  latest?: string;
-  checkedAt?: string;
-}
-
 /** A pinned tag of the platform's own repository: what the setting may name. */
 export function isAllowedImage(image: string, repository: string): boolean {
   const { repository: own, tag } = splitImage(image);
@@ -37,6 +25,12 @@ interface Checked {
   at: string;
 }
 
+/** A download of an image by the runtime: running, or failed (a done one is forgotten). */
+interface Download {
+  state: "running" | "failed";
+  done: Promise<void>;
+}
+
 /**
  * The platform image new instances and the broker's tools run on: the one from the adapter's settings, or the version
  * an admin chose (stored as `platform_image`). With `check`, asks the registries once a day for newer stable versions
@@ -46,6 +40,7 @@ export class Images {
   /** The repository of the adapter's own image; the setting can only pick another version of it. */
   private readonly repository: string | undefined;
   private readonly checked = new Map<string, Checked>();
+  private readonly downloads = new Map<string, Download>();
   private timer: ReturnType<typeof setTimeout> | undefined;
   private readonly fetch: typeof fetch;
   private readonly now: () => Date;
@@ -54,6 +49,8 @@ export class Images {
     private readonly options: {
       db: Db;
       broker: BrokerAdapter;
+      /** Fetches a chosen image ahead, so updating an instance to it does not wait for the download. */
+      runtime?: RuntimeAdapter;
       log: FastifyBaseLogger;
       /** wickwatch's own version, e.g. `0.8.7`. */
       version: string;
@@ -94,11 +91,43 @@ export class Images {
       .onConflict((oc) => oc.column("key").doUpdateSet({ value: image, updated_at }))
       .execute();
     broker.useImage(image);
+    void this.prepare(image).catch(() => undefined);
     return true;
+  }
+
+  /**
+   * Has the runtime fetch `image` if it lacks it; callers at the same time share one download. Fails like the runtime
+   * (logged); a later call tries again.
+   */
+  prepare(image: string): Promise<void> {
+    const prepareImage = this.options.runtime?.prepareImage?.bind(this.options.runtime);
+    if (!prepareImage) return Promise.resolve();
+    const running = this.downloads.get(image);
+    if (running?.state === "running") return running.done;
+    const download: Download = {
+      state: "running",
+      done: prepareImage(image).then(
+        () => {
+          if (this.downloads.get(image) === download) this.downloads.delete(image);
+        },
+        (error: unknown) => {
+          download.state = "failed";
+          this.options.log.warn({ err: error, image }, "Platform image could not be fetched");
+          throw error;
+        },
+      ),
+    };
+    this.downloads.set(image, download);
+    return download.done;
   }
 
   get version(): string {
     return this.options.version;
+  }
+
+  /** When the registry last told wickwatch's own versions. */
+  get wickwatchCheckedAt(): string | undefined {
+    return this.checked.get(WICKWATCH_REPOSITORY)?.at;
   }
 
   isAllowed(image: string): boolean {
@@ -111,12 +140,14 @@ export class Images {
     const checked = this.checked.get(this.repository);
     const versions = stableVersions(checked?.tags ?? []).slice(0, MAX_VERSIONS);
     const latest = this.latest(image, this.repository);
+    const download = this.downloads.get(image);
     return {
       image,
       repository: this.repository,
       versions,
       ...(latest ? { latest } : {}),
       ...(checked ? { checkedAt: checked.at } : {}),
+      ...(download ? { download: download.state } : {}),
     };
   }
 

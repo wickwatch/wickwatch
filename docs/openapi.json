@@ -1602,6 +1602,22 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "Z$"
+                        },
+                        "download": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "running"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "failed"
+                              ]
+                            }
+                          ]
                         }
                       }
                     },
@@ -1616,6 +1632,11 @@
                         },
                         "latest": {
                           "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
                         }
                       }
                     },
@@ -1725,6 +1746,22 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "Z$"
+                        },
+                        "download": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "running"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "failed"
+                              ]
+                            }
+                          ]
                         }
                       }
                     },
@@ -1739,6 +1776,11 @@
                         },
                         "latest": {
                           "type": "string"
+                        },
+                        "checkedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
                         }
                       }
                     },
@@ -16464,7 +16506,7 @@
         "tags": [
           "instances"
         ],
-        "description": "Deploys every managed instance that runs on another image than the platform's (`/platform`) again on it, one after the other; running ones restart. Instances with an open position, or whose positions are unknown, are left alone.",
+        "description": "Starts deploying every managed instance that runs on another image than the platform's (`/platform`) again on it, in the background, one after the other once the runtime has the image; running ones restart. Instances with an open position, or whose positions are unknown, are left alone. Answers at once; `GET` shows the progress.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16493,17 +16535,46 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "required": [
+                    "image",
+                    "running",
+                    "startedAt",
+                    "pending",
                     "updated",
                     "skipped"
                   ],
                   "properties": {
+                    "image": {
+                      "type": "string"
+                    },
+                    "running": {
+                      "type": "boolean"
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "finishedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "Z$"
+                    },
+                    "current": {
+                      "type": "string"
+                    },
+                    "pending": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "updated": {
                       "type": "array",
                       "items": {
@@ -16618,7 +16689,161 @@
               }
             }
           },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "501": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Progress of the last update of all instances",
+        "tags": [
+          "instances"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rollout": {
+                      "type": "object",
+                      "required": [
+                        "image",
+                        "running",
+                        "startedAt",
+                        "pending",
+                        "updated",
+                        "skipped"
+                      ],
+                      "properties": {
+                        "image": {
+                          "type": "string"
+                        },
+                        "running": {
+                          "type": "boolean"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "current": {
+                          "type": "string"
+                        },
+                        "pending": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "updated": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "skipped": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "reason"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "open_position"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "positions_unknown"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "failed"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "error": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
             "description": "Default Response",
             "content": {
               "application/json": {

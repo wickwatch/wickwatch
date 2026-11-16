@@ -1,4 +1,4 @@
-import type { ManagedInstance, PlatformInfo } from "@wickwatch/core";
+import type { ImageRollout, ManagedInstance, PlatformInfo } from "@wickwatch/core";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PlatformVersion from "../src/components/PlatformVersion.vue";
@@ -7,6 +7,7 @@ import { session } from "../src/session";
 
 const REPO = "registry.example/platform";
 let info: PlatformInfo;
+let rollout: ImageRollout | undefined;
 const instance = (name: string, image: string): ManagedInstance =>
   ({
     id: 1,
@@ -43,9 +44,10 @@ beforeEach(() => {
       latest: "1.1.0",
       checkedAt: "2026-11-16T09:00:00.000Z",
     },
-    wickwatch: { current: "0.8.7", latest: "0.9.0" },
+    wickwatch: { current: "0.8.7", latest: "0.9.0", checkedAt: "2026-11-16T09:00:00.000Z" },
     updateCheck: true,
   };
+  rollout = undefined;
   fetchMock = vi.fn((input: URL, init?: RequestInit) => {
     const path = input.pathname.replace(/^.*\/api\/v1\//, "");
     if (path === "platform/image") {
@@ -57,9 +59,19 @@ beforeEach(() => {
     if (path === "managed-instances") {
       return Promise.resolve(Response.json([instance("a", `${REPO}:1.0.0`), instance("b", `${REPO}:0.9.0`)]));
     }
-    if (path === "managed-instances/update-images") {
-      return Promise.resolve(Response.json({ updated: ["b"], skipped: [{ name: "a", reason: "open_position" }] }));
+    if (path === "managed-instances/update-images" && init?.method === "POST") {
+      rollout = {
+        image: `${REPO}:1.0.0`,
+        running: true,
+        startedAt: "2026-11-16T12:00:00.000Z",
+        current: "b",
+        pending: [],
+        updated: [],
+        skipped: [{ name: "a", reason: "open_position" }],
+      };
+      return Promise.resolve(Response.json(rollout, { status: 202 }));
     }
+    if (path === "managed-instances/update-images") return Promise.resolve(Response.json(rollout ? { rollout } : {}));
     return Promise.resolve(new Response(null, { status: 404 }));
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -79,7 +91,7 @@ describe("PlatformVersion", () => {
     const wrapper = await render();
     expect(wrapper.text()).toContain("New instances run on version 1.0.0.");
     expect(wrapper.text()).toContain("Version 1.1.0 is available.");
-    expect(wrapper.text()).toContain("wickwatch 0.8.7. Version 0.9.0 is available.");
+    expect(wrapper.text()).toContain("wickwatch itself runs version 0.8.7; version 0.9.0 is available.");
     expect(wrapper.text()).toContain("One instance runs on another version: b (0.9.0).");
   });
 
@@ -94,19 +106,41 @@ describe("PlatformVersion", () => {
     expect(wrapper.text()).toContain("2 instances run on another version");
   });
 
-  it("updates all only after confirmation and says what it left alone", async () => {
+  it("updates all only after confirmation, shows the progress and says what it left alone", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const wrapper = await render();
+      await wrapper
+        .findAll("button")
+        .find((b) => b.text() === "Update all to 1.0.0")
+        ?.trigger("click");
+      expect(calls()).toEqual([]);
+      const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
+      expect(dialog.props("message")).toContain("Instances with an open position are left alone.");
+      dialog.vm.$emit("confirm");
+      await flushPromises();
+      expect(calls()).toEqual([{ method: "POST", path: "managed-instances/update-images", body: { confirm: "all" } }]);
+      expect(wrapper.text()).toContain("Updating to 1.0.0: 1 of 2 done, now b.");
+
+      rollout = {
+        ...rollout!,
+        running: false,
+        updated: ["b"],
+        finishedAt: "2026-11-16T12:01:00.000Z",
+      };
+      delete rollout.current;
+      await vi.advanceTimersByTimeAsync(2000);
+      await flushPromises();
+      expect(wrapper.text()).toContain("Updated to 1.0.0: b. a left alone: open position.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells while the chosen version downloads", async () => {
+    info = { ...info, platform: { ...info.platform!, download: "running" } };
     const wrapper = await render();
-    await wrapper
-      .findAll("button")
-      .find((b) => b.text() === "Update all to 1.0.0")
-      ?.trigger("click");
-    expect(calls()).toEqual([]);
-    const dialog = wrapper.findComponent({ name: "ConfirmDialog" });
-    expect(dialog.props("message")).toContain("Instances with an open position are left alone.");
-    dialog.vm.$emit("confirm");
-    await flushPromises();
-    expect(calls()).toEqual([{ method: "POST", path: "managed-instances/update-images", body: { confirm: "all" } }]);
-    expect(wrapper.text()).toContain("Updated to 1.0.0: b. a left alone: open position.");
+    expect(wrapper.text()).toContain("Version 1.0.0 is being downloaded");
   });
 
   it("offers no changes to viewers", async () => {

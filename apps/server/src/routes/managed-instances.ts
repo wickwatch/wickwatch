@@ -3,6 +3,7 @@ import { join } from "node:path";
 import {
   AdapterError,
   InstanceConfigInput,
+  ImageRollout,
   InstanceStatus,
   ManagedInstance,
   deployedConfigVersion,
@@ -18,12 +19,11 @@ import {
 import { groupBy } from "@wickwatch/core/group-by";
 import { INSTANCE_NAME, isUp } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
-import type { FastifyRequest } from "fastify";
 import Type from "typebox";
 import { findAccountById, type AccountDirectory, type AccountEntry } from "../accounts";
 import type { Adapters } from "../adapters";
 import type { Db } from "../db";
-import { actor, isAdmin, requireAdmin, requireConfirmation } from "../plugins/auth";
+import { actor, isAdmin, requireAdmin, requireConfirmation, type Actor } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { schemaOf } from "../services/algo-metadata";
@@ -442,7 +442,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   async function deploy(
     name: string,
     options: { start: boolean; image?: string | undefined },
-    request: FastifyRequest,
+    who: Actor,
   ): Promise<DeployResult> {
     if (!cipher) return { ok: false, code: 503, error: "master_key_missing" };
     const [instance] = await load(name);
@@ -476,7 +476,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     const image = options.image ?? row?.image ?? instance.deployment?.image;
     const { runtime } = await auditOutcome(
       db,
-      { action: "instance.deploy", target: name, ...actor(request) },
+      { action: "instance.deploy", target: name, ...who },
       async () => {
         const launched = await launch({
           credentials: await entry.credentials(),
@@ -556,12 +556,62 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const result = await deploy(
         request.params.name,
         { start: request.body.start === true, image: request.body.image },
-        request,
+        actor(request),
       );
       if (!result.ok) return reply.code(result.code).send({ error: result.error });
       return { status: result.status, configVersion: result.configVersion };
     },
   );
+
+  /** The last "update all": running in the background, or done (kept until the next one, for the page to show). */
+  let rollout: ImageRollout | undefined;
+
+  /**
+   * Deploys every managed instance on another image than `image` again on it, one after the other, after the runtime
+   * has the image; leaves those with an open position (or unknown positions) alone. Updates `state` as it goes.
+   */
+  async function runRollout(state: ImageRollout, who: Actor): Promise<void> {
+    const skip = (name: string, reason: ImageRollout["skipped"][number]["reason"], error?: string) =>
+      state.skipped.push({ name, reason, ...(error ? { error } : {}) });
+    try {
+      await images.prepare(state.image);
+      const { instances, accounts: summaries } = await app.overview.overview();
+      for (const name of [...state.pending]) {
+        state.current = name;
+        state.pending = state.pending.filter((n) => n !== name);
+        const [instance] = await load(name);
+        const summary = instances.find((i) => i.name === name);
+        const account = summaries.find((a) => a.number === instance?.account.number);
+        if (!instance || !summary || !account || account.error) skip(name, "positions_unknown");
+        else if (summary.openPositions > 0) skip(name, "open_position");
+        else {
+          try {
+            const result = await deploy(name, { start: false, image: state.image }, who);
+            if (result.ok) state.updated.push(name);
+            else skip(name, "failed", result.error);
+          } catch (error) {
+            skip(name, "failed", error instanceof AdapterError ? error.code : "internal");
+          }
+        }
+      }
+    } catch (error) {
+      // The image could not be fetched: nothing was changed.
+      for (const name of state.pending) skip(name, "failed", error instanceof AdapterError ? error.code : "internal");
+      state.pending = [];
+    } finally {
+      delete state.current;
+      state.running = false;
+      state.finishedAt = new Date().toISOString();
+      await audit(db, {
+        action: "instance.update_images",
+        target: state.image,
+        details: { updated: state.updated, skipped: state.skipped.map((s) => `${s.name}: ${s.reason}`) },
+        ...who,
+      }).catch((error: unknown) => {
+        app.log.warn({ err: error }, "Audit entry for the image update failed");
+      });
+    }
+  }
 
   app.post(
     "/managed-instances/update-images",
@@ -578,67 +628,40 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         tags: ["instances"],
         summary: "Update all instances to the platform image",
         description:
-          "Deploys every managed instance that runs on another image than the platform's (`/platform`) again on it, one after the other; running ones restart. Instances with an open position, or whose positions are unknown, are left alone.",
+          "Starts deploying every managed instance that runs on another image than the platform's (`/platform`) again on it, in the background, one after the other once the runtime has the image; running ones restart. Instances with an open position, or whose positions are unknown, are left alone. Answers at once; `GET` shows the progress.",
         body: Type.Object({ confirm: Type.String({ description: "`all`" }) }),
-        response: {
-          200: Type.Object({
-            updated: Type.Array(Type.String()),
-            skipped: Type.Array(
-              Type.Object({
-                name: Type.String(),
-                reason: Type.Union([
-                  Type.Literal("open_position"),
-                  Type.Literal("positions_unknown"),
-                  Type.Literal("failed"),
-                ]),
-                error: Type.Optional(Type.String()),
-              }),
-            ),
-          }),
-          400: ErrorBody,
-          403: ErrorBody,
-          501: ErrorBody,
-        },
+        response: { 202: ImageRollout, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody, 501: ErrorBody },
       },
     },
     async (request, reply) => {
       const image = adapters.broker.image?.();
       if (!image) return reply.code(501).send({ error: "image_unsupported" });
+      if (rollout?.running) return reply.code(409).send({ error: "update_running" });
       const outdated = (await load()).filter((i) => i.deployment?.managed && i.deployment.image !== image);
-      const { instances, accounts: summaries } = await app.overview.overview();
-      const updated: string[] = [];
-      const skipped: { name: string; reason: "open_position" | "positions_unknown" | "failed"; error?: string }[] = [];
-      for (const instance of outdated) {
-        const summary = instances.find((i) => i.name === instance.name);
-        const account = summaries.find((a) => a.number === instance.account.number);
-        if (!summary || !account || account.error) {
-          skipped.push({ name: instance.name, reason: "positions_unknown" });
-          continue;
-        }
-        if (summary.openPositions > 0) {
-          skipped.push({ name: instance.name, reason: "open_position" });
-          continue;
-        }
-        try {
-          const result = await deploy(instance.name, { start: false, image }, request);
-          if (result.ok) updated.push(instance.name);
-          else skipped.push({ name: instance.name, reason: "failed", error: result.error });
-        } catch (error) {
-          skipped.push({
-            name: instance.name,
-            reason: "failed",
-            error: error instanceof AdapterError ? error.code : "internal",
-          });
-        }
-      }
-      await audit(db, {
-        action: "instance.update_images",
-        target: image,
-        details: { updated, skipped: skipped.map((s) => `${s.name}: ${s.reason}`) },
-        ...actor(request),
-      });
-      return { updated, skipped };
+      const state: ImageRollout = {
+        image,
+        running: true,
+        startedAt: new Date().toISOString(),
+        pending: outdated.map((i) => i.name),
+        updated: [],
+        skipped: [],
+      };
+      rollout = state;
+      void runRollout(state, actor(request));
+      return reply.code(202).send(state);
     },
+  );
+
+  app.get(
+    "/managed-instances/update-images",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "Progress of the last update of all instances",
+        response: { 200: Type.Object({ rollout: Type.Optional(ImageRollout) }) },
+      },
+    },
+    async () => (rollout ? { rollout } : {}),
   );
 
   app.put(

@@ -45,6 +45,14 @@ describe("DockerRuntimeAdapter", () => {
     expect(await new DockerRuntimeAdapter({ client: docker }).list()).toHaveLength(0);
   });
 
+  it("fetches an image ahead only when it is missing, and only a pinned one", async () => {
+    const { docker, adapter } = setup();
+    await adapter.prepareImage("example/platform:2.0");
+    await adapter.prepareImage("example/platform:2.0");
+    expect(docker.pulls).toEqual(["example/platform:2.0"]);
+    await expect(adapter.prepareImage("example/platform:latest")).rejects.toMatchObject({ code: "invalid_input" });
+  });
+
   it("stops, starts and restarts; a repeated start or stop is fine", async () => {
     const { adapter } = setup();
     const status = async () => (await adapter.list()).find((i) => i.ref === "bot-b")?.status;

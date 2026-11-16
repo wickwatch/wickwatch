@@ -178,19 +178,67 @@ describe("platform image", () => {
     });
 
     await inject("PUT", "/platform/image", { image: `${DEMO}:1.1.0` });
-    const result = (await inject("POST", "/managed-instances/update-images", { confirm: "all" })).json<{
-      updated: string[];
-      skipped: { name: string; reason: string }[];
-    }>();
-    expect(result).toEqual({ updated: ["x2"], skipped: [{ name: "x1", reason: "open_position" }] });
+    // The runtime fetches the image first; until then nothing is deployed.
+    let fetched = () => {};
+    const download = new Promise<void>((resolve) => (fetched = resolve));
+    const prepare = vi.fn(() => download);
+    t.adapters.runtime.prepareImage = prepare;
+
+    const started = await inject("POST", "/managed-instances/update-images", { confirm: "all" });
+    expect(started.statusCode).toBe(202);
+    expect(started.json()).toMatchObject({ image: `${DEMO}:1.1.0`, running: true, pending: ["x1", "x2"] });
+    expect((await inject("POST", "/managed-instances/update-images", { confirm: "all" })).json()).toEqual({
+      error: "update_running",
+    });
+    const progress = async () =>
+      (await inject("GET", "/managed-instances/update-images")).json<{
+        rollout?: { running: boolean; updated: string[]; skipped: { name: string; reason: string }[] };
+      }>().rollout;
+    expect(await progress()).toMatchObject({ running: true, updated: [] });
+    expect(await deployedImage("x2")).toBe(`${DEMO}:1.0.0`);
+
+    fetched();
+    await vi.waitFor(async () => {
+      expect((await progress())?.running).toBe(false);
+    });
+    expect(prepare).toHaveBeenCalledWith(`${DEMO}:1.1.0`);
+    expect(await progress()).toMatchObject({ updated: ["x2"], skipped: [{ name: "x1", reason: "open_position" }] });
     expect(await deployedImage("x1")).toBe(`${DEMO}:1.0.0`);
     expect(await deployedImage("x2")).toBe(`${DEMO}:1.1.0`);
+    const log = await t.db
+      .selectFrom("audit_log")
+      .select("details")
+      .where("action", "=", "instance.update_images")
+      .execute();
+    expect(log.map((l) => JSON.parse(l.details ?? "{}") as unknown)).toEqual([
+      { updated: ["x2"], skipped: ["x1: open_position"] },
+    ]);
 
-    // Nothing left to do: all updated or held back.
-    const again = (await inject("POST", "/managed-instances/update-images", { confirm: "all" })).json<{
-      updated: string[];
-    }>();
-    expect(again.updated).toEqual([]);
+    // Nothing left to do but the one held back.
+    expect((await inject("POST", "/managed-instances/update-images", { confirm: "all" })).json()).toMatchObject({
+      pending: ["x1"],
+    });
+    await vi.waitFor(async () => {
+      expect((await progress())?.running).toBe(false);
+    });
+  });
+
+  it("fetches a chosen image ahead and shows the download", async () => {
+    let fetched = () => {};
+    const download = new Promise<void>((resolve) => (fetched = resolve));
+    t.adapters.runtime.prepareImage = vi.fn(() => download);
+    await inject("PUT", "/platform/image", { image: `${DEMO}:1.1.0` });
+    expect(await platform()).toMatchObject({ image: `${DEMO}:1.1.0`, download: "running" });
+    fetched();
+    await vi.waitFor(async () => {
+      expect(await platform()).not.toHaveProperty("download");
+    });
+
+    t.adapters.runtime.prepareImage = vi.fn(() => Promise.reject(new Error("pull denied")));
+    await inject("PUT", "/platform/image", { image: `${DEMO}:1.2.0` });
+    await vi.waitFor(async () => {
+      expect(await platform()).toMatchObject({ download: "failed" });
+    });
   });
 
   it("tells about newer stable versions after a check, as info alerts", async () => {

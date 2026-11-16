@@ -299,7 +299,8 @@
       "invalid_pause_period": "Eine einmalige Pause endet vor ihrem Beginn.",
       "log_rule_invalid": "Ein Muster ist kein gültiger regulärer Ausdruck.",
       "invalid_image": "Wähle eine Version des eigenen Images der Plattform.",
-      "image_unsupported": "Diese Plattform läuft nicht auf einem Image."
+      "image_unsupported": "Diese Plattform läuft nicht auf einem Image.",
+      "update_running": "Eine Aktualisierung aller Instanzen läuft bereits."
     }
   },
   "parameterIssue": {
@@ -408,8 +409,8 @@
     "attribution_invalid": "Konto {subject}: ungültiges Order-Label-Muster bei {instances}",
     "challenge_guard": "Konto {subject} wurde um {since} automatisch gestoppt: {rule} hat die Schutzgrenze erreicht",
     "host_clock": "Die Server-Uhr geht um {offset} s falsch. Bots, Handelstage und der Tagesreset hängen an der Uhrzeit; prüfe die Zeitsynchronisation (NTP) des Hosts.",
-    "platform_update": "Plattform-Version {latest} ist verfügbar (im Einsatz: {current}). Probiere sie zuerst an einer Instanz aus (Seite Algos).",
-    "wickwatch_update": "wickwatch {latest} ist verfügbar (läuft: {current})."
+    "platform_update": "Neue Version der Plattform verfügbar: {latest} (bisher {current}). Umstellen auf der Seite Algos.",
+    "wickwatch_update": "Neue wickwatch-Version verfügbar: {latest} (läuft: {current})."
   },
   "emergencyStop": {
     "title": "Notstopp",
@@ -1149,7 +1150,12 @@
       "positions_unknown": "{name} unberührt: ihre Positionen sind gerade unbekannt.",
       "failed": "{name} fehlgeschlagen: {error}"
     },
-    "wickwatch": "wickwatch {version}.",
-    "wickwatchLatest": "Version {version} ist verfügbar."
+    "wickwatch": "wickwatch selbst läuft auf Version {version}.",
+    "wickwatchLatest": "wickwatch selbst läuft auf Version {version}; Version {latest} ist verfügbar.",
+    "wickwatchNewest": "wickwatch selbst läuft auf Version {version}, der neuesten.",
+    "downloading": "Version {version} wird heruntergeladen; danach lassen sich Instanzen darauf aktualisieren.",
+    "downloadFailed": "Version {version} konnte nicht heruntergeladen werden; siehe Server-Log.",
+    "updating": "Aktualisierung auf {version}: {done} von {total} erledigt, gerade {name}.",
+    "updatingStart": "Aktualisierung auf {version}: warte auf den Download …"
   }
 }

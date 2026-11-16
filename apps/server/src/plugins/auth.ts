@@ -116,9 +116,13 @@ export function clearSessionCookie(reply: FastifyReply, basePath: string): void 
 }
 
 /** Who acted, for the audit log: the user, and the API token when the request came with one. */
-export const actor = (
-  request: FastifyRequest,
-): { userId: number | undefined; token?: { id: number; name: string } } => ({
+/** Who did something, for the audit log: the user, and the API token if the request came with one. */
+export interface Actor {
+  userId: number | undefined;
+  token?: { id: number; name: string };
+}
+
+export const actor = (request: FastifyRequest): Actor => ({
   userId: request.user?.id,
   ...(request.apiToken ? { token: request.apiToken } : {}),
 });

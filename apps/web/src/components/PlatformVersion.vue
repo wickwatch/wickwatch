@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ManagedInstance, PlatformInfo } from "@wickwatch/core";
+import type { ImageRollout, ManagedInstance, PlatformInfo } from "@wickwatch/core";
 import { splitImage } from "@wickwatch/core/rules";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api, type ImageUpdateResult } from "../api";
+import { api } from "../api";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
@@ -13,10 +13,13 @@ import ConfirmDialog from "./ConfirmDialog.vue";
  * The platform version new instances run on (for a platform that ships as an image), the versions to choose from, and
  * the instances still on another one, to update them all at once. Also wickwatch's own version.
  */
+/** How often the card asks again while an image downloads or "update all" runs. */
+const POLL_MS = 2000;
 const { t, locale } = useI18n();
 const { busy, running, error, notice, run } = useAsyncAction();
 const info = ref<PlatformInfo>();
 const instances = ref<ManagedInstance[]>([]);
+const rollout = ref<ImageRollout>();
 const chosen = ref("");
 const confirming = ref(false);
 
@@ -43,11 +46,67 @@ const checked = computed(() => {
   const at = platform.value?.checkedAt;
   return at ? t("platform.checkedAt", { time: formatDateTime(locale.value, at) }) : t("platform.notChecked");
 });
+const wickwatchText = computed(() => {
+  const own = info.value?.wickwatch;
+  if (!own) return "";
+  if (own.latest) return t("platform.wickwatchLatest", { version: own.current, latest: own.latest });
+  return t(own.checkedAt ? "platform.wickwatchNewest" : "platform.wickwatch", { version: own.current });
+});
+const updating = computed(() => rollout.value?.running === true);
+const progress = computed(() => {
+  const r = rollout.value;
+  if (!r?.running) return "";
+  const done = r.updated.length + r.skipped.length;
+  const total = done + r.pending.length + (r.current ? 1 : 0);
+  const version = tagOf(r.image);
+  return r.current
+    ? t("platform.updating", { version, done, total, name: r.current })
+    : t("platform.updatingStart", { version });
+});
+
+function resultText(r: ImageRollout): string {
+  const version = tagOf(r.image);
+  const parts = [
+    r.updated.length ? t("platform.updated", { names: r.updated.join(", "), version }) : t("platform.nothingUpdated"),
+  ];
+  for (const s of r.skipped) {
+    parts.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(`error.api.${s.error}`) : "" }));
+  }
+  return parts.join(" ");
+}
+
+let timer: ReturnType<typeof setTimeout> | undefined;
+onUnmounted(() => clearTimeout(timer));
+
+/** Asks again while something runs in the background; says what "update all" did once it is done. */
+function poll() {
+  clearTimeout(timer);
+  if (!updating.value && platform.value?.download !== "running") return;
+  timer = setTimeout(() => {
+    void (async () => {
+      const wasUpdating = updating.value;
+      try {
+        await load();
+      } catch {
+        // Tried again with the next round.
+      }
+      if (wasUpdating && rollout.value && !rollout.value.running) notice.value = resultText(rollout.value);
+      poll();
+    })();
+  }, POLL_MS);
+}
 
 async function load() {
-  [info.value, instances.value] = await Promise.all([api.platform(), api.managedInstances()]);
+  const [platformInfo, list, progressed] = await Promise.all([
+    api.platform(),
+    api.managedInstances(),
+    api.imageRollout(),
+  ]);
+  info.value = platformInfo;
+  instances.value = list;
+  rollout.value = progressed.rollout;
 }
-onMounted(() => void run(load));
+onMounted(() => void run(load).then(poll));
 
 function save() {
   const repository = platform.value?.repository;
@@ -57,31 +116,17 @@ function save() {
       info.value = await api.setPlatformImage(`${repository}:${chosen.value}`);
     },
     { done: () => t("platform.saved", { version: chosen.value }), as: "save" },
-  );
-}
-
-function resultText(result: ImageUpdateResult): string {
-  const parts = [
-    result.updated.length
-      ? t("platform.updated", { names: result.updated.join(", "), version: current.value })
-      : t("platform.nothingUpdated"),
-  ];
-  for (const s of result.skipped) {
-    parts.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(`error.api.${s.error}`) : "" }));
-  }
-  return parts.join(" ");
+  ).then(poll);
 }
 
 function updateAll() {
   confirming.value = false;
   void run(
     async () => {
-      const result = await api.updateAllImages();
-      await load();
-      return result;
+      rollout.value = await api.updateAllImages();
     },
-    { done: resultText, as: "update" },
-  );
+    { as: "update" },
+  ).then(poll);
 }
 </script>
 
@@ -97,6 +142,10 @@ function updateAll() {
         <strong>{{ $t("platform.latest", { version: platform.latest }) }}</strong>
       </p>
       <p class="muted hint">{{ checked }}</p>
+      <p v-if="platform.download === 'running'" role="status">{{ $t("platform.downloading", { version: current }) }}</p>
+      <p v-else-if="platform.download === 'failed'" class="tone-negative" role="alert">
+        {{ $t("platform.downloadFailed", { version: current }) }}
+      </p>
       <p class="muted hint">{{ $t("platform.hint") }}</p>
       <form v-if="isAdmin" class="row" novalidate @submit.prevent="save">
         <label class="field">
@@ -105,11 +154,17 @@ function updateAll() {
             <option v-for="v in versions" :key="v" :value="v">{{ v }}</option>
           </select>
         </label>
-        <button type="submit" class="btn" :disabled="busy || chosen === current" :aria-busy="running === 'save'">
+        <button
+          type="submit"
+          class="btn"
+          :disabled="busy || updating || chosen === current"
+          :aria-busy="running === 'save'"
+        >
           {{ $t("action.save") }}
         </button>
       </form>
-      <template v-if="outdated.length">
+      <p v-if="updating" role="status" aria-live="polite">{{ progress }}</p>
+      <template v-else-if="outdated.length">
         <p>{{ $t("platform.outdated", { count: outdated.length, names: outdatedText }, outdated.length) }}</p>
         <div v-if="isAdmin">
           <button
@@ -124,12 +179,7 @@ function updateAll() {
         </div>
       </template>
     </template>
-    <p class="muted hint">
-      {{ $t("platform.wickwatch", { version: info.wickwatch.current }) }}
-      <template v-if="info.wickwatch.latest">{{
-        $t("platform.wickwatchLatest", { version: info.wickwatch.latest })
-      }}</template>
-    </p>
+    <p class="muted hint">{{ wickwatchText }}</p>
     <p v-if="notice" class="tone-positive" role="status">{{ notice }}</p>
     <p v-if="error" class="tone-negative" role="alert">{{ $t(error) }}</p>
     <ConfirmDialog
@@ -164,5 +214,10 @@ function updateAll() {
 
 .hint {
   font-size: var(--ww-size-xs);
+}
+
+/* A long registry path wraps on phones instead of running off the card. */
+.mono {
+  overflow-wrap: anywhere;
 }
 </style>

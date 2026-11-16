@@ -299,7 +299,8 @@
       "invalid_pause_period": "A one-off pause ends before it starts.",
       "log_rule_invalid": "A pattern is not a valid regular expression.",
       "invalid_image": "Choose a version of the platform's own image.",
-      "image_unsupported": "This platform does not run on an image."
+      "image_unsupported": "This platform does not run on an image.",
+      "update_running": "An update of all instances is already running."
     }
   },
   "parameterIssue": {
@@ -408,8 +409,8 @@
     "attribution_invalid": "Account {subject}: invalid order-label pattern for {instances}",
     "challenge_guard": "Account {subject} was stopped automatically at {since}: {rule} reached the protection limit",
     "host_clock": "Server clock is off by {offset} s. Bots, trading days and daily loss resets depend on the time; check the time sync (NTP) of the host.",
-    "platform_update": "Platform version {latest} is available (in use: {current}). Try it on one instance first (Algos page).",
-    "wickwatch_update": "wickwatch {latest} is available (running: {current})."
+    "platform_update": "New platform version available: {latest} (so far {current}). Switch on the Algos page.",
+    "wickwatch_update": "New wickwatch version available: {latest} (running: {current})."
   },
   "emergencyStop": {
     "title": "Emergency stop",
@@ -1149,7 +1150,12 @@
       "positions_unknown": "{name} left alone: its positions are unknown right now.",
       "failed": "{name} failed: {error}"
     },
-    "wickwatch": "wickwatch {version}.",
-    "wickwatchLatest": "Version {version} is available."
+    "wickwatch": "wickwatch itself runs version {version}.",
+    "wickwatchLatest": "wickwatch itself runs version {version}; version {latest} is available.",
+    "wickwatchNewest": "wickwatch itself runs version {version}, the newest.",
+    "downloading": "Version {version} is being downloaded; instances can be updated to it once it is there.",
+    "downloadFailed": "Version {version} could not be downloaded; see the server log.",
+    "updating": "Updating to {version}: {done} of {total} done, now {name}.",
+    "updatingStart": "Updating to {version}: waiting for the download …"
   }
 }

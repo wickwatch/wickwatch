@@ -22,6 +22,7 @@ import type {
   CreatedApiToken,
   EmergencyStopReport,
   HostStatus,
+  ImageRollout,
   InstanceDetail,
   InstanceStatus,
   LogFilter,
@@ -91,12 +92,6 @@ const send = <T>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body
 const post = <T>(path: string, body?: unknown) => send<T>("POST", path, body);
 
 export type InstanceAction = "start" | "stop" | "restart";
-
-/** What "update all" did: instances with an open position (or unknown positions) are left alone. */
-export interface ImageUpdateResult {
-  updated: string[];
-  skipped: { name: string; reason: "open_position" | "positions_unknown" | "failed"; error?: string }[];
-}
 
 export type {
   ApiToken,
@@ -298,7 +293,9 @@ export const api = {
     }),
   platform: () => request<PlatformInfo>("platform"),
   setPlatformImage: (image: string) => send<PlatformInfo>("PUT", "platform/image", { image }),
-  updateAllImages: () => post<ImageUpdateResult>("managed-instances/update-images", { confirm: "all" }),
+  /** Starts "update all" in the background; imageRollout() shows how far it is. */
+  updateAllImages: () => post<ImageRollout>("managed-instances/update-images", { confirm: "all" }),
+  imageRollout: () => request<{ rollout?: ImageRollout }>("managed-instances/update-images"),
   accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
   accounts: () => request<Account[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>

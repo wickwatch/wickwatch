@@ -126,6 +126,11 @@ export interface RuntimeAdapter {
   hostStatus(): Promise<HostStatus>;
   /** Runs a helper program next to the instances; missing when the runtime cannot. Tools are not instances. */
   runTool?(spec: ToolSpec): Promise<ToolProcess>;
+  /**
+   * Fetches a pinned image the runtime does not have yet (e.g. `docker pull`), so a later create or update does not
+   * wait for the download; missing when the runtime has nothing to fetch.
+   */
+  prepareImage?(image: string): Promise<void>;
 }
 
 /**

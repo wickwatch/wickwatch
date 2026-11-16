@@ -4,6 +4,12 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Fixed
+- "Update all to …" ran as one long request: with an image not on the host yet, its download and the deploys took longer than a reverse proxy waits (often 60 seconds), and the page showed "Unexpected server error" although the update went on and succeeded. It now answers at once and runs in the background; the Algos page shows how far it is ("2 of 4 done, now …") and what it did. A version picked on the Algos page is downloaded right away in the background (the page says so), and updating an instance waits until it is there.
+
+### Changed
+- Clearer texts: the alert for a new version reads "New platform version available: 5.10.6 (so far 5.9.11). Switch on the Algos page.", and the Algos page says which version wickwatch itself runs and whether it is the newest.
+
 ## 0.9.0 – 2026-11-16
 
 ### Added
