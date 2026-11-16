@@ -536,6 +536,43 @@ describe("CtraderCliBroker", () => {
     expect(tools).toHaveLength(2);
     for (const tool of tools) tool.kill();
   });
+
+  it("logs where a session start got stuck, without the cTrader ID", async () => {
+    let ended: (code: number | null) => void = () => undefined;
+    const stuck = new CtraderCliBroker({
+      runner: {
+        start() {
+          return Promise.resolve({
+            write: (text) => {
+              if (text === "q\n") ended(0);
+            },
+            onOutput: (listener) => {
+              listener(`cTrader CLI\n\nConnecting as ${c.login}...\n`);
+            },
+            exit: new Promise<number | null>((resolve) => (ended = resolve)),
+            kill: () => {
+              ended(null);
+            },
+          });
+        },
+      },
+      commandTimeoutMs: 300,
+      priceRetryMs: 10,
+      connectTimeoutMs: 200,
+    });
+    const entries: [Record<string, unknown>, string, string | undefined][] = [];
+    stuck.useLog((details, message, level) => entries.push([details, message, level]));
+    try {
+      await expect(stuck.stats(c, "1111111")).rejects.toMatchObject({ code: "timeout" });
+      const warning = entries.find(
+        ([details, message]) => message === "cTrader CLI did not answer" && details.atStartup,
+      );
+      expect(warning?.[0].output).toBe("cTrader CLI\n\nConnecting as ***...\n");
+      expect(JSON.stringify(entries)).not.toContain(c.login);
+    } finally {
+      await stuck.dispose();
+    }
+  });
 });
 
 describe("helpers", () => {

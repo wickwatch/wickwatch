@@ -6,6 +6,8 @@ import { cliError, passwordFile, runnerOf, type CliOptions } from "./cli";
 const PROMPT = "> ";
 /** How long `q`, and then a kill, may take to end the process. */
 const QUIT_MS = 5000;
+/** How much of the output a start that never reached the prompt shows in the log. */
+const STARTUP_OUTPUT_CHARS = 500;
 
 /** Why a session is closed, for the debug log. */
 type CloseReason = "idle" | "timeout" | "start failed" | "done" | "shutdown";
@@ -164,6 +166,12 @@ export class CliSession {
             sessionAgeMs: now - this.startedAt,
             outputChars: this.buffer.length,
             silentForMs: now - this.lastOutputAt,
+            // Where a start got stuck (connecting, login, account). Status lines only, but they name the cTrader ID.
+            ...(atStartup && {
+              output: this.credentials.login
+                ? this.buffer.slice(0, STARTUP_OUTPUT_CHARS).replaceAll(this.credentials.login, "***")
+                : this.buffer.slice(0, STARTUP_OUTPUT_CHARS),
+            }),
           },
           "cTrader CLI did not answer",
           "warn",
