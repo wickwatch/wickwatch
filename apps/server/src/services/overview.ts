@@ -306,7 +306,8 @@ export class OverviewLoader {
    * The account's broker answer for a load at `now`: the last one if asked at most REUSE_WITHIN_MS before; else that of
    * the query running for the account if it started no later (its deals then start no later either), or of a new one.
    * If that takes longer than ANSWER_WAIT_MS from the query's start, the last answer stands in while it is younger than
-   * LAST_ANSWER_MAX_AGE_MS; the query goes on and its answer replaces the last one.
+   * LAST_ANSWER_MAX_AGE_MS; the query goes on and its answer replaces the last one. A last timeout stands in at once:
+   * the session is likely still stuck, and the account would otherwise slow every load by ANSWER_WAIT_MS.
    */
   private async answer(
     entry: AccountEntry,
@@ -321,7 +322,7 @@ export class OverviewLoader {
     const asked =
       state.running && state.running.time <= now ? state.running : this.startQuery(entry, profile, now, state);
     if (!last || last.time > asked.time || age(last) > LAST_ANSWER_MAX_AGE_MS) return { answer: await asked.answer };
-    const wait = (this.options.answerWaitMs ?? ANSWER_WAIT_MS) - age(asked);
+    const wait = last.answer === "timeout" ? 0 : (this.options.answerWaitMs ?? ANSWER_WAIT_MS) - age(asked);
     const answer = wait > 0 ? await settle(asked.answer, wait) : undefined;
     return answer !== undefined
       ? { answer }
@@ -394,7 +395,8 @@ async function snapshot(
     ...(entry.credentialLabel ? { credentialLabel: entry.credentialLabel } : {}),
     ...(guardTripped ? { guardTripped } : {}),
   };
-  if (typeof answer === "string") return { ...base, error: answer };
+  const asOf = standIn ? { asOf: standIn.asOf.toISOString() } : {};
+  if (typeof answer === "string") return { ...base, error: answer, ...asOf };
   const { stats, positions, deals, pendingOrders } = answer;
   const dayStart = utcDayStart(now).getTime();
   const dealsToday = deals.filter((d) => Date.parse(d.time) >= dayStart);
@@ -412,7 +414,7 @@ async function snapshot(
     broker: entry.broker,
     currency: entry.currency,
     data: { stats, positions, dealsToday, ...(pendingOrders ? { pendingOrders } : {}) },
-    ...(standIn ? { asOf: standIn.asOf.toISOString() } : {}),
+    ...asOf,
     ...(challenge ? { challenge } : {}),
   };
 }

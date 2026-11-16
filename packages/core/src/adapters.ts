@@ -186,10 +186,12 @@ export interface BrokerAdapter {
 }
 
 /**
- * Debug details of an adapter's own work, e.g. why a session was replaced. Never credentials or secrets; the server
- * logs them at level debug.
+ * Details of an adapter's own work, e.g. why a session was replaced. Never credentials or secrets. `level` defaults to
+ * debug; info and warn are for what an operator should see without debugging (sessions started and ended, timeouts).
  */
-export type AdapterLog = (details: Record<string, unknown>, message: string) => void;
+export type AdapterLog = (details: Record<string, unknown>, message: string, level?: AdapterLogLevel) => void;
+
+export type AdapterLogLevel = "debug" | "info" | "warn";
 
 /** Reads and writes the parameter files of a trading platform (e.g. `.cbotset`). */
 export interface ConfigAdapter {

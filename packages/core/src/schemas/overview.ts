@@ -68,8 +68,8 @@ export const AccountSummary = Type.Object({
   /** Set when the broker could not be queried; the numbers below are then missing. */
   error: Type.Optional(AdapterErrorCode),
   /**
-   * The time the numbers below are from, when well before the overview's time: the broker did not answer in time and
-   * its last answer is shown.
+   * The time the numbers below (or the error) are from, when well before the overview's time: the broker did not
+   * answer in time and its last answer is shown.
    */
   asOf: Type.Optional(IsoTime),
   balance: Type.Optional(Type.Number()),

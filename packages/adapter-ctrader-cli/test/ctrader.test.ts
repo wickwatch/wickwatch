@@ -429,9 +429,9 @@ describe("CtraderCliBroker", () => {
     }
   });
 
-  it("reports sessions to the debug log without the login or password", async () => {
-    const entries: [Record<string, unknown>, string][] = [];
-    broker.useLog((details, message) => entries.push([details, message]));
+  it("reports sessions to the log without the login or password", async () => {
+    const entries: [Record<string, unknown>, string, string | undefined][] = [];
+    broker.useLog((details, message, level) => entries.push([details, message, level]));
     await broker.stats(c, "1111111");
     await broker.dispose();
     expect(entries.map(([, message]) => message)).toEqual(
@@ -440,7 +440,10 @@ describe("CtraderCliBroker", () => {
     expect(entries).toContainEqual([
       expect.objectContaining({ account: "1111111", reason: "shutdown" }),
       "Closing cTrader CLI session",
+      "info",
     ]);
+    expect(entries).toContainEqual([expect.anything(), "cTrader CLI session started", "info"]);
+    expect(entries).toContainEqual([expect.anything(), "cTrader CLI command", undefined]);
     const text = JSON.stringify(entries);
     expect(text).not.toContain(c.login);
     expect(text).not.toContain(c.secret);
@@ -503,8 +506,16 @@ describe("CtraderCliBroker", () => {
       connectTimeoutMs: 5000,
     });
     expect(await hanging.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
+    const entries: [Record<string, unknown>, string, string | undefined][] = [];
+    hanging.useLog((details, message, level) => entries.push([details, message, level]));
     tools[0]!.muted = true;
     await expect(hanging.stats(c, "1111111")).rejects.toMatchObject({ code: "timeout" });
+    // Only the command's name: its arguments may be ids.
+    expect(entries).toContainEqual([
+      expect.objectContaining({ account: "1111111", command: "account", outputChars: 0, atStartup: false }),
+      "cTrader CLI did not answer",
+      "warn",
+    ]);
     expect(await hanging.stats(c, "1111111")).toMatchObject({ balance: 10138.66 });
     expect(tools).toHaveLength(2);
     for (const tool of tools) tool.kill();

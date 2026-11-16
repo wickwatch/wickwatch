@@ -41,6 +41,10 @@ export class CliSession {
   private waiter: ((text: string) => void) | undefined;
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
+  private startedAt = 0;
+  /** When the process last wrote anything, and the command waiting for its answer: for the timeout log. */
+  private lastOutputAt = 0;
+  private current: string | undefined;
   /** Set when the process ended; the pool then replaces the session. */
   dead = false;
 
@@ -56,6 +60,7 @@ export class CliSession {
 
   async start(): Promise<void> {
     const startedAt = Date.now();
+    this.startedAt = this.lastOutputAt = startedAt;
     const child = await runnerOf(this.options).start(
       (path) => [`--ctid=${this.credentials.login}`, `--pwd-file=${path("pwd")}`, `--account=${this.account}`],
       [passwordFile(this.credentials.secret)],
@@ -64,12 +69,15 @@ export class CliSession {
     this.child = child;
     child.onOutput((text) => {
       this.buffer += text;
+      this.lastOutputAt = Date.now();
       this.check();
     });
     void child.exit.then((code) => {
       this.log(
         { account: this.account, code, closed: this.closed, ageMs: Date.now() - startedAt },
         "cTrader CLI session ended",
+        // Ended by itself: what makes the pool replace sessions, worth seeing without debugging.
+        this.closed ? "debug" : "warn",
       );
       this.dead = true;
       this.check();
@@ -88,7 +96,7 @@ export class CliSession {
     // The first history query of a session comes back empty; this one is thrown away.
     if (this.warmUp) await this.run("orders-history 1").catch(() => undefined);
     this.touch();
-    this.log({ account: this.account, ms: Date.now() - startedAt }, "cTrader CLI session started");
+    this.log({ account: this.account, ms: Date.now() - startedAt }, "cTrader CLI session started", "info");
   }
 
   /** Runs one command and returns its raw answer (JSON or an "Error: …" line). */
@@ -103,7 +111,11 @@ export class CliSession {
     this.closed = true;
     clearTimeout(this.idleTimer);
     const ended = this.dead;
-    this.log({ account: this.account, reason, ended }, "Closing cTrader CLI session");
+    this.log(
+      { account: this.account, reason, ended, ageMs: Date.now() - this.startedAt },
+      "Closing cTrader CLI session",
+      reason === "idle" || reason === "done" ? "debug" : "info",
+    );
     // At once, so the pool replaces the session even if the end of the process is never reported
     // (e.g. a tool container killed from outside behind a proxy that dropped the wait).
     this.dead = true;
@@ -111,7 +123,7 @@ export class CliSession {
     const child = this.child;
     child.write("q\n");
     if (!(await within(child.exit, QUIT_MS))) {
-      this.log({ account: this.account }, "cTrader CLI session did not quit; killing it");
+      this.log({ account: this.account }, "cTrader CLI session did not quit; killing it", "warn");
       child.kill();
       // The temporary password file goes away with the process.
       await within(child.exit, QUIT_MS);
@@ -122,12 +134,15 @@ export class CliSession {
     if (this.dead || !this.child) throw new AdapterError("unavailable", "cTrader CLI session ended");
     this.buffer = "";
     const sentAt = Date.now();
+    // Only the command's name: its arguments may be ids.
+    const name = command.split(" ", 1)[0];
+    this.current = name;
+    this.lastOutputAt = sentAt;
     this.child.write(`${command}\n`);
     const text = await this.untilPrompt(this.options.commandTimeoutMs, false);
     this.touch();
-    // Only the command's name: its arguments may be ids.
     this.log(
-      { account: this.account, command: command.split(" ", 1)[0], ms: Date.now() - sentAt },
+      { account: this.account, command: name, ms: Date.now() - sentAt },
       "cTrader CLI command",
     );
     // Drop the echo line "[2026-09-27 17:22:39 +02:00] account 123"; keep the answer.
@@ -141,7 +156,21 @@ export class CliSession {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.waiter = undefined;
-        this.log({ account: this.account, timeoutMs, atStartup }, "cTrader CLI did not answer");
+        const now = Date.now();
+        // Silent since the command (no output) or talking without a prompt (output, but none recent): two causes.
+        this.log(
+          {
+            account: this.account,
+            timeoutMs,
+            atStartup,
+            command: this.current,
+            sessionAgeMs: now - this.startedAt,
+            outputChars: this.buffer.length,
+            silentForMs: now - this.lastOutputAt,
+          },
+          "cTrader CLI did not answer",
+          "warn",
+        );
         if (!atStartup) void this.close("timeout");
         reject(new AdapterError("timeout", `cTrader CLI did not answer within ${String(timeoutMs)} ms`));
       }, timeoutMs);

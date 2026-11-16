@@ -49,15 +49,13 @@ try {
     onChallengeSaved: (accountId) => void tradingDays.sync?.(accountId),
   });
 
-  // LOG_LEVEL=debug: what the broker adapter does with logins and sessions.
-  if (config.logLevel === "debug" || config.logLevel === "trace") {
-    adapters.broker.useLog?.((details, message) => {
-      app.log.debug({ adapter: adapters.broker.id, ...details }, message);
-    });
-  }
+  // Sessions started and ended and timeouts at info/warn; with LOG_LEVEL=debug also each command and login.
+  adapters.broker.useLog?.((details, message, level = "debug") => {
+    app.log[level]({ adapter: adapters.broker.id, ...details }, message);
+  });
 
-  adapters.runtime.useLog?.((details, message) => {
-    app.log.warn({ adapter: adapters.runtime.id, ...details }, message);
+  adapters.runtime.useLog?.((details, message, level = "warn") => {
+    app.log[level]({ adapter: adapters.runtime.id, ...details }, message);
   });
 
   for (const result of await migrateToLatest(db)) {

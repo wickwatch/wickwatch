@@ -95,8 +95,8 @@ export class CtraderCliBroker implements BrokerAdapter {
   private accountsCache: { key: string; at: number; accounts: BrokerAccount[] } | undefined;
   private log: AdapterLog = () => undefined;
   /** Stays the same function, so the pool and sessions created before `useLog` report too. */
-  private readonly report: AdapterLog = (details, message) => {
-    this.log(details, message);
+  private readonly report: AdapterLog = (details, message, level) => {
+    this.log(details, message, level);
   };
 
   private readonly image: string;

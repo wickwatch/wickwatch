@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AdapterError } from "@wickwatch/core";
 import { dbAccountDirectory } from "../src/accounts";
 import { LogTracker } from "../src/services/log-tracker";
 import { OverviewLoader, type OverviewLoaderOptions } from "../src/services/overview";
@@ -190,6 +191,26 @@ describe("OverviewLoader", () => {
       });
       // The answer, asked shortly before, is used without asking again.
       expect(stats).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not wait again after a timeout, shows it with its time, and the new answer once there", async () => {
+      // Longer than the test's own timeout: a load that waited would fail the test.
+      const fast = makeLoader({ answerWaitMs: 60_000 });
+      const now = new Date();
+      vi.spyOn(t.adapters.broker, "stats").mockRejectedValueOnce(new AdapterError("timeout", "no answer"));
+      expect((await fast.accountDetail("1111111", now))?.account.error).toBe("timeout");
+      const { stats, release } = hangStats();
+
+      const later = new Date(now.getTime() + 60_000);
+      const detail = await fast.accountDetail("1111111", later);
+      expect(detail?.account.error).toBe("timeout");
+      expect(detail?.account.asOf).toBe(now.toISOString());
+      expect(stats).toHaveBeenCalledTimes(2);
+
+      release();
+      await vi.waitFor(async () => {
+        expect((await fast.accountDetail("1111111", new Date(later.getTime() + 2000)))?.account.state).not.toBe("error");
+      });
     });
 
     it("waits for the broker without an answer to show: at the start, after a change, or when it is too old", async () => {
