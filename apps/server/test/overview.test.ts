@@ -209,7 +209,9 @@ describe("OverviewLoader", () => {
 
       release();
       await vi.waitFor(async () => {
-        expect((await fast.accountDetail("1111111", new Date(later.getTime() + 2000)))?.account.state).not.toBe("error");
+        expect((await fast.accountDetail("1111111", new Date(later.getTime() + 2000)))?.account.state).not.toBe(
+          "error",
+        );
       });
     });
 

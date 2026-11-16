@@ -141,10 +141,7 @@ export class CliSession {
     this.child.write(`${command}\n`);
     const text = await this.untilPrompt(this.options.commandTimeoutMs, false);
     this.touch();
-    this.log(
-      { account: this.account, command: name, ms: Date.now() - sentAt },
-      "cTrader CLI command",
-    );
+    this.log({ account: this.account, command: name, ms: Date.now() - sentAt }, "cTrader CLI command");
     // Drop the echo line "[2026-09-27 17:22:39 +02:00] account 123"; keep the answer.
     const answer = text.replace(/^\[[^\]]*\][^\n]*\n/, "").trim();
     if (/^error:/i.test(answer)) throw cliError(answer);
