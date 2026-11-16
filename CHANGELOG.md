@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.9.2 – 2026-11-16
+
 ### Changed
 - When a cTrader CLI session never reaches its prompt at startup, the warning "cTrader CLI did not answer" now includes the start of what the CLI printed (up to 500 characters, the cTrader ID replaced by `***`), so the log shows whether it got stuck connecting, logging in or loading the account.
 
