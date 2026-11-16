@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.9.0 – 2026-11-16
+
 ### Added
 - Platform versions: the Algos page shows the platform image new instances run on (for the cTrader CLI: `ghcr.io/spotware/ctrader-console`), the stable versions of its repository and the instances still on another one. Admins pick another version there, without editing `CTRADER_IMAGE` or restarting wickwatch; wickwatch's own cTrader CLI sessions use it from their next start. Each instance keeps the image it was deployed on when a new configuration is applied, and can be updated on its configuration tab ("Update to …"), or all at once ("Update all to …"), which leaves instances with an open position alone. Both ask for confirmation and are audit-logged. To try a new version on one bot first: pick it, update that instance, and pick the old one again for new instances if needed.
 - Update check: once a day wickwatch asks the image registries (anonymously) for newer stable versions of the platform image and of wickwatch, and raises an info alert (also sent to `ALERT_WEBHOOK_URL`) when there is one. Pre-releases such as `-alpha` are left out. `UPDATE_CHECK=off` switches it off.
