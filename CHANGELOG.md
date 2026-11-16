@@ -4,6 +4,16 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.8.7 – 2026-11-16
+
+### Fixed
+- While an account's broker session kept timing out (the cTrader CLI not answering within 60 seconds), every load of the overview and the account pages waited 3 seconds for it. After a timeout the account's last answer now stands in at once, also when that answer is the error; the note "As of <time>" then shows how old it is.
+- An instance stopped through wickwatch showed as an error and raised an alert, since the cTrader CLI ends with exit code 1 when it is stopped. It now shows as stopped; a crash of a running bot stays an error.
+- Starting or stopping a second bot on the same account and symbol moved closed trades between instances or to no instance. The instance a trade is attributed to when its position is first seen open is now kept (after manual assignments, before the rules).
+
+### Changed
+- cTrader CLI sessions that start, end by themselves or close after a timeout are logged at `info`/`warn`, without `LOG_LEVEL=debug`. A timeout names the command that hung, the age of the session and whether the CLI wrote anything since the command, to tell a silent CLI from one that stopped showing its prompt.
+
 ## 0.8.6 – 2026-11-10
 
 ### Security
