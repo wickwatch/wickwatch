@@ -38,6 +38,7 @@ function toRule({ recoveryPattern, ...rest }: Draft): LogRule {
 }
 
 const saved = computed(() => props.settings?.logRules ?? []);
+const state = computed(() => t("logRules.state", saved.value.length));
 const drafts = ref<Draft[]>([]);
 watch(saved, (rules) => (drafts.value = rules.map(toDraft)), { immediate: true });
 
@@ -76,8 +77,7 @@ function save() {
 <template>
   <details class="rules">
     <summary class="rules__summary">
-      <span class="rules__title">{{ $t("logRules.title") }}</span
-      ><span class="muted rules__state"> · {{ $t("logRules.state", saved.length) }}</span>
+      <span class="rules__title">{{ $t("logRules.title") }}</span><span class="muted rules__state"> · {{ state }}</span>
     </summary>
     <p class="muted hint">{{ $t("logRules.hint", { algo: algoName }) }}</p>
     <LogRuleList v-if="!isAdmin" :rules="saved" />

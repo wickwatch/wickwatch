@@ -74,8 +74,7 @@ function save() {
   <!-- Folded by default: not every algo has such parameters. The summary says what is set. -->
   <details class="size">
     <summary class="size__summary">
-      <span class="size__title">{{ $t("algoSizing.title") }}</span
-      ><span class="muted size__state"> · {{ shown }}</span>
+      <span class="size__title">{{ $t("algoSizing.title") }}</span><span class="muted size__state"> · {{ shown }}</span>
     </summary>
     <p class="muted hint">{{ $t("algoSizing.sizeHint", { algo: algoName, tolerance }) }}</p>
     <p class="muted hint">{{ $t("algoSizing.riskHint") }}</p>
