@@ -14,3 +14,4 @@ export * from "./api-token";
 export * from "./parameter-template";
 export * from "./schedule";
 export * from "./platform";
+export * from "./algo-update";

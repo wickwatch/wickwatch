@@ -34,22 +34,27 @@ const algos: Algo[] = [
 ];
 
 let templates: ParameterTemplate[] = [];
+let instances: unknown[] = [];
+const managed = (input: URL) =>
+  input.pathname.endsWith("/managed-instances") ? new Response(JSON.stringify(instances), { status: 200 }) : undefined;
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   templates = [];
+  instances = [];
   setLocale("en", false);
   fetchMock = vi.fn((input: URL, init?: RequestInit) =>
     Promise.resolve(
-      // The platform card has its own tests (platform.test.ts).
-      input.pathname.endsWith("/platform")
-        ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
-        : input.pathname.endsWith("/parameter-templates") && !init?.method
-          ? new Response(JSON.stringify(templates), { status: 200 })
-          : init?.method === "POST"
-            ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
-            : init?.method === "DELETE"
-              ? new Response(null, { status: 204 })
-              : new Response(JSON.stringify(algos), { status: 200 }),
+      managed(input) ??
+        // The platform card has its own tests (platform.test.ts).
+        (input.pathname.endsWith("/platform")
+          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+          : input.pathname.endsWith("/parameter-templates") && !init?.method
+            ? new Response(JSON.stringify(templates), { status: 200 })
+            : init?.method === "POST"
+              ? new Response(JSON.stringify({ error: "algo_version_exists", message: "exists" }), { status: 409 })
+              : init?.method === "DELETE"
+                ? new Response(null, { status: 204 })
+                : new Response(JSON.stringify(algos), { status: 200 })),
     ),
   );
   vi.stubGlobal("fetch", fetchMock);
@@ -119,13 +124,14 @@ describe("AlgosView", () => {
     asRole("admin");
     fetchMock.mockImplementation((input: URL, init?: RequestInit) =>
       Promise.resolve(
-        input.pathname.endsWith("/platform")
-          ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
-          : init?.method === "POST"
-            ? new Response(JSON.stringify(algos[0]), { status: 201 })
-            : new Response(JSON.stringify(input.pathname.endsWith("/parameter-templates") ? [] : algos), {
-                status: 200,
-              }),
+        managed(input) ??
+          (input.pathname.endsWith("/platform")
+            ? new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+            : init?.method === "POST"
+              ? new Response(JSON.stringify(algos[0]), { status: 201 })
+              : new Response(JSON.stringify(input.pathname.endsWith("/parameter-templates") ? [] : algos), {
+                  status: 200,
+                })),
       ),
     );
     const wrapper = await render();
@@ -157,5 +163,75 @@ describe("AlgosView", () => {
     const del = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "DELETE") as [URL];
     expect(del[0].pathname).toMatch(/\/algos\/1$/);
     expect(wrapper.text()).toContain("SampleBot 1.0.0 deleted.");
+  });
+
+  it("moves instances on an older version to the newest one, with a preview of their parameters", async () => {
+    asRole("admin");
+    const instance = (name: string, algoId: number, version: string) => ({
+      name,
+      config: { algo: { id: algoId, name: "SampleBot", version } },
+    });
+    instances = [instance("x1", 1, "1.0.0"), instance("x2", 1, "1.0.0"), instance("x3", 2, "1.1.0")];
+    const candidate = (name: string, extra: Record<string, unknown> = {}) => ({
+      name,
+      account: { id: 1, number: "1111111", displayName: "Demo" },
+      from: { id: 1, version: "1.0.0" },
+      configVersion: 3,
+      deployed: true,
+      added: [],
+      dropped: [],
+      newDefaults: [],
+      rejected: [],
+      issues: [],
+      ...extra,
+    });
+    const preview = {
+      algo: { id: 2, name: "SampleBot", version: "1.1.0" },
+      instances: [
+        candidate("x1", { added: ["Period"], newDefaults: [{ parameter: "Mode", from: "Fast", to: "Slow" }] }),
+        candidate("x2", { issues: [{ parameter: "Period", code: "below_min" }] }),
+      ],
+    };
+    const posted: unknown[] = [];
+    fetchMock.mockImplementation((input: URL, init?: RequestInit) => {
+      const json = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      if (input.pathname.endsWith("/algo-update") && init?.method === "POST") {
+        posted.push(JSON.parse(String(init.body)));
+        return json({ saved: ["x1"], failed: [] });
+      }
+      if (input.pathname.endsWith("/algo-update")) return json(preview);
+      if (input.pathname.endsWith("/algo-rollout")) return json({});
+      if (input.pathname.endsWith("/platform")) return Promise.resolve(new Response("{}", { status: 404 }));
+      if (input.pathname.endsWith("/parameter-templates") || input.pathname.endsWith("/algo-settings")) return json([]);
+      return Promise.resolve(managed(input) ?? new Response(JSON.stringify(algos), { status: 200 }));
+    });
+    const wrapper = await render();
+    expect(wrapper.text()).toContain("In use by x1, x2");
+    expect(wrapper.text()).toContain("In use by x3");
+    const open = wrapper.findAll("button").filter((b) => b.text() === "Update 2 instances");
+    // Only at the newest version.
+    expect(open).toHaveLength(1);
+    await open[0]?.trigger("click");
+    await flushPromises();
+
+    // The page has more modals (upload, templates); this one is open.
+    const find = () => wrapper.findAll("dialog").find((d) => d.text().includes("Move instances to SampleBot 1.1.0"));
+    const dialog = find();
+    if (!dialog) throw new Error("dialog not open");
+    expect(dialog.text()).toContain("New, with their default: ATR period");
+    expect(dialog.text()).toContain("Follow the new default: Mode Fast → Slow");
+    expect(dialog.text()).toContain("Not possible, needs a manual edit first: ATR period (Below minimum)");
+    const boxes = dialog.findAll(".candidate input[type=checkbox]");
+    expect(boxes.map((b) => (b.element as HTMLInputElement).checked)).toEqual([true, false]);
+    expect(boxes[1]?.attributes("disabled")).toBeDefined();
+
+    // Deploying is a choice; the button says what happens.
+    await dialog.find(".check input").setValue(true);
+    expect(dialog.find("button[type=submit]").text()).toBe("Save and deploy 1");
+    await dialog.find(".check input").setValue(false);
+    await dialog.find("form").trigger("submit");
+    await flushPromises();
+    expect(posted).toEqual([{ algoId: 2, instances: ["x1"], comment: "Update to 1.1.0" }]);
+    expect(find()?.text()).toContain("New configuration version on 1.1.0 for: x1.");
   });
 });

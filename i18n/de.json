@@ -300,7 +300,8 @@
       "log_rule_invalid": "Ein Muster ist kein gültiger regulärer Ausdruck.",
       "invalid_image": "Wähle eine Version des eigenen Images der Plattform.",
       "image_unsupported": "Diese Plattform läuft nicht auf einem Image.",
-      "update_running": "Eine Aktualisierung aller Instanzen läuft bereits."
+      "update_running": "Eine Aktualisierung aller Instanzen läuft bereits.",
+      "not_found": "Nicht gefunden."
     }
   },
   "parameterIssue": {
@@ -646,7 +647,34 @@
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} Parameter",
     "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt.",
-    "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert."
+    "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert.",
+    "usedBy": "Verwendet von {names}"
+  },
+  "algoUpdate": {
+    "open": "1 Instanz aktualisieren | {count} Instanzen aktualisieren",
+    "title": "Instanzen auf {name} {version} umstellen",
+    "intro": "Jede gewählte Instanz bekommt eine neue Konfigurationsversion mit dieser Algo-Version. Von dir gesetzte Werte bleiben, Werte auf dem alten Standard übernehmen den neuen, neue Parameter bekommen ihren Standard. Symbol, Zeitrahmen und Trade-Zuordnung bleiben.",
+    "instances": "1 Instanz auf einer anderen Version | {count} Instanzen auf anderen Versionen",
+    "none": "Keine Instanz nutzt eine andere Version von {name}.",
+    "inContainer": "Im Container",
+    "added": "Neu, mit Standardwert: {names}",
+    "dropped": "Nicht mehr im Algo, entfallen: {names}",
+    "newDefaults": "Folgen dem neuen Standard: {changes}",
+    "rejected": "Passen nicht mehr, stattdessen Standard: {names}",
+    "issues": "Nicht möglich, erst von Hand anpassen: {names}",
+    "unchanged": "Alle Werte werden unverändert übernommen.",
+    "deploy": "Danach ausrollen",
+    "deployHint": "Nacheinander im Hintergrund: laufende Bots starten neu, gestoppte bleiben gestoppt. Instanzen mit offener Position bleiben unberührt; ihre neue Version wartet im Konfigurations-Tab.",
+    "save": "1 Version speichern | {count} Versionen speichern",
+    "saveDeploy": "1 speichern und ausrollen | {count} speichern und ausrollen",
+    "comment": "Update auf {version}",
+    "saved": "Neue Konfigurationsversion mit {version} für: {names}.",
+    "failed": "{name} nicht umgestellt: {error}",
+    "notDeployed": "Container behalten ihre alte Version, bis die neue im Konfigurations-Tab der Instanz übernommen wird.",
+    "deploying": "Ausrollen: {done} von {total} erledigt, gerade {name}.",
+    "deployingStart": "{total} Instanzen werden ausgerollt …",
+    "deployed": "Ausgerollt: {names}.",
+    "uploadedHint": "1 Instanz nutzt eine andere Version; „1 Instanz aktualisieren“ bei der neuen Version stellt sie um. | {count} Instanzen nutzen andere Versionen; „{count} Instanzen aktualisieren“ bei der neuen Version stellt sie um."
   },
   "instanceForm": {
     "newTitle": "Neue Instanz",
@@ -981,7 +1009,8 @@
       "instance_schedule_pause": "Vom Zeitplan pausiert",
       "instance_schedule_resume": "Nach der Pause wieder gestartet",
       "platform_image": "Plattform-Version gewählt",
-      "instance_update_images": "Alle Instanzen auf die Plattform-Version aktualisiert"
+      "instance_update_images": "Alle Instanzen auf die Plattform-Version aktualisiert",
+      "instance_update_algo": "Instanzen auf eine Algo-Version umgestellt und ausgerollt"
     },
     "groups": {
       "account": "Konten",

@@ -1,8 +1,12 @@
 import type {
   Account,
   Algo,
+  AlgoRollout,
   AlgoSettings,
   AlgoSettingsInput,
+  AlgoUpdateInput,
+  AlgoUpdatePreview,
+  AlgoUpdateResult,
   ApiToken,
   AuditPage,
   Credential,
@@ -296,6 +300,12 @@ export const api = {
   /** Starts "update all" in the background; imageRollout() shows how far it is. */
   updateAllImages: () => post<ImageRollout>("managed-instances/update-images", { confirm: "all" }),
   imageRollout: () => request<{ rollout?: ImageRollout }>("managed-instances/update-images"),
+  /** The instances on another version of the algo, and what moving them to this one changes (admins). */
+  algoUpdatePreview: (algoId: number) =>
+    request<AlgoUpdatePreview>(`managed-instances/algo-update?algoId=${String(algoId)}`),
+  /** Saves a configuration version on the algo per instance; with `deploy` starts a rollout (algoRollout()). */
+  updateAlgo: (body: AlgoUpdateInput) => post<AlgoUpdateResult>("managed-instances/algo-update", body),
+  algoRollout: () => request<{ rollout?: AlgoRollout }>("managed-instances/algo-rollout"),
   accountSymbols: (id: number) => request<string[]>(`accounts/${String(id)}/symbols`),
   accounts: () => request<Account[]>("accounts"),
   createAccount: (body: { number: string; displayName: string; credentialId: number }) =>

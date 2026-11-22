@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Algo, AlgoSettings, ParameterTemplate } from "@wickwatch/core";
+import type { Algo, AlgoSettings, ManagedInstance, ParameterTemplate } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
@@ -8,6 +8,7 @@ import { api } from "../api";
 import AlgoLogRules from "../components/AlgoLogRules.vue";
 import AlgoSizing from "../components/AlgoSizing.vue";
 import AlgoTemplates from "../components/AlgoTemplates.vue";
+import AlgoUpdateDialog from "../components/AlgoUpdateDialog.vue";
 import AppModal from "../components/AppModal.vue";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import IconButton from "../components/IconButton.vue";
@@ -27,6 +28,9 @@ const route = useRoute();
 const algos = ref<Algo[]>([]);
 const templates = ref<ParameterTemplate[]>([]);
 const settings = ref<AlgoSettings[]>([]);
+const instances = ref<ManagedInstance[]>([]);
+/** The version whose "update instances" dialog is open. */
+const updating = ref<Algo>();
 const loading = ref(true);
 const file = ref<File>();
 const version = ref("");
@@ -63,11 +67,19 @@ const groups = computed(() => {
   }));
 });
 
+/** The instances whose current configuration uses a version, by algo id. */
+const usedBy = computed(() => groupBy(instances.value, (i) => i.config.algo.id ?? -1));
+/** Instances of the algo on another version than `algo`: they can be moved to it. */
+const onOtherVersions = (algo: Algo) =>
+  instances.value.filter((i) => i.config.algo.name === algo.name && i.config.algo.id !== algo.id);
+
 async function load() {
-  [algos.value, templates.value, settings.value] = await Promise.all([
+  [algos.value, templates.value, settings.value, instances.value] = await Promise.all([
     api.algos(),
     api.parameterTemplates(),
     api.algoSettings(),
+    // Only for "in use by" and moving instances: without them the page still works.
+    api.managedInstances().catch(() => []),
   ]);
 }
 const { busy, running, error, notice, run } = useAsyncAction({ reload: load });
@@ -103,7 +115,14 @@ function upload() {
       closeUpload();
       return uploaded;
     },
-    { done: (a) => t("algos.uploaded", { name: a.name, version: a.version }), error: uploadError },
+    {
+      done: (a) => {
+        const older = onOtherVersions(a).length;
+        const text = t("algos.uploaded", { name: a.name, version: a.version });
+        return older ? `${text} ${t("algoUpdate.uploadedHint", older)}` : text;
+      },
+      error: uploadError,
+    },
   );
 }
 
@@ -173,6 +192,15 @@ const confirmRemove = () => {
               $t("algos.hash", { hash: a.sha256.slice(0, 12) })
             }}</span>
             <button
+              v-if="isAdmin && a === versions[0] && onOtherVersions(a).length"
+              type="button"
+              class="btn btn--small update-btn"
+              :disabled="busy"
+              @click="updating = a"
+            >
+              {{ $t("algoUpdate.open", onOtherVersions(a).length) }}
+            </button>
+            <button
               v-if="isAdmin"
               type="button"
               class="btn btn--danger btn--small"
@@ -183,6 +211,9 @@ const confirmRemove = () => {
               {{ $t("action.delete") }}
             </button>
           </div>
+          <p v-if="usedBy.get(a.id)?.length" class="muted meta used-by">
+            {{ $t("algos.usedBy", { names: (usedBy.get(a.id) ?? []).map((i) => i.name).join(", ") }) }}
+          </p>
           <details>
             <summary>{{ $t("algos.parameters", { count: a.parameters.length }) }}</summary>
             <ParameterList mode="schema" :schema="a.parameters" class="algo-params" />
@@ -243,6 +274,14 @@ const confirmRemove = () => {
         </form>
       </template>
     </AppModal>
+    <AlgoUpdateDialog
+      v-if="updating"
+      :open="updating !== undefined"
+      :algo="updating"
+      :algos="algos"
+      @close="updating = undefined"
+      @done="changed('')"
+    />
     <ConfirmDialog
       :open="removing !== undefined"
       :title="$t('action.delete')"
@@ -343,8 +382,13 @@ const confirmRemove = () => {
   font-size: var(--ww-size-xs);
 }
 
-.version__head .btn {
+/* The row's buttons sit together at the right end. */
+.version__head .btn:first-of-type {
   margin-left: auto;
+}
+
+.used-by {
+  margin: 0;
 }
 
 details summary {
