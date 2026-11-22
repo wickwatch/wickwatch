@@ -11,6 +11,15 @@ export function schemaOf(metadataJson: string): ParameterSchema[] {
   return Value.Check(AlgoMetadata, metadata) ? metadata.parameters : [];
 }
 
+/**
+ * The name the algo calls itself (its metadata), which the platform starts it by. The stored name may differ: a version
+ * can be filed under another algo, e.g. a bot that names each release differently.
+ */
+export function metadataName(metadataJson: string, fallback: string): string {
+  const metadata: unknown = JSON.parse(metadataJson);
+  return Value.Check(AlgoMetadata, metadata) && metadata.name ? metadata.name : fallback;
+}
+
 /** Which reader produces an algo's metadata; stored with each algo. */
 export const metadataReader = (broker: BrokerAdapter) => `${broker.id}:${String(broker.algoMetadataVersion ?? 0)}`;
 

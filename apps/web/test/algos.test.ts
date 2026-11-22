@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n, setLocale } from "../src/i18n";
 import { router } from "../src/router";
 import { session } from "../src/session";
+import { system } from "../src/system";
 import AlgosView from "../src/views/AlgosView.vue";
 
 const algos: Algo[] = [
@@ -60,6 +61,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => {
+  system.value = undefined;
   vi.unstubAllGlobals();
 });
 
@@ -233,5 +235,51 @@ describe("AlgosView", () => {
     await flushPromises();
     expect(posted).toEqual([{ algoId: 2, instances: ["x1"], comment: "Update to 1.1.0" }]);
     expect(find()?.text()).toContain("New configuration version on 1.1.0 for: x1.");
+  });
+
+  it("files an upload named like an algo but for its version under that algo", async () => {
+    asRole("admin");
+    system.value = { algoFormats: ["algo"] } as unknown as typeof system.value;
+    const wrapper = await render();
+    await openUpload(wrapper);
+    const input = wrapper.find("input[type=file]");
+    Object.defineProperty(input.element, "files", { value: [new File(["x"], "Sample Bot v1.2.algo")] });
+    await input.trigger("change");
+    const select = wrapper.find("dialog select");
+    expect((select.element as HTMLSelectElement).value).toBe("SampleBot");
+    const shown = select.findAll("option").find((o) => (o.element as HTMLOptionElement).value === "SampleBot");
+    expect(shown?.text()).toBe("New version of SampleBot");
+    await wrapper.find("dialog form").trigger("submit");
+    await flushPromises();
+    const [url] = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST") as [URL];
+    expect(url.searchParams.get("algo")).toBe("SampleBot");
+  });
+
+  it("files a version under another algo name", async () => {
+    asRole("admin");
+    const patched: unknown[] = [];
+    fetchMock.mockImplementation((input: URL, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patched.push([input.pathname, JSON.parse(String(init.body))]);
+        return Promise.resolve(new Response(JSON.stringify({ ...algos[1], name: "Sample", version: "v1" })));
+      }
+      if (input.pathname.endsWith("/platform")) return Promise.resolve(new Response("{}", { status: 404 }));
+      const list = input.pathname.endsWith("/parameter-templates") || input.pathname.endsWith("/algo-settings");
+      return Promise.resolve(managed(input) ?? new Response(JSON.stringify(list ? [] : algos)));
+    });
+    const wrapper = await render();
+    await wrapper
+      .findAll("button")
+      .filter((b) => b.text() === "File under…")[1]
+      ?.trigger("click");
+    const dialog = wrapper.findAll("dialog").find((d) => d.text().includes("File SampleBot 1.0.0 under"));
+    if (!dialog) throw new Error("dialog not open");
+    const [name, version] = dialog.findAll("input.mono");
+    await name?.setValue("Sample");
+    await version?.setValue("v1");
+    await dialog.find("form").trigger("submit");
+    await flushPromises();
+    expect(patched).toEqual([[expect.stringMatching(/\/algos\/1$/) as unknown, { name: "Sample", version: "v1" }]]);
+    expect(wrapper.text()).toContain("Filed as Sample v1.");
   });
 });

@@ -237,11 +237,16 @@ export const api = {
   deleteApiToken: (id: number) => send<undefined>("DELETE", `api-tokens/${String(id)}`),
   /** Address of the read-only MCP endpoint, for AI clients with an API token. */
   mcpUrl: () => new URL("mcp", document.baseURI).toString(),
-  uploadAlgo: (file: File, version?: string) =>
+  /** `algo` files it as a version of that algo instead of under the name it carries. */
+  uploadAlgo: (file: File, version?: string, algo?: string) =>
     request<Algo>(
-      `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}`,
+      `algos?fileName=${encodeURIComponent(file.name)}${version ? `&version=${encodeURIComponent(version)}` : ""}${
+        algo ? `&algo=${encodeURIComponent(algo)}` : ""
+      }`,
       { method: "POST", body: file, headers: { "content-type": "application/octet-stream" } },
     ),
+  /** Files a version under another algo name and/or gives it another version. */
+  fileAlgo: (id: number, body: { name?: string; version?: string }) => send<Algo>("PATCH", `algos/${String(id)}`, body),
   deleteAlgo: (id: number) => send<undefined>("DELETE", `algos/${String(id)}`),
   algoSettings: () => request<AlgoSettings[]>("algo-settings"),
   saveAlgoSettings: (algoName: string, body: AlgoSettingsInput) =>
@@ -346,12 +351,12 @@ export const api = {
 const ADAPTER_CODES = ["auth_failed", "not_found", "unsupported", "invalid_input", "timeout", "unavailable"];
 
 /** i18n key for an error: adapter codes under error.adapter.*, everything else under error.api.* */
+/** The i18n key of an error code from the server, e.g. one reported per instance of a bulk action. */
+export const codeKey = (code: string): string =>
+  ADAPTER_CODES.includes(code) ? `error.adapter.${code}` : `error.api.${code}`;
+
 export const errorKey = (error: unknown): string =>
-  error instanceof ApiError
-    ? ADAPTER_CODES.includes(error.code)
-      ? `error.adapter.${error.code}`
-      : `error.api.${error.code}`
-    : "error.api.internal";
+  error instanceof ApiError ? codeKey(error.code) : "error.api.internal";
 
 /** Starts the download of a file the server sends as an attachment (parameter file, log), as a download link would. */
 export function downloadFile(href: string) {

@@ -9708,7 +9708,7 @@
         "tags": [
           "algos"
         ],
-        "description": "The name comes from the algo's metadata. `version` defaults to the bot's BotVersion parameter, else its build time.",
+        "description": "The name comes from the algo's metadata, unless `algo` files it as a version of another algo (e.g. a bot that names each release differently: its templates, settings and instances then carry over). `version` defaults to a version at the end of the algo's own name when filed under another one, else to the bot's BotVersion parameter, else its build time.",
         "parameters": [
           {
             "schema": {
@@ -9727,6 +9727,15 @@
             },
             "in": "query",
             "name": "version",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+            },
+            "in": "query",
+            "name": "algo",
             "required": false
           }
         ],
@@ -10209,6 +10218,285 @@
         "responses": {
           "204": {
             "description": "Default Response"
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "File a version under another algo name and/or give it another version",
+        "tags": [
+          "algos"
+        ],
+        "description": "For bots that name each release differently: filed under one algo, the versions share templates, settings (log rules, account size, risk) and the update of instances to a new version. The configurations that use the version follow. When the old name has no version left, its templates (renamed on a clash) and settings move along; settings the target already has win. The platform still starts the algo by its own name.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "version",
+                    "sha256",
+                    "size",
+                    "fullAccess",
+                    "parameters",
+                    "uploadedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "buildTime": {
+                      "type": "string"
+                    },
+                    "fullAccess": {
+                      "type": "boolean"
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "type"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "int"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "double"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "bool"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "string"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "enum"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "time"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "symbol"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "period"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "color"
+                                ]
+                              }
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string"
+                          },
+                          "default": {},
+                          "min": {
+                            "type": "number"
+                          },
+                          "max": {
+                            "type": "number"
+                          },
+                          "step": {
+                            "type": "number"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "optionValues": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "uploadedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Default Response",
@@ -17223,7 +17511,7 @@
         "tags": [
           "instances"
         ],
-        "description": "Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: \"all\"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress.",
+        "description": "Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: \"all\"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress. Refused with `update_running` while a rollout runs, which would otherwise deploy the new versions too.",
         "requestBody": {
           "required": true,
           "content": {

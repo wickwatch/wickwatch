@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { Algo, AlgoSettings, ManagedInstance, ParameterTemplate } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
-import { computed, onMounted, ref } from "vue";
+import { algoFamilyKey } from "@wickwatch/core/rules";
+import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { api } from "../api";
 import AlgoLogRules from "../components/AlgoLogRules.vue";
 import AlgoSizing from "../components/AlgoSizing.vue";
+import AlgoFileDialog from "../components/AlgoFileDialog.vue";
 import AlgoTemplates from "../components/AlgoTemplates.vue";
 import AlgoUpdateDialog from "../components/AlgoUpdateDialog.vue";
 import AppModal from "../components/AppModal.vue";
@@ -34,6 +36,10 @@ const updating = ref<Algo>();
 const loading = ref(true);
 const file = ref<File>();
 const version = ref("");
+/** The algo the upload is filed under; empty: the name the file carries. */
+const family = ref("");
+/** The version whose "file under" dialog is open. */
+const filing = ref<Algo>();
 const removing = ref<Algo>();
 
 /** The broker's algo file extensions, e.g. ".algo". */
@@ -65,6 +71,15 @@ const groups = computed(() => {
     templates: byAlgo.get(name) ?? [],
     sizing: settings.value.find((s) => s.algoName === name),
   }));
+});
+
+/** The algo names there are, to file an upload or a version under. */
+const algoNames = computed(() => [...new Set(algos.value.map((a) => a.name))].sort((a, b) => a.localeCompare(b)));
+// A file named like an algo but for its version ("Bot v4.2.algo" next to "Bot-v4.11") is preselected as its version.
+watch(file, (chosen) => {
+  if (!chosen) return;
+  const key = algoFamilyKey(chosen.name, system.value?.algoFormats ?? []);
+  family.value = (key && algoNames.value.find((n) => algoFamilyKey(n) === key)) || "";
 });
 
 /** The instances whose current configuration uses a version, by algo id. */
@@ -103,6 +118,7 @@ function closeUpload() {
   uploading.value = false;
   file.value = undefined;
   version.value = "";
+  family.value = "";
   // A cleared form shows no "Required." until the next attempt.
   form.reset();
 }
@@ -111,7 +127,7 @@ function upload() {
   if (!form.validate() || !chosen) return;
   void run(
     async () => {
-      const uploaded = await api.uploadAlgo(chosen, version.value.trim() || undefined);
+      const uploaded = await api.uploadAlgo(chosen, version.value.trim() || undefined, family.value || undefined);
       closeUpload();
       return uploaded;
     },
@@ -200,6 +216,9 @@ const confirmRemove = () => {
             >
               {{ $t("algoUpdate.open", onOtherVersions(a).length) }}
             </button>
+            <button v-if="isAdmin" type="button" class="btn btn--small" :disabled="busy" @click="filing = a">
+              {{ $t("algos.fileUnder") }}
+            </button>
             <button
               v-if="isAdmin"
               type="button"
@@ -250,6 +269,14 @@ const confirmRemove = () => {
             />
             <FieldError :field="fileField" />
           </div>
+          <label v-if="algoNames.length" class="field">
+            {{ $t("algos.family") }}
+            <select v-model="family" class="input">
+              <option value="">{{ $t("algos.familyNew") }}</option>
+              <option v-for="n in algoNames" :key="n" :value="n">{{ $t("algos.familyOf", { name: n }) }}</option>
+            </select>
+            <span class="field__hint">{{ $t("algos.familyHint") }}</span>
+          </label>
           <label class="field">
             {{ $t("algos.version") }}
             <input
@@ -274,6 +301,14 @@ const confirmRemove = () => {
         </form>
       </template>
     </AppModal>
+    <AlgoFileDialog
+      v-if="filing"
+      :open="filing !== undefined"
+      :algo="filing"
+      :names="algoNames"
+      @close="filing = undefined"
+      @saved="(a: Algo) => ((filing = undefined), changed($t('algos.filed', { name: a.name, version: a.version })))"
+    />
     <AlgoUpdateDialog
       v-if="updating"
       :open="updating !== undefined"

@@ -3,7 +3,7 @@ import type { ImageRollout, ManagedInstance, PlatformInfo } from "@wickwatch/cor
 import { splitImage } from "@wickwatch/core/rules";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api } from "../api";
+import { api, codeKey } from "../api";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { formatDateTime } from "../format";
 import { isAdmin } from "../session";
@@ -70,7 +70,7 @@ function resultText(r: ImageRollout): string {
     r.updated.length ? t("platform.updated", { names: r.updated.join(", "), version }) : t("platform.nothingUpdated"),
   ];
   for (const s of r.skipped) {
-    parts.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(`error.api.${s.error}`) : "" }));
+    parts.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(codeKey(s.error)) : "" }));
   }
   return parts.join(" ");
 }
