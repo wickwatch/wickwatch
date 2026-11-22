@@ -16867,6 +16867,831 @@
         }
       }
     },
+    "/api/v1/managed-instances/algo-update": {
+      "get": {
+        "summary": "Preview: the instances on another version of an algo, and what moving them to this one changes",
+        "tags": [
+          "instances"
+        ],
+        "description": "Admins only, like parameter values. Values the user set stay; values left at the old version's default follow the new default (e.g. a version parameter); new parameters take their default; values that do not fit take the default. An instance with `issues` needs a manual edit.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "algoId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "algo",
+                    "instances"
+                  ],
+                  "properties": {
+                    "algo": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "version"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "instances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "account",
+                          "from",
+                          "configVersion",
+                          "deployed",
+                          "added",
+                          "dropped",
+                          "newDefaults",
+                          "rejected",
+                          "issues"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "account": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "number",
+                              "displayName"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "number": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "from": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "version": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "configVersion": {
+                            "type": "integer"
+                          },
+                          "deployed": {
+                            "type": "boolean"
+                          },
+                          "added": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "dropped": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "newDefaults": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "parameter",
+                                "from",
+                                "to"
+                              ],
+                              "properties": {
+                                "parameter": {
+                                  "type": "string"
+                                },
+                                "from": {},
+                                "to": {}
+                              }
+                            }
+                          },
+                          "rejected": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "parameter",
+                                "code"
+                              ],
+                              "properties": {
+                                "parameter": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "required"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "below_min"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "above_max"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_option"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_format"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          "issues": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "parameter",
+                                "code"
+                              ],
+                              "properties": {
+                                "parameter": {
+                                  "type": "string"
+                                },
+                                "code": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "required"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_type"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "below_min"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "above_max"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_option"
+                                      ]
+                                    },
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "invalid_format"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Move instances to an algo version: a new configuration version each, deployed on request",
+        "tags": [
+          "instances"
+        ],
+        "description": "Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: \"all\"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "algoId",
+                  "instances"
+                ],
+                "properties": {
+                  "algoId": {
+                    "type": "integer"
+                  },
+                  "instances": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "minItems": 1,
+                    "maxItems": 200
+                  },
+                  "deploy": {
+                    "type": "boolean"
+                  },
+                  "confirm": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "saved",
+                    "failed"
+                  ],
+                  "properties": {
+                    "saved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "failed": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "name",
+                          "error"
+                        ],
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "error": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "rollout": {
+                      "type": "object",
+                      "required": [
+                        "algo",
+                        "running",
+                        "startedAt",
+                        "pending",
+                        "updated",
+                        "skipped"
+                      ],
+                      "properties": {
+                        "algo": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name",
+                            "version"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "running": {
+                          "type": "boolean"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "current": {
+                          "type": "string"
+                        },
+                        "pending": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "updated": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "skipped": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "reason"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "open_position"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "positions_unknown"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "failed"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "error": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/managed-instances/algo-rollout": {
+      "get": {
+        "summary": "Progress of the last deployment after moving instances to an algo version",
+        "tags": [
+          "instances"
+        ],
+        "security": [
+          {
+            "session": []
+          },
+          {
+            "token": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rollout": {
+                      "type": "object",
+                      "required": [
+                        "algo",
+                        "running",
+                        "startedAt",
+                        "pending",
+                        "updated",
+                        "skipped"
+                      ],
+                      "properties": {
+                        "algo": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name",
+                            "version"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "running": {
+                          "type": "boolean"
+                        },
+                        "startedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "finishedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "Z$"
+                        },
+                        "current": {
+                          "type": "string"
+                        },
+                        "pending": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "updated": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "skipped": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "reason"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "open_position"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "positions_unknown"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "failed"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "error": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/managed-instances/{name}/schedules": {
       "put": {
         "summary": "Choose the schedules that pause an instance; it is paused while any of them pauses",

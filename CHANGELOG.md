@@ -4,6 +4,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+### Added
+- New algo version for several instances at once: on the Algos page the newest version of an algo offers "Update N instances" when instances still run an older one. A preview shows per instance what happens to its parameters: values you set stay, values still at the old default follow the new default (so a version parameter such as `BotVersion` moves along), new parameters take their default, values that no longer fit take the default, and instances that need a manual edit first cannot be chosen. Saving creates a new configuration version per instance (audit-logged as usual); optionally they are deployed right after, one after the other in the background, leaving instances with an open position alone, like "Update all" for the platform version. Each version on the Algos page now also names the instances using it. API: `GET`/`POST /managed-instances/algo-update`, `GET /managed-instances/algo-rollout`.
+
 ## 0.9.2 – 2026-11-16
 
 ### Changed

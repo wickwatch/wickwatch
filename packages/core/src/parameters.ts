@@ -201,6 +201,68 @@ export function applyTemplate(
   return { values, changed, rejected, unknown: Object.keys(template).filter((n) => !known.has(n)), kept };
 }
 
+export interface VersionChange {
+  /** The values to save with the other version: complete, only parameters it knows. */
+  values: ParameterValues;
+  /** Parameters the other version adds; they take its default. */
+  added: string[];
+  /** Values the other version no longer knows; left out. */
+  dropped: string[];
+  /** Values still at the old version's default that follow the other version's default (e.g. `BotVersion`). */
+  newDefaults: { parameter: string; from: unknown; to: unknown }[];
+  /** Values that do not fit the other version (e.g. an option it dropped); its default instead. */
+  rejected: ParameterIssue[];
+  /** What is still wrong after all that (e.g. a new text parameter without a default): needs a manual edit. */
+  issues: ParameterIssue[];
+}
+
+/**
+ * Carries an instance's values over to another version of its algo. Values the user set stay; values left at the old
+ * version's default follow the new default, so a changed default (or a version parameter) is not frozen at the old
+ * one. `from` is the schema of the version the values were saved with; without it every value counts as set.
+ */
+export function changeAlgoVersion(
+  current: ParameterValues,
+  from: ParameterSchema[],
+  to: ParameterSchema[],
+  options: ValidateOptions = {},
+): VersionChange {
+  const before = new Map(from.map((p) => [p.name, p]));
+  const values: ParameterValues = {};
+  const added: string[] = [];
+  const newDefaults: VersionChange["newDefaults"] = [];
+  const rejected: ParameterIssue[] = [];
+  const useDefault = (param: ParameterSchema) => {
+    if (param.default !== undefined) values[param.name] = param.default;
+  };
+  for (const param of to) {
+    const old = before.get(param.name);
+    if (!Object.hasOwn(current, param.name)) {
+      if (!old) added.push(param.name);
+      useDefault(param);
+      continue;
+    }
+    const value = current[param.name];
+    const atOldDefault = old?.default !== undefined && value === old.default;
+    if (atOldDefault && param.default !== undefined && param.default !== old.default) {
+      newDefaults.push({ parameter: param.name, from: value, to: param.default });
+      useDefault(param);
+      continue;
+    }
+    const code = checkValue(value, param);
+    if (code) {
+      rejected.push({ parameter: param.name, code });
+      useDefault(param);
+    } else values[param.name] = value;
+  }
+  const known = new Set(to.map((p) => p.name));
+  const dropped = Object.keys(current).filter((n) => !known.has(n));
+  const { errors, missing } = validateParameters(values, to, options);
+  // A parameter left without a value (no default to fall back on) needs one, whatever the runtime accepts.
+  const issues = [...errors, ...missing.map((parameter): ParameterIssue => ({ parameter, code: "required" }))];
+  return { values, added, dropped, newDefaults, rejected, issues };
+}
+
 /** How far the account size an algo calculates with may be off the account's before wickwatch warns, as a share. */
 export const ACCOUNT_SIZE_TOLERANCE = 0.25;
 

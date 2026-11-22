@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { accountSizeMismatch, applyTemplate, riskPreview, validateParameters, type ParameterSchema } from "../src";
+import {
+  accountSizeMismatch,
+  applyTemplate,
+  changeAlgoVersion,
+  riskPreview,
+  validateParameters,
+  type ParameterSchema,
+} from "../src";
 
 const schema: ParameterSchema[] = [
   { name: "Risk", type: "double", min: 0.1, max: 2 },
@@ -156,5 +163,65 @@ describe("riskPreview", () => {
     expect(riskPreview({ Risk: "1" }, check)).toBeUndefined();
     expect(riskPreview({ Risk: 1 }, { parameter: "Risk", currency: "USD" })).toBeUndefined();
     expect(riskPreview({ Risk: 1 }, undefined)).toBeUndefined();
+  });
+});
+
+describe("changeAlgoVersion", () => {
+  const v1: ParameterSchema[] = [
+    { name: "BotVersion", type: "string", default: "1.0" },
+    { name: "Risk", type: "double", min: 0.1, max: 2, default: 0.5 },
+    { name: "Lookback", type: "int", min: 1, default: 20 },
+    { name: "Mode", type: "enum", options: ["Fast", "Slow", "Turbo"], default: "Fast" },
+    { name: "Retired", type: "bool", default: false },
+  ];
+  const v2: ParameterSchema[] = [
+    { name: "BotVersion", type: "string", default: "2.0" },
+    { name: "Risk", type: "double", min: 0.1, max: 1, default: 0.5 },
+    { name: "Lookback", type: "int", min: 1, default: 30 },
+    { name: "Mode", type: "enum", options: ["Fast", "Slow"], default: "Slow" },
+    { name: "Filter", type: "bool", default: true },
+  ];
+
+  it("keeps set values, follows changed defaults and reports what changed", () => {
+    const current = { BotVersion: "1.0", Risk: 0.8, Lookback: 20, Mode: "Turbo", Retired: true };
+    expect(changeAlgoVersion(current, v1, v2)).toEqual({
+      values: { BotVersion: "2.0", Risk: 0.8, Lookback: 30, Mode: "Slow", Filter: true },
+      added: ["Filter"],
+      dropped: ["Retired"],
+      newDefaults: [
+        { parameter: "BotVersion", from: "1.0", to: "2.0" },
+        { parameter: "Lookback", from: 20, to: 30 },
+      ],
+      rejected: [{ parameter: "Mode", code: "invalid_option" }],
+      issues: [],
+    });
+  });
+
+  it("falls back to the new default for a value out of the new range", () => {
+    const change = changeAlgoVersion({ Risk: 1.5 }, v1, v2);
+    expect(change.values["Risk"]).toBe(0.5);
+    expect(change.rejected).toEqual([{ parameter: "Risk", code: "above_max" }]);
+  });
+
+  it("counts every value as set without the old schema", () => {
+    const change = changeAlgoVersion({ BotVersion: "1.0", Lookback: 20 }, [], v2);
+    expect(change.values).toMatchObject({ BotVersion: "1.0", Lookback: 20 });
+    expect(change.newDefaults).toEqual([]);
+    expect(change.added).toEqual(["Risk", "Mode", "Filter"]);
+  });
+
+  it("names what still needs a manual edit, e.g. a new text parameter without a default", () => {
+    const withKey: ParameterSchema[] = [...v2, { name: "LicenseKey", type: "string" }];
+    const change = changeAlgoVersion({ BotVersion: "1.0" }, v1, withKey, { requireText: true });
+    expect(change.added).toContain("LicenseKey");
+    expect(change.issues).toEqual([{ parameter: "LicenseKey", code: "required" }]);
+  });
+
+  it("names a value that does not fit and has no default to fall back on", () => {
+    const noDefault: ParameterSchema[] = [{ name: "Mode", type: "enum", options: ["Fast", "Slow"] }];
+    const change = changeAlgoVersion({ Mode: "Turbo" }, v1, noDefault);
+    expect(change.values).toEqual({});
+    expect(change.rejected).toEqual([{ parameter: "Mode", code: "invalid_option" }]);
+    expect(change.issues).toEqual([{ parameter: "Mode", code: "required" }]);
   });
 });

@@ -2,6 +2,11 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   AdapterError,
+  AlgoRollout,
+  AlgoUpdateInput,
+  AlgoUpdatePreview,
+  AlgoUpdateResult,
+  changeAlgoVersion,
   InstanceConfigInput,
   ImageRollout,
   InstanceStatus,
@@ -12,8 +17,10 @@ import {
   parameterDefaults,
   ParameterIssue,
   readLabels,
+  type AlgoUpdateCandidate,
   type Deployment,
   type InstanceConfig,
+  type ParameterValues,
   type RuntimeInstance,
 } from "@wickwatch/core";
 import { groupBy } from "@wickwatch/core/group-by";
@@ -205,6 +212,48 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     };
   }
 
+  /** Saves a checked configuration as the instance's next version; false when it equals the current one. */
+  async function saveVersion(
+    cipher: Cipher,
+    instance: ManagedInstance,
+    checked: Extract<Checked, { ok: true }>,
+    who: Actor,
+  ): Promise<boolean> {
+    const current = instance.config;
+    const unchanged =
+      current.algo.id === checked.row.algo_id &&
+      current.symbol === checked.row.symbol &&
+      current.period === checked.row.period &&
+      canonicalParameters(current.parameters) === checked.row.parameters &&
+      current.attribution.mode === checked.row.attribution &&
+      (current.attribution.orderLabel ?? null) === checked.row.order_label;
+    if (unchanged) return false;
+
+    const version = current.version + 1;
+    await db
+      .insertInto("instance_configs")
+      .values({
+        ...checked.row,
+        parameters: encryptParameters(cipher, checked.row.parameters),
+        instance_id: instance.id,
+        version,
+        created_by: who.userId ?? null,
+        created_at: new Date().toISOString(),
+      })
+      .execute();
+    await audit(db, {
+      action: "instance.config",
+      target: instance.name,
+      details: {
+        version,
+        algo: `${checked.row.algo_name} ${checked.row.algo_version}`,
+        ...(checked.template !== undefined ? { template: checked.template } : {}),
+      },
+      ...who,
+    });
+    return true;
+  }
+
   app.get(
     "/managed-instances",
     {
@@ -393,38 +442,9 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const checked = await check(request.body, entry);
       if (!checked.ok) return reply.code(checked.status).send(checked.body);
 
-      const current = instance.config;
-      const unchanged =
-        current.algo.id === checked.row.algo_id &&
-        current.symbol === checked.row.symbol &&
-        current.period === checked.row.period &&
-        canonicalParameters(current.parameters) === checked.row.parameters &&
-        current.attribution.mode === checked.row.attribution &&
-        (current.attribution.orderLabel ?? null) === checked.row.order_label;
-      if (unchanged) return reply.code(409).send({ error: "config_unchanged" });
-
-      const version = current.version + 1;
-      await db
-        .insertInto("instance_configs")
-        .values({
-          ...checked.row,
-          parameters: encryptParameters(cipher, checked.row.parameters),
-          instance_id: instance.id,
-          version,
-          created_by: request.user?.id ?? null,
-          created_at: new Date().toISOString(),
-        })
-        .execute();
-      await audit(db, {
-        action: "instance.config",
-        target: instance.name,
-        details: {
-          version,
-          algo: `${checked.row.algo_name} ${checked.row.algo_version}`,
-          ...(checked.template !== undefined ? { template: checked.template } : {}),
-        },
-        ...actor(request),
-      });
+      if (!(await saveVersion(cipher, instance, checked, actor(request)))) {
+        return reply.code(409).send({ error: "config_unchanged" });
+      }
       const [updated] = await load(instance.name);
       if (!updated) throw new AdapterError("not_found", `Instance ${instance.name} vanished`);
       return reply.code(201).send(updated);
@@ -563,18 +583,30 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     },
   );
 
-  /** The last "update all": running in the background, or done (kept until the next one, for the page to show). */
+  /** The last "update all" to an image or an algo version: running in the background, or done (kept until the next one, for the page to show). */
   let rollout: ImageRollout | undefined;
+  let algoRollout: AlgoRollout | undefined;
+  /**
+   * One rollout at a time: two would deploy the same instance twice. An algo update with `deploy` claims the slot before
+   * it saves the configurations, so no other rollout starts in between.
+   */
+  let algoRolloutClaimed = false;
+  const rolling = () => rollout?.running === true || algoRollout?.running === true || algoRolloutClaimed;
 
   /**
-   * Deploys every managed instance on another image than `image` again on it, one after the other, after the runtime
-   * has the image; leaves those with an open position (or unknown positions) alone. Updates `state` as it goes.
+   * Deploys the pending instances again, one after the other, on `image` if given (else on the image each runs on),
+   * after `prepare` (e.g. the runtime fetching the image); leaves those with an open position (or unknown positions)
+   * alone. Updates `state` as it goes and writes one audit entry at the end.
    */
-  async function runRollout(state: ImageRollout, who: Actor): Promise<void> {
+  async function runRollout(
+    state: Omit<ImageRollout, "image">,
+    who: Actor,
+    options: { image?: string; prepare?: () => Promise<void>; action: string; target: string },
+  ): Promise<void> {
     const skip = (name: string, reason: ImageRollout["skipped"][number]["reason"], error?: string) =>
       state.skipped.push({ name, reason, ...(error ? { error } : {}) });
     try {
-      await images.prepare(state.image);
+      await options.prepare?.();
       const { instances, accounts: summaries } = await app.overview.overview();
       for (const name of [...state.pending]) {
         state.current = name;
@@ -586,7 +618,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         else if (summary.openPositions > 0) skip(name, "open_position");
         else {
           try {
-            const result = await deploy(name, { start: false, image: state.image }, who);
+            const result = await deploy(name, { start: false, image: options.image }, who);
             if (result.ok) state.updated.push(name);
             else skip(name, "failed", result.error);
           } catch (error) {
@@ -603,12 +635,12 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       state.running = false;
       state.finishedAt = new Date().toISOString();
       await audit(db, {
-        action: "instance.update_images",
-        target: state.image,
+        action: options.action,
+        target: options.target,
         details: { updated: state.updated, skipped: state.skipped.map((s) => `${s.name}: ${s.reason}`) },
         ...who,
       }).catch((error: unknown) => {
-        app.log.warn({ err: error }, "Audit entry for the image update failed");
+        app.log.warn({ err: error }, "Audit entry for the rollout failed");
       });
     }
   }
@@ -636,7 +668,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
     async (request, reply) => {
       const image = adapters.broker.image?.();
       if (!image) return reply.code(501).send({ error: "image_unsupported" });
-      if (rollout?.running) return reply.code(409).send({ error: "update_running" });
+      if (rolling()) return reply.code(409).send({ error: "update_running" });
       const outdated = (await load()).filter((i) => i.deployment?.managed && i.deployment.image !== image);
       const state: ImageRollout = {
         image,
@@ -647,7 +679,12 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         skipped: [],
       };
       rollout = state;
-      void runRollout(state, actor(request));
+      void runRollout(state, actor(request), {
+        image,
+        prepare: () => images.prepare(image),
+        action: "instance.update_images",
+        target: image,
+      });
       return reply.code(202).send(state);
     },
   );
@@ -662,6 +699,182 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       },
     },
     async () => (rollout ? { rollout } : {}),
+  );
+
+  /**
+   * The instances on another version of `algo`'s algo, each with the values it would get on `algo`
+   * (`changeAlgoVersion`): set values stay, values at the old default follow the new one.
+   */
+  async function algoUpdates(
+    algo: { id: number; name: string; metadata: string },
+    list: ManagedInstance[],
+  ): Promise<{ instance: ManagedInstance; candidate: AlgoUpdateCandidate; values: ParameterValues }[]> {
+    const others = list.filter((i) => i.config.algo.name === algo.name && i.config.algo.id !== algo.id);
+    const fromIds = [...new Set(others.flatMap((i) => (i.config.algo.id === null ? [] : [i.config.algo.id])))];
+    const schemas = new Map(
+      (fromIds.length
+        ? await db.selectFrom("algos").select(["id", "metadata"]).where("id", "in", fromIds).execute()
+        : []
+      ).map((a) => [a.id, schemaOf(a.metadata)]),
+    );
+    const to = schemaOf(algo.metadata);
+    return others.map((instance) => {
+      const { config } = instance;
+      const from = config.algo.id === null ? [] : (schemas.get(config.algo.id) ?? []);
+      const { values, ...change } = changeAlgoVersion(config.parameters, from, to, validateOptions);
+      return {
+        instance,
+        values,
+        candidate: {
+          name: instance.name,
+          account: instance.account,
+          from: { id: config.algo.id, version: config.algo.version },
+          configVersion: config.version,
+          deployed: instance.deployment?.managed === true,
+          ...change,
+        },
+      };
+    });
+  }
+
+  const algoRef = (algo: { id: number; name: string; version: string }) => ({
+    id: algo.id,
+    name: algo.name,
+    version: algo.version,
+  });
+
+  app.get(
+    "/managed-instances/algo-update",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Preview: the instances on another version of an algo, and what moving them to this one changes",
+        description:
+          "Admins only, like parameter values. Values the user set stay; values left at the old version's default follow the new default (e.g. a version parameter); new parameters take their default; values that do not fit take the default. An instance with `issues` needs a manual edit.",
+        querystring: Type.Object({ algoId: Type.Integer() }),
+        response: { 200: AlgoUpdatePreview, 403: ErrorBody, 404: ErrorBody, 503: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
+      const algo = await db
+        .selectFrom("algos")
+        .select(["id", "name", "version", "metadata"])
+        .where("id", "=", request.query.algoId)
+        .executeTakeFirst();
+      if (!algo) return reply.code(404).send({ error: "algo_not_found" });
+      const updates = await algoUpdates(algo, await load());
+      return { algo: algoRef(algo), instances: updates.map((u) => u.candidate) };
+    },
+  );
+
+  app.post(
+    "/managed-instances/algo-update",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["instances"],
+        summary: "Move instances to an algo version: a new configuration version each, deployed on request",
+        description:
+          'Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: "all"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress.',
+        body: AlgoUpdateInput,
+        response: {
+          200: AlgoUpdateResult,
+          400: ErrorBody,
+          403: ErrorBody,
+          404: ErrorBody,
+          409: ErrorBody,
+          503: ErrorBody,
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
+      const { algoId, deploy: rollOut, confirm, comment } = request.body;
+      if (rollOut && confirm !== "all") return reply.code(400).send({ error: "confirmation_required" });
+      if (rollOut && rolling()) return reply.code(409).send({ error: "update_running" });
+      const algo = await db
+        .selectFrom("algos")
+        .select(["id", "name", "version", "metadata"])
+        .where("id", "=", algoId)
+        .executeTakeFirst();
+      if (!algo) return reply.code(404).send({ error: "algo_not_found" });
+
+      if (rollOut) algoRolloutClaimed = true;
+      try {
+        const list = await load();
+        const updates = new Map((await algoUpdates(algo, list)).map((u) => [u.instance.name, u]));
+        const who = actor(request);
+        const saved: string[] = [];
+        const failed: AlgoUpdateResult["failed"] = [];
+
+        /** Saves the instance's version on the algo; the error code when it cannot be moved. */
+        const move = async (name: string): Promise<string | undefined> => {
+          const update = updates.get(name);
+          if (!update) {
+            const onIt = list.some((i) => i.name === name && i.config.algo.id === algo.id);
+            return onIt ? "config_unchanged" : "instance_not_found";
+          }
+          if (update.candidate.issues.length) return "parameters_incomplete";
+          const { instance, values } = update;
+          const entry = await findAccountById(accounts, instance.account.id);
+          if (!entry) return "instance_not_found";
+          const { config } = instance;
+          const checked = await check(
+            {
+              algoId: algo.id,
+              symbol: config.symbol,
+              period: config.period,
+              parameters: values,
+              attribution: config.attribution,
+              ...(comment?.trim() ? { comment: comment.trim() } : {}),
+            },
+            entry,
+          );
+          if (!checked.ok) return checked.body.error;
+          return (await saveVersion(cipher, instance, checked, who)) ? undefined : "config_unchanged";
+        };
+        for (const name of new Set(request.body.instances)) {
+          // One instance failing (e.g. the broker not answering for its symbols) leaves the others to go on.
+          const error = await move(name).catch((e: unknown) => {
+            request.log.warn({ err: e, instance: name }, "Moving an instance to another algo version failed");
+            return e instanceof AdapterError ? e.code : "internal";
+          });
+          if (error) failed.push({ name, error });
+          else saved.push(name);
+        }
+
+        const toDeploy = saved.filter((n) => updates.get(n)?.candidate.deployed);
+        if (!rollOut || !toDeploy.length) return { saved, failed };
+        const state: AlgoRollout = {
+          algo: algoRef(algo),
+          running: true,
+          startedAt: new Date().toISOString(),
+          pending: toDeploy,
+          updated: [],
+          skipped: [],
+        };
+        algoRollout = state;
+        void runRollout(state, who, { action: "instance.update_algo", target: `${algo.name} ${algo.version}` });
+        return { saved, failed, rollout: state };
+      } finally {
+        // The running rollout (if any) holds the slot from here.
+        if (rollOut) algoRolloutClaimed = false;
+      }
+    },
+  );
+
+  app.get(
+    "/managed-instances/algo-rollout",
+    {
+      schema: {
+        tags: ["instances"],
+        summary: "Progress of the last deployment after moving instances to an algo version",
+        response: { 200: Type.Object({ rollout: Type.Optional(AlgoRollout) }) },
+      },
+    },
+    async () => (algoRollout ? { rollout: algoRollout } : {}),
   );
 
   app.put(

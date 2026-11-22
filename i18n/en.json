@@ -300,7 +300,8 @@
       "log_rule_invalid": "A pattern is not a valid regular expression.",
       "invalid_image": "Choose a version of the platform's own image.",
       "image_unsupported": "This platform does not run on an image.",
-      "update_running": "An update of all instances is already running."
+      "update_running": "An update of all instances is already running.",
+      "not_found": "Not found."
     }
   },
   "parameterIssue": {
@@ -646,7 +647,34 @@
     "hash": "SHA-256 {hash}…",
     "parameters": "{count} parameters",
     "deleteConfirm": "Delete {name} {version}? The file is removed.",
-    "fileHint": "A {formats} file, e.g. exported from the platform."
+    "fileHint": "A {formats} file, e.g. exported from the platform.",
+    "usedBy": "In use by {names}"
+  },
+  "algoUpdate": {
+    "open": "Update 1 instance | Update {count} instances",
+    "title": "Move instances to {name} {version}",
+    "intro": "Each chosen instance gets a new configuration version on this algo version. Values you set stay, values still at the old default take the new one, new parameters take their default. Symbol, timeframe and trade attribution stay.",
+    "instances": "1 instance on another version | {count} instances on other versions",
+    "none": "No instance runs another version of {name}.",
+    "inContainer": "In a container",
+    "added": "New, with their default: {names}",
+    "dropped": "No longer in the algo, left out: {names}",
+    "newDefaults": "Follow the new default: {changes}",
+    "rejected": "No longer fit, default taken instead: {names}",
+    "issues": "Not possible, needs a manual edit first: {names}",
+    "unchanged": "All values carry over unchanged.",
+    "deploy": "Deploy them afterwards",
+    "deployHint": "One after the other, in the background: running bots restart, stopped ones stay stopped. Instances with an open position are left alone; their new version waits on their configuration tab.",
+    "save": "Save 1 version | Save {count} versions",
+    "saveDeploy": "Save and deploy 1 | Save and deploy {count}",
+    "comment": "Update to {version}",
+    "saved": "New configuration version on {version} for: {names}.",
+    "failed": "{name} not moved: {error}",
+    "notDeployed": "Containers keep their old version until the new one is applied on the instance's configuration tab.",
+    "deploying": "Deploying: {done} of {total} done, now {name}.",
+    "deployingStart": "Deploying {total} instances …",
+    "deployed": "Deployed: {names}.",
+    "uploadedHint": "1 instance runs another version; \"Update 1 instance\" at the new version moves it. | {count} instances run other versions; \"Update {count} instances\" at the new version moves them."
   },
   "instanceForm": {
     "newTitle": "New instance",
@@ -981,7 +1009,8 @@
       "instance_schedule_pause": "Paused by its schedule",
       "instance_schedule_resume": "Started again after its pause",
       "platform_image": "Platform version chosen",
-      "instance_update_images": "All instances updated to the platform version"
+      "instance_update_images": "All instances updated to the platform version",
+      "instance_update_algo": "Instances moved to an algo version and deployed"
     },
     "groups": {
       "account": "Accounts",

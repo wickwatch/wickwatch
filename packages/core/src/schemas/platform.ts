@@ -29,9 +29,8 @@ export const PlatformInfo = Type.Object({
 });
 export type PlatformInfo = Type.Static<typeof PlatformInfo>;
 
-/** An update of all instances to the platform image ("update all"), running in the background or done. */
-export const ImageRollout = Type.Object({
-  image: Type.String(),
+/** The progress of deploying instances one after the other in the background ("update all"), running or done. */
+export const rolloutProgress = {
   running: Type.Boolean(),
   startedAt: IsoTime,
   finishedAt: Type.Optional(IsoTime),
@@ -47,5 +46,8 @@ export const ImageRollout = Type.Object({
       error: Type.Optional(Type.String()),
     }),
   ),
-});
+};
+
+/** An update of all instances to the platform image ("update all"), running in the background or done. */
+export const ImageRollout = Type.Object({ image: Type.String(), ...rolloutProgress });
 export type ImageRollout = Type.Static<typeof ImageRollout>;
