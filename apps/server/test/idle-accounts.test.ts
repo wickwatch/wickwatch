@@ -152,6 +152,18 @@ describe("IdleAccounts", () => {
     expect(broker.deals).toHaveBeenCalledTimes(1);
   });
 
+  it("does not answer a range from one that ended before it, e.g. the pieces of the poller's full run", async () => {
+    await round();
+    // The first piece of the history ends long before now; the next one starts where it ends.
+    await idle.broker.deals(c, "1001", "2026-10-01T00:00:00.000Z", "2026-10-31T00:00:00.000Z");
+    const next = await idle.broker.deals(c, "1001", "2026-10-31T00:00:00.000Z", "2026-11-03T09:00:00.000Z");
+    expect(next.map((d) => d.id)).toEqual(["d1", "d2"]);
+    expect(broker.deals).toHaveBeenCalledTimes(2);
+    // Within the first piece it is still reused.
+    await idle.broker.deals(c, "1001", "2026-10-10T00:00:00.000Z", "2026-10-20T00:00:00.000Z");
+    expect(broker.deals).toHaveBeenCalledTimes(2);
+  });
+
   it("passes trading actions through", async () => {
     await idle.broker.closePosition(c, "1001", "p1");
     expect(broker.closePosition).toHaveBeenCalledWith(c, "1001", "p1");

@@ -448,4 +448,34 @@ describe("trading days by opening day", () => {
       await t.app.close();
     }
   });
+
+  it("keeps marked days the broker returned no deals for", async () => {
+    const t = await startApp();
+    try {
+      const deal = { id: "1", positionId: "1", symbol: "US100", side: "buy" as const, volume: 1, price: 1, pnl: 10 };
+      // Seen after a restart: a piece of the history came back empty although the account traded then (idle cache).
+      const { id, poller } = await pollerWith(t, {
+        deals: async (_c, _account, from) =>
+          from < "2026-09-23"
+            ? [{ ...deal, time: "2026-09-22T07:00:00.000Z", openedAt: "2026-09-21T19:00:00.000Z" }]
+            : [],
+      });
+      await t.db.deleteFrom("daily_stats").where("account_id", "=", id).execute();
+      await t.db
+        .insertInto("daily_stats")
+        .values(["2026-09-21", "2026-09-24"].map((day) => ({ account_id: id, day, traded: 1 })))
+        .execute();
+      await poller.syncTradingDays(id);
+      const traded = await t.db
+        .selectFrom("daily_stats")
+        .select("day")
+        .where("account_id", "=", id)
+        .where("traded", "=", 1)
+        .orderBy("day")
+        .execute();
+      expect(traded.map((r) => r.day)).toEqual(["2026-09-21", "2026-09-24"]);
+    } finally {
+      await t.app.close();
+    }
+  });
 });

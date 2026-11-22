@@ -203,15 +203,21 @@ export class AccountPoller {
       const positions = await adapters.broker.positions(credentials, entry.number);
       const firstDay = tradingDayKey(from, resetTime, timeZone);
       const days = [...new Set(tradingDays(deals, positions, resetTime, timeZone))].filter((day) => day >= firstDay);
-      // Days marked before (e.g. by closing day, as older versions did) that no position was opened on.
-      await db
-        .updateTable("daily_stats")
-        .set({ traded: 0 })
-        .where("account_id", "=", entry.id)
-        .where("day", ">=", firstDay)
-        .where("traded", "=", 1)
-        .$if(days.length > 0, (q) => q.where("day", "not in", days))
-        .execute();
+      // Days marked before by closing day (as older versions did) that no position was opened on. Only days the answer
+      // has deals for: an answer that misses deals (once a cache answered whole pieces empty) must not wipe recorded
+      // trading days and raise a false inactivity breach.
+      const closingDays = [...new Set(deals.map((d) => tradingDayKey(new Date(d.time), resetTime, timeZone)))].filter(
+        (day) => day >= firstDay && !days.includes(day),
+      );
+      if (closingDays.length) {
+        await db
+          .updateTable("daily_stats")
+          .set({ traded: 0 })
+          .where("account_id", "=", entry.id)
+          .where("traded", "=", 1)
+          .where("day", "in", closingDays)
+          .execute();
+      }
       if (days.length) {
         await db
           .insertInto("daily_stats")
