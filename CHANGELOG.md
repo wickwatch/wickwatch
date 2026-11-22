@@ -11,6 +11,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ### Changed
 - New API tokens can also be valid for 1 or 7 days, e.g. for a one-off script; so far the shortest choice was 30 days.
 
+### Fixed
+- After a restart while no bot was running (e.g. on a weekend), the trading days of a challenge could be lost: the cache for idle accounts answered the later pieces of the deal history from the first one, so they came back empty, and the challenge showed false "no trade for N days" warnings or an inactivity breach. Each piece is now asked on its own, and recorded trading days are only cleared for days the broker returned deals for.
+
 ## 0.9.2 – 2026-11-16
 
 ### Changed
