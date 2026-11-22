@@ -5,6 +5,8 @@ import { isActiveInstance, readLabels, type BrokerAdapter, type RuntimeAdapter }
  * so a shorter time would ask the runtime for nearly every query. Actions of wickwatch drop it at once (`forget`).
  */
 const BUSY_TTL_MS = 30_000;
+/** A deals range that ends this close to when it was asked counts as asked up to then. */
+const CLOCK_SLACK_MS = 60_000;
 
 interface Kept {
   at: number;
@@ -31,7 +33,7 @@ export interface IdleAccountsOptions {
  */
 export class IdleAccounts {
   readonly broker: BrokerAdapter;
-  /** Answers by account, then by query: `stats`, `positions`, `pendingOrders`, `deals <from>`. */
+  /** Answers by account, then by query: `stats`, `positions`, `pendingOrders`, `deals <from> <to>`. */
   private known = new Map<string, Map<string, Kept>>();
   /** Bumped by `forget`: an answer to a query started before it is not kept. */
   private generation = 0;
@@ -47,17 +49,17 @@ export class IdleAccounts {
       stats: (c, account) => this.keep(account, "stats", () => target.stats(c, account)),
       positions: (c, account) => this.keep(account, "positions", () => target.positions(c, account)),
       pendingOrders: (c, account) => this.keep(account, "pendingOrders", () => target.pendingOrders(c, account)),
-      // Kept by the start of the range; a later start is answered from an earlier one, cut to the range: the
-      // poller, the loss guard and the overview each ask from their own day, some from a start that moves on.
+      // Kept by the range; a later start is answered from an earlier one, cut to the range: the poller, the loss
+      // guard and the overview each ask from their own day, some from a start that moves on.
       deals: async (c, account, from, to) => {
         const start = Date.parse(from);
         const until = Date.parse(to);
-        const query = `deals ${from}`;
+        const query = `deals ${from} ${to}`;
         const deals = await this.keep(
           account,
           query,
           () => target.deals(c, account, from, to),
-          this.coveringDeals(account, start) ?? query,
+          this.coveringDeals(account, start, until) ?? query,
         );
         return deals.filter((deal) => {
           const time = Date.parse(deal.time);
@@ -97,11 +99,18 @@ export class IdleAccounts {
     return value;
   }
 
-  /** A fresh kept deals answer whose range starts at `start` or before. */
-  private coveringDeals(account: string, start: number): string | undefined {
+  /**
+   * A fresh kept deals answer whose range starts at `start` or before and reaches `until`, or reached the time it was
+   * asked (later deals of an idle account can only be trades by hand). An answer for a range that ended earlier, e.g.
+   * a piece of the poller's full run, does not answer a later range: that came back empty and wiped trading days.
+   */
+  private coveringDeals(account: string, start: number, until: number): string | undefined {
     const now = this.now();
     for (const [query, kept] of this.known.get(account) ?? []) {
-      if (query.startsWith("deals ") && this.fresh(kept, now) && Date.parse(query.slice(6)) <= start) return query;
+      if (!query.startsWith("deals ") || !this.fresh(kept, now)) continue;
+      const [from = "", to = ""] = query.slice(6).split(" ");
+      const end = Date.parse(to);
+      if (Date.parse(from) <= start && (end >= until || end >= kept.at - CLOCK_SLACK_MS)) return query;
     }
     return undefined;
   }
