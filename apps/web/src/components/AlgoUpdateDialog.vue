@@ -2,7 +2,7 @@
 import type { Algo, AlgoRollout, AlgoUpdateCandidate, AlgoUpdatePreview, ParameterIssue } from "@wickwatch/core";
 import { computed, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { api } from "../api";
+import { api, codeKey } from "../api";
 import { useAsyncAction } from "../composables/useAsyncAction";
 import { accountLabel } from "../format";
 import { parameterTitle } from "../parameter-label";
@@ -111,7 +111,7 @@ const rolloutResult = computed(() => {
   if (!r || r.running || !ownRollout.value) return [];
   const lines = r.updated.length ? [t("algoUpdate.deployed", { names: r.updated.join(", ") })] : [];
   for (const s of r.skipped) {
-    lines.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(`error.api.${s.error}`) : "" }));
+    lines.push(t(`platform.skipped.${s.reason}`, { name: s.name, error: s.error ? t(codeKey(s.error)) : "" }));
   }
   return lines;
 });
@@ -154,7 +154,7 @@ function save() {
               {{ $t("algoUpdate.saved", { names: result.saved.join(", "), version: algo.version }) }}
             </p>
             <p v-for="f in result.failed" :key="f.name" class="tone-negative">
-              {{ $t("algoUpdate.failed", { name: f.name, error: $t(`error.api.${f.error}`) }) }}
+              {{ $t("algoUpdate.failed", { name: f.name, error: $t(codeKey(f.error)) }) }}
             </p>
             <p v-if="result.saved.length && !ownRollout" class="muted">
               {{ $t("algoUpdate.notDeployed") }}

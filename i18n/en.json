@@ -637,7 +637,7 @@
     "upload": "Upload algo",
     "file": "Algo file ({formats})",
     "version": "Version (optional)",
-    "versionHint": "Default: the bot's BotVersion parameter, else its build time.",
+    "versionHint": "Default: the version in the bot's own name when filed under another algo, else its BotVersion parameter, else its build time.",
     "uploaded": "{name} {version} uploaded.",
     "deleted": "{name} {version} deleted.",
     "none": "No algos uploaded yet.",
@@ -648,7 +648,18 @@
     "parameters": "{count} parameters",
     "deleteConfirm": "Delete {name} {version}? The file is removed.",
     "fileHint": "A {formats} file, e.g. exported from the platform.",
-    "usedBy": "In use by {names}"
+    "usedBy": "In use by {names}",
+    "family": "Algo",
+    "familyNew": "New algo (the name the file carries)",
+    "familyOf": "New version of {name}",
+    "familyHint": "For bots that name each release differently: as a version of an existing algo it keeps its templates, settings and instances. Preselected when the file name matches but for the version.",
+    "fileUnder": "File under…",
+    "fileTitle": "File {name} {version} under",
+    "fileIntro": "Versions filed under one algo share its templates, settings (log rules, account size, risk) and the update of instances to a new version. Configurations using this version follow. The platform still starts the bot by the name in its file.",
+    "fileName": "Algo",
+    "fileNameHint": "An existing algo, or a new name, e.g. without the version. When the old name has no version left, its templates and settings move along.",
+    "filed": "Filed as {name} {version}.",
+    "fileVersion": "Version"
   },
   "algoUpdate": {
     "open": "Update 1 instance | Update {count} instances",
@@ -1010,7 +1021,8 @@
       "instance_schedule_resume": "Started again after its pause",
       "platform_image": "Platform version chosen",
       "instance_update_images": "All instances updated to the platform version",
-      "instance_update_algo": "Instances moved to an algo version and deployed"
+      "instance_update_algo": "Instances moved to an algo version and deployed",
+      "algo_update": "Algo version filed under another name or version"
     },
     "groups": {
       "account": "Accounts",

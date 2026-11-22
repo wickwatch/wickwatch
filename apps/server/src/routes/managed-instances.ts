@@ -33,7 +33,7 @@ import type { Db } from "../db";
 import { actor, isAdmin, requireAdmin, requireConfirmation, type Actor } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
-import { schemaOf } from "../services/algo-metadata";
+import { metadataName, schemaOf } from "../services/algo-metadata";
 import { audit, auditOutcome } from "../services/audit";
 import { parameterChecks } from "../services/parameter-checks";
 import { findPeriod } from "../services/periods";
@@ -502,7 +502,8 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
           credentials: await entry.credentials(),
           account: entry.number,
           algo: {
-            name: algo.name,
+            // The platform knows it by its own name, whatever algo it is filed under here.
+            name: metadataName(algo.metadata, algo.name),
             file: await readFile(join(algosDir, algo.file_path)),
             fullAccess: algo.full_access === 1,
             parameters: schema,
@@ -587,11 +588,12 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
   let rollout: ImageRollout | undefined;
   let algoRollout: AlgoRollout | undefined;
   /**
-   * One rollout at a time: two would deploy the same instance twice. An algo update with `deploy` claims the slot before
-   * it saves the configurations, so no other rollout starts in between.
+   * One rollout at a time: two would deploy the same instance twice. A route claims the slot right after its check,
+   * before anything it awaits, so no other request gets past the check in between.
    */
-  let algoRolloutClaimed = false;
-  const rolling = () => rollout?.running === true || algoRollout?.running === true || algoRolloutClaimed;
+  /** Taken by a route from its check until its rollout runs (or it found nothing to roll out). */
+  let claimed = false;
+  const rolling = () => rollout?.running === true || algoRollout?.running === true || claimed;
 
   /**
    * Deploys the pending instances again, one after the other, on `image` if given (else on the image each runs on),
@@ -669,23 +671,28 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       const image = adapters.broker.image?.();
       if (!image) return reply.code(501).send({ error: "image_unsupported" });
       if (rolling()) return reply.code(409).send({ error: "update_running" });
-      const outdated = (await load()).filter((i) => i.deployment?.managed && i.deployment.image !== image);
-      const state: ImageRollout = {
-        image,
-        running: true,
-        startedAt: new Date().toISOString(),
-        pending: outdated.map((i) => i.name),
-        updated: [],
-        skipped: [],
-      };
-      rollout = state;
-      void runRollout(state, actor(request), {
-        image,
-        prepare: () => images.prepare(image),
-        action: "instance.update_images",
-        target: image,
-      });
-      return reply.code(202).send(state);
+      claimed = true;
+      try {
+        const outdated = (await load()).filter((i) => i.deployment?.managed && i.deployment.image !== image);
+        const state: ImageRollout = {
+          image,
+          running: true,
+          startedAt: new Date().toISOString(),
+          pending: outdated.map((i) => i.name),
+          updated: [],
+          skipped: [],
+        };
+        rollout = state;
+        void runRollout(state, actor(request), {
+          image,
+          prepare: () => images.prepare(image),
+          action: "instance.update_images",
+          target: image,
+        });
+        return await reply.code(202).send(state);
+      } finally {
+        claimed = false;
+      }
     },
   );
 
@@ -777,7 +784,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         tags: ["instances"],
         summary: "Move instances to an algo version: a new configuration version each, deployed on request",
         description:
-          'Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: "all"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress.',
+          'Saves a configuration version on the algo for each named instance, with the values the preview (`GET`) shows; symbol, timeframe and trade attribution stay. An instance that needs a manual edit, or is not on another version of the algo, is left out with an error. With `deploy` (and `confirm: "all"`) the saved ones that run in a container are deployed again afterwards, in the background, one after the other: running ones restart, stopped ones stay stopped, those with an open position are left alone. `GET /managed-instances/algo-rollout` shows the progress. Refused with `update_running` while a rollout runs, which would otherwise deploy the new versions too.',
         body: AlgoUpdateInput,
         response: {
           200: AlgoUpdateResult,
@@ -793,16 +800,16 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
       if (!cipher) return reply.code(503).send({ error: "master_key_missing" });
       const { algoId, deploy: rollOut, confirm, comment } = request.body;
       if (rollOut && confirm !== "all") return reply.code(400).send({ error: "confirmation_required" });
-      if (rollOut && rolling()) return reply.code(409).send({ error: "update_running" });
-      const algo = await db
-        .selectFrom("algos")
-        .select(["id", "name", "version", "metadata"])
-        .where("id", "=", algoId)
-        .executeTakeFirst();
-      if (!algo) return reply.code(404).send({ error: "algo_not_found" });
-
-      if (rollOut) algoRolloutClaimed = true;
+      // Also without `deploy`: a running rollout would deploy the new versions when it gets to them.
+      if (rolling()) return reply.code(409).send({ error: "update_running" });
+      claimed = true;
       try {
+        const algo = await db
+          .selectFrom("algos")
+          .select(["id", "name", "version", "metadata"])
+          .where("id", "=", algoId)
+          .executeTakeFirst();
+        if (!algo) return await reply.code(404).send({ error: "algo_not_found" });
         const list = await load();
         const updates = new Map((await algoUpdates(algo, list)).map((u) => [u.instance.name, u]));
         const who = actor(request);
@@ -860,7 +867,7 @@ export const managedInstanceRoutes: FastifyPluginAsyncTypebox<ManagedInstanceRou
         return { saved, failed, rollout: state };
       } finally {
         // The running rollout (if any) holds the slot from here.
-        if (rollOut) algoRolloutClaimed = false;
+        claimed = false;
       }
     },
   );

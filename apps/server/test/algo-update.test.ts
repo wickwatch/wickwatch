@@ -216,6 +216,12 @@ describe("moving instances to another algo version", () => {
     expect((await inject("POST", "/managed-instances/algo-update", { ...body, confirm: "all" })).json()).toEqual({
       error: "update_running",
     });
+    // Also a save without deploying: the running rollout would deploy it when it gets there.
+    expect(
+      (await inject("POST", "/managed-instances/algo-update", { algoId: newId, instances: ["x3"] })).json(),
+    ).toEqual({
+      error: "update_running",
+    });
     release();
 
     const progress = async () =>

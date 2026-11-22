@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   Algo,
   AlgoSettings,
@@ -11,7 +12,7 @@ import {
   type LogRule,
 } from "@wickwatch/core";
 import { numberParameters } from "@wickwatch/core/parameters";
-import { logRuleMatchers, SAFE_NAME } from "@wickwatch/core/rules";
+import { logRuleMatchers, nameVersion, SAFE_NAME } from "@wickwatch/core/rules";
 import type { FastifyPluginAsyncTypebox } from "@fastify/type-provider-typebox";
 import Type from "typebox";
 import type { Adapters } from "../adapters";
@@ -119,10 +120,11 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
         tags: ["algos"],
         summary: "Upload an algo file (body: the file, application/octet-stream)",
         description:
-          "The name comes from the algo's metadata. `version` defaults to the bot's BotVersion parameter, else its build time.",
+          "The name comes from the algo's metadata, unless `algo` files it as a version of another algo (e.g. a bot that names each release differently: its templates, settings and instances then carry over). `version` defaults to a version at the end of the algo's own name when filed under another one, else to the bot's BotVersion parameter, else its build time.",
         querystring: Type.Object({
           fileName: Type.String({ minLength: 1, maxLength: 255 }),
           version: Type.Optional(Type.String({ pattern: SAFE_NAME.source })),
+          algo: Type.Optional(Type.String({ pattern: SAFE_NAME.source })),
         }),
         response: { 201: Algo, 400: ErrorBody, 403: ErrorBody, 409: ErrorBody },
       },
@@ -154,8 +156,11 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
             .code(400)
             .send({ error: "algo_unreadable", ...(isAdapterError(error) ? { message: error.code } : {}) });
         }
-        const name = safe(metadata.name);
-        const version = request.query.version ?? defaultVersion(metadata, sha256);
+        const own = safe(metadata.name);
+        const name = request.query.algo ?? own;
+        const fromName = name === own ? undefined : nameVersion(metadata.name);
+        const version =
+          request.query.version ?? (fromName && SAFE_NAME.test(fromName) ? fromName : defaultVersion(metadata, sha256));
         if (!SAFE_NAME.test(name) || !SAFE_NAME.test(version))
           return await reply.code(400).send({ error: "invalid_input" });
         const exists = await db
@@ -224,6 +229,116 @@ export const algoRoutes: FastifyPluginAsyncTypebox<{ db: Db; adapters: Adapters;
       await rm(dirname(join(algosDir, row.file_path)), { recursive: true, force: true });
       await audit(db, { action: "algo.delete", target: `${row.name} ${row.version}`, ...actor(request) });
       return reply.code(204).send(null);
+    },
+  );
+
+  app.patch(
+    "/algos/:id",
+    {
+      preHandler: requireAdmin,
+      schema: {
+        tags: ["algos"],
+        summary: "File a version under another algo name and/or give it another version",
+        description:
+          "For bots that name each release differently: filed under one algo, the versions share templates, settings (log rules, account size, risk) and the update of instances to a new version. The configurations that use the version follow. When the old name has no version left, its templates (renamed on a clash) and settings move along; settings the target already has win. The platform still starts the algo by its own name.",
+        params: Type.Object({ id: Type.Integer() }),
+        body: Type.Object({
+          name: Type.Optional(Type.String({ pattern: SAFE_NAME.source })),
+          version: Type.Optional(Type.String({ pattern: SAFE_NAME.source })),
+        }),
+        response: { 200: Algo, 403: ErrorBody, 404: ErrorBody, 409: ErrorBody },
+      },
+    },
+    async (request, reply) => {
+      const row = await db.selectFrom("algos").selectAll().where("id", "=", request.params.id).executeTakeFirst();
+      if (!row) return reply.code(404).send({ error: "not_found" });
+      const name = request.body.name ?? row.name;
+      const version = request.body.version ?? row.version;
+      if (name === row.name && version === row.version) return toAlgo(row);
+      const taken = await db
+        .selectFrom("algos")
+        .select("id")
+        .where("name", "=", name)
+        .where("version", "=", version)
+        .executeTakeFirst();
+      if (taken) return reply.code(409).send({ error: "algo_version_exists" });
+
+      // The file goes along to <name>/<version>/: an upload of the old name and version would otherwise write over it.
+      const filePath = join(name, version, basename(row.file_path));
+      const from = join(algosDir, row.file_path);
+      const to = join(algosDir, filePath);
+      if (existsSync(to)) return reply.code(409).send({ error: "algo_version_exists" });
+      await mkdir(dirname(to), { recursive: true });
+      await rename(from, to);
+
+      const moved = await db
+        .transaction()
+        .execute(async (trx) => {
+          await trx.updateTable("algos").set({ name, version, file_path: filePath }).where("id", "=", row.id).execute();
+          // Every configuration version with it, so log rules, checks and history name the algo it is filed under now.
+          await trx
+            .updateTable("instance_configs")
+            .set({ algo_name: name, algo_version: version })
+            .where("algo_id", "=", row.id)
+            .execute();
+          if (name === row.name) return { templates: 0, settings: false };
+          const left = await trx.selectFrom("algos").select("id").where("name", "=", row.name).executeTakeFirst();
+          if (left) return { templates: 0, settings: false };
+          // The old name is gone: its templates and settings go to the new one.
+          const templates = await trx
+            .selectFrom("parameter_templates")
+            .select(["id", "name"])
+            .where("algo_name", "=", row.name)
+            .execute();
+          const names = new Set(
+            (await trx.selectFrom("parameter_templates").select("name").where("algo_name", "=", name).execute()).map(
+              (t) => t.name,
+            ),
+          );
+          for (const tpl of templates) {
+            let newName = tpl.name;
+            // On a clash: "<name> (<old algo>)", then with a counter, short enough for the 100 characters a name has.
+            for (let n = 1; names.has(newName); n++) {
+              const tag = n === 1 ? ` (${row.name})` : ` (${row.name} ${String(n)})`;
+              newName = `${tpl.name.slice(0, Math.max(1, 100 - tag.length))}${tag}`.slice(0, 100);
+            }
+            names.add(newName);
+            await trx
+              .updateTable("parameter_templates")
+              .set({ algo_name: name, name: newName })
+              .where("id", "=", tpl.id)
+              .execute();
+          }
+          const target = await trx
+            .selectFrom("algo_settings")
+            .select("algo_name")
+            .where("algo_name", "=", name)
+            .executeTakeFirst();
+          let settings = false;
+          if (target) await trx.deleteFrom("algo_settings").where("algo_name", "=", row.name).execute();
+          else {
+            const res = await trx
+              .updateTable("algo_settings")
+              .set({ algo_name: name })
+              .where("algo_name", "=", row.name)
+              .executeTakeFirst();
+            settings = res.numUpdatedRows > 0n;
+          }
+          return { templates: templates.length, settings };
+        })
+        .catch(async (error: unknown) => {
+          // Nothing was changed: the file goes back where the row still says it is.
+          await rename(to, from).catch(() => undefined);
+          throw error;
+        });
+      await rm(dirname(from), { recursive: true, force: true }).catch(() => undefined);
+      await audit(db, {
+        action: "algo.update",
+        target: `${name} ${version}`,
+        details: { from: `${row.name} ${row.version}`, ...moved },
+        ...actor(request),
+      });
+      return toAlgo({ ...row, name, version });
     },
   );
 

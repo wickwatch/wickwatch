@@ -637,7 +637,7 @@
     "upload": "Algo hochladen",
     "file": "Algo-Datei ({formats})",
     "version": "Version (optional)",
-    "versionHint": "Standard: der Parameter BotVersion des Bots, sonst seine Build-Zeit.",
+    "versionHint": "Standard: die Version im Namen des Bots, wenn er einem anderen Algo zugeordnet wird, sonst sein BotVersion-Parameter, sonst die Build-Zeit.",
     "uploaded": "{name} {version} hochgeladen.",
     "deleted": "{name} {version} gelöscht.",
     "none": "Noch keine Algos hochgeladen.",
@@ -648,7 +648,18 @@
     "parameters": "{count} Parameter",
     "deleteConfirm": "{name} {version} löschen? Die Datei wird entfernt.",
     "fileHint": "Eine {formats}-Datei, z. B. aus der Plattform exportiert.",
-    "usedBy": "Verwendet von {names}"
+    "usedBy": "Verwendet von {names}",
+    "family": "Algo",
+    "familyNew": "Neuer Algo (Name aus der Datei)",
+    "familyOf": "Neue Version von {name}",
+    "familyHint": "Für Bots, die jede Version anders nennen: Als Version eines bestehenden Algos behält er Vorlagen, Einstellungen und Instanzen. Vorausgewählt, wenn der Dateiname bis auf die Version passt.",
+    "fileUnder": "Zuordnen…",
+    "fileTitle": "{name} {version} zuordnen",
+    "fileIntro": "Versionen unter einem Algo teilen sich Vorlagen, Einstellungen (Log-Regeln, Kontogröße, Risiko) und das Umstellen von Instanzen auf eine neue Version. Konfigurationen mit dieser Version ziehen mit. Die Plattform startet den Bot weiter unter dem Namen aus seiner Datei.",
+    "fileName": "Algo",
+    "fileNameHint": "Ein bestehender Algo oder ein neuer Name, z. B. ohne Version. Hat der alte Name danach keine Version mehr, ziehen seine Vorlagen und Einstellungen mit.",
+    "filed": "Zugeordnet als {name} {version}.",
+    "fileVersion": "Version"
   },
   "algoUpdate": {
     "open": "1 Instanz aktualisieren | {count} Instanzen aktualisieren",
@@ -1010,7 +1021,8 @@
       "instance_schedule_resume": "Nach der Pause wieder gestartet",
       "platform_image": "Plattform-Version gewählt",
       "instance_update_images": "Alle Instanzen auf die Plattform-Version aktualisiert",
-      "instance_update_algo": "Instanzen auf eine Algo-Version umgestellt und ausgerollt"
+      "instance_update_algo": "Instanzen auf eine Algo-Version umgestellt und ausgerollt",
+      "algo_update": "Algo-Version anders zugeordnet"
     },
     "groups": {
       "account": "Konten",

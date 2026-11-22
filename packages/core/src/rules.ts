@@ -25,6 +25,35 @@ export const INSTANCE_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 export const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
 /**
+ * A version at the end of an algo or file name: a "v" with a number ("Bot-v4.11", "Bot v4") or a dotted number after a
+ * separator ("Bot_2.0"). A plain trailing number ("NAS_100") belongs to the name.
+ */
+const VERSION_SUFFIX = /(?:[\s._-]*v(\d+(?:\.\d+)*)|[\s_-]+(\d+(?:\.\d+)+))$/i;
+
+/**
+ * The version an algo carries in its name, e.g. "v4.2" for "Sample-Bot-v4.2"; bots that name each release
+ * differently would otherwise look like new algos.
+ */
+export function nameVersion(name: string): string | undefined {
+  const match = VERSION_SUFFIX.exec(name.trim());
+  return match ? `v${match[1] ?? match[2] ?? ""}` : undefined;
+}
+
+/**
+ * What stays of an algo or file name without its version, extension, case and separators: "Sample Bot v4.2.algo"
+ * and "Sample-Bot-v4.11" are the same algo.
+ */
+export function algoFamilyKey(name: string, extensions: readonly string[] = []): string {
+  let base = name.trim();
+  for (const ext of extensions)
+    if (base.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) base = base.slice(0, -ext.length - 1);
+  return base
+    .replace(VERSION_SUFFIX, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
  * Challenge rules reported by an alert of their own (the days without a trade): they get no bar on the account and no
  * line in the daily summary, and do not make the challenge "near a limit". A breach still counts like any other.
  */
