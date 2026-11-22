@@ -1062,7 +1062,7 @@
     "createdAt": "Created",
     "expiresAt": "Expires",
     "expiry": "Valid for",
-    "days": "{days} days",
+    "days": "1 day | {days} days",
     "never": "Never",
     "expired": "Expired",
     "lastUsed": "Last used",

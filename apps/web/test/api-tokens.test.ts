@@ -80,6 +80,8 @@ describe("ApiTokensView", () => {
       "Required.",
     ]);
 
+    // Short lifetimes too, e.g. for a one-off script.
+    expect(wrapper.findAll("dialog select option").map((o) => o.text())).toContain("1 day");
     await wrapper.find("dialog input").setValue("  claude  ");
     await wrapper.find('dialog input[type="password"]').setValue("my passphrase");
     await wrapper.find('dialog input[autocomplete="one-time-code"]').setValue("123456");
