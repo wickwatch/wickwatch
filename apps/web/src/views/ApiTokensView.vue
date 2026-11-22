@@ -265,7 +265,7 @@ const confirmRemove = () => {
             {{ $t("apiTokens.expiry") }}
             <select v-model="draft.expiry" class="input">
               <option v-for="days in API_TOKEN_EXPIRY_DAYS" :key="days" :value="String(days)">
-                {{ $t("apiTokens.days", { days }) }}
+                {{ $t("apiTokens.days", { days }, days) }}
               </option>
               <option value="">{{ $t("apiTokens.never") }}</option>
             </select>

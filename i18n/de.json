@@ -1062,7 +1062,7 @@
     "createdAt": "Angelegt",
     "expiresAt": "Läuft ab",
     "expiry": "Gültig für",
-    "days": "{days} Tage",
+    "days": "1 Tag | {days} Tage",
     "never": "Nie",
     "expired": "Abgelaufen",
     "lastUsed": "Zuletzt genutzt",
