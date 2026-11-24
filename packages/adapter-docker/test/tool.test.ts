@@ -29,6 +29,7 @@ describe("runTool", () => {
       image: IMAGE,
       command: spec.command,
       labels: { "wickwatch.tool": "true" },
+      hostname: "wickwatch-tool",
     });
     expect(container?.archives.map((a) => a.path)).toEqual(["/"]);
     expect(container?.details.State.Status).toBe("running");
@@ -59,6 +60,19 @@ describe("runTool", () => {
     expect(names[1]).toMatch(/^ww-session-1234567-[0-9a-f]{6}$/);
     expect(names[1]).not.toBe(names[0]);
     expect(names[2]).toMatch(/^ww-odd-name-[0-9a-f]{6}$/);
+  });
+
+  it("keeps the hostname of a purpose across runs, so the broker login does not see a new device each time", async () => {
+    const docker = new FakeDocker();
+    docker.images.add(IMAGE);
+    const adapter = new DockerRuntimeAdapter({ client: docker, diskPath: "/", labelPrefix: "WW" });
+    await adapter.runTool({ ...spec, purpose: "session-1234567" });
+    await adapter.runTool({ ...spec, purpose: "session-1234567" });
+    await adapter.runTool({ ...spec, purpose: `session-${"9".repeat(80)}` });
+    const hostnames = toolsOf(docker).map((c) => c.tool?.request.hostname);
+    expect(hostnames.slice(0, 2)).toEqual(["ww-session-1234567", "ww-session-1234567"]);
+    expect(hostnames[2]).toMatch(/^ww-session-9+$/);
+    expect(hostnames[2]).toHaveLength(63);
   });
 
   it("ends a tool killed from outside when the wait for its exit was lost", async () => {

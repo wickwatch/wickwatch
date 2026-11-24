@@ -47,6 +47,13 @@ export interface DockerRuntimeOptions {
 /** Container names Docker accepts; the core's instance names are a subset. */
 const CONTAINER_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/;
 
+const slug = (text: string) => text.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+/** A valid hostname label: letters, digits and hyphens, at most 63 characters, no hyphen at either end. */
+function hostname(text: string): string {
+  return slug(text).slice(0, 63).replace(/-+$/, "").toLowerCase() || "wickwatch";
+}
+
 const MAX_TAIL = 1000;
 /** How long the exit code of a tool may lag behind the end of its output, and the other way round. */
 const TOOL_END_GRACE_MS = 1000;
@@ -228,6 +235,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     const id = await call(() =>
       this.client.createTool({
         name: this.toolName(spec.purpose),
+        hostname: this.toolHostname(spec.purpose),
         image: spec.image,
         command: spec.command,
         labels: { [this.toolLabel]: "true" },
@@ -300,9 +308,19 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
 
   /** `<prefix>-<purpose>-<random>`: readable in `docker ps`, unique while a replaced tool is still being removed. */
   private toolName(purpose = "tool"): string {
-    const slug = (text: string) => text.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    const base = `${slug(this.labelPrefix) || "tool"}-${slug(purpose) || "tool"}`.slice(0, 120);
-    return `${base}-${randomBytes(3).toString("hex")}`;
+    return `${this.toolBase(purpose).slice(0, 120)}-${randomBytes(3).toString("hex")}`;
+  }
+
+  /**
+   * `<prefix>-<purpose>` without the random part: Docker would otherwise use the container id, and the cTrader
+   * login lists every new hostname as another session.
+   */
+  private toolHostname(purpose = "tool"): string {
+    return hostname(this.toolBase(purpose));
+  }
+
+  private toolBase(purpose: string): string {
+    return `${slug(this.labelPrefix) || "tool"}-${slug(purpose) || "tool"}`;
   }
 
   /**
@@ -380,6 +398,8 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
         image: spec.image,
         command: spec.command,
         labels,
+        // The instance's name, not `name`: a replacement is built under a temporary one.
+        hostname: hostname(spec.name),
         restartPolicy: this.restartPolicy,
         stopTimeout: this.stopTimeout,
       }),

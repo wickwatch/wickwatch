@@ -37,7 +37,12 @@ describe("creating instances", () => {
     expect(created.labels).toMatchObject({ "wickwatch.managed": "true", "wickwatch.symbol": "GER40" });
     expect(docker.pulls).toEqual([IMAGE]);
     const c = docker.containers.get("bot-new");
-    expect(c?.created).toMatchObject({ restartPolicy: "on-failure", stopTimeout: 30, command: spec().command });
+    expect(c?.created).toMatchObject({
+      restartPolicy: "on-failure",
+      stopTimeout: 30,
+      command: spec().command,
+      hostname: "bot-new",
+    });
     expect(c?.archives.map((a) => a.path)).toEqual(["/"]);
     // The image is there now; no second pull.
     await adapter.create(spec({ name: "bot-two" }));
@@ -63,6 +68,8 @@ describe("creating instances", () => {
     const updated = await adapter.update("bot-new", spec({ command: ["run", "v2"] }));
     expect(updated.status).toBe("running");
     expect(docker.containers.get("bot-new")?.created?.command).toEqual(["run", "v2"]);
+    // Built under a temporary name, but keeps the instance's hostname.
+    expect(docker.containers.get("bot-new")?.created?.hostname).toBe("bot-new");
     expect([...docker.containers.keys()].sort()).toEqual(["bot-new", "compose-bot"]);
 
     docker.failArchive = true;
