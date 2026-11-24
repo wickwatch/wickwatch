@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.10.1 – 2026-11-24
+
 ### Changed
 - Containers started by the Docker runtime get a stable hostname: a bot the instance name, a tool container `<label prefix>-<purpose>` (e.g. `wickwatch-session-1234567`). So far Docker used the container id, and the cTrader login listed every new shell session or bot container as another "cTrader Console" session. Existing bot containers take the new hostname when they are next applied. The CLI has no logout command; entries already listed have to be ended in the cTrader ID account.
 
