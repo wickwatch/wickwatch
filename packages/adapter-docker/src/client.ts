@@ -50,6 +50,8 @@ export interface CreateRequest {
   image: string;
   command: string[];
   labels: Record<string, string>;
+  /** Stays the same across replacements: a broker may count each new hostname as a new device. */
+  hostname: string;
   restartPolicy: "on-failure" | "unless-stopped" | "no";
   /** Seconds `docker stop` waits for a clean exit before killing. */
   stopTimeout: number;
@@ -60,6 +62,8 @@ export interface ToolRequest {
   image: string;
   command: string[];
   labels: Record<string, string>;
+  /** Stays the same across runs of one purpose: a broker may count each new hostname as a new device. */
+  hostname: string;
 }
 
 export interface DockerClient {
@@ -108,9 +112,10 @@ function wrap(docker: Docker): DockerClient {
         });
       });
     },
-    async create({ name, image, command, labels, restartPolicy, stopTimeout }) {
+    async create({ name, image, command, labels, hostname, restartPolicy, stopTimeout }) {
       const container = await docker.createContainer({
         name,
+        Hostname: hostname,
         Image: image,
         Cmd: command,
         Labels: labels,
@@ -125,9 +130,10 @@ function wrap(docker: Docker): DockerClient {
       });
       return container.id;
     },
-    async createTool({ name, image, command, labels }) {
+    async createTool({ name, image, command, labels, hostname }) {
       const container = await docker.createContainer({
         name,
+        Hostname: hostname,
         Image: image,
         Cmd: command,
         Labels: labels,
