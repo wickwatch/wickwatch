@@ -19,6 +19,18 @@ describe("readCtraderCliSettings", () => {
     expect(read(env).settings).toEqual({ cli: "container", cliPath: "/opt/ctrader", image: "registry/ctrader:1.2" });
   });
 
+  it("reads the idle time of a shell session in seconds", () => {
+    expect(read({ CTRADER_SESSION_IDLE_SECONDS: "1800" })).toEqual({
+      settings: { cli: "local", cliPath: "ctrader-cli", sessionIdleMs: 1_800_000 },
+      problems: [],
+    });
+    for (const value of ["0", "-5", "1.5", "10m", "86401"]) {
+      expect(read({ CTRADER_SESSION_IDLE_SECONDS: value }).problems).toEqual([
+        "CTRADER_SESSION_IDLE_SECONDS must be a whole number of seconds from 1 to 86400",
+      ]);
+    }
+  });
+
   it("reports an unpinned image and an unknown mode", () => {
     expect(read({ CTRADER_IMAGE: "registry/ctrader:latest", CTRADER_CLI: "docker" }).problems).toEqual([
       "CTRADER_IMAGE must be pinned to a version or digest, not latest",
