@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.10.2 – 2026-11-25
+
 ### Added
 - `CTRADER_SESSION_IDLE_SECONDS` (default 600): how long a cTrader CLI shell session may stay without commands before wickwatch closes it. Each new session logs in again, which the broker may record as another login; a longer time means fewer of them.
 
