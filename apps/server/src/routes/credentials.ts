@@ -8,6 +8,7 @@ import { actor, requireAdmin } from "../plugins/auth";
 import { ErrorBody } from "../plugins/errors";
 import type { Cipher } from "../security/cipher";
 import { audit } from "../services/audit";
+import { writeCredentialFiles } from "../services/credential-files";
 
 const Id = Type.Object({ id: Type.Integer() });
 
@@ -124,19 +125,29 @@ export const credentialRoutes: FastifyPluginAsyncTypebox<{
         .where("id", "=", id)
         .executeTakeFirst();
       if (result.numUpdatedRows === 0n) return reply.code(404).send({ error: "not_found" });
-      // Which fields changed, never their values.
-      const changed = Object.keys(request.body).filter((k) => k !== "secret" || secret !== undefined);
-      await audit(db, {
-        action: "credential.update",
-        target: String(id),
-        details: { changed },
-        ...actor(request),
-      });
       const row = await db
         .selectFrom("credentials")
         .select(["id", "label", "login", "created_at"])
         .where("id", "=", id)
         .executeTakeFirstOrThrow();
+      // Bots got the secret as a file when they were deployed; without the new one their next start fails to log in.
+      const files =
+        secret === undefined ? undefined : await writeCredentialFiles(db, adapters, id, { login: row.login, secret });
+      if (files?.failed.length) {
+        request.log.warn({ credential: id, instances: files.failed }, "Writing the new secret into instances failed");
+      }
+      // Which fields changed, never their values.
+      const changed = Object.keys(request.body).filter((k) => k !== "secret" || secret !== undefined);
+      await audit(db, {
+        action: "credential.update",
+        target: String(id),
+        details: {
+          changed,
+          ...(files?.written.length ? { instancesUpdated: files.written } : {}),
+          ...(files?.failed.length ? { instancesFailed: files.failed } : {}),
+        },
+        ...actor(request),
+      });
       return {
         id: row.id,
         label: row.label,

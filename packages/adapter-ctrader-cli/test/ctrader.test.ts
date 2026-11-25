@@ -325,6 +325,10 @@ describe("CtraderCliBroker", () => {
       ["/mnt/wickwatch/parameters.cbotset", 0o400],
     ]);
     expect(new TextDecoder().decode(launch.files[1]?.content)).toBe("correct horse");
+    // The same password file is written into existing instances when the stored password changes.
+    expect(broker.credentialFiles({ ...c, secret: "new horse" })).toEqual([
+      { ...launch.files[1], content: new TextEncoder().encode("new horse") },
+    ]);
     // Enums as their numbers, like a cTrader export (verified with ctrader-console 5.9.11).
     expect(JSON.parse(new TextDecoder().decode(launch.files[2]?.content))).toEqual({
       Chart: { Symbol: "US100.cash", Period: "m5" },

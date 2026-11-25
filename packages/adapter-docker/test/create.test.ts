@@ -103,6 +103,23 @@ describe("creating instances", () => {
     expect(updated.status).toBe("stopped");
   });
 
+  it("writes files into an instance without replacing or restarting it, never into one it did not create", async () => {
+    const { docker, adapter } = setup();
+    await adapter.create(spec());
+    await adapter.start("bot-new");
+    const before = docker.containers.get("bot-new");
+    const pwd = { path: "/mnt/wickwatch/ctid.pwd", content: new TextEncoder().encode("new secret"), mode: 0o400 };
+    await adapter.writeFiles("bot-new", [pwd]);
+    const after = docker.containers.get("bot-new");
+    expect(after).toBe(before);
+    expect(after?.details.State.Status).toBe("running");
+    expect(after?.details.RestartCount).toBe(0);
+    const tar = after?.archives.at(-1)?.tar;
+    expect(tar && Buffer.compare(tar, tarFiles([pwd]))).toBe(0);
+    await expect(adapter.writeFiles("compose-bot", [pwd])).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(adapter.writeFiles("missing", [pwd])).rejects.toMatchObject({ code: "not_found" });
+  });
+
   it("never replaces or removes containers it did not create", async () => {
     const { adapter } = setup();
     await expect(adapter.update("compose-bot", spec({ name: "compose-bot" }))).rejects.toMatchObject({

@@ -250,6 +250,63 @@ describe("managed instances", () => {
     expect(list.map(params)).toEqual([{}]);
   });
 
+  it("writes a changed password into the deployed instances of its accounts, running or not", async () => {
+    const credentialId = (
+      await t.db.selectFrom("accounts").select("credential_id").where("id", "=", accountId).executeTakeFirstOrThrow()
+    ).credential_id;
+    const otherAccount = await t.db
+      .selectFrom("accounts")
+      .select("id")
+      .where("credential_id", "!=", credentialId)
+      .executeTakeFirstOrThrow();
+    const written: { ref: string; content: string }[] = [];
+    Object.assign(t.adapters.broker, {
+      credentialFiles: (c: { secret: string }) => [
+        { path: "/mnt/pwd", content: new TextEncoder().encode(c.secret), mode: 0o400 },
+      ],
+    });
+    Object.assign(t.adapters.runtime, {
+      writeFiles: async (ref: string, files: { content: Uint8Array }[]) => {
+        if (ref === "not-deployed") throw new AdapterError("not_found", "no container");
+        if (ref === "x3") throw new AdapterError("unavailable", "proxy down");
+        written.push({ ref, content: new TextDecoder().decode(files[0]?.content) });
+      },
+    });
+    await create("x1");
+    await create("x2");
+    await create("x3");
+    await create("y1", config(), otherAccount.id);
+    await create("not-deployed");
+    await inject("POST", "/managed-instances/x1/deploy", { confirm: "x1", start: true });
+    for (const name of ["x2", "x3", "y1"]) await inject("POST", `/managed-instances/${name}/deploy`, { confirm: name });
+
+    const res = await t.app.inject({
+      method: "PATCH",
+      url: `/api/v1/credentials/${String(credentialId)}`,
+      headers: { cookie: admin },
+      payload: { secret: "new-password!" },
+    });
+    expect(res.statusCode).toBe(200);
+    // Not the other login's instance, and nothing for one without a container.
+    expect(written).toEqual([
+      { ref: "x1", content: "new-password!" },
+      { ref: "x2", content: "new-password!" },
+    ]);
+    expect(await auditDetails("credential.update")).toEqual([
+      { changed: ["secret"], instancesUpdated: ["x1", "x2"], instancesFailed: ["x3"] },
+    ]);
+
+    // A new label alone leaves the instances alone.
+    written.length = 0;
+    await t.app.inject({
+      method: "PATCH",
+      url: `/api/v1/credentials/${String(credentialId)}`,
+      headers: { cookie: admin },
+      payload: { label: "Renamed" },
+    });
+    expect(written).toEqual([]);
+  });
+
   it("keeps the instance when the runtime cannot be asked whether a container must go", async () => {
     await create("x1");
     await inject("POST", "/managed-instances/x1/deploy", { confirm: "x1" });
