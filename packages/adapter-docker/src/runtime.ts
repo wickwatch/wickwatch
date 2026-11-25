@@ -9,6 +9,7 @@ import {
   labelKey,
   type AdapterLog,
   type HostStatus,
+  type InstanceFile,
   type InstanceSpec,
   type InstanceStatus,
   type LogLine,
@@ -377,6 +378,12 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private check(spec: InstanceSpec): void {
     if (!CONTAINER_NAME.test(spec.name)) throw new AdapterError("invalid_input", `Invalid instance name ${spec.name}`);
     checkPinned(spec.image);
+  }
+
+  /** Copies the files into the container; a running one keeps running and reads them at its next start. */
+  async writeFiles(ref: string, files: InstanceFile[]): Promise<void> {
+    const { handle } = await this.owned(ref);
+    if (files.length) await call(() => handle.putArchive(tarFiles(files), "/"));
   }
 
   async prepareImage(image: string): Promise<void> {

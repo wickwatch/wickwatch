@@ -131,6 +131,11 @@ export interface RuntimeAdapter {
    * wait for the download; missing when the runtime has nothing to fetch.
    */
   prepareImage?(image: string): Promise<void>;
+  /**
+   * Replaces files in an instance created by `create`, running or not, without restarting it (e.g. a new password
+   * file); missing when the runtime cannot. The instance reads them at its next start.
+   */
+  writeFiles?(ref: string, files: InstanceFile[]): Promise<void>;
 }
 
 /**
@@ -159,6 +164,12 @@ export interface BrokerAdapter {
   readonly algoMetadataVersion?: number;
   /** How to run an algo on an account; missing when this broker cannot run bots itself. */
   launch?(input: LaunchInput): Promise<Launch>;
+  /**
+   * The files of `launch` that hold the login's secret (e.g. a password file). When a stored secret changes, the core
+   * writes them into the existing instances, so their next start does not log in with the old one. Missing when
+   * `launch` puts no secret in a file.
+   */
+  credentialFiles?(credentials: Credentials): InstanceFile[];
   /**
    * The pinned image new instances and the adapter's own tools run on, for a platform that ships as an image; missing
    * otherwise. Its repository is fixed by the adapter's settings; `useImage` switches the version.

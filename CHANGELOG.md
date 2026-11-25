@@ -7,6 +7,9 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 ### Added
 - `CTRADER_SESSION_IDLE_SECONDS` (default 600): how long a cTrader CLI shell session may stay without commands before wickwatch closes it. Each new session logs in again, which the broker may record as another login; a longer time means fewer of them.
 
+### Fixed
+- A changed password of a stored login now reaches the bots: wickwatch writes it into the deployed containers of the accounts using that login, running or stopped, without restarting them. So far a bot kept the password file from its last deploy; after a password change its next start failed with "Invalid ctid or password" and, with the container's restart policy, tried again every few seconds. The audit entry of the change names the instances updated (and any that failed).
+
 ## 0.10.1 – 2026-11-24
 
 ### Changed

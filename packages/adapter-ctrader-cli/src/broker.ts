@@ -11,6 +11,7 @@ import {
   type Deal,
   type EmergencyStopResult,
   type Id,
+  type InstanceFile,
   type IsoTime,
   type Launch,
   type LaunchInput,
@@ -52,6 +53,7 @@ const PRICE_ATTEMPTS = 6;
 export const DEFAULT_CTRADER_IMAGE = "ghcr.io/spotware/ctrader-console:5.9.11";
 /** Where wickwatch puts the algo and the password file inside an instance. */
 const MOUNT = "/mnt/wickwatch";
+const PWD_FILE = `${MOUNT}/ctid.pwd`;
 
 export interface CtraderCliBrokerOptions extends Partial<CliOptions> {
   /** Image instances run with, e.g. ghcr.io/spotware/ctrader-console:5.9.11. */
@@ -159,6 +161,11 @@ export class CtraderCliBroker implements BrokerAdapter {
     return redactStartupTable(text);
   }
 
+  /** The password file of `launch`; the login itself is an argument and needs a new deploy when it changes. */
+  credentialFiles(credentials: Credentials): InstanceFile[] {
+    return [{ path: PWD_FILE, content: new TextEncoder().encode(credentials.secret), mode: 0o400 }];
+  }
+
   /**
    * `run` in the official image. Password and parameters are files copied into the instance, never
    * arguments, so `docker inspect` shows neither (parameter sets may hold licence keys);
@@ -166,7 +173,6 @@ export class CtraderCliBroker implements BrokerAdapter {
    */
   async launch(input: LaunchInput): Promise<Launch> {
     const algoFile = `${MOUNT}/${input.algo.name.replace(/[^A-Za-z0-9._-]/g, "-")}.algo`;
-    const pwdFile = `${MOUNT}/ctid.pwd`;
     const parametersFile = `${MOUNT}/parameters.cbotset`;
     checkParameterNames(input.parameters);
     return {
@@ -176,7 +182,7 @@ export class CtraderCliBroker implements BrokerAdapter {
         algoFile,
         parametersFile,
         `--ctid=${input.credentials.login}`,
-        `--pwd-file=${pwdFile}`,
+        `--pwd-file=${PWD_FILE}`,
         `--account=${input.account}`,
         `--symbol=${input.symbol}`,
         `--period=${input.period}`,
@@ -185,7 +191,7 @@ export class CtraderCliBroker implements BrokerAdapter {
       ],
       files: [
         { path: algoFile, content: input.algo.file, mode: 0o444 },
-        { path: pwdFile, content: new TextEncoder().encode(input.credentials.secret), mode: 0o400 },
+        ...this.credentialFiles(input.credentials),
         {
           path: parametersFile,
           content: new CbotsetConfigAdapter().serialize(input.parameters, input.algo.parameters, {
