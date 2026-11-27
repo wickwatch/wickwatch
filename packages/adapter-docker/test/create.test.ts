@@ -43,10 +43,20 @@ describe("creating instances", () => {
       command: spec().command,
       hostname: "bot-new",
     });
+    expect(c?.created?.memoryBytes).toBeUndefined();
     expect(c?.archives.map((a) => a.path)).toEqual(["/"]);
     // The image is there now; no second pull.
     await adapter.create(spec({ name: "bot-two" }));
     expect(docker.pulls).toEqual([IMAGE]);
+  });
+
+  it("gives created and replaced containers the memory limit", async () => {
+    const docker = new FakeDocker();
+    const adapter = new DockerRuntimeAdapter({ client: docker, diskPath: "/", memoryLimitBytes: 1024 ** 3 });
+    await adapter.create(spec());
+    expect(docker.containers.get("bot-new")?.created?.memoryBytes).toBe(1024 ** 3);
+    await adapter.update("bot-new", spec({ command: ["run", "v2"] }));
+    expect(docker.containers.get("bot-new")?.created).toMatchObject({ command: ["run", "v2"], memoryBytes: 1024 ** 3 });
   });
 
   it("rejects unpinned images and bad names, and cleans up when copying fails", async () => {
