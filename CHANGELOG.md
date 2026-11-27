@@ -4,6 +4,8 @@ All notable changes are listed here. The project follows [Semantic Versioning](h
 
 ## Unreleased
 
+## 0.10.3 – 2026-11-27
+
 ### Added
 - `INSTANCE_MEMORY_LIMIT` (default `off`): memory limit of each instance the Docker runtime creates, like Docker's `--memory` (`768m`, `1g`), without swap on top. A bot with a leak can no longer take the host and the other bots down; the kernel ends it, it shows as crashed, and with `on-failure` Docker starts it again. Instances take the limit when they are next created or updated.
 
