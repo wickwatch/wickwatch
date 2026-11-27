@@ -1,2 +1,3 @@
 # GitHub writes web commits (e.g. squash merges) with the noreply address; both are the same person.
-Martin Mohr <mohrwurm@gmail.com> Martin Mohr <104555737+mmohrx@users.noreply.github.com>
+# Matched by address only: the name on GitHub may differ (e.g. "Martin M.").
+Martin Mohr <mohrwurm@gmail.com> <104555737+mmohrx@users.noreply.github.com>
