@@ -104,6 +104,20 @@ describe("loadConfig", () => {
     expect(() => load({ INSTANCE_RESTART_POLICY: "always" })).toThrow(/INSTANCE_RESTART_POLICY/);
   });
 
+  it("reads the memory limit of instances like Docker's --memory, off by default", () => {
+    const limit = (value?: string) =>
+      load(value === undefined ? {} : { INSTANCE_MEMORY_LIMIT: value }).instanceMemoryLimit;
+    expect(limit()).toBeUndefined();
+    expect(limit("OFF")).toBeUndefined();
+    expect(limit("768m")).toBe(768 * 1024 ** 2);
+    expect(limit("1G")).toBe(1024 ** 3);
+    expect(limit("1gb")).toBe(1024 ** 3);
+    expect(limit(String(64 * 1024 ** 2))).toBe(64 * 1024 ** 2);
+    for (const bad of ["5m", "1.5g", "1t", "-1g", "lots"]) {
+      expect(() => load({ INSTANCE_MEMORY_LIMIT: bad })).toThrow(/INSTANCE_MEMORY_LIMIT/);
+    }
+  });
+
   it("treats empty values like unset ones, as in .env.example", () => {
     expect(load({ MASTER_KEY: "", HEARTBEAT_URL: "", PORT: "" }).port).toBe(3000);
   });

@@ -55,6 +55,8 @@ export interface CreateRequest {
   restartPolicy: "on-failure" | "unless-stopped" | "no";
   /** Seconds `docker stop` waits for a clean exit before killing. */
   stopTimeout: number;
+  /** Memory limit in bytes, swap included (no swap on top); missing: no limit. */
+  memoryBytes?: number;
 }
 
 export interface ToolRequest {
@@ -112,7 +114,7 @@ function wrap(docker: Docker): DockerClient {
         });
       });
     },
-    async create({ name, image, command, labels, hostname, restartPolicy, stopTimeout }) {
+    async create({ name, image, command, labels, hostname, restartPolicy, stopTimeout, memoryBytes }) {
       const container = await docker.createContainer({
         name,
         Hostname: hostname,
@@ -123,6 +125,8 @@ function wrap(docker: Docker): DockerClient {
         HostConfig: {
           RestartPolicy: { Name: restartPolicy },
           LogConfig: { Type: "json-file", Config: { "max-size": "10m", "max-file": "5" } },
+          // One bot with a leak must not take the host down; swap equal to memory means none on top.
+          ...(memoryBytes ? { Memory: memoryBytes, MemorySwap: memoryBytes } : {}),
           // Bots get no extra kernel capabilities; Linux has no algo sandbox of its own.
           CapDrop: ["ALL"],
           SecurityOpt: ["no-new-privileges:true"],

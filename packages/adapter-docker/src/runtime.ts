@@ -43,6 +43,8 @@ export interface DockerRuntimeOptions {
   restartPolicy?: CreateRequest["restartPolicy"];
   /** Seconds a bot gets to shut down cleanly on stop. */
   stopTimeoutSeconds?: number;
+  /** Memory limit of created containers in bytes; the kernel ends a bot above it (shown as crashed). */
+  memoryLimitBytes?: number;
 }
 
 /** Container names Docker accepts; the core's instance names are a subset. */
@@ -82,6 +84,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
   private readonly now: () => Date;
   private readonly restartPolicy: CreateRequest["restartPolicy"];
   private readonly stopTimeout: number;
+  private readonly memoryLimit: number | undefined;
 
   constructor(options: DockerRuntimeOptions = {}) {
     this.client = options.client ?? createDockerClient(options.dockerHost);
@@ -91,6 +94,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
     this.labelPrefix = options.labelPrefix ?? DEFAULT_LABEL_PREFIX;
     this.restartPolicy = options.restartPolicy ?? "on-failure";
     this.stopTimeout = options.stopTimeoutSeconds ?? 30;
+    this.memoryLimit = options.memoryLimitBytes;
     this.diskPath = options.diskPath ?? process.cwd();
     this.now = options.now ?? (() => new Date());
   }
@@ -409,6 +413,7 @@ export class DockerRuntimeAdapter implements RuntimeAdapter {
         hostname: hostname(spec.name),
         restartPolicy: this.restartPolicy,
         stopTimeout: this.stopTimeout,
+        ...(this.memoryLimit ? { memoryBytes: this.memoryLimit } : {}),
       }),
     );
     if (!spec.files.length) return;

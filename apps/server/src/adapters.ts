@@ -42,6 +42,7 @@ export function createAdapters(config: Config): Adapters {
       new DockerRuntimeAdapter({
         labelPrefix: config.labelPrefix,
         restartPolicy: config.instanceRestartPolicy,
+        ...(config.instanceMemoryLimit ? { memoryLimitBytes: config.instanceMemoryLimit } : {}),
         ...(config.dockerHost ? { dockerHost: config.dockerHost } : {}),
         // Disk usage is reported for the file system holding the database.
         ...(config.database.filename === ":memory:" ? {} : { diskPath: dirname(config.database.filename) }),

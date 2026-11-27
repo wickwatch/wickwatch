@@ -32,6 +32,8 @@ export interface Config {
   adapterSettings: AdapterSettings;
   /** Docker restart policy of created instances. */
   instanceRestartPolicy: RestartPolicy;
+  /** Memory limit of created instances in bytes; missing: none (`INSTANCE_MEMORY_LIMIT=off`). */
+  instanceMemoryLimit?: number;
   /** Directory with challenge templates (*.json). */
   challengeTemplatesDir: string;
   /** Where uploaded algo files are stored, one folder per algo name and version. */
@@ -102,6 +104,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
   if (basePath === undefined) problems.push("BASE_PATH must look like /bots (letters, digits, - _ . ~ and /)");
 
   const instanceRestartPolicy = oneOf("INSTANCE_RESTART_POLICY", "on-failure", RESTART_POLICIES);
+  const instanceMemoryLimit = parseMemoryLimit(get("INSTANCE_MEMORY_LIMIT"), problems);
   const logLevel = oneOf("LOG_LEVEL", "info", LOG_LEVELS);
 
   const masterKey = parseMasterKey(get("MASTER_KEY"), problems);
@@ -193,6 +196,7 @@ export function loadConfig(env: Record<string, string | undefined>, cwd = proces
     algosDir: resolve(cwd, get("ALGOS_DIR") ?? "data/algos"),
     adapterSettings,
     instanceRestartPolicy,
+    ...(instanceMemoryLimit ? { instanceMemoryLimit } : {}),
     accountPollSeconds,
     idleAccountPollSeconds,
     alertCheckSeconds,
@@ -281,4 +285,21 @@ function parseUrl(name: string, value: string | undefined, problems: string[]): 
   }
   problems.push(`${name} must be an http(s) URL`);
   return undefined;
+}
+
+const MEMORY_UNITS = { "": 1, k: 1024, m: 1024 ** 2, g: 1024 ** 3 } as const;
+/** Docker refuses limits below 6 MiB. */
+const MIN_MEMORY_LIMIT = 6 * 1024 ** 2;
+
+/** `off` (default) or a size like Docker's `--memory`: `768m`, `1g`, bytes without a unit. */
+export function parseMemoryLimit(value: string | undefined, problems: string[]): number | undefined {
+  const text = (value ?? "off").trim().toLowerCase();
+  if (text === "off") return undefined;
+  const match = /^(\d+)([kmg]?)b?$/.exec(text);
+  const bytes = match ? Number(match[1]) * MEMORY_UNITS[match[2] as keyof typeof MEMORY_UNITS] : NaN;
+  if (!Number.isSafeInteger(bytes) || bytes < MIN_MEMORY_LIMIT) {
+    problems.push("INSTANCE_MEMORY_LIMIT must be off or a size of at least 6m, e.g. 768m or 1g");
+    return undefined;
+  }
+  return bytes;
 }
